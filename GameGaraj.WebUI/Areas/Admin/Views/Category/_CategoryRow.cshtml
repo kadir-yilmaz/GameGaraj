@@ -1,0 +1,66 @@
+@model (GameGaraj.WebUI.Models.Products.CategoryViewModel Category, int Level, string ParentId)
+
+@{
+    var hasChildren = Model.Category.Children != null && Model.Category.Children.Any();
+}
+
+<tr data-id="@Model.Category.Id" data-parent-id="@Model.ParentId" class="tree-row category-level-@Model.Level">
+    <td class="ps-4">
+        <div class="tree-node" style="margin-left: @(Model.Level * 2)rem">
+            @if (hasChildren)
+            {
+                <span class="chevron-toggle me-1 text-muted">
+                    <i class="fas fa-chevron-down small"></i>
+                </span>
+            }
+            else if (Model.Level > 0)
+            {
+                <span class="me-1 text-muted" style="width: 20px; display: inline-block;"></span>
+            }
+
+            <span class="folder-icon me-2">
+                @if (Model.Level == 0)
+                {
+                    <i class="fas fa-layer-group text-primary"></i>
+                }
+                else if (hasChildren)
+                {
+                    <i class="fas fa-folder text-warning"></i>
+                }
+                else
+                {
+                    <i class="fas fa-tag text-info"></i>
+                }
+            </span>
+
+            <div class="d-inline-block">
+                <span class="@(Model.Level == 0 ? "fw-bold" : "text-dark")">@Model.Category.Name</span>
+                @if (hasChildren)
+                {
+                    <span class="badge bg-light text-muted fw-normal border ms-2" style="font-size: 0.7rem;">@Model.Category.Children.Count alt</span>
+                }
+            </div>
+        </div>
+    </td>
+    <td class="text-end pe-4">
+        <div class="btn-group shadow-sm rounded">
+            <a asp-action="Edit" asp-route-id="@Model.Category.Id" class="btn btn-sm btn-white border text-primary" title="Düzenle">
+                <i class="fas fa-edit"></i>
+            </a>
+            <a asp-action="Create" asp-route-parentId="@Model.Category.Id" class="btn btn-sm btn-white border text-success" title="Alt Kategori Ekle">
+                <i class="fas fa-plus-circle"></i>
+            </a>
+            <button type="button" class="btn btn-sm btn-white border text-danger" title="Sil">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+
+@if (hasChildren)
+{
+    @foreach (var child in Model.Category.Children)
+    {
+        @await Html.PartialAsync("_CategoryRow", (child, Model.Level + 1, Model.Category.Id))
+    }
+}

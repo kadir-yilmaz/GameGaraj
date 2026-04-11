@@ -1,0 +1,566 @@
+@model GameGaraj.WebUI.Models.Baskets.BasketViewModel
+@{
+    ViewData["Title"] = "Sepetim";
+}
+
+<style>
+    /* Hepsiburada Style Basket Page */
+    .basket-page {
+        background: #f5f5f5;
+        min-height: calc(100vh - 200px);
+        padding: 1.5rem 0;
+    }
+
+    .basket-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .basket-header h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .basket-count {
+        background: #ff6000;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    /* Basket Items Card */
+    .basket-card {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+
+    .basket-card-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .seller-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .seller-badge {
+        background: #00a365;
+        color: white;
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .seller-name {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .free-shipping-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #00a365;
+        font-size: 0.85rem;
+    }
+
+    /* Basket Item */
+    .basket-item {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        gap: 1rem;
+        transition: background 0.2s;
+    }
+
+    .basket-item:hover {
+        background: #fafafa;
+    }
+
+    .basket-item:last-child {
+        border-bottom: none;
+    }
+
+    .item-image {
+        width: 100px;
+        height: 100px;
+        border-radius: 8px;
+        overflow: hidden;
+        flex-shrink: 0;
+        border: 1px solid #e0e0e0;
+    }
+
+    .item-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .item-image-placeholder {
+        width: 100%;
+        height: 100%;
+        background: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ccc;
+    }
+
+    .item-details {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .item-name {
+        font-size: 0.95rem;
+        color: #333;
+        text-decoration: none;
+        line-height: 1.4;
+        margin-bottom: 0.5rem;
+    }
+
+    .item-name:hover {
+        color: #ff6000;
+    }
+
+    .item-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 0.75rem;
+    }
+
+    .item-stock {
+        color: #00a365;
+    }
+
+    .item-stock.out {
+        color: #e74c3c;
+    }
+
+    /* Quantity Controls */
+    .quantity-section {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: auto;
+    }
+
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .qty-btn {
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: #f5f5f5;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .qty-btn:hover:not(:disabled) {
+        background: #ff6000;
+        color: white;
+    }
+
+    .qty-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .qty-value {
+        width: 40px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .remove-btn {
+        background: none;
+        border: none;
+        color: #999;
+        cursor: pointer;
+        padding: 0.5rem;
+        transition: color 0.2s;
+    }
+
+    .remove-btn:hover {
+        color: #e74c3c;
+    }
+
+    /* Price Section */
+    .item-price-section {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: space-between;
+        min-width: 120px;
+    }
+
+    .item-unit-price {
+        font-size: 0.85rem;
+        color: #666;
+    }
+
+    .item-total-price {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #ff6000;
+    }
+
+    /* Summary Card */
+    .summary-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        position: sticky;
+        top: 20px;
+    }
+
+    .summary-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+    }
+
+    .summary-row.discount {
+        color: #00a365;
+    }
+
+    .summary-total {
+        display: flex;
+        justify-content: space-between;
+        padding-top: 1rem;
+        margin-top: 1rem;
+        border-top: 2px solid #e0e0e0;
+    }
+
+    .summary-total .label {
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .summary-total .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #ff6000;
+    }
+
+    .checkout-btn {
+        width: 100%;
+        padding: 1rem;
+        background: #ff6000;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: background 0.2s;
+    }
+
+    .checkout-btn:hover {
+        background: #e55500;
+        color: white;
+        text-decoration: none;
+    }
+
+    .clear-basket-btn {
+        width: 100%;
+        padding: 0.75rem;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        color: #666;
+        font-size: 0.9rem;
+        cursor: pointer;
+        margin-top: 0.75rem;
+        transition: all 0.2s;
+    }
+
+    .clear-basket-btn:hover {
+        border-color: #e74c3c;
+        color: #e74c3c;
+    }
+
+    /* Campaign Box */
+    .campaign-box {
+        background: #fff5f0;
+        border: 1px solid #ffccb3;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .campaign-box i {
+        color: #ff6000;
+        font-size: 1.25rem;
+    }
+
+    .campaign-box span {
+        font-size: 0.9rem;
+        color: #333;
+    }
+
+    /* Empty Basket */
+    .empty-basket {
+        background: white;
+        border-radius: 8px;
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+
+    .empty-basket i {
+        font-size: 5rem;
+        color: #ddd;
+        margin-bottom: 1.5rem;
+    }
+
+    .empty-basket h3 {
+        color: #333;
+        margin-bottom: 0.75rem;
+    }
+
+    .empty-basket p {
+        color: #666;
+        margin-bottom: 1.5rem;
+    }
+
+    .shop-now-btn {
+        padding: 0.875rem 2rem;
+        background: #ff6000;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: background 0.2s;
+    }
+
+    .shop-now-btn:hover {
+        background: #e55500;
+        color: white;
+    }
+
+    /* Responsive */
+    @@media (max-width: 991px) {
+        .summary-card {
+            position: static;
+            margin-top: 1.5rem;
+        }
+    }
+
+    @@media (max-width: 767px) {
+        .basket-item {
+            flex-wrap: wrap;
+        }
+
+        .item-image {
+            width: 80px;
+            height: 80px;
+        }
+
+        .item-price-section {
+            width: 100%;
+            flex-direction: row;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px dashed #e0e0e0;
+        }
+
+        .quantity-section {
+            margin-top: 0.75rem;
+        }
+    }
+</style>
+
+<div class="basket-page">
+    <div class="container">
+        @if (Model.Items.Any())
+        {
+            <div class="basket-header">
+                <h1><i class="fas fa-shopping-cart me-2"></i>Sepetim</h1>
+                <span class="basket-count">@Model.Items.Sum(x => x.Quantity) ürün</span>
+            </div>
+
+            <div class="row">
+                <!-- Basket Items -->
+                <div class="col-lg-8">
+                    <!-- Campaign Info -->
+                    <div class="campaign-box">
+                        <i class="fas fa-truck"></i>
+                        <span><strong>Tebrikler!</strong> Siparişiniz kargo bedava.</span>
+                    </div>
+
+                    <div class="basket-card">
+                        <div class="basket-card-header">
+                            <div class="seller-info">
+                                <span class="seller-badge">9.8</span>
+                                <span class="seller-name">GameGaraj</span>
+                            </div>
+                            <div class="free-shipping-badge">
+                                <i class="fas fa-check-circle"></i>
+                                Ücretsiz Kargo
+                            </div>
+                        </div>
+
+                        @foreach (var item in Model.Items)
+                        {
+                            <div class="basket-item">
+                                <!-- Image -->
+                                <div class="item-image">
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                    {
+                                        <a asp-controller="Product" asp-action="Detail" asp-route-id="@item.ProductId">
+                                            <img src="@item.ImageUrl" alt="@item.ProductName">
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <div class="item-image-placeholder">
+                                            <i class="fas fa-image fa-2x"></i>
+                                        </div>
+                                    }
+                                </div>
+
+                                <!-- Details -->
+                                <div class="item-details">
+                                    <a asp-controller="Product" asp-action="Detail" asp-route-id="@item.ProductId" class="item-name">
+                                        @item.ProductName
+                                    </a>
+                                    <div class="item-meta">
+                                        <span class="item-stock"><i class="fas fa-check-circle me-1"></i>Stokta</span>
+                                        <span>Satıcı: GameGaraj</span>
+                                    </div>
+                                    <div class="quantity-section">
+                                        <div class="quantity-control">
+                                            <form asp-action="UpdateQuantity" method="post" class="d-inline">
+                                                <input type="hidden" name="productId" value="@item.ProductId" />
+                                                <input type="hidden" name="quantity" value="@(item.Quantity - 1)" />
+                                                <button type="submit" class="qty-btn" @(item.Quantity <= 1 ? "disabled" : "")>
+                                                    <i class="fas fa-minus"></i>
+                                                </button>
+                                            </form>
+                                            <span class="qty-value">@item.Quantity</span>
+                                            <form asp-action="UpdateQuantity" method="post" class="d-inline">
+                                                <input type="hidden" name="productId" value="@item.ProductId" />
+                                                <input type="hidden" name="quantity" value="@(item.Quantity + 1)" />
+                                                <button type="submit" class="qty-btn">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                        <form asp-action="RemoveItem" method="post">
+                                            <input type="hidden" name="productId" value="@item.ProductId" />
+                                            <button type="submit" class="remove-btn" title="Sepetten Sil">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <!-- Price -->
+                                <div class="item-price-section">
+                                    <span class="item-unit-price">Birim: @item.Price.ToString("N2") TL</span>
+                                    <span class="item-total-price">@((item.Price * item.Quantity).ToString("N2")) TL</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div class="col-lg-4">
+                    <div class="summary-card">
+                        <h2 class="summary-title">Sipariş Özeti</h2>
+                        
+                        <div class="summary-row">
+                            <span>Ürünlerin Toplamı</span>
+                            <span>@Model.TotalPrice.ToString("N2") TL</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Kargo Toplam</span>
+                            <span>0,00 TL</span>
+                        </div>
+                        <div class="summary-row discount">
+                            <span>Kargo İndirimi</span>
+                            <span>-0,00 TL</span>
+                        </div>
+
+                        <div class="summary-total">
+                            <span class="label">Toplam</span>
+                            <span class="value">@Model.TotalPrice.ToString("N2") TL</span>
+                        </div>
+
+                        <a asp-controller="Order" asp-action="Checkout" class="checkout-btn">
+                            <i class="fas fa-lock"></i>
+                            Sepeti Onayla
+                        </a>
+
+                        <form asp-action="Clear" method="post">
+                            <button type="submit" class="clear-basket-btn">
+                                <i class="fas fa-trash me-2"></i>Sepeti Temizle
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="empty-basket">
+                <i class="fas fa-shopping-cart"></i>
+                <h3>Sepetiniz Boş</h3>
+                <p>Sepetinizde ürün bulunmamaktadır. Hemen alışverişe başlayın!</p>
+                <a asp-controller="Product" asp-action="Index" class="shop-now-btn">
+                    <i class="fas fa-shopping-bag"></i>
+                    Alışverişe Başla
+                </a>
+            </div>
+        }
+    </div>
+</div>

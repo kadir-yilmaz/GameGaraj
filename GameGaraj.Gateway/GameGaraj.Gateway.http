@@ -1,0 +1,6 @@
+@GameGaraj.Gateway_HostAddress = http://localhost:5083
+
+GET {{GameGaraj.Gateway_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

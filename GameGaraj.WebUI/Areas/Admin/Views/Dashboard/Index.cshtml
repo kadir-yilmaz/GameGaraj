@@ -1,0 +1,141 @@
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h2>
+            <p class="text-muted">GameGaraj Yönetim Paneline Hoş Geldiniz</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        @* Sipariş Yönetimi - Sadece Admin *@
+        @if (User.IsInRole("admin"))
+        {
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-shopping-cart fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">Sipariş Yönetimi</h5>
+                        <p class="card-text text-muted">Siparişleri görüntüle ve yönet</p>
+                        <a asp-area="Admin" asp-controller="Orders" asp-action="Index" class="btn btn-primary">
+                            <i class="fas fa-arrow-right me-1"></i> Git
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* Ürün Yönetimi - Admin ve Editor *@
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-box fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title">Ürün Yönetimi</h5>
+                    <p class="card-text text-muted">Ürünleri ekle, düzenle, sil</p>
+                    <a asp-area="Admin" asp-controller="Product" asp-action="Index" class="btn btn-success">
+                        <i class="fas fa-arrow-right me-1"></i> Git
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        @* Kategori Yönetimi - Admin ve Editor *@
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-th-list fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">Kategori Yönetimi</h5>
+                    <p class="card-text text-muted">Kategorileri düzenle</p>
+                    <a asp-area="Admin" asp-controller="Category" asp-action="Index" class="btn btn-warning">
+                        <i class="fas fa-arrow-right me-1"></i> Git
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        @* Site - Herkes *@
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-globe fa-3x text-info"></i>
+                    </div>
+                    <h5 class="card-title">Siteyi Görüntüle</h5>
+                    <p class="card-text text-muted">Ana siteye git</p>
+                    <a asp-area="" asp-controller="Home" asp-action="Index" target="_blank" class="btn btn-info">
+                        <i class="fas fa-external-link-alt me-1"></i> Aç
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Hoş Geldiniz
+                    </h5>
+                    <p class="mb-2">
+                        <strong>@(User.IsInRole("admin") ? "Admin" : "Editor") Paneli</strong> üzerinden GameGaraj'ın yönetim işlemlerini gerçekleştirebilirsiniz.
+                    </p>
+                    <ul class="list-unstyled mb-0">
+                        @if (User.IsInRole("admin"))
+                        {
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                Siparişleri görüntüleyin ve durumlarını güncelleyin
+                            </li>
+                        }
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Ürünleri ekleyin, düzenleyin veya silin
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Kategorileri yönetin
+                        </li>
+                        @if (User.IsInRole("editor"))
+                        {
+                            <li class="mb-2">
+                                <i class="fas fa-info text-info me-2"></i>
+                                Editor olarak sadece ürün ve kategori yönetimi yapabilirsiniz
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .card-body i.fa-3x {
+        transition: transform 0.3s;
+    }
+
+    .card:hover .card-body i.fa-3x {
+        transform: scale(1.1);
+    }
+</style>

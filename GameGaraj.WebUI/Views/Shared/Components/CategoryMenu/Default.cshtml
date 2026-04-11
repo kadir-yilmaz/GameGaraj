@@ -1,0 +1,170 @@
+@model List<GameGaraj.WebUI.Models.Products.CategoryViewModel>
+
+<style>
+    .category-bar {
+        background: #232f3e;
+        position: relative;
+        z-index: 100;
+    }
+    
+    .category-scroll-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .category-nav-btn {
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: #f39c12;
+        color: white;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        opacity: 0.9;
+    }
+    
+    .category-nav-btn:hover {
+        background: #e67e22;
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    
+    .category-nav-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .category-scroll {
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0.5rem 0;
+        flex: 1;
+        scrollbar-width: none;
+        scroll-behavior: smooth;
+    }
+    
+    .category-scroll::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .category-pill {
+        flex-shrink: 0;
+        padding: 0.5rem 1rem;
+        background: rgba(255,255,255,0.1);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        transition: all 0.2s;
+        border: 1px solid rgba(255,255,255,0.15);
+    }
+    
+    .category-pill:hover {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border-color: rgba(255,255,255,0.3);
+    }
+    
+    .category-pill.active {
+        background: #f39c12;
+        border-color: #f39c12;
+        color: white;
+    }
+    
+    /* Smaller buttons on mobile */
+    @@media (max-width: 768px) {
+        .category-nav-btn {
+            width: 28px;
+            height: 28px;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+
+<div class="category-bar">
+    <div class="container">
+        <div class="category-scroll-wrapper">
+            <!-- Left Arrow -->
+            <button class="category-nav-btn" id="categoryPrev" onclick="scrollCategories(-1)">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            
+            <!-- Categories -->
+            <div class="category-scroll" id="categoryScroll">
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var category in Model)
+                    {
+                        @if (category.Children != null && category.Children.Any())
+                        {
+                            @foreach (var child in category.Children)
+                            {
+                                <a href="@Url.Action("Index", "Product", new { categoryId = child.Id })" 
+                                   class="category-pill">
+                                    @child.Name
+                                </a>
+                            }
+                        }
+                    }
+                }
+            </div>
+            
+            <!-- Right Arrow -->
+            <button class="category-nav-btn" id="categoryNext" onclick="scrollCategories(1)">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function scrollCategories(direction) {
+        const container = document.getElementById('categoryScroll');
+        if (!container) return;
+        
+        const scrollAmount = 200;
+        container.scrollBy({
+            left: direction * scrollAmount,
+            behavior: 'smooth'
+        });
+    }
+    
+    function updateNavButtons() {
+        const container = document.getElementById('categoryScroll');
+        const prevBtn = document.getElementById('categoryPrev');
+        const nextBtn = document.getElementById('categoryNext');
+        
+        if (!container || !prevBtn || !nextBtn) return;
+        
+        prevBtn.disabled = container.scrollLeft <= 0;
+        nextBtn.disabled = container.scrollLeft >= container.scrollWidth - container.clientWidth - 5;
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.getElementById('categoryScroll');
+        if (container) {
+            container.addEventListener('scroll', updateNavButtons);
+            updateNavButtons();
+            
+            // Also enable mouse wheel scroll
+            container.addEventListener('wheel', function(e) {
+                if (e.deltaY !== 0) {
+                    e.preventDefault();
+                    container.scrollLeft += e.deltaY * 2;
+                }
+            }, { passive: false });
+        }
+    });
+</script>

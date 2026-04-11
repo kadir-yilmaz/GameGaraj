@@ -1,0 +1,52 @@
+@{
+    ViewData["Title"] = "Ödeme İşlemi";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            @if (ViewBag.Error != null)
+            {
+                <div class="card shadow mb-4">
+                    <div class="card-body text-center py-5">
+                        <div class="mb-4">
+                            <i class="fas fa-times-circle text-danger" style="font-size: 5rem;"></i>
+                        </div>
+                        <h2 class="mb-3 text-danger">Ödeme Başarısız!</h2>
+                        <p class="lead text-muted mb-4">
+                            @ViewBag.Error
+                        </p>
+                        <p class="text-muted">
+                            Sipariş numaranız: <strong class="text-primary">#@ViewBag.OrderId</strong>
+                        </p>
+                        
+                        <div class="d-grid gap-2 col-md-6 mx-auto mt-4">
+                            <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-lg">
+                                <i class="fas fa-home me-2"></i>Ana Sayfaya Dön
+                            </a>
+                            <a asp-controller="Order" asp-action="History" class="btn btn-outline-secondary">
+                                <i class="fas fa-history me-2"></i>Siparişlerim
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card shadow">
+                    <div class="card-body text-center py-5">
+                        <div class="mb-4">
+                            <div class="spinner-border text-primary" role="status" style="width: 5rem; height: 5rem;">
+                                <span class="visually-hidden">Yükleniyor...</span>
+                            </div>
+                        </div>
+                        <h2 class="mb-3">Ödeme İşleniyor...</h2>
+                        <p class="lead text-muted mb-4">
+                            Lütfen bekleyin, ödemeniz işleniyor.
+                        </p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

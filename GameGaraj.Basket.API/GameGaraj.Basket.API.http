@@ -1,0 +1,54 @@
+@GameGaraj.Basket.API_HostAddress = http://localhost:5013
+
+### Get Basket
+GET {{GameGaraj.Basket.API_HostAddress}}/api/v1/baskets
+Accept: application/json
+
+###
+
+### Add Basket Item (Valid)
+POST {{GameGaraj.Basket.API_HostAddress}}/api/v1/baskets/items
+Content-Type: application/json
+
+{
+  "id": "item-1",
+  "name": "Nvidia RTX 5090",
+  "quantity": 1,
+  "price": 75000.00,
+  "pictureUrl": "rtx5090.jpg"
+}
+
+###
+
+### Add Another Item (Valid)
+POST {{GameGaraj.Basket.API_HostAddress}}/api/v1/baskets/items
+Content-Type: application/json
+
+{
+  "id": "item-2",
+  "name": "Intel Core i9-15900K",
+  "quantity": 2,
+  "price": 25000.00,
+  "pictureUrl": "intel-i9.jpg"
+}
+
+###
+
+### Add Basket Item (Invalid - Validation Error)
+# Quantity cannot be 0
+POST {{GameGaraj.Basket.API_HostAddress}}/api/v1/baskets/items
+Content-Type: application/json
+
+{
+  "id": "item-3",
+  "name": "Broken Item",
+  "quantity": 0,
+  "price": 100.00,
+  "pictureUrl": "error.jpg"
+}
+
+###
+
+### Delete Basket
+DELETE {{GameGaraj.Basket.API_HostAddress}}/api/v1/baskets
+Accept: application/json

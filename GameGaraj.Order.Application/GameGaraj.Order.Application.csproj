@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GameGaraj.Order.Domain\GameGaraj.Order.Domain.csproj" />
+    <ProjectReference Include="..\GameGaraj.Order.Infrastructure\GameGaraj.Order.Infrastructure.csproj" />
+    <ProjectReference Include="..\GameGaraj.Shared\GameGaraj.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

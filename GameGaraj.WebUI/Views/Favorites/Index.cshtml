@@ -1,0 +1,309 @@
+@model IEnumerable<GameGaraj.WebUI.Models.Products.ProductViewModel>
+@{
+    ViewData["Title"] = "Favorilerim";
+}
+
+@await Html.PartialAsync("_ProductCardStyles")
+
+<style>
+    /* Hepsiburada Style Favorites Page */
+    .favorites-page {
+        background: #f5f5f5;
+        min-height: calc(100vh - 200px);
+        padding: 1.5rem 0;
+    }
+
+    .favorites-header {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .favorites-title {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .favorites-title h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .favorites-title .heart-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+    }
+
+    .favorites-count {
+        background: #ff6000;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .favorites-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .action-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        background: white;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #666;
+    }
+
+    .action-btn:hover {
+        border-color: #ff6000;
+        color: #ff6000;
+    }
+
+    /* Products Grid */
+    .favorites-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1rem;
+    }
+
+    /* Info Bar */
+    .info-bar {
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .info-text {
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    .info-text strong {
+        color: #333;
+    }
+
+    .sort-dropdown {
+        position: relative;
+    }
+
+    .sort-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        background: white;
+        font-size: 0.85rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Empty State */
+    .empty-favorites {
+        background: white;
+        border-radius: 8px;
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+
+    .empty-favorites .empty-icon {
+        width: 120px;
+        height: 120px;
+        background: linear-gradient(135deg, #fee 0%, #fdd 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 2rem;
+    }
+
+    .empty-favorites .empty-icon i {
+        font-size: 3.5rem;
+        color: #e74c3c;
+    }
+
+    .empty-favorites h3 {
+        color: #333;
+        font-size: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .empty-favorites p {
+        color: #666;
+        font-size: 1rem;
+        margin-bottom: 2rem;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .shop-now-btn {
+        padding: 1rem 2rem;
+        background: #ff6000;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 1rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: background 0.2s;
+    }
+
+    .shop-now-btn:hover {
+        background: #e55500;
+        color: white;
+    }
+
+    /* Responsive */
+    @@media (max-width: 1199px) {
+        .favorites-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+
+    @@media (max-width: 991px) {
+        .favorites-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @@media (max-width: 767px) {
+        .favorites-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .favorites-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .favorites-actions {
+            width: 100%;
+        }
+
+        .action-btn {
+            flex: 1;
+            justify-content: center;
+        }
+    }
+
+    @@media (max-width: 575px) {
+        .favorites-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+    }
+</style>
+
+<div class="favorites-page">
+    <div class="container">
+        @if (!Model.Any())
+        {
+            <div class="empty-favorites">
+                <div class="empty-icon">
+                    <i class="far fa-heart"></i>
+                </div>
+                <h3>Favori Listeniz Boş</h3>
+                <p>Beğendiğiniz ürünleri kalp ikonuna tıklayarak favorilere ekleyin ve onları kaybetmeyin!</p>
+                <a asp-controller="Product" asp-action="Index" class="shop-now-btn">
+                    <i class="fas fa-shopping-bag"></i>
+                    Ürünleri Keşfet
+                </a>
+            </div>
+        }
+        else
+        {
+            <!-- Header -->
+            <div class="favorites-header">
+                <div class="favorites-title">
+                    <div class="heart-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div>
+                        <h1>Favorilerim</h1>
+                    </div>
+                    <span class="favorites-count">@Model.Count() ürün</span>
+                </div>
+                <div class="favorites-actions">
+                    <button class="action-btn" onclick="shareList()">
+                        <i class="fas fa-share-alt"></i>
+                        Listeyi Paylaş
+                    </button>
+                </div>
+            </div>
+
+            <!-- Info Bar -->
+            <div class="info-bar">
+                <span class="info-text">
+                    <i class="fas fa-info-circle text-primary me-1"></i>
+                    Toplam <strong>@Model.Count()</strong> favori ürününüz var
+                </span>
+                <div class="dropdown">
+                    <button class="sort-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-sort"></i>
+                        Sırala
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#">En Yeniler</a></li>
+                        <li><a class="dropdown-item" href="#">Fiyat: Düşük - Yüksek</a></li>
+                        <li><a class="dropdown-item" href="#">Fiyat: Yüksek - Düşük</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Products Grid -->
+            <div class="favorites-grid">
+                @foreach (var product in Model)
+                {
+                    @await Html.PartialAsync("_ProductCard", product)
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function shareList() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Favori Ürünlerim - GameGaraj',
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                alert('Link kopyalandı!');
+            }
+        }
+    </script>
+}

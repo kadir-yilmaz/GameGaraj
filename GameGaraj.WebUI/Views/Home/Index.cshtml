@@ -1,0 +1,130 @@
+﻿@model List<GameGaraj.WebUI.Models.Products.ProductViewModel>
+@{
+    ViewData["Title"] = "Hoş Geldiniz";
+}
+
+@await Html.PartialAsync("_ProductCardStyles")
+
+<style>
+    /* Hero Carousel */
+    .hero-carousel {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(135deg, #1e1e2f 0%, #111119 100%);
+    }
+    .carousel-item {
+        height: 500px;
+        background-size: cover;
+        background-position: center;
+        position: relative;
+    }
+    .carousel-item::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 100%);
+    }
+    .carousel-caption {
+        left: 10%;
+        right: auto;
+        bottom: 50%;
+        transform: translateY(50%);
+        text-align: left;
+        max-width: 600px;
+    }
+    .carousel-caption h1 {
+        font-size: 3.5rem;
+        font-weight: 900;
+        text-shadow: 2px 2px 20px rgba(0,0,0,0.5);
+    }
+    .carousel-caption p {
+        font-size: 1.25rem;
+        text-shadow: 1px 1px 10px rgba(0,0,0,0.5);
+    }
+    
+    @@media (max-width: 768px) {
+        .carousel-item { height: 350px; }
+        .carousel-caption h1 { font-size: 2rem; }
+        .carousel-caption p { font-size: 1rem; }
+    }
+</style>
+
+<!-- Hero Carousel -->
+<div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel">
+    <div class="carousel-indicators">
+        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active"></button>
+        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1"></button>
+        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2"></button>
+    </div>
+    
+    <div class="carousel-inner">
+        <div class="carousel-item active" style="background-image: url('https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=1920&auto=format&fit=crop&q=80');">
+            <div class="carousel-caption">
+                <h1 class="mb-3">Geleceğin Teknolojisi <span class="text-primary">Burada</span></h1>
+                <p class="mb-4">En güçlü oyun bilgisayarları ve ekipmanları</p>
+                <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold">Keşfet</a>
+            </div>
+        </div>
+        
+        <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1920&auto=format&fit=crop&q=80');">
+            <div class="carousel-caption">
+                <h1 class="mb-3">Profesyonel <span class="text-warning">Ekipmanlar</span></h1>
+                <p class="mb-4">E-spor oyuncuları için özel seçilmiş ürünler</p>
+                <a asp-controller="Product" asp-action="Index" class="btn btn-warning btn-lg px-5 py-3 rounded-pill fw-bold text-dark">İncele</a>
+            </div>
+        </div>
+        
+        <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1591488320449-011701bb6704?w=1920&auto=format&fit=crop&q=80');">
+            <div class="carousel-caption">
+                <h1 class="mb-3">Kampanyalı <span class="text-success">Fırsatlar</span></h1>
+                <p class="mb-4">Sınırlı sayıda özel indirimler</p>
+                <a asp-controller="Product" asp-action="Index" class="btn btn-success btn-lg px-5 py-3 rounded-pill fw-bold">Fırsatları Gör</a>
+            </div>
+        </div>
+    </div>
+    
+    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon"></span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon"></span>
+    </button>
+</div>
+
+<!-- Featured Products Section -->
+<div class="container my-5 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h6 class="text-primary fw-bold text-uppercase mb-1" style="letter-spacing: 2px;">Seçilmişler</h6>
+            <h2 class="display-6 fw-bold mb-0">Öne Çıkan Ürünler</h2>
+        </div>
+        <a asp-controller="Product" asp-action="Index" class="btn btn-outline-dark rounded-pill px-4">
+            Tümünü Gör <i class="fas fa-arrow-right ms-2"></i>
+        </a>
+    </div>
+
+    <div class="row g-3">
+        @if (Model != null && Model.Any())
+        {
+            @foreach (var product in Model)
+            {
+                <div class="col-6 col-md-4 col-xl-3">
+                    @{
+                        ViewBag.ShowFeaturedBadge = true;
+                    }
+                    @await Html.PartialAsync("_ProductCard", product)
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12 text-center py-5">
+                <div class="p-5 bg-light rounded-3">
+                    <i class="fas fa-boxes fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Şu an öne çıkan ürün bulunmamaktadır.</p>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+

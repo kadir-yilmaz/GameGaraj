@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - GameGaraj</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body style="min-height: 100vh; display: flex; flex-direction: column;">
+    <header>
+        <!-- Navbar -->
+        @await Html.PartialAsync("_Navbar")
+        
+        <!-- Category Bar -->
+        @await Component.InvokeAsync("CategoryMenu")
+    </header>
+    
+    <style>
+        /* Navbar z-index fix */
+        header > nav:first-child {
+            position: relative;
+            z-index: 1050;
+        }
+        
+        .dropdown-menu {
+            z-index: 1060 !important;
+        }
+        
+        .nav-link:hover {
+            color: #007bff !important;
+            transform: translateY(-1px);
+        }
+        .dropdown-item:hover {
+            background: #f8f9fa;
+            padding-left: 1.25rem !important;
+            transition: all 0.2s;
+        }
+        #searchInput::placeholder {
+            color: #6c757d;
+        }
+        #searchInput:focus {
+            background: white;
+            border-color: #f39c12;
+            box-shadow: 0 0 0 0.2rem rgba(243,156,18,0.25);
+            color: #333;
+        }
+        .search-suggestion-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: all 0.2s;
+        }
+        .search-suggestion-item:hover {
+            background: #f8f9fa;
+        }
+        .search-suggestion-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+    
+    <script>
+        // Search autocomplete (Multi-input support for Desktop & Mobile)
+        let searchTimeout;
+        const searchInputs = document.querySelectorAll('.js-search-input');
+        
+        searchInputs.forEach(input => {
+            const suggestionsContainer = input.closest('form').querySelector('.js-search-suggestions');
+            
+            input.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const query = this.value.trim();
+                
+                if (query.length < 2) {
+                    if (suggestionsContainer) suggestionsContainer.style.display = 'none';
+                    return;
+                }
+                
+                searchTimeout = setTimeout(() => {
+                    fetch(`/api/products/search?q=${encodeURIComponent(query)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (!suggestionsContainer) return;
+                            
+                            let html = '';
+                            
+                            // Categories
+                            if (data.categories && data.categories.length > 0) {
+                                html += data.categories.map(c => `
+                                    <a href="${c.url}" class="search-suggestion-item d-flex align-items-center text-decoration-none">
+                                        <div class="d-flex align-items-center justify-content-center bg-light text-secondary me-3" style="width: 40px; height: 40px; border-radius: 4px;">
+                                            <i class="fas fa-tags"></i>
+                                        </div>
+                                        <div class="flex-grow-1 d-flex justify-content-between align-items-center">
+                                            <div class="fw-semibold text-dark">${c.name}</div>
+                                            <small class="text-muted">Kategori</small>
+                                        </div>
+                                    </a>
+                                `).join('');
+                            }
+
+                            // Brands
+                            if (data.brands && data.brands.length > 0) {
+                                html += data.brands.map(b => `
+                                    <a href="${b.url}" class="search-suggestion-item d-flex align-items-center text-decoration-none">
+                                        <div class="d-flex align-items-center justify-content-center bg-light text-secondary me-3" style="width: 40px; height: 40px; border-radius: 4px;">
+                                            <i class="fas fa-tag"></i>
+                                        </div>
+                                        <div class="flex-grow-1 d-flex justify-content-between align-items-center">
+                                            <div class="fw-semibold text-dark">${b.name}</div>
+                                            <small class="text-muted">Marka</small>
+                                        </div>
+                                    </a>
+                                `).join('');
+                            }
+                            
+                            // Products
+                            if (data.products && data.products.length > 0) {
+                                html += data.products.map(p => `
+                                    <a href="${p.url}" class="search-suggestion-item d-flex align-items-center text-decoration-none">
+                                        <img src="${p.imageUrl}" alt="${p.name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" class="me-3">
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold text-dark">${p.name}</div>
+                                            <small class="text-muted">${p.price}</small>
+                                        </div>
+                                    </a>
+                                `).join('');
+                            }
+                            
+                            if (html !== '') {
+                                suggestionsContainer.innerHTML = html;
+                                suggestionsContainer.style.display = 'block';
+                            } else {
+                                suggestionsContainer.innerHTML = '<div class="p-3 text-muted text-center">Sonuç bulunamadı</div>';
+                                suggestionsContainer.style.display = 'block';
+                            }
+                        })
+                        .catch(() => {
+                            if (suggestionsContainer) suggestionsContainer.style.display = 'none';
+                        });
+                }, 300);
+            });
+            
+            // Close suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!input.contains(e.target) && (!suggestionsContainer || !suggestionsContainer.contains(e.target))) {
+                    if (suggestionsContainer) suggestionsContainer.style.display = 'none';
+                }
+            });
+        });
+    </script>
+    <div class="container-fluid px-0" style="flex: 1; margin-top: 0;">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+<footer class="mt-auto pt-5 pb-4" style="background-color: #0d0d0d; color: #b0b0b0; border-top: 1px solid #222;">
+        <div class="container">
+            <div class="row">
+                <!-- Brand & About -->
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <h5 class="text-white mb-3" style="font-weight: 700; letter-spacing: 1px;">GAMEGARAJ</h5>
+                    <p class="small" style="line-height: 1.6;">En yeni nesil oyuncu bilgisayarları, yüksek performanslı ekipmanlar ve benzersiz sistem toplama sihirbazı ile oyun dünyasının kurallarını baştan yazın.</p>
+                    <div class="mt-4">
+                        <a href="#" class="text-white me-3 social-icon"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-white me-3 social-icon"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-white me-3 social-icon"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-white social-icon"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <h5 class="text-white mb-3">Hızlı Erişim</h5>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="/" class="footer-link">Anasayfa</a></li>
+                        <li class="mb-2"><a href="/Product" class="footer-link">Tüm Ürünler</a></li>
+                        <li class="mb-2"><a href="#" class="footer-link">Hazır Sistemler</a></li>
+                        <li class="mb-2"><a href="#" class="footer-link">Kampanyalar</a></li>
+                        <li class="mb-2"><a href="#" class="footer-link">Hakkımızda</a></li>
+                    </ul>
+                </div>
+
+                <!-- Customer Service -->
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <h5 class="text-white mb-3">Müşteri Hizmetleri</h5>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="#" class="footer-link">Sipariş Takibi</a></li>
+                        <li class="mb-2"><a href="#" class="footer-link">İade ve Değişim</a></li>
+                        <li class="mb-2"><a href="#" class="footer-link">Teslimat Koşulları</a></li>
+                        <li class="mb-2"><a href="#" class="footer-link">Gizlilik Politikası</a></li>
+                        <li class="mb-2"><a href="#" class="footer-link">İletişim</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <h5 class="text-white mb-3">Bize Ulaşın</h5>
+                    <ul class="list-unstyled small">
+                        <li class="mb-3 d-flex"><i class="fas fa-map-marker-alt text-danger me-3 mt-1"></i> <span>Teknoloji Vadisi, No: 123<br>Maslak, İstanbul</span></li>
+                        <li class="mb-3 d-flex"><i class="fas fa-phone text-danger me-3 mt-1"></i> +90 0850 123 45 67</li>
+                        <li class="mb-3 d-flex"><i class="fas fa-envelope text-danger me-3 mt-1"></i> destek@gamegaraj.com</li>
+                        <li class="d-flex"><i class="fas fa-clock text-danger me-3 mt-1"></i> Pzt - Cum: 09:00 - 18:00</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <hr style="border-color: #333; margin: 20px 0;">
+            
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                    <p class="small mb-0">&copy; 2026 GameGaraj. Tüm hakları saklıdır.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <i class="fab fa-cc-visa fa-2x me-2 text-secondary"></i>
+                    <i class="fab fa-cc-mastercard fa-2x me-2 text-secondary"></i>
+                    <i class="fab fa-cc-amex fa-2x text-secondary"></i>
+                </div>
+            </div>
+        </div>
+        
+        <style>
+            .footer-link {
+                color: #b0b0b0;
+                text-decoration: none;
+                transition: color 0.3s ease;
+            }
+            .footer-link:hover {
+                color: #fff;
+                padding-left: 5px;
+            }
+            .social-icon {
+                transition: transform 0.3s;
+                display: inline-block;
+            }
+            .social-icon:hover {
+                transform: translateY(-3px);
+                color: #f39c12 !important;
+            }
+        </style>
+    </footer>
+
+    <!-- Toast Notification Container -->
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11; margin-top: 80px;">
+        <div id="liveToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-check-circle"></i> Ürün sepete eklendi!
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    <script>
+        // Check for TempData notification
+        @if (TempData["BasketNotification"] != null)
+        {
+            <text>
+            var toastEl = document.getElementById('liveToast');
+            var toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+            toast.show();
+            </text>
+        }
+    </script>
+    
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

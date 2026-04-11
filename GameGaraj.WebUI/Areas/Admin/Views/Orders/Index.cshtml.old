@@ -1,0 +1,246 @@
+@model List<GameGaraj.WebUI.Models.Orders.OrderViewModel>
+@{
+    ViewData["Title"] = "Sipariş Yönetimi";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-shopping-cart me-2"></i>Sipariş Yönetimi</h2>
+        <div>
+            <span class="badge bg-info me-2">Toplam: @Model.Count</span>
+            <span class="badge bg-warning me-2">Beklemede: @Model.Count(x => x.Status == 0)</span>
+            <span class="badge bg-primary me-2">Hazırlanıyor: @Model.Count(x => x.Status == 3)</span>
+            <span class="badge bg-info me-2">Kargoda: @Model.Count(x => x.Status == 4)</span>
+            <span class="badge bg-success">Tamamlandı: @Model.Count(x => x.Status == 1 || x.Status == 5)</span>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sipariş #</th>
+                            <th>Müşteri</th>
+                            <th>Ürünler</th>
+                            <th>Toplam</th>
+                            <th>Tarih</th>
+                            <th>Durum</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var order in Model)
+                            {
+                                <tr>
+                                    <td><strong>#@order.Id</strong></td>
+                                    <td>
+                                        @if (order.Address != null && !string.IsNullOrEmpty(order.Address.FirstName))
+                                        {
+                                            <div>
+                                                <i class="fas fa-user me-1"></i>
+                                                @order.Address.FirstName @order.Address.LastName
+                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-phone me-1"></i>@order.Address.PhoneNumber
+                                            </small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @foreach (var item in order.OrderItems)
+                                        {
+                                            <div class="mb-1">
+                                                <small>@item.ProductName</small>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <strong>@order.OrderItems.Sum(x => x.Price).ToString("C2")</strong>
+                                    </td>
+                                    <td>
+                                        <small>@order.CreatedDate.ToString("dd.MM.yyyy")</small><br/>
+                                        <small class="text-muted">@order.CreatedDate.ToString("HH:mm")</small>
+                                    </td>
+                                    <td>
+                                        @switch (order.Status)
+                                        {
+                                            case 0: // Pending
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-clock me-1"></i>Beklemede
+                                                </span>
+                                                break;
+                                            case 1: // Completed
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check-circle me-1"></i>Tamamlandı
+                                                </span>
+                                                break;
+                                            case 2: // Failed
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times-circle me-1"></i>Başarısız
+                                                </span>
+                                                break;
+                                            case 3: // Processing
+                                                <span class="badge bg-primary">
+                                                    <i class="fas fa-cog fa-spin me-1"></i>Hazırlanıyor
+                                                </span>
+                                                break;
+                                            case 4: // Shipped
+                                                <span class="badge bg-info">
+                                                    <i class="fas fa-truck me-1"></i>Kargoda
+                                                </span>
+                                                break;
+                                            case 5: // Delivered
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-box-open me-1"></i>Teslim Edildi
+                                                </span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            @if (order.Status == 1) // Completed - Ödeme tamamlandı
+                                            {
+                                                <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                                    <input type="hidden" name="orderId" value="@order.Id" />
+                                                    <input type="hidden" name="status" value="3" />
+                                                    <button type="submit" class="btn btn-sm btn-primary" title="Hazırlanıyor">
+                                                        <i class="fas fa-cog"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                            @if (order.Status == 3) // Processing - Hazırlanıyor
+                                            {
+                                                <form asp-action="Ship" method="post" class="d-inline">
+                                                    <input type="hidden" name="orderId" value="@order.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-info" title="Kargoya Ver">
+                                                        <i class="fas fa-truck"></i> Kargola
+                                                    </button>
+                                                </form>
+                                            }
+                                            @if (order.Status == 4) // Shipped - Kargoda
+                                            {
+                                                <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                                    <input type="hidden" name="orderId" value="@order.Id" />
+                                                    <input type="hidden" name="status" value="5" />
+                                                    <button type="submit" class="btn btn-sm btn-success" title="Teslim Edildi">
+                                                        <i class="fas fa-box-open"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#orderModal@(order.Id)"
+                                                    title="Detaylar">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Order Detail Modal -->
+                                <div class="modal fade" id="orderModal@(order.Id)" tabindex="-1">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Sipariş #@order.Id Detayları</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <h6>Müşteri Bilgileri</h6>
+                                                        @if (order.Address != null)
+                                                        {
+                                                            <p class="mb-1"><strong>Ad Soyad:</strong> @order.Address.FirstName @order.Address.LastName</p>
+                                                            <p class="mb-1"><strong>Telefon:</strong> @order.Address.PhoneNumber</p>
+                                                            <p class="mb-1"><strong>Email:</strong> @order.Address.Email</p>
+                                                        }
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <h6>Teslimat Adresi</h6>
+                                                        @if (order.Address != null)
+                                                        {
+                                                            <p class="mb-1">@order.Address.AddressDetail</p>
+                                                            <p class="mb-1">@order.Address.Neighborhood</p>
+                                                            <p class="mb-1">@order.Address.District / @order.Address.Province</p>
+                                                            <p class="mb-1">@order.Address.PostalCode</p>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                <hr>
+                                                <h6>Ürünler</h6>
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Ürün</th>
+                                                            <th class="text-end">Fiyat</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var item in order.OrderItems)
+                                                        {
+                                                            <tr>
+                                                                <td>@item.ProductName</td>
+                                                                <td class="text-end">@item.Price.ToString("C2")</td>
+                                                            </tr>
+                                                        }
+                                                        <tr class="table-light">
+                                                            <td><strong>Toplam</strong></td>
+                                                            <td class="text-end"><strong>@order.OrderItems.Sum(x => x.Price).ToString("C2")</strong></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                    Henüz sipariş bulunmamaktadır.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table td {
+        vertical-align: middle;
+    }
+    .btn-group .btn {
+        margin-right: 2px;
+    }
+</style>

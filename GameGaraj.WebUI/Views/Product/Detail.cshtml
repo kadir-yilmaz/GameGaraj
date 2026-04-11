@@ -1,0 +1,1236 @@
+@model GameGaraj.WebUI.Models.Products.ProductViewModel
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<style>
+    /* Hepsiburada Style Product Detail */
+    .product-page {
+        background: #f5f5f5;
+        min-height: 100vh;
+        padding-bottom: 2rem;
+    }
+
+    /* Breadcrumb */
+    .breadcrumb-section {
+        background: white;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e0e0e0;
+        font-size: 0.8rem;
+    }
+
+    .breadcrumb-section a {
+        color: #666;
+        text-decoration: none;
+    }
+
+    .breadcrumb-section a:hover {
+        color: #ff6000;
+    }
+
+    .breadcrumb-section .separator {
+        color: #999;
+        margin: 0 0.5rem;
+    }
+
+    /* Main Content */
+    .product-main {
+        background: white;
+        border-radius: 8px;
+        margin-top: 1rem;
+        padding: 1.5rem;
+    }
+
+    /* Image Gallery */
+    .image-gallery {
+        position: sticky;
+        top: 20px;
+    }
+
+    .main-image-wrapper {
+        position: relative;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        background: white;
+        margin-bottom: 1rem;
+    }
+
+    .main-image-wrapper img {
+        width: 100%;
+        height: 350px;
+        object-fit: contain;
+        transition: transform 0.3s ease;
+    }
+
+    .main-image-wrapper:hover img {
+        transform: scale(1.05);
+    }
+
+    .image-nav-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 1px solid #ddd;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        transition: all 0.2s;
+    }
+
+    .image-nav-btn:hover {
+        background: #f5f5f5;
+        border-color: #ff6000;
+        color: #ff6000;
+    }
+
+    .image-nav-btn.prev {
+        left: 10px;
+    }
+
+    .image-nav-btn.next {
+        right: 10px;
+    }
+
+    .thumbnail-row {
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+    }
+
+    .thumbnail-row::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .thumbnail-row::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 2px;
+    }
+
+    .thumbnail-item {
+        flex-shrink: 0;
+        width: 60px;
+        height: 60px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .thumbnail-item:hover,
+    .thumbnail-item.active {
+        border-color: #ff6000;
+    }
+
+    .thumbnail-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Product Info */
+    .product-info-section {
+        padding-left: 1.5rem;
+    }
+
+    .product-brand {
+        color: #ff6000;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+    }
+
+    .product-brand:hover {
+        text-decoration: underline;
+    }
+
+    .product-title {
+        font-size: 1.1rem;
+        font-weight: 400;
+        color: #333;
+        line-height: 1.5;
+        margin: 0.5rem 0;
+    }
+
+    .product-rating {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.85rem;
+    }
+
+    .stars {
+        color: #ffc107;
+    }
+
+    .rating-count {
+        color: #0066cc;
+        text-decoration: none;
+    }
+
+    .rating-count:hover {
+        text-decoration: underline;
+    }
+
+    .seller-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .seller-badge {
+        background: #00a365;
+        color: white;
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    /* Price Section */
+    .price-section {
+        margin-bottom: 1rem;
+    }
+
+    .main-price {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #333;
+    }
+
+    .main-price .currency {
+        font-size: 1.25rem;
+    }
+
+    .installment-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: #f5f5f5;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
+
+    .installment-badge {
+        background: #ff6000;
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Variant Options */
+    .variant-section {
+        margin: 1rem 0;
+        padding: 1rem 0;
+        border-top: 1px solid #e0e0e0;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .variant-label {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 0.5rem;
+    }
+
+    .variant-label strong {
+        color: #333;
+    }
+
+    .variant-options {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+    }
+
+    .variant-btn {
+        padding: 0.5rem 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        background: white;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .variant-btn:hover {
+        border-color: #ff6000;
+    }
+
+    .variant-btn.active {
+        border-color: #ff6000;
+        background: #fff5f0;
+        color: #ff6000;
+        font-weight: 600;
+    }
+
+    /* Add to Cart Section */
+    .cart-section {
+        margin-top: 1.5rem;
+    }
+
+    .add-to-cart-btn {
+        width: 100%;
+        padding: 1rem;
+        background: #ff6000;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .add-to-cart-btn:hover {
+        background: #e55500;
+    }
+
+    .add-to-cart-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+
+    .add-to-cart-btn.in-cart {
+        background: #00a365;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+
+    .action-btn {
+        flex: 1;
+        padding: 0.75rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: #666;
+        transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+        border-color: #ff6000;
+        color: #ff6000;
+    }
+
+    .action-btn.active {
+        color: #e74c3c;
+        border-color: #e74c3c;
+    }
+
+    .action-btn.active i {
+        color: #e74c3c;
+    }
+
+    /* Delivery Options */
+    .delivery-section {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    .delivery-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+    }
+
+    .delivery-option {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: #f9f9f9;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+    }
+
+    .delivery-icon {
+        color: #00a365;
+        font-size: 1.25rem;
+    }
+
+    .delivery-text {
+        font-size: 0.85rem;
+    }
+
+    .delivery-text strong {
+        color: #00a365;
+    }
+
+    /* Right Sidebar */
+    .sidebar-section {
+        padding-left: 1rem;
+    }
+
+    .sidebar-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .sidebar-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .campaign-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        font-size: 0.85rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .campaign-item:last-child {
+        border-bottom: none;
+    }
+
+    .campaign-icon {
+        color: #ff6000;
+    }
+
+    /* Premium Box */
+    .premium-box {
+        background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
+        color: white;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .premium-title {
+        color: #ff6000;
+        font-weight: 700;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .premium-text {
+        font-size: 0.8rem;
+        color: #ccc;
+    }
+
+    /* Other Sellers */
+    .seller-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+    }
+
+    .seller-name {
+        font-size: 0.85rem;
+        color: #0066cc;
+    }
+
+    .seller-price {
+        font-weight: 700;
+        color: #333;
+    }
+
+    .seller-go-btn {
+        padding: 0.4rem 0.75rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        background: white;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .seller-go-btn:hover {
+        border-color: #ff6000;
+        color: #ff6000;
+    }
+
+    /* Tabs Section */
+    .tabs-section {
+        background: white;
+        border-radius: 8px;
+        margin-top: 1rem;
+        overflow: hidden;
+    }
+
+    .tab-nav {
+        display: flex;
+        border-bottom: 1px solid #e0e0e0;
+        overflow-x: auto;
+    }
+
+    .tab-btn {
+        padding: 1rem 1.5rem;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #666;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+        color: #ff6000;
+    }
+
+    .tab-btn.active {
+        color: #ff6000;
+        border-bottom-color: #ff6000;
+    }
+
+    .tab-content {
+        padding: 1.5rem;
+    }
+
+    .tab-pane {
+        display: none;
+    }
+
+    .tab-pane.active {
+        display: block;
+    }
+
+    /* Specs Table */
+    .specs-header {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #ff6000;
+        display: inline-block;
+    }
+
+    .specs-table {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0;
+    }
+
+    .spec-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .spec-row:nth-child(odd) {
+        background: #fafafa;
+    }
+
+    .spec-label {
+        color: #666;
+        font-size: 0.85rem;
+    }
+
+    .spec-value {
+        color: #333;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-align: right;
+    }
+
+    .spec-value.highlight {
+        color: #0066cc;
+    }
+
+    /* Product Info Icons */
+    .info-icons {
+        display: flex;
+        gap: 1.5rem;
+        padding: 1rem;
+        background: #f9f9f9;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .info-icon-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.5rem;
+    }
+
+    .info-icon-item i {
+        font-size: 1.5rem;
+        color: #666;
+    }
+
+    .info-icon-item span {
+        font-size: 0.75rem;
+        color: #666;
+    }
+
+    .info-icon-item strong {
+        font-size: 0.85rem;
+        color: #333;
+    }
+
+    /* Responsive */
+    @@media (max-width: 991px) {
+        .product-info-section {
+            padding-left: 0;
+            margin-top: 1.5rem;
+        }
+
+        .sidebar-section {
+            padding-left: 0;
+            margin-top: 1.5rem;
+        }
+
+        .specs-table {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 575px) {
+        .product-main {
+            padding: 1rem;
+            margin: 0.5rem;
+            border-radius: 0;
+        }
+
+        .main-image-wrapper img {
+            height: 250px;
+        }
+
+        .main-price {
+            font-size: 1.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        .info-icons {
+            gap: 1rem;
+        }
+    }
+
+    /* Modal Gallery Styles */
+    .gallery-modal .modal-content {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+    }
+
+    .gallery-modal .modal-body {
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        position: relative;
+    }
+
+    .modal-image-container {
+        width: 100%;
+        height: 80vh;
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-main-image {
+        flex-grow: 1;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .modal-main-image img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .modal-thumbnails {
+        width: 100px;
+        height: 100%;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding-left: 1rem;
+        border-left: 1px solid #eee;
+    }
+
+    .modal-thumbnails::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .modal-thumbnails::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 2px;
+    }
+
+    .modal-thumb-item {
+        width: 100%;
+        padding-top: 100%;
+        /* 1:1 Aspect ratio */
+        position: relative;
+        border: 2px solid transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        overflow: hidden;
+        transition: all 0.2s;
+    }
+
+    .modal-thumb-item img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: white;
+    }
+
+    .modal-thumb-item:hover,
+    .modal-thumb-item.active {
+        border-color: #ff6000;
+    }
+
+    .modal-close-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 2rem;
+        cursor: pointer;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .modal-close-btn:hover {
+        opacity: 1;
+    }
+
+    .modal-title-bar {
+        color: white;
+        font-size: 1.25rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding-right: 20px;
+    }
+
+    .main-image-wrapper {
+        cursor: zoom-in;
+        /* Change cursor to indicate it's clickable */
+    }
+</style>
+
+<!-- Breadcrumb -->
+<div class="breadcrumb-section">
+    <div class="container">
+        <a asp-controller="Home" asp-action="Index">Ana Sayfa</a>
+        <span class="separator">&gt;</span>
+        @if (!string.IsNullOrEmpty(Model.CategoryName))
+        {
+            <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@Model.CategoryId">@Model.CategoryName</a>
+            <span class="separator">&gt;</span>
+        }
+        <span class="text-muted">@Model.Name</span>
+    </div>
+</div>
+
+<div class="product-page">
+    <div class="container">
+        <div class="product-main">
+            <div class="row">
+                <!-- Image Gallery -->
+                <div class="col-lg-4">
+                    <div class="image-gallery">
+                        <div class="main-image-wrapper">
+                            @if (Model.ImageUrls.Count > 1)
+                            {
+                                <button class="image-nav-btn prev" onclick="prevImage()">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button class="image-nav-btn next" onclick="nextImage()">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            }
+                            <img src="@Model.FirstImageUrl" alt="@Model.Name" id="mainImage"
+                                onclick="openGalleryModal()" title="Büyütmek için tıklayın">
+                        </div>
+
+                        @if (Model.ImageUrls.Count > 1)
+                        {
+                            <div class="thumbnail-row">
+                                @for (int i = 0; i < Model.ImageUrls.Count; i++)
+                                {
+                                    <div class="thumbnail-item @(i == 0 ? "active" : "")"
+                                        onclick="selectImage(@i, '@Model.ImageUrls[i]')">
+                                        <img src="@Model.ImageUrls[i]" alt="@Model.Name - @(i + 1)">
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Product Info -->
+                <div class="col-lg-5">
+                    <div class="product-info-section">
+                        <!-- Brand -->
+                        @if (!string.IsNullOrEmpty(Model.CategoryName))
+                        {
+                            <a href="#" class="product-brand">@Model.CategoryName</a>
+                        }
+
+                        <!-- Title -->
+                        <h1 class="product-title">@Model.Name</h1>
+
+                        <!-- Rating -->
+                        <div class="product-rating">
+                            <span class="stars">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star-half-alt"></i>
+                            </span>
+                            <span>4.5</span>
+                            <a href="#reviews" class="rating-count">38 Değerlendirme</a>
+                        </div>
+
+                        <!-- Seller Info -->
+                        <div class="seller-info">
+                            <span>Satıcı:</span>
+                            <a href="#" class="product-brand">GameGaraj</a>
+                            <span class="seller-badge">9.8</span>
+                        </div>
+
+                        <!-- Price -->
+                        <div class="price-section">
+                            <div class="main-price">
+                                @Model.Price.ToString("N2") <span class="currency">TL</span>
+                            </div>
+                            <div class="installment-info">
+                                <i class="far fa-credit-card"></i>
+                                <span>Peşin Fiyatına</span>
+                                <span class="installment-badge">9 x @((Model.Price / 9).ToString("N2")) TL</span>
+                            </div>
+                        </div>
+
+                        <!-- Variants (if specs exist) -->
+                        @if (Model.Specs.Any())
+                        {
+                            <div class="variant-section">
+                                @{
+                                    var displayedSpecs = Model.Specs.Take(2).ToList();
+                                }
+                                @foreach (var spec in displayedSpecs)
+                                {
+                                    <div class="variant-label">
+                                        <span>@spec.Key:</span> <strong>@spec.Value</strong>
+                                    </div>
+                                    <div class="variant-options">
+                                        <button class="variant-btn active">@spec.Value</button>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Add to Cart -->
+                        <div class="cart-section">
+                            @if (Model.AvailableStock > 0 || (Model.AvailableStock == 0 && Model.Stock > 0))
+                            {
+                                <form asp-controller="Basket" asp-action="AddItem" method="post" id="addToCartForm"
+                                    class="js-add-to-cart-form">
+                                    <input type="hidden" name="productId" value="@Model.Id" />
+                                    <input type="hidden" name="quantity" value="1" id="quantityInput" />
+                                    <button type="submit" class="add-to-cart-btn @(Model.IsInBasket ? "in-cart" : "")">
+                                        <i class="fas @(Model.IsInBasket ? "fa-check" : "fa-shopping-cart")"></i>
+                                        <span>@(Model.IsInBasket ? "Sepete Eklendi" : "Sepete Ekle")</span>
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <button class="add-to-cart-btn" disabled>
+                                    <i class="fas fa-ban"></i>
+                                    Stokta Yok
+                                </button>
+                            }
+
+                            <div class="action-buttons">
+                                <button class="action-btn btn-favorite @(Model.IsFavorite ? "active" : "")"
+                                    data-product-id="@Model.Id">
+                                    <i class="@(Model.IsFavorite ? "fas" : "far") fa-heart"></i>
+                                    Favorilere Ekle
+                                </button>
+                                <button class="action-btn" onclick="shareProduct()">
+                                    <i class="fas fa-share-alt"></i>
+                                    Paylaş
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Delivery -->
+                        <div class="delivery-section">
+                            <div class="delivery-title">Teslimat Seçenekleri</div>
+                            <div class="delivery-option">
+                                <i class="fas fa-truck delivery-icon"></i>
+                                <div class="delivery-text">
+                                    <strong>Ücretsiz Kargo</strong> ile yarın kapınızda!
+                                </div>
+                            </div>
+                            <div class="delivery-option">
+                                <i class="fas fa-store delivery-icon"></i>
+                                <div class="delivery-text">
+                                    <strong>Mağazadan Teslim</strong> - Bugün teslim al
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar -->
+                <div class="col-lg-3">
+                    <div class="sidebar-section">
+                        <!-- Campaigns -->
+                        <div class="sidebar-card">
+                            <div class="sidebar-title">
+                                <i class="fas fa-tags campaign-icon"></i>
+                                Kampanyalar
+                            </div>
+                            <div class="campaign-item">
+                                <i class="fas fa-check-circle campaign-icon"></i>
+                                <span>150 TL üzeri kargo bedava</span>
+                            </div>
+                            <div class="campaign-item">
+                                <i class="fas fa-check-circle campaign-icon"></i>
+                                <span>Kredi kartına 9 taksit</span>
+                            </div>
+                        </div>
+
+                        <!-- Premium Box -->
+                        <div class="premium-box">
+                            <div class="premium-title">PREMIUM</div>
+                            <div class="premium-text">
+                                Premium üye ol, tüm avantajlardan faydalan!
+                                <a href="#" style="color: #ff6000;">Hepsipara kazan &gt;</a>
+                            </div>
+                        </div>
+
+                        <!-- Stock Info -->
+                        <div class="sidebar-card">
+                            <div class="sidebar-title">
+                                <i class="fas fa-box campaign-icon"></i>
+                                Stok Durumu
+                            </div>
+                            @if (Model.AvailableStock > 0 || (Model.AvailableStock == 0 && Model.Stock > 0))
+                            {
+                                <div style="color: #00a365; font-weight: 600;">
+                                    <i class="fas fa-check-circle"></i> Stokta (@(Model.AvailableStock > 0 ?
+                                Model.AvailableStock : Model.Stock) adet)
+                                </div>
+                                <div class="mt-2" style="font-size: 0.8rem; color: #666;">
+                                    <i class="fas fa-clock"></i> 15 saat 34 dk içinde sipariş ver, bugün kargoda
+                                </div>
+                            }
+                            else
+                            {
+                                <div style="color: #e74c3c; font-weight: 600;">
+                                    <i class="fas fa-times-circle"></i> Stokta yok
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs Section -->
+        <div class="tabs-section">
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="openTab(event, 'description')">Ürün Açıklaması</button>
+                <button class="tab-btn" onclick="openTab(event, 'specs')">Teknik Özellikler</button>
+                <button class="tab-btn" onclick="openTab(event, 'reviews')">Değerlendirmeler <span
+                        style="background: #ff6000; color: white; padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.7rem; margin-left: 0.25rem;">38</span></button>
+                <button class="tab-btn" onclick="openTab(event, 'qa')">Soru & Cevap</button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Description Tab -->
+                <div id="description" class="tab-pane active">
+                    <h2 class="specs-header">Ürün Açıklaması</h2>
+                    <p style="font-size: 0.95rem; line-height: 1.8; color: #333;">
+                        <strong>@Model.Name</strong>
+                    </p>
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <p style="font-size: 0.95rem; line-height: 1.8; color: #666;">
+                            @Model.Description
+                        </p>
+                    }
+                </div>
+
+                <!-- Specs Tab -->
+                <div id="specs" class="tab-pane">
+                    <h2 class="specs-header">Ürün Özellikleri</h2>
+
+                    <!-- Info Icons -->
+                    @if (Model.Specs.Any())
+                    {
+                        <div class="info-icons">
+                            @foreach (var spec in Model.Specs.Take(5))
+                            {
+                                <div class="info-icon-item">
+                                    <i class="fas fa-microchip"></i>
+                                    <span>@spec.Key</span>
+                                    <strong>@spec.Value</strong>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="specs-table">
+                            @foreach (var spec in Model.Specs)
+                            {
+                                <div class="spec-row">
+                                    <span class="spec-label">@spec.Key</span>
+                                    <span class="spec-value">@spec.Value</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Bu ürün için teknik özellik bilgisi bulunmamaktadır.</p>
+                    }
+                </div>
+
+                <!-- Reviews Tab -->
+                <div id="reviews" class="tab-pane">
+                    <h2 class="specs-header">Değerlendirmeler</h2>
+                    <div class="text-center py-5">
+                        <i class="far fa-comment-dots fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Henüz değerlendirme yapılmamış.</p>
+                        <button class="btn btn-outline-primary">İlk Değerlendirmeyi Yaz</button>
+                    </div>
+                </div>
+
+                <!-- Q&A Tab -->
+                <div id="qa" class="tab-pane">
+                    <h2 class="specs-header">Soru & Cevap</h2>
+                    <div class="text-center py-5">
+                        <i class="far fa-question-circle fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Henüz soru sorulmamış.</p>
+                        <button class="btn btn-outline-primary">Soru Sor</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fullscreen Image Gallery Modal -->
+<div class="modal fade gallery-modal" id="imageGalleryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <!-- Click Event on modal-body to close if clicking outside container -->
+            <div class="modal-body"
+                onclick="if(event.target === this) { const m = bootstrap.Modal.getInstance(document.getElementById('imageGalleryModal')); if(m) m.hide(); }">
+                <!-- Wrapper to position header and container together -->
+                <div style="width: 80%; max-width: 1000px; display: flex; flex-direction: column; gap: 15px;">
+
+                    <!-- Header Actions -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div class="modal-title-bar" title="@Model.Name">
+                            @Model.Name
+                        </div>
+                        <button type="button" class="modal-close-btn" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <!-- Inner White Box -->
+                    <div class="modal-image-container" onclick="event.stopPropagation();">
+                        <!-- Main Modal Image -->
+                        <div class="modal-main-image">
+                            @if (Model.ImageUrls.Count > 1)
+                            {
+                                <button class="image-nav-btn prev" onclick="prevModalImage()">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button class="image-nav-btn next" onclick="nextModalImage()">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            }
+                            <img src="@Model.FirstImageUrl" id="modalMainImage" alt="@Model.Name">
+                        </div>
+
+                        <!-- Modal Thumbnails -->
+                        @if (Model.ImageUrls.Count > 1)
+                        {
+                            <div class="modal-thumbnails">
+                                @for (int i = 0; i < Model.ImageUrls.Count; i++)
+                                {
+                                    <div class="modal-thumb-item @(i == 0 ? "active" : "")"
+                                        onclick="selectModalImage(@i, '@Model.ImageUrls[i]')">
+                                        <img src="@Model.ImageUrls[i]" alt="Thumbnail @(i + 1)">
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div> <!-- modal-image-container -->
+                </div> <!-- wrapper -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentImageIndex = 0;
+        const images = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ImageUrls));
+
+        function selectImage(index, src) {
+            currentImageIndex = index;
+            document.getElementById('mainImage').src = src;
+
+            document.querySelectorAll('.thumbnail-item').forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+        }
+
+        function prevImage() {
+            if (images.length === 0) return;
+            currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+            selectImage(currentImageIndex, images[currentImageIndex]);
+        }
+
+        function nextImage() {
+            if (images.length === 0) return;
+            currentImageIndex = (currentImageIndex + 1) % images.length;
+            selectImage(currentImageIndex, images[currentImageIndex]);
+        }
+
+        // Tab functionality
+        function openTab(evt, tabName) {
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+
+        // Share functionality
+        function shareProduct() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '@Model.Name',
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                alert('Link kopyalandı!');
+            }
+        }
+        // Modal Gallery functionality
+        let modal;
+        document.addEventListener("DOMContentLoaded", function () {
+            // Initialize Bootstrap modal instance
+            let modalEl = document.getElementById('imageGalleryModal');
+            if (modalEl) {
+                modal = new bootstrap.Modal(modalEl);
+
+                // When modal is hidden, sync the main page image to the last viewed modal image
+                modalEl.addEventListener('hidden.bs.modal', function () {
+                    selectImage(currentImageIndex, images[currentImageIndex]);
+                });
+            }
+        });
+
+        function openGalleryModal() {
+            if (modal) {
+                // Sync modal with current index before opening
+                selectModalImage(currentImageIndex, images[currentImageIndex]);
+                modal.show();
+            }
+        }
+
+        function selectModalImage(index, src) {
+            currentImageIndex = index;
+            document.getElementById('modalMainImage').src = src;
+
+            document.querySelectorAll('.modal-thumb-item').forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+        }
+
+        function prevModalImage() {
+            if (images.length === 0) return;
+            currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+            selectModalImage(currentImageIndex, images[currentImageIndex]);
+        }
+
+        function nextModalImage() {
+            if (images.length === 0) return;
+            currentImageIndex = (currentImageIndex + 1) % images.length;
+            selectModalImage(currentImageIndex, images[currentImageIndex]);
+        }
+    </script>
+}

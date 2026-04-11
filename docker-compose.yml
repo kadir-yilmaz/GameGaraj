@@ -1,0 +1,143 @@
+services:
+  # MongoDB for Catalog Service
+  mongodb:
+    image: mongo:7.0
+    container_name: gamegaraj-catalog-mongodb
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=GameGarajCatalogDb
+
+  # PostgreSQL for Catalog Service
+  catalogdb:
+    image: postgres:16-alpine
+    container_name: gamegaraj-catalog-postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - catalog_postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=GameGarajCatalogDb
+
+  # Redis for Basket API
+  redis:
+    image: redis:alpine
+    container_name: gamegaraj-basket-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+
+  # PostgreSQL for Discount API
+  discountdb:
+    image: postgres:16-alpine
+    container_name: gamegaraj-discount-postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=Password12*
+      - POSTGRES_DB=discountdb
+
+  # SQL Server for Order API (Apple Silicon Mac requires platform specification)
+  orderdb:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    container_name: gamegaraj-order-sqlserver
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    environment:
+      - ACCEPT_EULA=${ACCEPT_EULA}
+      - SA_PASSWORD=${SA_PASSWORD}
+      - MSSQL_PID=${MSSQL_PID}
+
+  # Dedicated Postgres for Keycloak (Otomatik DB Oluşturma Avantajı)
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: gamegaraj-keycloak-postgres
+    environment:
+      POSTGRES_USER: ${KEYCLOAK_DB_USER}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME}
+    ports:
+      - "5433:5432"
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+
+  # Keycloak for Identity Management
+  keycloak:
+    image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
+    container_name: keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/${KEYCLOAK_DB_NAME}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./realm-init.json:/opt/keycloak/data/import/realm-init.json
+    depends_on:
+      - keycloak-db
+
+  # RabbitMQ for Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: gamegaraj-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+
+  # Elasticsearch for Search service
+  elasticsearch:
+    image: elasticsearch:8.13.0
+    container_name: gamegaraj-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9201:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  # Kibana for viewing Elastic data
+  kibana:
+    image: kibana:8.13.0
+    container_name: gamegaraj-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+volumes:
+  mongodb_data:
+  redis_data:
+  postgres_data:
+  sqlserver_data:
+  keycloak_postgres_data:
+  rabbitmq_data:
+  catalog_postgres_data:
+  elasticsearch_data:

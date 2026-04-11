@@ -1,0 +1,711 @@
+@model GameGaraj.WebUI.Models.Orders.CheckoutInfoInput
+@{
+    ViewData["Title"] = "Ödeme";
+    var deliveryAddresses = ViewBag.DeliveryAddresses as List<GameGaraj.WebUI.Models.Addresses.UserAddressViewModel> ?? new
+    List<GameGaraj.WebUI.Models.Addresses.UserAddressViewModel>();
+    var invoiceAddresses = ViewBag.InvoiceAddresses as List<GameGaraj.WebUI.Models.Addresses.UserAddressViewModel> ?? new
+    List<GameGaraj.WebUI.Models.Addresses.UserAddressViewModel>();
+}
+
+<style>
+    .address-card {
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        background: white;
+    }
+
+    .address-card:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .address-card.selected {
+        border-color: #0d6efd;
+        background: #f8f9ff;
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
+    }
+
+    .address-card .check-icon {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #0d6efd;
+        color: white;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+
+    .address-card.selected .check-icon {
+        display: flex;
+    }
+
+    .address-card .default-badge {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        background: #198754;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .new-address-card {
+        border: 2px dashed #0d6efd;
+        border-radius: 12px;
+        padding: 40px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #f8f9ff;
+    }
+
+    .new-address-card:hover {
+        background: #e7f1ff;
+        border-color: #0a58ca;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #212529;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-title i {
+        color: #0d6efd;
+    }
+</style>
+
+<div class="row">
+    <div class="col-lg-8">
+        <form asp-controller="Order" asp-action="Checkout" method="post" id="checkoutForm" novalidate>
+
+            <!-- Teslimat Adresi -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="section-title">
+                        <i class="fas fa-truck"></i> Teslimat Adresi
+                    </h5>
+
+                    @if (deliveryAddresses.Any())
+                    {
+                        <div class="row g-3 mb-4">
+                            @foreach (var addr in deliveryAddresses)
+                            {
+                                <div class="col-md-6">
+                                    <div class="address-card @(addr.IsDefault ? "selected" : "")" data-address-id="@addr.Id"
+                                        data-type="delivery" data-firstname="@addr.FirstName" data-lastname="@addr.LastName"
+                                        data-phone="@addr.PhoneNumber" data-email="@addr.Email" data-province="@addr.Province"
+                                        data-district="@addr.District" data-street="@addr.Neighborhood"
+                                        data-line="@addr.AddressDetail" data-zipcode="@addr.PostalCode">
+
+                                        @if (addr.IsDefault)
+                                        {
+                                            <span class="default-badge">Varsayılan</span>
+                                        }
+                                        <div class="check-icon">
+                                            <i class="fas fa-check"></i>
+                                        </div>
+
+                                        <h6 class="fw-bold mb-2" style="margin-top: @(addr.IsDefault ? "30px" : "0")">
+                                            @addr.Title</h6>
+                                        <p class="mb-1 text-muted small">
+                                            <i class="fas fa-user me-1"></i> @addr.FirstName @addr.LastName
+                                        </p>
+                                        <p class="mb-1 text-muted small">
+                                            <i class="fas fa-phone me-1"></i> @addr.PhoneNumber
+                                        </p>
+                                        <p class="mb-1 text-muted small">
+                                            <i class="fas fa-envelope me-1"></i> @addr.Email
+                                        </p>
+                                        <p class="mb-0 text-muted small">
+                                            <i class="fas fa-map-marker-alt me-1"></i>
+                                            @addr.AddressDetail, @addr.Neighborhood<br />
+                                            @addr.District / @addr.Province @addr.PostalCode
+                                        </p>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="col-md-6">
+                                <div class="new-address-card" id="newDeliveryAddressBtn">
+                                    <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>
+                                    <h6 class="text-primary fw-bold">Yeni Adres Ekle</h6>
+                                    <p class="text-muted small mb-0">Farklı bir adrese teslimat</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Kayıtlı teslimat adresiniz yok. Lütfen adres bilgilerinizi girin.
+                        </div>
+                    }
+
+                    <!-- Manuel Adres Formu -->
+                    <div id="deliveryAddressForm" style="display: @(deliveryAddresses.Any() ? "none" : "block")">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">Adres Bilgileri</h6>
+                            @if (deliveryAddresses.Any())
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="cancelNewDeliveryBtn">
+                                    <i class="fas fa-times me-1"></i> İptal
+                                </button>
+                            }
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="CustomerName" class="form-label small">Ad</label>
+                                <input asp-for="CustomerName" class="form-control" id="customerNameInput">
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="CustomerSurname" class="form-label small">Soyad</label>
+                                <input asp-for="CustomerSurname" class="form-control" id="customerSurnameInput">
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="CustomerEmail" class="form-label small">E-posta</label>
+                                <input asp-for="CustomerEmail" type="email" class="form-control"
+                                    id="customerEmailInput">
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="CustomerPhone" class="form-label small">Telefon</label>
+                                <input asp-for="CustomerPhone" class="form-control" id="customerPhoneInput">
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Province" class="form-label small">İl</label>
+                                <input asp-for="Province" class="form-control" id="provinceInput">
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="District" class="form-label small">İlçe</label>
+                                <input asp-for="District" class="form-control" id="districtInput">
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Street" class="form-label small">Mahalle/Sokak</label>
+                                <input asp-for="Street" class="form-control" id="streetInput">
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Line" class="form-label small">Adres Detayı</label>
+                                <textarea asp-for="Line" class="form-control" rows="2" id="lineInput"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ZipCode" class="form-label small">Posta Kodu</label>
+                                <input asp-for="ZipCode" class="form-control" id="zipCodeInput">
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input asp-for="SaveAddress" class="form-check-input" type="checkbox"
+                                        id="deliverySaveAddress">
+                                    <label class="form-check-label" for="deliverySaveAddress">
+                                        Bu adresi kaydet (gelecekte kullanmak için)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6" id="deliveryTitleGroup" style="display: none;">
+                                <label class="form-label small">Adres Başlığı <span class="text-danger">*</span></label>
+                                <input asp-for="AddressTitle" type="text" class="form-control" id="deliveryTitle"
+                                    placeholder="Örn: Ev Adresim">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fatura Adresi -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="section-title">
+                        <i class="fas fa-file-invoice"></i> Fatura Adresi
+                    </h5>
+
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="sameAsDelivery" checked>
+                        <label class="form-check-label fw-bold" for="sameAsDelivery">
+                            Fatura adresi teslimat adresi ile aynı
+                        </label>
+                    </div>
+
+                    <div id="invoiceAddressSection" style="display: none;">
+                        @if (invoiceAddresses.Any())
+                        {
+                            <div class="row g-3 mb-3">
+                                @foreach (var addr in invoiceAddresses)
+                                {
+                                    <div class="col-md-6">
+                                        <div class="address-card @(addr.IsDefault ? "selected" : "")" data-address-id="@addr.Id"
+                                            data-type="invoice" data-province="@addr.Province" data-district="@addr.District"
+                                            data-street="@addr.Neighborhood" data-line="@addr.AddressDetail"
+                                            data-zipcode="@addr.PostalCode">
+
+                                            @if (addr.IsDefault)
+                                            {
+                                                <span class="default-badge">Varsayılan</span>
+                                            }
+                                            <div class="check-icon">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+
+                                            <h6 class="fw-bold mb-2" style="margin-top: @(addr.IsDefault ? "30px" : "0")">
+                                                @addr.Title</h6>
+                                            <p class="mb-1 text-muted small">
+                                                <i class="fas fa-user me-1"></i> @addr.FirstName @addr.LastName
+                                            </p>
+                                            <p class="mb-0 text-muted small">
+                                                <i class="fas fa-map-marker-alt me-1"></i>
+                                                @addr.AddressDetail, @addr.Neighborhood<br />
+                                                @addr.District / @addr.Province @addr.PostalCode
+                                            </p>
+                                        </div>
+                                    </div>
+                                }
+
+                                <div class="col-md-6">
+                                    <div class="new-address-card" data-bs-toggle="modal"
+                                        data-bs-target="#invoiceAddressModal">
+                                        <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>
+                                        <h6 class="text-primary fw-bold">Yeni Fatura Adresi</h6>
+                                        <p class="text-muted small mb-0">Farklı bir fatura adresi ekle</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Kayıtlı fatura adresiniz yok.
+                            </div>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                data-bs-target="#invoiceAddressModal">
+                                <i class="fas fa-plus me-1"></i> Fatura Adresi Ekle
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ödeme Bilgileri -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="section-title">
+                        <i class="fas fa-credit-card"></i> Ödeme Bilgileri
+                    </h5>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label asp-for="CardName" class="form-label small">Kart Üzerindeki İsim</label>
+                            <input asp-for="CardName" class="form-control" autocomplete="off" required>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="CardNumber" class="form-label small">Kart Numarası</label>
+                            <input asp-for="CardNumber" class="form-control" maxlength="19" autocomplete="off" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Expiration" class="form-label small">Son Kullanma Tarihi</label>
+                            <input asp-for="Expiration" class="form-control" placeholder="AA/YY" maxlength="5"
+                                autocomplete="off" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CVV" class="form-label small">CVV</label>
+                            <input asp-for="CVV" class="form-control" maxlength="3" autocomplete="off" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm sticky-top" style="top: 2rem;">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Sipariş Özeti</h5>
+
+                @if (ViewBag.Basket != null)
+                {
+                    var basket = ViewBag.Basket as GameGaraj.WebUI.Models.Baskets.BasketViewModel;
+
+                    <div class="mb-3">
+                        @foreach (var item in basket.Items)
+                        {
+                            <div class="d-flex justify-content-between mb-2">
+                                <div>
+                                    <h6 class="mb-0 small">@item.ProductName</h6>
+                                    <small class="text-muted">Adet: @item.Quantity</small>
+                                </div>
+                                <span class="small">@((item.Price * item.Quantity).ToString("C2"))</span>
+                            </div>
+                        }
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="fw-bold">Toplam</span>
+                        <span class="fw-bold text-primary h4">@basket.TotalPrice.ToString("C2")</span>
+                    </div>
+                }
+
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        @ViewBag.Error
+                    </div>
+                }
+
+                <button type="submit" form="checkoutForm" class="btn btn-success w-100 py-3 fw-bold">
+                    <i class="fas fa-lock me-2"></i> Güvenli Ödeme Yap
+                </button>
+
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-shield-alt"></i> 256-bit SSL ile korunmaktadır
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fatura Adresi Modal -->
+<div class="modal fade" id="invoiceAddressModal" tabindex="-1" aria-labelledby="invoiceAddressModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="invoiceAddressModalLabel">
+                    <i class="fas fa-file-invoice me-2"></i>Yeni Fatura Adresi Ekle
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="invoiceAddressForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small">Ad <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="invoiceFirstName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Soyad <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="invoiceLastName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Telefon <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="invoicePhone" placeholder="+90 555 123 4567"
+                                required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Adres Başlığı <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="invoiceTitle" placeholder="Örn: Fatura Adresim"
+                                required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">İl <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="invoiceProvinceInput" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">İlçe <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="invoiceDistrictInput" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Mahalle <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="invoiceNeighborhood" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Posta Kodu</label>
+                            <input type="text" class="form-control" id="invoicePostalCode" maxlength="5">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small">Adres Detayı <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="invoiceAddressDetail" rows="2" required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="invoiceSaveAddress">
+                                <label class="form-check-label" for="invoiceSaveAddress">
+                                    Bu adresi kaydet (gelecekte kullanmak için)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" id="saveInvoiceAddressBtn">
+                    <i class="fas fa-check me-1"></i> Kullan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Teslimat adresi kartlarına tıklama
+        document.querySelectorAll('.address-card[data-type="delivery"]').forEach(card => {
+            card.addEventListener('click', function () {
+                // Tüm kartların seçimini kaldır
+                document.querySelectorAll('.address-card[data-type="delivery"]').forEach(c => c.classList.remove('selected'));
+                // Bu kartı seç
+                this.classList.add('selected');
+
+                // Form alanlarını doldur
+                document.getElementById('customerNameInput').value = this.dataset.firstname || '';
+                document.getElementById('customerSurnameInput').value = this.dataset.lastname || '';
+                document.getElementById('customerPhoneInput').value = this.dataset.phone || '';
+                document.getElementById('customerEmailInput').value = this.dataset.email || '';
+                document.getElementById('provinceInput').value = this.dataset.province || '';
+                document.getElementById('districtInput').value = this.dataset.district || '';
+                document.getElementById('streetInput').value = this.dataset.street || '';
+                document.getElementById('lineInput').value = this.dataset.line || '';
+                document.getElementById('zipCodeInput').value = this.dataset.zipcode || '';
+
+                // Formu gizle
+                document.getElementById('deliveryAddressForm').style.display = 'none';
+            });
+        });
+
+        // Yeni adres ekle butonu
+        document.getElementById('newDeliveryAddressBtn')?.addEventListener('click', function () {
+            // Tüm kartların seçimini kaldır
+            document.querySelectorAll('.address-card[data-type="delivery"]').forEach(c => c.classList.remove('selected'));
+            // Formu göster
+            document.getElementById('deliveryAddressForm').style.display = 'block';
+            // Formu temizle
+            document.getElementById('customerNameInput').value = '';
+            document.getElementById('customerSurnameInput').value = '';
+            document.getElementById('customerPhoneInput').value = '';
+            document.getElementById('customerEmailInput').value = '';
+            document.getElementById('provinceInput').value = '';
+            document.getElementById('districtInput').value = '';
+            document.getElementById('streetInput').value = '';
+            document.getElementById('lineInput').value = '';
+            document.getElementById('zipCodeInput').value = '';
+        });
+
+        // İptal butonu
+        document.getElementById('cancelNewDeliveryBtn')?.addEventListener('click', function () {
+            document.getElementById('deliveryAddressForm').style.display = 'none';
+            // İlk adresi seç
+            const firstCard = document.querySelector('.address-card[data-type="delivery"]');
+            if (firstCard) {
+                firstCard.click();
+            }
+        });
+
+        // Fatura adresi checkbox
+        document.getElementById('sameAsDelivery')?.addEventListener('change', function () {
+            const invoiceSection = document.getElementById('invoiceAddressSection');
+            if (this.checked) {
+                invoiceSection.style.display = 'none';
+            } else {
+                invoiceSection.style.display = 'block';
+            }
+        });
+
+        // Fatura adresi kartlarına tıklama
+        document.querySelectorAll('.address-card[data-type="invoice"]').forEach(card => {
+            card.addEventListener('click', function () {
+                // Tüm kartların seçimini kaldır
+                document.querySelectorAll('.address-card[data-type="invoice"]').forEach(c => c.classList.remove('selected'));
+                // Bu kartı seç
+                this.classList.add('selected');
+            });
+        });
+
+        // Modal'dan fatura adresi kaydet/kullan
+        document.getElementById('saveInvoiceAddressBtn')?.addEventListener('click', async function () {
+            const form = document.getElementById('invoiceAddressForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const saveAddress = document.getElementById('invoiceSaveAddress').checked;
+            const addressData = {
+                type: 2, // Invoice
+                title: document.getElementById('invoiceTitle').value,
+                isDefault: false,
+                firstName: document.getElementById('invoiceFirstName').value,
+                lastName: document.getElementById('invoiceLastName').value,
+                phoneNumber: document.getElementById('invoicePhone').value,
+                province: document.getElementById('invoiceProvinceInput').value,
+                district: document.getElementById('invoiceDistrictInput').value,
+                neighborhood: document.getElementById('invoiceNeighborhood').value,
+                postalCode: document.getElementById('invoicePostalCode').value,
+                addressDetail: document.getElementById('invoiceAddressDetail').value
+            };
+
+            if (saveAddress) {
+                // API'ye kaydet
+                try {
+                    const response = await fetch('/api/useraddresses', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(addressData)
+                    });
+
+                    if (response.ok) {
+                        // Başarılı - sayfayı yenile
+                        window.location.reload();
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Adres kaydedilemedi:', error);
+                }
+            }
+
+            // Sadece kullan (kaydetme) - form alanlarını doldur
+            // Not: Şu an için basit bir çözüm, ileride hidden input'lar eklenebilir
+            alert('Fatura adresi seçildi. (Geliştirme aşamasında)');
+
+            // Modal'ı kapat
+            const modal = bootstrap.Modal.getInstance(document.getElementById('invoiceAddressModal'));
+            modal.hide();
+        });
+
+        // Sayfa yüklendiğinde varsayılan adresi seç
+        window.addEventListener('DOMContentLoaded', function () {
+            const defaultCard = document.querySelector('.address-card[data-type="delivery"].selected');
+            if (defaultCard) {
+                defaultCard.click();
+            }
+
+            // Kredi Kartı Numarası Formatlama (Sadece Rakam ve Boşluklu)
+            const cardNumberInput = document.querySelector('input[name="CardNumber"]');
+            if (cardNumberInput) {
+                cardNumberInput.addEventListener('input', function (e) {
+                    let val = e.target.value.replace(/\D/g, '');
+                    if (val.length > 0) {
+                        val = val.match(new RegExp('.{1,4}', 'g')).join(' ');
+                    }
+                    e.target.value = val;
+                });
+            }
+
+            // Son Kullanma Tarihi Formatlama (AA/YY)
+            const expInput = document.querySelector('input[name="Expiration"]');
+            if (expInput) {
+                expInput.addEventListener('input', function (e) {
+                    let val = e.target.value.replace(/\D/g, ''); // Sadece rakamları al
+                    if (val.length > 2) {
+                        val = val.substring(0, 2) + '/' + val.substring(2, 4);
+                    }
+                    e.target.value = val;
+                });
+
+                expInput.addEventListener('keydown', function (e) {
+                    // Backspace ile silerken '/' karakterine takılmamak için
+                    if (e.key === 'Backspace' && e.target.value.length === 3 && e.target.value.includes('/')) {
+                        e.target.value = e.target.value.substring(0, 2);
+                    }
+                });
+            }
+
+            // Teslimat adresi kaydet checkbox toggle
+            const deliverySaveCheck = document.getElementById('deliverySaveAddress');
+            const deliveryTitleGroup = document.getElementById('deliveryTitleGroup');
+            if (deliverySaveCheck && deliveryTitleGroup) {
+                deliverySaveCheck.addEventListener('change', function () {
+                    deliveryTitleGroup.style.display = this.checked ? 'block' : 'none';
+                });
+            }
+        });
+
+        // Form submit validation
+        document.getElementById('checkoutForm')?.addEventListener('submit', function (e) {
+            console.log('=== FORM SUBMIT STARTED ===');
+
+            // Teslimat adresi kontrolü
+            const deliveryFormVisible = document.getElementById('deliveryAddressForm').style.display !== 'none';
+            const hasSelectedDeliveryCard = document.querySelector('.address-card[data-type="delivery"].selected');
+
+            console.log('Delivery form visible:', deliveryFormVisible);
+            console.log('Has selected delivery card:', hasSelectedDeliveryCard);
+
+            // Adres seçilmemiş ve form da görünmüyorsa hata
+            if (!hasSelectedDeliveryCard && !deliveryFormVisible) {
+                e.preventDefault();
+                console.error('ERROR: No address selected');
+                alert('Lütfen bir teslimat adresi seçin veya yeni adres girin.');
+                return false;
+            }
+
+            // Form görünürse ve adres seçilmemişse, form alanlarını kontrol et
+            if (deliveryFormVisible && !hasSelectedDeliveryCard) {
+                console.log('Checking form fields...');
+                const requiredFields = ['customerNameInput', 'customerSurnameInput', 'customerEmailInput',
+                    'customerPhoneInput', 'provinceInput', 'districtInput',
+                    'streetInput', 'lineInput', 'zipCodeInput'];
+
+                for (const fieldId of requiredFields) {
+                    const field = document.getElementById(fieldId);
+                    console.log(`Field ${fieldId}:`, field?.value);
+                    if (!field || !field.value.trim()) {
+                        e.preventDefault();
+                        console.error(`ERROR: Field ${fieldId} is empty`);
+                        alert('Lütfen tüm zorunlu alanları doldurun.');
+                        if (field) field.focus();
+                        return false;
+                    }
+                }
+            }
+
+            // Kart bilgileri kontrolü
+            console.log('Checking card info...');
+            const cardName = document.querySelector('input[name="CardName"]');
+            const cardNumber = document.querySelector('input[name="CardNumber"]');
+            const expiration = document.querySelector('input[name="Expiration"]');
+            const cvv = document.querySelector('input[name="CVV"]');
+
+            console.log('Card Name:', cardName?.value);
+            console.log('Card Number:', cardNumber?.value);
+            console.log('Expiration:', expiration?.value);
+            console.log('CVV:', cvv?.value);
+
+            if (!cardName?.value || !cardNumber?.value || !expiration?.value || !cvv?.value) {
+                e.preventDefault();
+                console.error('ERROR: Card info incomplete');
+                alert('Lütfen kart bilgilerini eksiksiz doldurun.');
+                return false;
+            }
+
+            console.log('=== FORM VALIDATION PASSED ===');
+            console.log('Form will be submitted...');
+
+            // Adres Başlığı kontrolü (eğer kaydetme seçilmişse)
+            const deliverySaveCheck = document.getElementById('deliverySaveAddress');
+            if (deliverySaveCheck && deliverySaveCheck.checked && deliveryFormVisible && !hasSelectedDeliveryCard) {
+                const deliveryTitleInput = document.getElementById('deliveryTitle');
+                if (!deliveryTitleInput || !deliveryTitleInput.value.trim()) {
+                    e.preventDefault();
+                    alert('Adresi kaydetmek için lütfen bir adres başlığı girin.');
+                    if (deliveryTitleInput) deliveryTitleInput.focus();
+                    return false;
+                }
+                // NOT: Gerçek kayıt işlemi artık sunucu tarafında RabbitMQ üzerinden yapılacak.
+                // Form submit edildiğinde model içindeki SaveAddress=true gidecek.
+            }
+        });
+    </script>
+}

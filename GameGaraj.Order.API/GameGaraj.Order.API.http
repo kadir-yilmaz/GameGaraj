@@ -1,0 +1,54 @@
+@GameGaraj.Order.API_HostAddress = http://localhost:5015
+@userId = 5b814009-4ed7-4617-803c-56ed0adebdb6
+
+### Weather Forecast (Test)
+GET {{GameGaraj.Order.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+### Get Orders by UserId
+GET {{GameGaraj.Order.API_HostAddress}}/api/orders/{{userId}}
+Accept: application/json
+
+###
+
+### Create Order
+POST {{GameGaraj.Order.API_HostAddress}}/api/orders
+Content-Type: application/json
+
+{
+  "buyerId": "{{userId}}",
+  "address": {
+    "firstName": "Test",
+    "lastName": "User",
+    "phoneNumber": "+90 555 123 4567",
+    "province": "İstanbul",
+    "district": "Kadıköy",
+    "neighborhood": "Caferağa",
+    "postalCode": "34710",
+    "addressDetail": "Test Sokak No:1"
+  },
+  "orderItems": [
+    {
+      "productId": "test-product-id",
+      "productName": "Test Product",
+      "pictureUrl": "https://via.placeholder.com/150",
+      "price": 100.00
+    }
+  ]
+}
+
+###
+
+### Get User Addresses (Delivery)
+GET {{GameGaraj.Order.API_HostAddress}}/api/useraddresses?type=Delivery
+Accept: application/json
+
+###
+
+### Get User Addresses (Invoice)
+GET {{GameGaraj.Order.API_HostAddress}}/api/useraddresses?type=Invoice
+Accept: application/json
+
+###

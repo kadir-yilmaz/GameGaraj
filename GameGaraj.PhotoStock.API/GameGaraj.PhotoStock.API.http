@@ -1,0 +1,6 @@
+@GameGaraj.PhotoStock.API_HostAddress = http://localhost:5179
+
+GET {{GameGaraj.PhotoStock.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

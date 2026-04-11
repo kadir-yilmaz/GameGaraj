@@ -1,0 +1,164 @@
+@* Navbar Partial View - Logo, Search, Icons *@
+
+<div style="background: #232f3e; padding: 10px 0; position: relative; z-index: 1050;">
+    <div class="container">
+        <!-- Desktop Layout (≥ LG) -->
+        <div class="d-none d-lg-flex align-items-center justify-content-between">
+            <!-- Logo -->
+            <a class="navbar-brand d-flex align-items-center me-4" asp-controller="Home" asp-action="Index" style="font-weight: 800; font-size: 1.5rem; text-decoration: none; color: white;">
+                <i class="fas fa-gamepad text-primary me-2" style="font-size: 1.75rem;"></i>
+                <span>GameGaraj</span>
+            </a>
+            
+            <!-- Search Bar (Centered) -->
+            <div class="flex-grow-1 mx-4">
+                <form asp-controller="Product" asp-action="Index" method="get" class="position-relative">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control border-0 shadow-none ps-3 js-search-input" 
+                               placeholder="Aradığınız ürünü yazınız..." 
+                               autocomplete="off"
+                               style="height: 42px; border-radius: 6px 0 0 6px; background: white; color: #333;">
+                        <button type="submit" class="btn btn-warning shadow-none px-4" style="border-radius: 0 6px 6px 0; color: #232f3e;">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <!-- Suggestions -->
+                    <div class="js-search-suggestions position-absolute w-100 bg-white rounded-bottom shadow-lg" 
+                         style="display: none; top: 100%; left: 0; max-height: 400px; overflow-y: auto; z-index: 1060; border-top: 1px solid #eee;"></div>
+                </form>
+            </div>
+            
+            <!-- Icons -->
+            <ul class="navbar-nav flex-row align-items-center" style="gap: 1.25rem;">
+                <li class="nav-item">
+                    <a class="nav-link px-0 text-white d-flex align-items-center js-favorites-link" asp-controller="Favorites" asp-action="Index">
+                        <div class="d-inline-block position-relative">
+                            <i class="fas fa-heart" style="color: #e74c3c; font-size: 1.2rem;"></i>
+                            @await Component.InvokeAsync("FavoritesCount")
+                        </div>
+                        <span class="ms-1 small fw-bold">Favorilerim</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link px-0 text-white d-flex align-items-center js-basket-link" asp-controller="Basket" asp-action="Index">
+                        <div class="d-inline-block position-relative">
+                            <i class="fas fa-shopping-cart" style="color: white; font-size: 1.2rem;"></i>
+                            @await Component.InvokeAsync("BasketCount")
+                        </div>
+                        <span class="ms-1 small fw-bold">Sepetim</span>
+                    </a>
+                </li>
+                
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle px-0 d-flex align-items-center text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white me-2" style="width: 32px; height: 32px; font-size: 0.9rem;">
+                                @(User.Identity.Name?.Substring(0, 1).ToUpper() ?? "U")
+                            </div>
+                            <span class="small fw-bold">@User.Identity.Name</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2" style="min-width: 200px;">
+                            <li class="px-3 py-2 border-bottom bg-light">
+                                <small class="text-muted d-block">Hesabım</small>
+                                <span class="fw-bold text-dark">@User.Identity.Name</span>
+                            </li>
+                            @if (User.IsInRole("admin") || User.IsInRole("editor"))
+                            {
+                                <li><a class="dropdown-item py-2" asp-area="Admin" asp-controller="Dashboard" asp-action="Index" target="_blank"><i class="fas fa-cog me-2 text-primary"></i>Admin Paneli</a></li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                            }
+                            <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="History"><i class="fas fa-box me-2 text-muted"></i>Siparişlerim</a></li>
+                            <li><a class="dropdown-item py-2" asp-controller="Address" asp-action="Index"><i class="fas fa-map-marker-alt me-2 text-muted"></i>Adreslerim</a></li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li><a class="dropdown-item py-2 text-danger" asp-controller="Auth" asp-action="SignOut"><i class="fas fa-sign-out-alt me-2"></i>Çıkış Yap</a></li>
+                        </ul>
+                    </li>
+                }
+                else
+                {
+                    <li class="nav-item">
+                        <a class="nav-link px-0 text-white d-flex align-items-center" asp-controller="Auth" asp-action="SignIn">
+                            <i class="fas fa-sign-in-alt me-1"></i> <span class="small fw-bold">Giriş Yap</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <!-- Mobile Layout (< LG) -->
+        <div class="d-lg-none">
+            <!-- Row 1: Logo + Icons -->
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <a class="navbar-brand d-flex align-items-center" asp-controller="Home" asp-action="Index" style="font-weight: 800; font-size: 1.35rem; color: white;">
+                    <i class="fas fa-gamepad text-primary me-2"></i>
+                    <span>GameGaraj</span>
+                </a>
+                <ul class="navbar-nav flex-row align-items-center" style="gap: 1.5rem;">
+                    <!-- Favorites -->
+                    <li class="nav-item">
+                        <a class="nav-link px-0 text-white js-favorites-link" asp-controller="Favorites" asp-action="Index">
+                            <div class="d-inline-block position-relative">
+                                <i class="fas fa-heart" style="color: #e74c3c;"></i>
+                                @await Component.InvokeAsync("FavoritesCount")
+                            </div>
+                        </a>
+                    </li>
+                    <!-- Basket -->
+                    <li class="nav-item">
+                        <a class="nav-link px-0 text-white js-basket-link" asp-controller="Basket" asp-action="Index">
+                            <div class="d-inline-block position-relative">
+                                <i class="fas fa-shopping-cart"></i>
+                                @await Component.InvokeAsync("BasketCount")
+                            </div>
+                        </a>
+                    </li>
+                    <!-- User -->
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle px-0 text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 30px; height: 30px; font-size: 0.85rem;">
+                                    @(User.Identity.Name?.Substring(0, 1).ToUpper() ?? "U")
+                                </div>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2" style="min-width: 180px;">
+                                <li class="px-3 py-2 border-bottom bg-light">
+                                    <small class="text-muted">@User.Identity.Name</small>
+                                </li>
+                                <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="History"><i class="fas fa-box me-2 text-muted"></i>Siparişlerim</a></li>
+                                <li><a class="dropdown-item py-2" asp-controller="Address" asp-action="Index"><i class="fas fa-map-marker-alt me-2 text-muted"></i>Adreslerim</a></li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li><a class="dropdown-item py-2 text-danger" asp-controller="Auth" asp-action="SignOut"><i class="fas fa-sign-out-alt me-2"></i>Çıkış</a></li>
+                            </ul>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link px-0 text-white" asp-controller="Auth" asp-action="SignIn"><i class="fas fa-sign-in-alt"></i></a>
+                        </li>
+                    }
+                </ul>
+            </div>
+            
+            <!-- Row 2: Search Bar -->
+            <div class="w-100">
+                <form asp-controller="Product" asp-action="Index" method="get" class="position-relative">
+                   <div class="input-group">
+                        <input type="text" name="search" class="form-control border-0 shadow-none ps-3 js-search-input" 
+                               placeholder="Ürün ara..." 
+                               autocomplete="off"
+                               style="height: 40px; border-radius: 6px 0 0 6px; background: white; color: #333;">
+                        <button type="submit" class="btn btn-warning shadow-none px-3" style="border-radius: 0 6px 6px 0; color: #232f3e;">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <!-- Suggestions Mobile -->
+                    <div class="js-search-suggestions position-absolute w-100 bg-white rounded-bottom shadow-lg" 
+                         style="display: none; top: 100%; left: 0; max-height: 300px; overflow-y: auto; z-index: 1060; border-top: 1px solid #eee;"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,614 @@
+@model List<GameGaraj.WebUI.Models.Products.ProductViewModel>
+@{
+    ViewData["Title"] = ViewBag.CurrentCategoryName ?? "Ürünler";
+    var categories = ViewBag.Categories as List<GameGaraj.WebUI.Models.Products.CategoryViewModel>;
+    var currentCategoryId = ViewBag.CategoryId as string;
+    var currentCategoryAttributes = ViewBag.CurrentCategoryAttributes as
+    List<GameGaraj.WebUI.Models.Products.CategoryAttributeViewModel>;
+    var selectedSpecs = ViewBag.SelectedSpecs as Dictionary<string, string[]> ?? new Dictionary<string, string[]>();
+}
+
+@await Html.PartialAsync("_ProductCardStyles")
+
+<style>
+    /* Sidebar */
+    .sidebar {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+    }
+
+    .sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 3px;
+    }
+
+    .category-item {
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 8px;
+        transition: all 0.2s;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        text-decoration: none;
+        color: #333;
+        font-weight: 500;
+    }
+
+    .category-item:hover {
+        background: #f8f9fa;
+        color: #007bff;
+        transform: translateX(4px);
+    }
+
+    .category-item.active {
+        background: #007bff;
+        color: white;
+        font-weight: 600;
+    }
+
+    .category-item.child {
+        padding-left: 2rem;
+        font-size: 0.9rem;
+    }
+
+    .filter-section {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .filter-section:last-child {
+        border-bottom: none;
+    }
+
+    .filter-title {
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    /* Category Accordion */
+    .category-accordion-btn {
+        background: #f8f9fa;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #333;
+        transition: all 0.2s;
+    }
+
+    .category-accordion-btn:not(.collapsed) {
+        background: #007bff;
+        color: white;
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    }
+
+    .category-accordion-btn:hover {
+        background: #e9ecef;
+    }
+
+    .category-accordion-btn:not(.collapsed):hover {
+        background: #0056b3;
+    }
+
+    .category-accordion-btn::after {
+        margin-left: auto;
+    }
+
+    .category-link {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #333;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .category-link:hover {
+        background: #e9ecef;
+        color: #007bff;
+        transform: translateX(4px);
+    }
+
+    .category-link.active {
+        background: #007bff;
+        color: white;
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    }
+
+    .category-child-link {
+        display: flex;
+        align-items: center;
+        padding: 0.6rem 1rem 0.6rem 2rem;
+        text-decoration: none;
+        color: #666;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+    }
+
+    .category-child-link:hover {
+        background: #f8f9fa;
+        color: #007bff;
+        border-left-color: #007bff;
+        padding-left: 2.25rem;
+    }
+
+    .category-child-link.active {
+        background: #e7f3ff;
+        color: #007bff;
+        border-left-color: #007bff;
+        font-weight: 600;
+    }
+
+    .accordion-item {
+        background: transparent;
+    }
+
+    .accordion-body {
+        padding-top: 0.5rem;
+    }
+
+    /* Mobile Sidebar */
+    @@media (max-width: 991px) {
+        .sidebar-col {
+            display: none !important;
+        }
+
+        #mobileFilterSidebar {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            right: 0;
+            top: auto;
+            height: 85vh;
+            max-height: 85vh;
+            width: 100%;
+            z-index: 1050;
+            transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2);
+            padding: 0;
+            background: white;
+        }
+
+        #mobileFilterSidebar.show {
+            bottom: 0;
+        }
+
+        .sidebar-header {
+            position: sticky;
+            top: 0;
+            background: #fff;
+            padding: 1.5rem;
+            border-bottom: 1px solid #eee;
+            border-radius: 24px 24px 0 0;
+            z-index: 10;
+        }
+
+        .sidebar-handle {
+            width: 40px;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            margin: 0 auto 1rem;
+        }
+
+        .mobile-sidebar-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+            height: calc(85vh - 80px);
+        }
+
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1040;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .sidebar-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+    }
+
+    @@media (min-width: 992px) {
+        #mobileFilterSidebar {
+            display: none !important;
+        }
+        
+        .sidebar-header {
+            display: none !important;
+        }
+
+        .sidebar-content {
+            padding: 0;
+        }
+
+        .sidebar-overlay {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="row g-4">
+        <!-- Sidebar -->
+        <div class="col-lg-2 sidebar-col">
+            <div class="sidebar" id="filterSidebar">
+                <div class="sidebar-content">
+                    <!-- Categories Section -->
+                    <div class="filter-section">
+                        <h6 class="filter-title">
+                            <i class="fas fa-th-large me-2"></i>Kategoriler
+                        </h6>
+                        <div class="accordion accordion-flush" id="categoryAccordion">
+                            @if (categories != null && categories.Any())
+                            {
+                                @foreach (var category in categories)
+                                {
+                                    <div class="accordion-item border-0 mb-2">
+                                        @if (category.Children != null && category.Children.Any())
+                                        {
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed category-accordion-btn" type="button" 
+                                                        data-bs-toggle="collapse" data-bs-target="#category_@category.Id">
+                                                    <i class="fas fa-folder me-2 text-primary"></i>
+                                                    @category.Name
+                                                </button>
+                                            </h2>
+                                            <div id="category_@category.Id" class="accordion-collapse collapse" 
+                                                 data-bs-parent="#categoryAccordion">
+                                                <div class="accordion-body p-0">
+                                                    @foreach (var child in category.Children)
+                                                    {
+                                                        <a href="@Url.Action("Index", "Product", new { categoryId = child.Id })" 
+                                                           class="category-child-link @(currentCategoryId == child.Id ? "active" : "")">
+                                                            <i class="fas fa-angle-right me-2"></i>
+                                                            @child.Name
+                                                        </a>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <a href="@Url.Action("Index", "Product", new { categoryId = category.Id })" 
+                                               class="category-link @(currentCategoryId == category.Id ? "active" : "")">
+                                                <i class="fas fa-folder me-2 text-primary"></i>
+                                                @category.Name
+                                            </a>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                    
+                    <!-- Filters Form -->
+                    @if (currentCategoryAttributes != null && currentCategoryAttributes.Any())
+                    {
+                        <form method="get" asp-controller="Product" asp-action="Index" id="filterForm">
+                            <input type="hidden" name="categoryId" value="@currentCategoryId" />
+
+                            <!-- Dynamic Filters -->
+                            @foreach (var attr in currentCategoryAttributes)
+                            {
+                                <div class="filter-section">
+                                    <h6 class="filter-title">@attr.DisplayName</h6>
+                                    @if (attr.Options != null && attr.Options.Any())
+                                    {
+                                        @foreach (var option in attr.Options)
+                                        {
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" name="specs[@attr.Name]" value="@option"
+                                                    id="@(attr.Name)_@option" @(selectedSpecs.ContainsKey(attr.Name) &&
+                                selectedSpecs[attr.Name].Contains(option) ? "checked" : "")>
+                                                <label class="form-check-label" for="@(attr.Name)_@option">
+                                                    @option
+                                                </label>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            }
+
+                            <!-- Price Filter -->
+                            <div class="filter-section">
+                                <h6 class="filter-title">Fiyat Aralığı</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <input type="number" name="minPrice" class="form-control form-control-sm"
+                                            placeholder="Min ₺" value="@ViewBag.MinPrice">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="number" name="maxPrice" class="form-control form-control-sm"
+                                            placeholder="Max ₺" value="@ViewBag.MaxPrice">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Apply Button -->
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-check me-2"></i>Uygula
+                                </button>
+                                @if (selectedSpecs.Any() || ViewBag.MinPrice != null || ViewBag.MaxPrice != null)
+                                {
+                                    <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@currentCategoryId"
+                                        class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-2"></i>Temizle
+                                    </a>
+                                }
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Products -->
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+                <div>
+                    <h1 class="h3 fw-bold mb-1">@ViewBag.CurrentCategoryName</h1>
+                    <p class="text-muted mb-0">@Model.Count ürün bulundu</p>
+                </div>
+
+                <div class="d-flex gap-2 align-items-center">
+                    <!-- Mobile Filter Button -->
+                    <button class="btn btn-outline-dark d-lg-none" onclick="toggleFilterSidebar()" type="button">
+                        <i class="fas fa-filter me-2"></i>Filtreleme
+                    </button>
+                    
+                    <!-- Sort Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-dark dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown">
+                            <i class="fas fa-sort me-2"></i>Sıralama
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="@Url.Action("Index", "Product", new { 
+                                    categoryId = currentCategoryId, 
+                                    sortBy = "price_asc",
+                                    minPrice = ViewBag.MinPrice,
+                                    maxPrice = ViewBag.MaxPrice
+                                })">
+                                    <i class="fas fa-arrow-up me-2"></i>Fiyat: Düşük-Yüksek
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="@Url.Action("Index", "Product", new { 
+                                    categoryId = currentCategoryId, 
+                                    sortBy = "price_desc",
+                                    minPrice = ViewBag.MinPrice,
+                                    maxPrice = ViewBag.MaxPrice
+                                })">
+                                    <i class="fas fa-arrow-down me-2"></i>Fiyat: Yüksek-Düşük
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="@Url.Action("Index", "Product", new { 
+                                    categoryId = currentCategoryId, 
+                                    sortBy = "name_asc",
+                                    minPrice = ViewBag.MinPrice,
+                                    maxPrice = ViewBag.MaxPrice
+                                })">
+                                    <i class="fas fa-sort-alpha-down me-2"></i>İsim: A-Z
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Grid -->
+            <div class="row g-3">
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var product in Model)
+                    {
+                        <div class="col-6 col-md-4 col-xl-3">
+                            @{
+                                ViewBag.ShowFeaturedBadge = false;
+                            }
+                            @await Html.PartialAsync("_ProductCard", product)
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="col-12 text-center py-5">
+                        <div class="p-5 bg-light rounded-3">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h5 class="fw-bold mb-2">Ürün Bulunamadı</h5>
+                            <p class="text-muted">Aradığınız kriterlere uygun ürün bulunmamaktadır.</p>
+                            <a asp-controller="Product" asp-action="Index" class="btn btn-primary mt-3">
+                                Tüm Ürünleri Gör
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Mobile Filter Bottom Sheet -->
+<div id="mobileFilterSidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-handle"></div>
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold">
+                <i class="fas fa-filter me-2 text-primary"></i>Filtreler
+            </h5>
+            <button class="btn btn-sm btn-light rounded-circle" onclick="toggleFilterSidebar()" type="button" style="width: 36px; height: 36px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    <div class="mobile-sidebar-content">
+        <!-- Filters Form -->
+        @if (currentCategoryAttributes != null && currentCategoryAttributes.Any())
+        {
+            <form method="get" asp-controller="Product" asp-action="Index" id="mobileFilterForm">
+                <input type="hidden" name="categoryId" value="@currentCategoryId" />
+
+                <!-- Dynamic Filters -->
+                @foreach (var attr in currentCategoryAttributes)
+                {
+                    <div class="filter-section">
+                        <h6 class="filter-title">@attr.DisplayName</h6>
+                        @if (attr.Options != null && attr.Options.Any())
+                        {
+                            @foreach (var option in attr.Options)
+                            {
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="specs[@attr.Name]" value="@option"
+                                        id="mobile_@(attr.Name)_@option" @(selectedSpecs.ContainsKey(attr.Name) &&
+                                selectedSpecs[attr.Name].Contains(option) ? "checked" : "")>
+                                    <label class="form-check-label" for="mobile_@(attr.Name)_@option">
+                                        @option
+                                    </label>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+
+                <!-- Price Filter -->
+                <div class="filter-section">
+                    <h6 class="filter-title">Fiyat Aralığı</h6>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <input type="number" name="minPrice" class="form-control"
+                                placeholder="Min ₺" value="@ViewBag.MinPrice">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" name="maxPrice" class="form-control"
+                                placeholder="Max ₺" value="@ViewBag.MaxPrice">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Apply Button -->
+                <div class="d-grid gap-2 sticky-bottom bg-white pt-3 pb-2" style="margin: 0 -1.5rem; padding-left: 1.5rem !important; padding-right: 1.5rem !important; border-top: 1px solid #eee;">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-check me-2"></i>Uygula
+                    </button>
+                    @if (selectedSpecs.Any() || ViewBag.MinPrice != null || ViewBag.MaxPrice != null)
+                    {
+                        <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@currentCategoryId"
+                            class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Temizle
+                        </a>
+                    }
+                </div>
+            </form>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-filter fa-3x text-muted mb-3"></i>
+                <p class="text-muted mb-0">Bir kategori seçtiğinizde filtreler burada görünecek</p>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebars()"></div>
+
+<script>
+    function toggleFilterSidebar() {
+        const sidebar = document.getElementById('mobileFilterSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        sidebar.classList.toggle('show');
+        overlay.classList.toggle('show');
+        
+        if (sidebar.classList.contains('show')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+    }
+
+    function closeSidebars() {
+        document.getElementById('mobileFilterSidebar').classList.remove('show');
+        document.getElementById('sidebarOverlay').classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
+    // Close sidebar on swipe down (touch devices)
+    let touchStartY = 0;
+    let touchEndY = 0;
+
+    const filterSidebar = document.getElementById('mobileFilterSidebar');
+    if (filterSidebar) {
+        filterSidebar.addEventListener('touchstart', function(e) {
+            touchStartY = e.changedTouches[0].screenY;
+        }, false);
+
+        filterSidebar.addEventListener('touchend', function(e) {
+            touchEndY = e.changedTouches[0].screenY;
+            if (touchEndY - touchStartY > 100) {
+                closeSidebars();
+            }
+        }, false);
+    }
+
+    // Close sidebar on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeSidebars();
+        }
+    });
+
+    // Auto-expand active category accordion
+    document.addEventListener('DOMContentLoaded', function() {
+        const activeLinks = document.querySelectorAll('.category-child-link.active');
+        activeLinks.forEach(link => {
+            const accordionCollapse = link.closest('.accordion-collapse');
+            if (accordionCollapse) {
+                accordionCollapse.classList.add('show');
+                const accordionButton = document.querySelector(`[data-bs-target="#${accordionCollapse.id}"]`);
+                if (accordionButton) {
+                    accordionButton.classList.remove('collapsed');
+                }
+            }
+        });
+    });
+</script>

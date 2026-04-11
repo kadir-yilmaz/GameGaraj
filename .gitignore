@@ -1,0 +1,26 @@
+## [Visual Studio]
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.userosscache
+*.sln.docstate
+
+## [NuGet]
+**/packages/*
+!**/packages/build/
+
+## [Environment Variables]
+.env
+.env.*
+
+## [Common]
+node_modules/
+dist/
+build/
+.idea/
+.vscode/
+
+## [App Specific]
+ConsoleLogs/
+docker-compose.override.yml
