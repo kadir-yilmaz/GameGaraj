@@ -155,13 +155,12 @@
                                         }
                                         @if (order.Status == 4) // Shipped - Kargoda
                                         {
-                                            <form asp-action="UpdateStatus" method="post">
-                                                <input type="hidden" name="orderId" value="@order.Id" />
-                                                <input type="hidden" name="status" value="5" />
-                                                <button type="submit" class="btn btn-success btn-sm w-100" title="Teslim Edildi">
+                                                <button type="button" 
+                                                        class="btn btn-success btn-sm w-100" 
+                                                        onclick="showDeliverConfirm(@order.Id)"
+                                                        title="Teslim Edildi">
                                                     <i class="fas fa-box-open me-1"></i> Teslim
                                                 </button>
-                                            </form>
                                         }
                                         <button type="button" 
                                                 class="btn btn-outline-secondary btn-sm w-100" 
@@ -375,33 +374,37 @@
     </div>
 </div>
 
-<!-- Kargola Onay Modal -->
-<div class="modal fade" id="shipConfirmModal" tabindex="-1">
+<!-- Deliver Onay Modal -->
+<div class="modal fade" id="deliverConfirmModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-info text-white">
+            <div class="modal-header bg-success text-white">
                 <h5 class="modal-title">
-                    <i class="fas fa-truck me-2"></i>Kargoya Ver
+                    <i class="fas fa-box-open me-2"></i>Siparişi Teslim Et
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="text-center mb-3">
-                    <i class="fas fa-shipping-fast fa-3x text-info mb-3"></i>
-                    <h6>Bu siparişi kargoya vermek istediğinize emin misiniz?</h6>
+                    <i class="fas fa-check-double fa-3x text-success mb-3"></i>
+                    <h6>Bu siparişi <strong>"Teslim Edildi"</strong> olarak işaretlemek istediğinize emin misiniz?</h6>
                 </div>
-                <div class="alert alert-info mb-0">
-                    <i class="fas fa-envelope me-2"></i>
-                    <small>Kargo bilgileri kaydedilecek ve müşteriye kargo takip numarası ile birlikte bilgilendirme e-postası gönderilecektir.</small>
+                <div class="alert alert-success mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <small>Bu işlem sipariş sürecini tamamlayacak ve siparişi arşive taşıyacaktır.</small>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i> İptal
                 </button>
-                <button type="button" class="btn btn-info" id="confirmShipBtn">
-                    <i class="fas fa-truck me-1"></i> Kargoya Ver
-                </button>
+                <form id="deliverForm" asp-action="UpdateStatus" method="post" style="display: inline;">
+                    <input type="hidden" name="orderId" id="deliverOrderId" />
+                    <input type="hidden" name="status" value="5" />
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-1"></i> Evet, Teslim Edildi
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -468,6 +471,13 @@
     function showShipConfirm(orderId) {
         currentShipOrderId = orderId;
         const modal = new bootstrap.Modal(document.getElementById('shipConfirmModal'));
+        modal.show();
+    }
+
+    // Teslim onay popup
+    function showDeliverConfirm(orderId) {
+        document.getElementById('deliverOrderId').value = orderId;
+        const modal = new bootstrap.Modal(document.getElementById('deliverConfirmModal'));
         modal.show();
     }
 

@@ -1,32 +1,32 @@
 using GameGaraj.Order.Domain.Common;
-using GameGaraj.Order.Domain.Enums;
 
 namespace GameGaraj.Order.Domain.Entities
 {
-    /// <summary>
-    /// Sipariş entity'si
-    /// </summary>
     public class Order : BaseEntity
     {
+        public DateTime CreatedDate { get; set; }
         public string BuyerId { get; set; } = string.Empty;
-        
-        /// <summary>
-        /// Sipariş durumu (Pending, Completed, Failed)
-        /// </summary>
-        public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
-        // Navigation properties
-        public int DeliveryAddressId { get; set; }
+        // Fiyatlandırma Verileri (Hızlı listeleme için özet kolonlar korunuyor)
+        public decimal OriginalTotalAmount { get; set; }
+        public decimal CampaignDiscountAmount { get; set; }
+        public decimal CouponDiscountAmount { get; set; }
+        public decimal ShippingFee { get; set; }
+        public decimal TotalPaidAmount { get; set; }
+
+        public string? CouponCode { get; set; }
+        public string? AppliedCampaignName { get; set; }
+
         public Address DeliveryAddress { get; set; } = null!;
-        
-        public int? InvoiceAddressId { get; set; }
-        public Address? InvoiceAddress { get; set; }
-        
-        public List<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+        public Address InvoiceAddress { get; set; } = null!;
 
+        public List<OrderItem> OrderItems { get; set; } = new();
+        
         /// <summary>
-        /// Toplam sipariş tutarını hesaplar
+        /// Siparişin detaylı mali özeti (Ledger)
         /// </summary>
-        public decimal GetTotalPrice => OrderItems.Sum(x => x.Price);
+        public List<OrderPricingLedger> OrderPricingLedgers { get; set; } = new();
+
+        public int Status { get; set; } // 0=Pending, 1=Completed, 2=Failed, 3=Preparing, 4=Shipped, 5=Delivered
     }
 }

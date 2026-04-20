@@ -127,7 +127,7 @@ namespace GameGaraj.Catalog.API.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
-                    b.Property<int>("TotalStock")
+                    b.Property<int>("Stock")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")

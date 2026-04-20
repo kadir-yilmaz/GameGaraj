@@ -4,20 +4,23 @@
 }
 
 <div class="container py-4">
-    <h2 class="mb-4">Siparişlerim</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Siparişlerim</h2>
+        <a href="/" class="btn btn-outline-primary btn-sm rounded-pill"><i class="fas fa-shopping-cart me-1"></i> Alışverişe Devam Et</a>
+    </div>
 
     @if (Model != null && Model.Any())
     {
         foreach (var order in Model)
         {
-            <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card mb-4 shadow-sm border-0 overflow-hidden">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center pt-3 px-4">
                     <div>
-                        <strong>Sipariş #@order.Id</strong>
-                        <span class="text-muted ms-2">@order.CreatedDate.ToString("dd.MM.yyyy HH:mm")</span>
+                        <strong class="fs-5 text-dark">Sipariş #@order.Id</strong>
+                        <span class="text-muted ms-2 small">@order.CreatedDate.ToString("dd.MM.yyyy HH:mm")</span>
                     </div>
                     <span
-                        class="badge @(order.Status == 1 || order.Status == 5 ? "bg-success" : order.Status == 2 ? "bg-danger" : order.Status == 4 ? "bg-info" : order.Status == 3 ? "bg-primary" : "bg-warning")">
+                        class="badge rounded-pill px-3 py-2 @(order.Status == 1 || order.Status == 5 ? "bg-success" : order.Status == 2 ? "bg-danger" : order.Status == 4 ? "bg-info pulse-badge" : order.Status == 3 ? "bg-primary pulse-badge" : "bg-warning")">
                         @(order.Status == 0 ? "Beklemede" :
                             order.Status == 1 ? "Ödeme Tamamlandı" :
                             order.Status == 2 ? "Başarısız" :
@@ -26,81 +29,143 @@
                             order.Status == 5 ? "Teslim Edildi" : "")
                     </span>
                 </div>
-                <div class="card-body">
+                <div class="card-body px-4 pb-4">
                     <!-- Sipariş Takip Adımları -->
-                    @if (order.Status != 2) // Başarısız değilse
+                    @if (order.Status != 2)
                     {
-                        <div class="order-tracking mb-4">
+                        <div class="order-tracking mb-5">
                             <div class="steps">
-                                <!-- Adım 1: Sipariş Alındı -->
                                 <div class="step @(order.Status == 1 || order.Status == 3 || order.Status == 4 || order.Status == 5 ? "completed" : "")">
-                                    <div class="step-icon">
-                                        <i class="fas fa-check-circle"></i>
-                                    </div>
+                                    <div class="step-icon"><i class="fas fa-check-circle"></i></div>
                                     <div class="step-label">Sipariş Alındı</div>
                                 </div>
-
-                                <!-- Adım 2: Hazırlanıyor -->
                                 <div class="step @(order.Status == 4 || order.Status == 5 ? "completed" : order.Status == 3 ? "active" : "")">
-                                    <div class="step-icon">
-                                        <i class="fas fa-cog"></i>
-                                    </div>
+                                    <div class="step-icon"><i class="fas fa-cog"></i></div>
                                     <div class="step-label">Hazırlanıyor</div>
                                 </div>
-
-                                <!-- Adım 3: Kargoya Verildi -->
                                 <div class="step @(order.Status == 5 ? "completed" : order.Status == 4 ? "active" : "")">
-                                    <div class="step-icon">
-                                        <i class="fas fa-truck"></i>
-                                    </div>
-                                    <div class="step-label">Kargoya Verildi</div>
+                                    <div class="step-icon"><i class="fas fa-truck"></i></div>
+                                    <div class="step-label">Kargoda</div>
                                 </div>
-
-                                <!-- Adım 4: Teslim Edildi -->
                                 <div class="step @(order.Status == 5 ? "completed" : "")">
-                                    <div class="step-icon">
-                                        <i class="fas fa-box-open"></i>
-                                    </div>
+                                    <div class="step-icon"><i class="fas fa-box-open"></i></div>
                                     <div class="step-label">Teslim Edildi</div>
                                 </div>
                             </div>
                         </div>
                     }
 
-                    @if (order.Address != null && !string.IsNullOrEmpty(order.Address.FirstName))
-                    {
-                        <div class="mb-3">
-                            <h6 class="text-muted mb-2">Teslimat Adresi</h6>
-                            <p class="mb-1">
-                                <i class="fas fa-user me-2"></i>
-                                <strong>@order.Address.FirstName @order.Address.LastName</strong>
-                            </p>
-                            <p class="mb-1">
-                                <i class="fas fa-phone me-2"></i>
-                                @order.Address.PhoneNumber
-                            </p>
-                            <p class="mb-0">
-                                <i class="fas fa-map-marker-alt me-2"></i>
-                                @order.Address.AddressDetail, @order.Address.Neighborhood<br />
-                                <span class="ms-4">@order.Address.District / @order.Address.Province
-                                    @order.Address.PostalCode</span>
-                            </p>
+                    <div class="row g-4">
+                        <div class="col-md-7">
+                            <h6 class="text-secondary text-uppercase small fw-bold mb-3 d-flex align-items-center">
+                                <i class="fas fa-laptop me-2"></i> Satın Alınan Ürünler
+                            </h6>
+                            <div class="order-items border rounded-3 p-3 bg-light">
+                                @foreach (var item in order.OrderItems)
+                                {
+                                    <div class="order-item-row mb-3 pb-3 border-bottom last-border-0">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center">
+                                                @if (!string.IsNullOrEmpty(item.PictureUrl))
+                                                {
+                                                    <img src="@item.PictureUrl" class="rounded border me-3" style="width: 50px; height: 50px; object-fit: cover;" alt="@item.ProductName" />
+                                                }
+                                                <div>
+                                                    <div class="fw-bold text-dark">@item.ProductName</div>
+                                                    <div class="text-secondary small">@((item.Quantity > 0 ? item.Quantity : 1)) Adet x @item.Price.ToString("C2")</div>
+                                                </div>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="fw-bold fs-6">@((item.Price * (item.Quantity > 0 ? item.Quantity : 1)).ToString("C2"))</div>
+                                            </div>
+                                        </div>
+                                        @if (item.DiscountAmount > 0)
+                                        {
+                                            <div class="d-flex justify-content-between text-success small mt-1 ps-5">
+                                                <span><i class="fas fa-tag me-1"></i> Ürün İndirimi</span>
+                                                <span class="fw-bold">-@item.DiscountAmount.ToString("C2")</span>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
                         </div>
-                        <hr>
-                    }
 
-                    <h6 class="text-muted mb-2">Ürünler</h6>
-                    @foreach (var item in order.OrderItems)
-                    {
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>@item.ProductName</span>
-                            <span>@item.Price.ToString("C2")</span>
+                        <div class="col-md-5">
+                            <div class="summary-card border rounded-3 p-4 h-100 shadow-sm bg-white">
+                                <h6 class="text-secondary text-uppercase small fw-bold mb-3 d-flex align-items-center">
+                                    <i class="fas fa-file-invoice-dollar me-2"></i> Hesap Özeti
+                                </h6>
+                                
+                                <div class="price-summary">
+                                    @if (order.OrderPricingLedgers != null && order.OrderPricingLedgers.Any())
+                                    {
+                                        foreach (var ledger in order.OrderPricingLedgers.OrderBy(x => x.SortOrder))
+                                        {
+                                            if (ledger.Type == 3) // Net Toplam
+                                            {
+                                                <hr class="my-3">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="h5 mb-0 fw-bold">@ledger.Title</span>
+                                                    <span class="h4 mb-0 text-primary fw-bold">@ledger.Amount.ToString("C2")</span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="d-flex justify-content-between mb-2 @(ledger.Type == 1 ? "text-success fw-medium" : "text-dark")">
+                                                    <span class="small">
+                                                        @if(ledger.Type == 1) { <i class="fas fa-gift me-1"></i> }
+                                                        @ledger.Title
+                                                    </span>
+                                                    <span class="small fw-bold">@(ledger.Type == 1 ? "-" : "")@ledger.Amount.ToString("C2")</span>
+                                                </div>
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        @* Fallback for old orders *@
+                                        <div class="d-flex justify-content-between mb-2 small text-dark">
+                                            <span>Ara Toplam</span>
+                                            <span class="fw-bold">@order.OriginalTotalAmount.ToString("C2")</span>
+                                        </div>
+                                        @if (order.CampaignDiscountAmount > 0)
+                                        {
+                                            <div class="d-flex justify-content-between mb-2 small text-success fw-medium">
+                                                <span><i class="fas fa-gift me-1"></i> İndirim</span>
+                                                <span class="fw-bold">-@order.CampaignDiscountAmount.ToString("C2")</span>
+                                            </div>
+                                        }
+                                        <div class="d-flex justify-content-between mb-2 small text-dark">
+                                            <span>Kargo</span>
+                                            <span class="fw-bold">@order.ShippingFee.ToString("C2")</span>
+                                        </div>
+                                        <hr class="my-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="h5 mb-0 fw-bold">Toplam</span>
+                                            <span class="h4 mb-0 text-primary fw-bold">@order.TotalPaidAmount.ToString("C2")</span>
+                                        </div>
+                                    }
+                                </div>
+
+                                @if (order.Address != null && !string.IsNullOrEmpty(order.Address.FirstName))
+                                {
+                                    <div class="mt-4 pt-4 border-top">
+                                        <h6 class="text-secondary text-uppercase small fw-bold mb-3 d-flex align-items-center">
+                                            <i class="fas fa-map-marker-alt me-2"></i> Teslimat
+                                        </h6>
+                                        <div class="small text-dark">
+                                            <div class="fw-bold mb-1">@order.Address.FirstName @order.Address.LastName</div>
+                                            <div class="text-muted mb-2"><i class="fas fa-phone me-1"></i> @order.Address.PhoneNumber</div>
+                                            <div class="bg-light p-2 rounded border-0 text-secondary" style="font-size: 13px;">
+                                                @order.Address.AddressDetail, @order.Address.Neighborhood<br />
+                                                <strong>@order.Address.District / @order.Address.Province</strong> @order.Address.PostalCode
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
                         </div>
-                    }
-                    <hr>
-                    <div class="d-flex justify-content-between">
-                        <strong>Toplam</strong>
-                        <strong>@order.OrderItems.Sum(x => x.Price).ToString("C2")</strong>
                     </div>
                 </div>
             </div>
@@ -108,108 +173,86 @@
     }
     else
     {
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i>
-            Henüz siparişiniz bulunmamaktadır.
+        <div class="text-center py-5 bg-white rounded shadow-sm border">
+            <div class="mb-4"><i class="fas fa-box-open fa-5x text-light opacity-50"></i></div>
+            <h4 class="text-muted fw-light">Henüz siparişiniz bulunmamaktadır.</h4>
+            <p class="text-secondary mb-4">Harika PC ürünlerimize göz atarak hemen alışverişe başlayabilirsin.</p>
+            <a href="/" class="btn btn-primary px-5 py-2 rounded-pill shadow-sm fw-bold">ALIŞVERİŞE BAŞLA</a>
         </div>
     }
 </div>
 
 <style>
-    .order-tracking {
-        padding: 20px 0;
+    body { background-color: #f8f9fa; }
+    .card { transition: all 0.25s ease-in-out; border-radius: 16px; border: 1px solid rgba(0,0,0,.05); }
+    .last-border-0:last-child { border-bottom: 0 !important; margin-bottom: 0 !important; padding-bottom: 0 !important; }
+    
+    .order-tracking { padding: 10px 0; }
+    .steps { display: flex; justify-content: space-between; position: relative; margin: 0 auto; max-width: 650px; }
+    .steps::before { content: ''; position: absolute; top: 20px; left: 0; right: 0; height: 3px; background: #f0f0f0; z-index: 0; }
+    .step { flex: 1; text-align: center; position: relative; z-index: 1; }
+    .step-icon { width: 42px; height: 42px; border-radius: 50%; background: #fff; border: 3px solid #f0f0f0; color: #bbb; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-size: 16px; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    
+    .step.completed .step-icon { background: #28a745; border-color: #28a745; color: white; transform: scale(1.1); }
+    .step.active .step-icon { background: #fff; border-color: #007bff; color: #007bff; box-shadow: 0 0 15px rgba(0,123,255,0.35); transform: scale(1.15); }
+    
+    .step-label { font-size: 12px; color: #999; font-weight: 500; margin-top: 5px; }
+    .step.completed .step-label { color: #28a745; font-weight: 600; }
+    .step.active .step-label { color: #007bff; font-weight: 700; }
+    
+    /* Pulse Animation */
+    .pulse-badge {
+        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
+        animation: pulse-red 2s infinite;
     }
-
-    .steps {
-        display: flex;
-        justify-content: space-between;
-        position: relative;
-        margin: 0 auto;
-        max-width: 800px;
-    }
-
-    .steps::before {
-        content: '';
-        position: absolute;
-        top: 30px;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: #e0e0e0;
-        z-index: 0;
-    }
-
-    .step {
-        flex: 1;
-        text-align: center;
-        position: relative;
-        z-index: 1;
-    }
-
-    .step-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: #e0e0e0;
-        color: #999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 10px;
-        font-size: 24px;
-        transition: all 0.3s;
-    }
-
-    .step.completed .step-icon {
-        background: #28a745;
-        color: white;
+    
+    .bg-info.pulse-badge {
+        box-shadow: 0 0 0 0 rgba(13, 202, 240, 0.4);
+        animation: pulse-info 2s infinite;
     }
 
     .step.active .step-icon {
-        background: #007bff;
-        color: white;
-        animation: pulse 2s infinite;
+        animation: pulse-blue 2s infinite;
     }
 
-    .step-label {
-        font-size: 14px;
-        color: #666;
-        font-weight: 500;
+    @@keyframes pulse-blue {
+        0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
+        70% { box-shadow: 0 0 0 15px rgba(0, 123, 255, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
     }
 
-    .step.completed .step-label {
-        color: #28a745;
-        font-weight: 600;
+    @@keyframes pulse-info {
+        0% { box-shadow: 0 0 0 0 rgba(13, 202, 240, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(13, 202, 240, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(13, 202, 240, 0); }
     }
 
-    .step.active .step-label {
-        color: #007bff;
-        font-weight: 600;
+    /* Icon Specific Animations */
+    .step.active .fa-cog {
+        animation: fa-spin 2s linear infinite;
     }
 
-    @@keyframes pulse {
-
-        0%,
-        100% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.1);
-        }
+    .step.active .fa-truck {
+        animation: truck-move 1s ease-in-out infinite;
     }
+
+    @@keyframes truck-move {
+        0% { transform: translateX(0); }
+        25% { transform: translateX(3px) translateY(-1px); }
+        50% { transform: translateX(0); }
+        75% { transform: translateX(-2px) translateY(1px); }
+        100% { transform: translateX(0); }
+    }
+
+    .btn-outline-primary { border-width: 2px; font-weight: 600; }
+    .btn-outline-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,123,255,0.2); }
 
     @@media (max-width: 768px) {
-        .steps {
-            flex-direction: column;
-        }
-
-        .steps::before {
-            display: none;
-        }
-
-        .step {
-            margin-bottom: 20px;
-        }
+        .steps { flex-direction: column; text-align: left; max-width: 100%; border-left: 3px solid #f0f0f0; padding-left: 30px; margin-left: 20px; }
+        .steps::before { display: none; }
+        .step { display: flex; align-items: center; text-align: left; margin-bottom: 25px; }
+        .step-icon { margin: 0 20px 0 0; }
+        .step-label { margin-top: 0; font-size: 14px; }
+        .summary-card { border-left: 0 !important; border-top: 1px solid #eee; margin-top: 20px; }
     }
 </style>

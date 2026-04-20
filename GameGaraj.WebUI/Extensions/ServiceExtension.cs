@@ -58,6 +58,19 @@ namespace GameGaraj.WebUI.Extensions
                 client.BaseAddress = new Uri($"{serviceApiSettings!.PhotoStockUri}/");
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
+
+            // Campaign Service - Direkt Campaign API'ye bağlan
+            services.AddHttpClient<ICampaignService, CampaignService>(client =>
+            {
+                client.BaseAddress = new Uri($"{serviceApiSettings!.CampaignUri}/");
+            });
+
+            // Discount Service - Direkt Discount API'ye bağlan
+            services.AddHttpClient<IDiscountService, DiscountService>(client =>
+            {
+                client.BaseAddress = new Uri($"{serviceApiSettings!.DiscountUri}/");
+            })
+            .AddHttpMessageHandler<UserIdDelegatingHandler>();
         }
     }
 }

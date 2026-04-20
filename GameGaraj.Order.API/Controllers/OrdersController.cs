@@ -34,6 +34,7 @@ namespace GameGaraj.Order.API.Controllers
 
             var orders = await _context.Orders
                 .Include(x => x.OrderItems)
+                .Include(x => x.OrderPricingLedgers)
                 .Include(x => x.DeliveryAddress)
                 .Include(x => x.InvoiceAddress)
                 .Where(x => x.BuyerId == userId)
@@ -64,6 +65,7 @@ namespace GameGaraj.Order.API.Controllers
 
             var orders = await _context.Orders
                 .Include(x => x.OrderItems)
+                .Include(x => x.OrderPricingLedgers)
                 .Include(x => x.DeliveryAddress)
                 .Include(x => x.InvoiceAddress)
                 .OrderByDescending(x => x.CreatedDate)
@@ -91,7 +93,7 @@ namespace GameGaraj.Order.API.Controllers
                 return NotFound();
             }
 
-            order.Status = (OrderStatus)status;
+            order.Status = status;
             await _context.SaveChangesAsync();
 
             Console.WriteLine($"[OrdersController] Order {orderId} status updated to {status}");
@@ -106,7 +108,7 @@ namespace GameGaraj.Order.API.Controllers
         public async Task<IActionResult> GetOwnedProductIds(string userId)
         {
             var ownedProductIds = await _context.Orders
-                .Where(x => x.BuyerId == userId && x.Status == OrderStatus.Completed)
+                .Where(x => x.BuyerId == userId && x.Status == (int)OrderStatus.Completed)
                 .SelectMany(x => x.OrderItems)
                 .Select(x => x.ProductId)
                 .Distinct()
@@ -122,14 +124,14 @@ namespace GameGaraj.Order.API.Controllers
         public async Task<IActionResult> CheckProductOwnership(string userId, string productId)
         {
             var owns = await _context.Orders
-                .Where(x => x.BuyerId == userId && x.Status == OrderStatus.Completed)
+                .Where(x => x.BuyerId == userId && x.Status == (int)OrderStatus.Completed)
                 .SelectMany(x => x.OrderItems)
                 .AnyAsync(x => x.ProductId == productId);
 
             if (owns)
             {
                 var purchaseDate = await _context.Orders
-                    .Where(x => x.BuyerId == userId && x.Status == OrderStatus.Completed)
+                    .Where(x => x.BuyerId == userId && x.Status == (int)OrderStatus.Completed)
                     .Where(x => x.OrderItems.Any(oi => oi.ProductId == productId))
                     .Select(x => x.CreatedDate)
                     .FirstOrDefaultAsync();

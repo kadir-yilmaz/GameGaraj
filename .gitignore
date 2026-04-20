@@ -9,6 +9,14 @@
 ## [NuGet]
 **/packages/*
 !**/packages/build/
+.dotnet/
+*.dotnetUserLevelCache
+*.dotnetFirstUseSentinel
+*.dotnetSentinel
+*.telemetry
+*.trn
+*.ttrn
+10.0.201_*
 
 ## [Environment Variables]
 .env
@@ -24,3 +32,5 @@ build/
 ## [App Specific]
 ConsoleLogs/
 docker-compose.override.yml
+**/wwwroot/photos/
+**/wwwroot/images/

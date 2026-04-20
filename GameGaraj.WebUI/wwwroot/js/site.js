@@ -50,6 +50,11 @@ window.updateBasketBadge = function (count) {
 };
 
 $(document).ready(function () {
+    function buildGoToBasketButton(buttonClassName) {
+        var classes = buttonClassName || 'btn btn-secondary w-100 mt-auto position-relative';
+        return '<a href="/Basket/Index" class="' + classes + '" style="z-index: 2; background-color: #28a745; border-color: #28a745; color: white;"><i class="fas fa-check me-2"></i>Sepete Git</a>';
+    }
+
     // Generic AJAX Form Handler for Add to Cart
     $(document).on('submit', '.js-add-to-cart-form', function (e) {
         e.preventDefault();
@@ -83,20 +88,26 @@ $(document).ready(function () {
                         window.updateBasketBadge(response.count);
                     }
 
-                    // Reset button state
-                    $button.prop('disabled', false).html(originalContent);
+                    if ($form.closest('.product-card').length) {
+                        $form.replaceWith(buildGoToBasketButton('btn btn-secondary w-100 mt-auto position-relative'));
+                    } else if ($form.attr('id') === 'addToCartForm') {
+                        var detailButtonClasses = ($button.attr('class') || 'add-to-cart-btn') + ' in-cart';
+                        $form.replaceWith(buildGoToBasketButton(detailButtonClasses));
+                    } else {
+                        $button.prop('disabled', false).html(originalContent);
+                        $button.addClass('in-cart');
 
-                    // Add "in-cart" style if available
-                    $button.addClass('in-cart');
-                    var $icon = $button.find('i');
-                    if ($icon.length) {
-                        $icon.removeClass('fa-shopping-cart fa-cart-plus').addClass('fa-check');
-                    }
+                        var $icon = $button.find('i');
+                        if ($icon.length) {
+                            $icon.removeClass('fa-shopping-cart fa-cart-plus').addClass('fa-check');
+                        }
 
-                    // Update button text if it's a specific button structure
-                    var $textSpan = $button.find('span');
-                    if ($textSpan.length) {
-                        // Keep content but update text (optional)
+                        var $textSpan = $button.find('span');
+                        if ($textSpan.length) {
+                            $textSpan.text('Sepete Git');
+                        } else {
+                            $button.html('<i class="fas fa-check"></i> Sepete Git');
+                        }
                     }
 
                 } else {

@@ -84,26 +84,46 @@
         }
 
         #sidebar-wrapper .list-group-item {
-            padding: 1rem 1.25rem;
+            padding: 0.9rem 1.2rem;
+            margin: 0.3rem 0.8rem;
             background-color: transparent;
             color: rgba(255,255,255,0.7);
             border: none;
+            border-radius: 10px;
             font-weight: 500;
-            border-left: 4px solid transparent;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        #sidebar-wrapper .list-group-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(220, 53, 69, 0.2), transparent);
+            transition: all 0.5s ease;
+            z-index: -1;
+        }
+
+        #sidebar-wrapper .list-group-item:hover::before {
+            left: 100%;
         }
 
         #sidebar-wrapper .list-group-item:hover {
             color: #fff;
-            background-color: rgba(255,255,255,0.05);
-            border-left-color: var(--primary-color);
-            transform: translateX(5px);
+            background-color: rgba(255, 255, 255, 0.06);
+            transform: translateX(6px) scale(1.02);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
         
         #sidebar-wrapper .list-group-item.active {
             color: #fff;
-            background-color: rgba(220, 53, 69, 0.1);
-            border-left-color: var(--primary-color);
+            background-color: rgba(220, 53, 69, 0.15);
+            box-shadow: inset 4px 0 0 var(--primary-color);
         }
         
         #sidebar-wrapper .list-group-item i {
@@ -202,14 +222,98 @@
                 transform: translateX(-100%);
             }
         }
+        /* Toast Notifications */
+        #admin-toast-container {
+            position: fixed;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            width: 350px;
+            max-width: calc(100vw - 50px);
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .admin-toast {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            margin-bottom: 15px;
+            overflow: hidden;
+            pointer-events: auto;
+            position: relative;
+            transform: translateY(-120%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            width: 100%;
+        }
+
+        .admin-toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .admin-toast-body {
+            padding: 15px 16px;
+            color: #444;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            display: flex;
+            align-items: center;
+        }
+
+        .admin-toast-icon {
+            margin-right: 12px;
+            font-size: 1.25rem;
+        }
+
+        .admin-toast-success .admin-toast-icon { color: #28a745; }
+        .admin-toast-error .admin-toast-icon { color: #dc3545; }
+
+        .admin-toast-progress {
+            height: 4px;
+            width: 100%;
+            background: #eee;
+            position: relative;
+        }
+
+        .admin-toast-progress-bar {
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            transform-origin: left;
+        }
+
+        .admin-toast-success .admin-toast-progress-bar { background: #28a745; }
+        .admin-toast-error .admin-toast-progress-bar { background: #dc3545; }
+
+        @@keyframes progress-animation {
+            from { transform: scaleX(1); }
+            to { transform: scaleX(0); }
+        }
+
+        .toast-closing {
+            transform: translateY(-120%) !important;
+            transition: transform 0.4s ease-in !important;
+        }
     </style>
 </head>
 <body>
+    <div id="admin-toast-container"></div>
     <div id="wrapper">
         <!-- Sidebar -->
         <div id="sidebar-wrapper">
-            <div class="sidebar-heading">
-                <i class="fas fa-gamepad me-2 text-danger"></i> GameGaraj
+            <div class="sidebar-heading p-0">
+                <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="text-white text-decoration-none px-4 py-3 d-flex align-items-center w-100">
+                    <i class="fas fa-gamepad me-2 text-danger"></i> GameGaraj
+                </a>
             </div>
             <div class="list-group list-group-flush mt-2">
                 <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" ? "active" : "")" 
@@ -231,6 +335,18 @@
                 <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Product" ? "active" : "")" 
                    asp-area="Admin" asp-controller="Product" asp-action="Index">
                     <i class="fas fa-box"></i> Ürün Yönetimi
+                </a>
+                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Campaign" ? "active" : "")" 
+                   asp-area="Admin" asp-controller="Campaign" asp-action="Index">
+                    <i class="fas fa-bullhorn"></i> İndirim Kuralları
+                </a>
+                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Discount" ? "active" : "")" 
+                   asp-area="Admin" asp-controller="Discount" asp-action="Index">
+                    <i class="fas fa-ticket-alt"></i> İndirim Kuponları
+                </a>
+                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "ShippingSetting" ? "active" : "")" 
+                   asp-area="Admin" asp-controller="ShippingSetting" asp-action="Index">
+                    <i class="fas fa-truck"></i> Kargo Ayarları
                 </a>
                 <div class="mt-4 border-top border-secondary pt-3 mx-3">
                     <span class="text-uppercase small text-muted font-weight-bold" style="font-size: 0.75rem;">Hızlı Bağlantılar</span>
@@ -310,6 +426,50 @@
                     }
                 });
             });
+
+            // Admin Toast Logic
+            window.showNotification = function(message, type = 'success', duration = 5000) {
+                const container = document.getElementById('admin-toast-container');
+                const toast = document.createElement('div');
+                toast.className = `admin-toast admin-toast-${type}`;
+                
+                const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+                
+                toast.innerHTML = `
+                    <div class="admin-toast-body">
+                        <i class="fas ${icon} admin-toast-icon"></i>
+                        <div>${message}</div>
+                    </div>
+                    <div class="admin-toast-progress">
+                        <div class="admin-toast-progress-bar" style="animation: progress-animation ${duration}ms linear forwards"></div>
+                    </div>
+                `;
+                
+                container.appendChild(toast);
+                setTimeout(() => toast.classList.add('show'), 10);
+                
+                const timeout = setTimeout(() => closeToast(toast), duration);
+                
+                toast.onclick = () => {
+                    clearTimeout(timeout);
+                    closeToast(toast);
+                };
+            };
+
+            function closeToast(toast) {
+                toast.classList.add('toast-closing');
+                setTimeout(() => toast.remove(), 400);
+            }
+
+            // TempData Check
+            @if (TempData["Success"] != null)
+            {
+                <text>window.showNotification('@Html.Raw(TempData["Success"])', 'success');</text>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <text>window.showNotification('@Html.Raw(TempData["Error"])', 'error');</text>
+            }
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)

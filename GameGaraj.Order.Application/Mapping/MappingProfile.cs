@@ -11,8 +11,11 @@ namespace GameGaraj.Order.Application.Mapping
             CreateMap<Domain.Entities.Order, OrderDto>()
                 .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.DeliveryAddress))
                 .ReverseMap();
+
             CreateMap<OrderItem, OrderItemDto>().ReverseMap();
+            CreateMap<OrderPricingLedger, OrderPricingLedgerDto>().ReverseMap();
             CreateMap<Address, AddressDto>().ReverseMap();
+            CreateMap<UserAddress, UserAddressDto>().ReverseMap();
         }
     }
 }

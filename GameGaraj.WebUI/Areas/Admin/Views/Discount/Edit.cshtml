@@ -1,0 +1,87 @@
+@model GameGaraj.WebUI.Models.Discounts.UpdateDiscountInput
+@{
+    ViewData["Title"] = "Kupon Düzenle";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3 mb-0 text-gray-800">Kupon Düzenle: <span class="text-primary">@Model.Code</span></h2>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Geri Dön
+        </a>
+    </div>
+
+    <div class="card shadow mb-4 border-0">
+        <div class="card-body p-4">
+            <form asp-action="Edit" method="post">
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="CreatedTime" />
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Code" class="form-label fw-bold">Kupon Kodu <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-ticket-alt"></i></span>
+                            <input asp-for="Code" class="form-control" required />
+                        </div>
+                        <span asp-validation-for="Code" class="text-danger small"></span>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Rate" class="form-label fw-bold">İndirim Oranı (%) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-percentage"></i></span>
+                            <input asp-for="Rate" type="number" class="form-control" min="1" max="100" required />
+                        </div>
+                        <span asp-validation-for="Rate" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="UserId" class="form-label fw-bold">Kullanıcı ID (Opsiyonel)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input asp-for="UserId" class="form-control" placeholder="Tüm kullanıcılar için boş bırakın" />
+                        </div>
+                        <span asp-validation-for="UserId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="AllowedProductIds" class="form-label fw-bold">Geçerli Ürün ID'leri (Opsiyonel)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-box"></i></span>
+                            <input asp-for="AllowedProductIds" class="form-control" placeholder="Örn: 1, 2, 3" />
+                        </div>
+                        <span asp-validation-for="AllowedProductIds" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="ExpirationDate" class="form-label fw-bold">Son Kullanma Tarihi (Opsiyonel)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                            <input asp-for="ExpirationDate" type="date" class="form-control" />
+                        </div>
+                        <span asp-validation-for="ExpirationDate" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <hr class="mb-4">
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save me-2"></i> Değişiklikleri Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

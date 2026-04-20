@@ -15,7 +15,7 @@ namespace GameGaraj.WebUI.ViewComponents
         public async Task<IViewComponentResult> InvokeAsync()
         {
             var basket = await _basketService.GetBasketAsync();
-            var count = basket?.Items?.Count ?? 0;
+            var count = basket?.Items?.Sum(x => x.Quantity) ?? 0;
             return View(count);
         }
     }

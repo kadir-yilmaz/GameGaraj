@@ -17,21 +17,26 @@ public class AddBasketItemCommandHandler(BasketService basketService, IIdentityS
             basket = new Data.Basket { UserId = identityService.UserId };
         }
         
-        // Remove existing item if exists to update it (simple implementation)
         var existingItem = basket.Items.FirstOrDefault(x => x.Id == request.Id);
-        if (existingItem != null)
-        {
-            basket.Items.Remove(existingItem);
-        }
-
-        basket.Items.Add(new BasketItem
+        var newItem = new BasketItem
         {
             Id = request.Id,
             Name = request.Name,
+            CategoryId = request.CategoryId ?? string.Empty,
             Price = request.Price, 
             PictureUrl = request.PictureUrl,
             Quantity = request.Quantity
-        });
+        };
+
+        if (existingItem != null)
+        {
+            var index = basket.Items.IndexOf(existingItem);
+            basket.Items[index] = newItem;
+        }
+        else
+        {
+            basket.Items.Add(newItem);
+        }
 
         await basketService.SaveBasketAsync(basket, cancellationToken);
 

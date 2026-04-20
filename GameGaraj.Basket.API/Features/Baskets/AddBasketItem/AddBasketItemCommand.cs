@@ -7,6 +7,7 @@ namespace GameGaraj.Basket.API.Features.Baskets.AddBasketItem;
 public record AddBasketItemCommand(
     [Required] string Id,
     [Required] string Name,
+    string CategoryId,
     [Required] decimal Price,
     string? PictureUrl,
     [Range(1, int.MaxValue)] int Quantity) : IRequest<ServiceResult>;

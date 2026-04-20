@@ -9,9 +9,9 @@ namespace GameGaraj.Catalog.API.Models
         public string Brand { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
-        public int TotalStock { get; set; }
+        public int Stock { get; set; }
         public int ReservedStock { get; set; }
-        public int AvailableStock => TotalStock - ReservedStock;
+        public int AvailableStock => Stock - ReservedStock;
         public bool IsActive { get; set; }
         public bool IsFeatured { get; set; }
         public List<string> ImageUrls { get; set; } = new();

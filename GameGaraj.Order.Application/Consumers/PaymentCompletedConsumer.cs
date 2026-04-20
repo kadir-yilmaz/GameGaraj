@@ -31,7 +31,7 @@ namespace GameGaraj.Order.Application.Consumers
             }
 
             // Ödeme başarılı, sipariş hazırlanmaya başlasın
-            order.Status = OrderStatus.Completed; // Önce Completed yap (ödeme onayı)
+            order.Status = (int)OrderStatus.Completed; // Önce Completed yap (ödeme onayı)
             await _context.SaveChangesAsync();
 
             Console.WriteLine($"[PaymentCompletedConsumer] ✅ Order {order.Id} status updated to Completed (Payment confirmed)");

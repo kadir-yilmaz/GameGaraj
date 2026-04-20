@@ -17,6 +17,7 @@ namespace GameGaraj.Order.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("ordering")
                 .HasAnnotation("ProductVersion", "8.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
@@ -82,9 +83,21 @@ namespace GameGaraj.Order.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AppliedCampaignName")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("BuyerId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("CampaignDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CouponCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("CouponDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
@@ -92,20 +105,26 @@ namespace GameGaraj.Order.Infrastructure.Migrations
                     b.Property<int>("DeliveryAddressId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("InvoiceAddressId")
+                    b.Property<int>("InvoiceAddressId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("OriginalTotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ShippingFee")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("TotalPaidAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("DeliveryAddressId")
-                        .IsUnique();
+                    b.HasIndex("DeliveryAddressId");
 
-                    b.HasIndex("InvoiceAddressId")
-                        .IsUnique()
-                        .HasFilter("[InvoiceAddressId] IS NOT NULL");
+                    b.HasIndex("InvoiceAddressId");
 
                     b.ToTable("Orders", "ordering");
                 });
@@ -120,6 +139,9 @@ namespace GameGaraj.Order.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
@@ -139,11 +161,48 @@ namespace GameGaraj.Order.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OrderId");
 
                     b.ToTable("OrderItems", "ordering");
+                });
+
+            modelBuilder.Entity("GameGaraj.Order.Domain.Entities.OrderPricingLedger", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("OrderPricingLedgers", "ordering");
                 });
 
             modelBuilder.Entity("GameGaraj.Order.Domain.Entities.UserAddress", b =>
@@ -205,15 +264,9 @@ namespace GameGaraj.Order.Infrastructure.Migrations
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("UserId", "Type")
-                        .HasDatabaseName("IX_UserAddresses_UserId_Type");
-
-                    b.HasIndex("UserId", "Type", "IsDefault")
-                        .HasDatabaseName("IX_UserAddresses_UserId_Type_IsDefault");
 
                     b.ToTable("UserAddresses", "ordering");
                 });
@@ -221,15 +274,16 @@ namespace GameGaraj.Order.Infrastructure.Migrations
             modelBuilder.Entity("GameGaraj.Order.Domain.Entities.Order", b =>
                 {
                     b.HasOne("GameGaraj.Order.Domain.Entities.Address", "DeliveryAddress")
-                        .WithOne()
-                        .HasForeignKey("GameGaraj.Order.Domain.Entities.Order", "DeliveryAddressId")
+                        .WithMany()
+                        .HasForeignKey("DeliveryAddressId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("GameGaraj.Order.Domain.Entities.Address", "InvoiceAddress")
-                        .WithOne()
-                        .HasForeignKey("GameGaraj.Order.Domain.Entities.Order", "InvoiceAddressId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .WithMany()
+                        .HasForeignKey("InvoiceAddressId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("DeliveryAddress");
 
@@ -247,9 +301,22 @@ namespace GameGaraj.Order.Infrastructure.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("GameGaraj.Order.Domain.Entities.OrderPricingLedger", b =>
+                {
+                    b.HasOne("GameGaraj.Order.Domain.Entities.Order", "Order")
+                        .WithMany("OrderPricingLedgers")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("GameGaraj.Order.Domain.Entities.Order", b =>
                 {
                     b.Navigation("OrderItems");
+
+                    b.Navigation("OrderPricingLedgers");
                 });
 #pragma warning restore 612, 618
         }

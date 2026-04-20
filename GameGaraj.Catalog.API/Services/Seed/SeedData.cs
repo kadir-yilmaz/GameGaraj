@@ -192,7 +192,7 @@ namespace GameGaraj.Catalog.API.Services.Seed
                 Brand = brand,
                 Description = description,
                 Price = price,
-                TotalStock = stock,
+                Stock = stock,
                 ReservedStock = 0,
                 CategoryId = categoryId,
                 IsActive = true,

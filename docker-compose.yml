@@ -45,7 +45,21 @@ services:
       - POSTGRES_PASSWORD=Password12*
       - POSTGRES_DB=discountdb
 
-  # SQL Server for Order API (Apple Silicon Mac requires platform specification)
+  # SQL Server for Campaign API
+  campaigndb:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    container_name: gamegaraj-campaign-sqlserver
+    ports:
+      - "1434:1433"
+    volumes:
+      - campaign_sqlserver_data:/var/opt/mssql
+    environment:
+      - ACCEPT_EULA=${ACCEPT_EULA}
+      - SA_PASSWORD=${SA_PASSWORD}
+      - MSSQL_PID=${MSSQL_PID}
+
+  # SQL Server for Order API
   orderdb:
     image: mcr.microsoft.com/mssql/server:2022-latest
     platform: linux/amd64
@@ -137,6 +151,7 @@ volumes:
   redis_data:
   postgres_data:
   sqlserver_data:
+  campaign_sqlserver_data:
   keycloak_postgres_data:
   rabbitmq_data:
   catalog_postgres_data:

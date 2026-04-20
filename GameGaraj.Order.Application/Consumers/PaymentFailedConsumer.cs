@@ -30,7 +30,7 @@ namespace GameGaraj.Order.Application.Consumers
                 return;
             }
 
-            order.Status = OrderStatus.Failed;
+                order.Status = (int)OrderStatus.Failed;
             await _context.SaveChangesAsync();
 
             Console.WriteLine($"[PaymentFailedConsumer] ✅ Order {order.Id} status updated to Failed");

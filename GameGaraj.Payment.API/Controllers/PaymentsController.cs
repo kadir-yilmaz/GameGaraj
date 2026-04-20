@@ -214,16 +214,48 @@ namespace GameGaraj.Payment.API.Controllers
                     Country = dto.Country,
                     Description = dto.AddressDetail,
                     ZipCode = dto.ZipCode
-                },
-                BasketItems = dto.Items.Select((item, i) => new BasketItem
-                {
-                    Id = $"BI{i + 1}",
-                    Name = item.ProductName,
-                    Category1 = "General",
-                    ItemType = BasketItemType.PHYSICAL.ToString(),
-                    Price = item.Price.ToString("F2", CultureInfo.InvariantCulture)
-                }).ToList()
+                }
             };
+
+            // Iyzico requires: PaidPrice == Sum(BasketItem.Price)
+            // Since we have global discounts (coupons, threshold discounts), we must distribute them to items.
+            var basketItems = new List<BasketItem>();
+            decimal totalItemPrices = dto.Items.Sum(x => x.Price);
+            decimal currentDistributedSum = 0;
+
+            if (totalItemPrices > 0)
+            {
+                var items = dto.Items.ToList();
+                for (int i = 0; i < items.Count; i++)
+                {
+                    var item = items[i];
+                    decimal adjustedPrice;
+
+                    if (i == items.Count - 1)
+                    {
+                        // Last item: Use remainder to avoid rounding issues
+                        adjustedPrice = dto.TotalPrice - currentDistributedSum;
+                    }
+                    else
+                    {
+                        // Pro-rata distribution
+                        adjustedPrice = Math.Round(item.Price * (dto.TotalPrice / totalItemPrices), 2);
+                    }
+
+                    basketItems.Add(new BasketItem
+                    {
+                        Id = $"BI{i + 1}",
+                        Name = item.ProductName,
+                        Category1 = "General",
+                        ItemType = BasketItemType.PHYSICAL.ToString(),
+                        Price = adjustedPrice.ToString("F2", CultureInfo.InvariantCulture)
+                    });
+
+                    currentDistributedSum += adjustedPrice;
+                }
+            }
+
+            request.BasketItems = basketItems;
 
             Console.WriteLine($"[PaymentsController] Creating Iyzico payment request:");
             Console.WriteLine($"  - Price: {request.Price}");

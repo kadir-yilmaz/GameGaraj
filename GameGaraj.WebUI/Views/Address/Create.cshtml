@@ -51,51 +51,50 @@
                         <!-- Adres Bilgileri -->
                         <h6 class="text-muted mb-3">Adres Bilgileri</h6>
 
-                        <div class="row g-3 mb-4">
+                        <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">İl <span class="text-danger">*</span></label>
-                                <input class="form-control" asp-for="Province" placeholder="Örn: İstanbul" required />
-                                <span asp-validation-for="Province" class="text-danger small"></span>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">İlçe <span class="text-danger">*</span></label>
-                                <input class="form-control" asp-for="District" placeholder="Örn: Kadıköy" required />
-                                <span asp-validation-for="District" class="text-danger small"></span>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">Mahalle <span class="text-danger">*</span></label>
-                                <input class="form-control" asp-for="Neighborhood" placeholder="Mahalle adı" required />
-                                <span asp-validation-for="Neighborhood" class="text-danger small"></span>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">Posta Kodu</label>
-                                <input class="form-control" asp-for="PostalCode" maxlength="5" placeholder="34000" />
-                                <span asp-validation-for="PostalCode" class="text-danger small"></span>
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Adres Detayı <span class="text-danger">*</span></label>
-                                <textarea class="form-control" asp-for="AddressDetail" rows="3" 
-                                          placeholder="Sokak, bina no, daire no..." required></textarea>
-                                <span asp-validation-for="AddressDetail" class="text-danger small"></span>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">Adres Başlığı <span class="text-danger">*</span></label>
-                                <input class="form-control" asp-for="Title" placeholder="Örn: Evim, İşyerim" required />
+                                <label class="form-label small fw-bold">Adres Başlığı <span class="text-danger">*</span></label>
+                                <input class="form-control" asp-for="Title" value="Adresim" placeholder="Örn: Evim, İşyerim" required />
                                 <span asp-validation-for="Title" class="text-danger small"></span>
                             </div>
 
                             <div class="col-md-6">
-                                <div class="form-check mt-4">
-                                    <input class="form-check-input" type="checkbox" asp-for="IsDefault" />
-                                    <label class="form-check-label" asp-for="IsDefault">
-                                        Varsayılan adres olarak ayarla
-                                    </label>
-                                </div>
+                                <label class="form-label small fw-bold">Posta Kodu</label>
+                                <input class="form-control" asp-for="PostalCode" maxlength="5" placeholder="34000" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+                                <span asp-validation-for="PostalCode" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label small">İl <span class="text-danger">*</span></label>
+                                <select class="form-select" asp-for="Province" id="provinceInput" required>
+                                    <option value="">İl Seçiniz</option>
+                                </select>
+                                <span asp-validation-for="Province" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small">İlçe <span class="text-danger">*</span></label>
+                                <select class="form-select" asp-for="District" id="districtInput" required disabled>
+                                    <option value="">İlçe Seçiniz</option>
+                                </select>
+                                <span asp-validation-for="District" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small">Mahalle <span class="text-danger">*</span></label>
+                                <select class="form-select" asp-for="Neighborhood" id="streetInput" required disabled>
+                                    <option value="">Mahalle Seçiniz</option>
+                                </select>
+                                <span asp-validation-for="Neighborhood" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small">Adres Detayı <span class="text-danger">*</span></label>
+                                <textarea class="form-control" asp-for="AddressDetail" rows="3" 
+                                          placeholder="Sokak, bina no, daire no..." required></textarea>
+                                <span asp-validation-for="AddressDetail" class="text-danger small"></span>
                             </div>
                         </div>
 
@@ -118,4 +117,53 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let addressData = {};
+            const provinceSelect = document.getElementById('provinceInput');
+            const districtSelect = document.getElementById('districtInput');
+            const streetSelect = document.getElementById('streetInput');
+
+            fetch('/data/il_ilce_mahalle.json')
+                .then(res => res.json())
+                .then(data => {
+                    addressData = data;
+                    const provinces = Object.keys(data).sort();
+                    provinces.forEach(p => {
+                        provinceSelect.add(new Option(p, p));
+                    });
+                });
+
+            provinceSelect.addEventListener('change', function () {
+                const province = this.value;
+                districtSelect.innerHTML = '<option value="">İlçe Seçiniz</option>';
+                streetSelect.innerHTML = '<option value="">Mahalle Seçiniz</option>';
+                streetSelect.disabled = true;
+
+                if (province && addressData[province]) {
+                    districtSelect.disabled = false;
+                    Object.keys(addressData[province]).sort().forEach(d => {
+                        districtSelect.add(new Option(d, d));
+                    });
+                } else {
+                    districtSelect.disabled = true;
+                }
+            });
+
+            districtSelect.addEventListener('change', function () {
+                const province = provinceSelect.value;
+                const district = this.value;
+                streetSelect.innerHTML = '<option value="">Mahalle Seçiniz</option>';
+
+                if (province && district && addressData[province][district]) {
+                    streetSelect.disabled = false;
+                    addressData[province][district].sort().forEach(m => {
+                        streetSelect.add(new Option(m, m));
+                    });
+                } else {
+                    streetSelect.disabled = true;
+                }
+            });
+        });
+    </script>
 }

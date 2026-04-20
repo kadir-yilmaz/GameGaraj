@@ -1,0 +1,104 @@
+@model GameGaraj.WebUI.Models.Campaigns.ShippingSettingViewModel
+
+@{
+    ViewData["Title"] = "Kargo Ayarları";
+}
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-1 text-gray-800">Kargo Ayarları</h2>
+                    <p class="text-muted mb-0">Mağazanızın sepet ve ödeme sayfalarında geçerli olacak global kargo limitlerini ve ücretlerini belirleyin.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-check-circle me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-xl-8 col-lg-10">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-truck me-2"></i>Kargo Ayarlarını Güncelle</h6>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="Index" method="post">
+                        
+                        <!-- Kargo Bedava Limiti -->
+                        <div class="mb-4">
+                            <label asp-for="FreeShippingThreshold" class="form-label font-weight-bold">
+                                Kargo Bedava Limiti (Sepet Tutarı)
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-shopping-basket text-primary"></i></span>
+                                <input asp-for="FreeShippingThreshold" type="number" step="0.01" class="form-control" placeholder="Örn: 1000" required />
+                                <span class="input-group-text">TL</span>
+                            </div>
+                            <div class="form-text text-muted">
+                                Sepet amblemi <strong>bu tutarın altındaysa</strong> müşteriye kargo ücreti yansıtılır. Tutar ulaşılırsa kargo bedava olur.
+                            </div>
+                        </div>
+
+                        <!-- Sabit Kargo Ücreti -->
+                        <div class="mb-4">
+                            <label asp-for="DefaultShippingFee" class="form-label font-weight-bold">
+                                Sabit Kargo Ücreti
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-money-bill-wave text-success"></i></span>
+                                <input asp-for="DefaultShippingFee" type="number" step="0.01" class="form-control" placeholder="Örn: 50" required />
+                                <span class="input-group-text">TL</span>
+                            </div>
+                            <div class="form-text text-muted">
+                                Limit altındaki sepetlere eklenecek olan kargo taşıma bedeli.
+                            </div>
+                        </div>
+
+                        <!-- Durum -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch form-switch-lg">
+                                <input class="form-check-input" type="checkbox" role="switch" asp-for="IsActive" id="IsActiveSwitch">
+                                <label class="form-check-label font-weight-bold ms-2" for="IsActiveSwitch" style="padding-top: 4px;">Kargo Ücretlendirmesini Aktif Et</label>
+                            </div>
+                            <div class="form-text text-muted mt-2">
+                                Kapalı olursa (pasif), tüm sepetlerde kargo tutarı sistem tarafından otomatik 0,00 TL sayılacaktır.
+                            </div>
+                        </div>
+
+                        <hr class="my-4" />
+                        
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary px-4 py-2">
+                                <i class="fas fa-save me-2"></i> Ayarları Kaydet
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-switch-lg .form-check-input {
+        width: 3rem;
+        height: 1.5rem;
+    }
+</style>

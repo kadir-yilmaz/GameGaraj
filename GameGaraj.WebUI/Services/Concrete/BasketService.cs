@@ -53,6 +53,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                     {
                         ProductId = x.Id,
                         ProductName = x.Name, // Name -> ProductName mapping
+                        CategoryId = x.CategoryId ?? string.Empty,
                         Price = x.Price,
                         Quantity = x.Quantity,
                         ImageUrl = x.PictureUrl ?? ""
@@ -79,6 +80,7 @@ namespace GameGaraj.WebUI.Services.Concrete
         {
             public string Id { get; set; } = string.Empty;
             public string Name { get; set; } = string.Empty;
+            public string CategoryId { get; set; } = string.Empty;
             public decimal Price { get; set; }
             public string? PictureUrl { get; set; }
             public int Quantity { get; set; }
@@ -123,6 +125,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 {
                     Id = item.ProductId,
                     Name = item.ProductName,
+                    CategoryId = item.CategoryId,
                     Price = item.Price,
                     PictureUrl = item.ImageUrl,
                     Quantity = item.Quantity

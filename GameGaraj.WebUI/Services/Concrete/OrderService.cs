@@ -26,7 +26,7 @@ namespace GameGaraj.WebUI.Services.Concrete
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<OrderCreatedViewModel> CreateOrder(CheckoutInfoInput checkoutInfoInput)
+        public async Task<OrderCreatedViewModel> CreateOrder(CheckoutInfoInput checkoutInfoInput, OrderPricingSnapshot pricingSnapshot)
         {
             try
             {
@@ -46,6 +46,13 @@ namespace GameGaraj.WebUI.Services.Concrete
                 var orderCreateInput = new
                 {
                     BuyerId = basket.UserId,
+                    OriginalTotalAmount = pricingSnapshot.OriginalTotalAmount,
+                    CampaignDiscountAmount = pricingSnapshot.CampaignDiscountAmount,
+                    CouponDiscountAmount = pricingSnapshot.CouponDiscountAmount,
+                    ShippingFee = pricingSnapshot.ShippingFee,
+                    TotalPaidAmount = pricingSnapshot.TotalPaidAmount,
+                    CouponCode = pricingSnapshot.CouponCode,
+                    AppliedCampaignName = pricingSnapshot.AppliedCampaignName,
                     Address = new
                     {
                         FirstName = checkoutInfoInput.CustomerName,
@@ -63,7 +70,14 @@ namespace GameGaraj.WebUI.Services.Concrete
                         ProductId = x.ProductId,
                         ProductName = x.ProductName,
                         Price = x.Price,
-                        PictureUrl = x.ImageUrl
+                        PictureUrl = x.ImageUrl,
+                        Quantity = x.Quantity,
+                        DiscountAmount = 0m // Not: Eğer kalem bazlı kampanya verisi varsa buraya eşlenmeli
+                    }).ToList(),
+                    OrderDiscounts = pricingSnapshot.OrderPricingLedgers.Select(d => new
+                    {
+                        Title = d.Title,
+                        Amount = d.Amount
                     }).ToList()
                 };
 
@@ -85,26 +99,22 @@ namespace GameGaraj.WebUI.Services.Concrete
                     };
                 }
 
-                var responseContent = await response.Content.ReadAsStringAsync();
-                
-                _logger.LogInformation($"[OrderService] Response content: {responseContent}");
-                
-                var orderResponse = JsonSerializer.Deserialize<Dictionary<string, object>>(responseContent, new JsonSerializerOptions
+                if (response.IsSuccessStatusCode)
                 {
-                    PropertyNameCaseInsensitive = true
-                });
-
-                if (orderResponse != null && orderResponse.ContainsKey("orderId"))
-                {
-                    var orderId = Convert.ToInt32(orderResponse["orderId"].ToString());
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogInformation($"[OrderService] Order created successfully. Raw response: {responseContent}");
                     
-                    _logger.LogInformation($"[OrderService] Order created successfully: {orderId}");
-                    
-                    return new OrderCreatedViewModel 
-                    { 
-                        OrderId = orderId,
-                        IsSuccessful = true 
-                    };
+                    if (int.TryParse(responseContent, out int orderId))
+                    {
+                        // Sipariş başarılı, sepeti temizle
+                        await _basketService.DeleteAsync();
+                        
+                        return new OrderCreatedViewModel 
+                        { 
+                            OrderId = orderId,
+                            IsSuccessful = true 
+                        };
+                    }
                 }
 
                 return new OrderCreatedViewModel 

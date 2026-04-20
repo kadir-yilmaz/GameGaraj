@@ -1,0 +1,283 @@
+@model GameGaraj.WebUI.Models.Campaigns.CampaignRuleCreateInput
+@{
+    ViewData["Title"] = "Yeni İndirim Kuralı";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-plus-circle me-2 text-primary"></i>Yeni İndirim Kuralı</h1>
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Geri Dön
+    </a>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    @* Temel Bilgiler *@
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Kural Adı <span class="text-danger">*</span></label>
+                        <input asp-for="Name" class="form-control" placeholder="Örn: 1000 TL Üzeri %10 İndirim" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Açıklama <span class="text-muted small">(isteğe bağlı)</span></label>
+                        <textarea asp-for="Description" class="form-control" rows="2"
+                            placeholder="Bu kuralın ne yaptığını kısaca açıklayın..."></textarea>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Kural Türü <span class="text-danger">*</span></label>
+                            <select asp-for="RuleType" asp-items="ViewBag.RuleTypes" class="form-select" id="ruleTypeSelect" required>
+                                <option value="">-- Seçiniz --</option>
+                            </select>
+                        </div>
+                        @* Sadece BuyXGetYFree ve CheapestItemDiscount için hedef seçim gösterilir *@
+                        <div class="col-md-6" id="targetTypeCol" style="display:none;">
+                            <label class="form-label fw-semibold">Uygulama Kapsamı</label>
+                            <select class="form-select" id="targetTypeSelect">
+                                <option value="category">Kategori Bazlı</option>
+                                <option value="product">Ürün Bazlı</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    @* Kategori seçimi *@
+                    <div class="mb-3" id="categoryField" style="display:none;">
+                        <label class="form-label fw-semibold">Kategori Seçiniz</label>
+                        <select asp-for="CategoryId" asp-items="ViewBag.Categories" class="form-select">
+                            <option value="">-- Kategori Seçiniz --</option>
+                        </select>
+                    </div>
+
+                    @* Ürün arama (AJAX) *@
+                    <div class="mb-3" id="productField" style="display:none;">
+                        <label class="form-label fw-semibold">Ürün Seçiniz</label>
+                        <div class="position-relative">
+                            <input type="text" id="productSearchInput" class="form-control"
+                                   placeholder="Ürün adı yazın (min 2 karakter)..." autocomplete="off" />
+                            <div id="productSuggestions"
+                                 class="list-group position-absolute w-100 shadow-sm"
+                                 style="display:none; z-index:1000; max-height:280px; overflow-y:auto; top:100%;"></div>
+                        </div>
+                        <input type="hidden" asp-for="ProductId" id="productIdHidden" />
+                        <div id="selectedProductBadge" class="mt-2" style="display:none;">
+                            <span class="badge bg-primary fs-6 fw-normal" id="selectedProductText"></span>
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1" id="clearProductBtn">
+                                <i class="fas fa-times-circle"></i>
+                            </button>
+                        </div>
+                        <div class="form-text text-muted"><i class="fas fa-info-circle me-1"></i>Arama yaparak ürün seçin</div>
+                    </div>
+
+                    @* Dinamik Parametreler *@
+                    <div id="totalAmountFields" class="rule-fields" style="display:none;">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary"><i class="fas fa-money-bill-wave me-1"></i>Toplam Tutar Parametreleri</h6>
+                                <p class="text-muted small mb-2">Sipariş toplam fiyatı üzerinden indirim uygulanır.</p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Minimum Tutar (₺)</label>
+                                        <input asp-for="MinAmount" type="number" step="0.01" class="form-control" placeholder="1000" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">İndirim Oranı (%)</label>
+                                        <input asp-for="DiscountRate" type="number" step="0.01" class="form-control" placeholder="10" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="buyXGetYFields" class="rule-fields" style="display:none;">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title text-success"><i class="fas fa-gift me-1"></i>X Al Y Bedava Parametreleri</h6>
+                                <p class="text-muted small mb-2">Seçili kategori veya üründen X adet alınınca Y adet bedava verilir (en ucuzlar ücretsiz).</p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Satın Alınacak Adet (X)</label>
+                                        <input asp-for="MinQuantity" type="number" class="form-control" placeholder="6" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Bedava Adet (Y)</label>
+                                        <input asp-for="FreeQuantity" type="number" class="form-control" placeholder="1" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="cheapestItemFields" class="rule-fields" style="display:none;">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title text-warning"><i class="fas fa-tag me-1"></i>En Ucuz Ürüne İndirim Parametreleri</h6>
+                                <p class="text-muted small mb-2">Seçili kategori veya üründen minimum adet alınınca en ucuz ürüne indirim uygulanır.</p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Minimum Ürün Adedi</label>
+                                        <input asp-for="MinQuantity" type="number" class="form-control" placeholder="2" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">İndirim Oranı (%)</label>
+                                        <input asp-for="DiscountRate" type="number" step="0.01" class="form-control" placeholder="20" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="IsActive" class="form-check-input" type="checkbox" checked />
+                            <label class="form-check-label fw-semibold" asp-for="IsActive">Aktif</label>
+                        </div>
+                    </div>
+
+                    <hr />
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Kaydet
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">İptal</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* Bilgi Paneli *@
+    <div class="col-lg-4">
+        <div class="card border-info mb-3">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-info-circle me-1"></i>Kural Türleri
+            </div>
+            <div class="card-body small">
+                <p><strong class="text-primary">Toplam Tutar İndirimi:</strong><br />
+                Sipariş toplam fiyatı belirlenen tutarı aşınca tüm sepete yüzde indirim uygulanır. Kategori/ürün seçimi gerekmez.</p>
+                <p><strong class="text-success">X Al Y Bedava:</strong><br />
+                Belirli kategori veya üründen X adet alınca Y tanesi ücretsiz (en ucuzlar bedava).</p>
+                <p><strong class="text-warning">En Ucuz Ürüne İndirim:</strong><br />
+                Belirli kategori veya üründen 2+ ürün alınca en ucuz ürüne yüzde indirim uygulanır.</p>
+                <hr />
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const ruleSelect = document.getElementById('ruleTypeSelect');
+    const targetTypeSelect = document.getElementById('targetTypeSelect');
+    const targetTypeCol = document.getElementById('targetTypeCol');
+    const categoryField = document.getElementById('categoryField');
+    const productField = document.getElementById('productField');
+
+    // ─── Visibility ───────────────────────────────────────────
+    function toggleFields() {
+        const ruleVal = ruleSelect.value;
+        const targetVal = targetTypeSelect.value;
+
+        // Kural tipi parametre bölümleri
+        document.querySelectorAll('.rule-fields').forEach(el => el.style.display = 'none');
+        if (ruleVal === 'TotalAmount')         document.getElementById('totalAmountFields').style.display = 'block';
+        else if (ruleVal === 'BuyXGetYFree')   document.getElementById('buyXGetYFields').style.display = 'block';
+        else if (ruleVal === 'CheapestItemDiscount') document.getElementById('cheapestItemFields').style.display = 'block';
+
+        // TotalAmount için kapsam seçimi yok — tüm toplam fiyata uygulanır
+        const needsTarget = (ruleVal === 'BuyXGetYFree' || ruleVal === 'CheapestItemDiscount');
+        targetTypeCol.style.display = needsTarget ? 'block' : 'none';
+        categoryField.style.display = (needsTarget && targetVal === 'category') ? 'block' : 'none';
+        productField.style.display  = (needsTarget && targetVal === 'product')  ? 'block' : 'none';
+
+        // Aktif olmayan alanları temizle
+        if (!needsTarget || targetVal !== 'category') {
+            const catSel = document.querySelector('select[name="CategoryId"]');
+            if (catSel) catSel.value = '';
+        }
+        if (!needsTarget || targetVal !== 'product') {
+            clearProduct();
+        }
+    }
+
+    ruleSelect.addEventListener('change', toggleFields);
+    targetTypeSelect.addEventListener('change', toggleFields);
+    toggleFields();
+
+    // ─── Ürün AJAX Arama ─────────────────────────────────────
+    const searchInput   = document.getElementById('productSearchInput');
+    const suggestions   = document.getElementById('productSuggestions');
+    const hiddenInput   = document.getElementById('productIdHidden');
+    const badge         = document.getElementById('selectedProductBadge');
+    const badgeText     = document.getElementById('selectedProductText');
+    const clearBtn      = document.getElementById('clearProductBtn');
+
+    let searchTimeout;
+
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimeout);
+        const q = this.value.trim();
+        if (q.length < 2) { suggestions.style.display = 'none'; return; }
+
+        searchTimeout = setTimeout(() => {
+            fetch(`/Admin/Campaign/SearchProducts?q=${encodeURIComponent(q)}`)
+                .then(r => r.json())
+                .then(data => {
+                    suggestions.innerHTML = '';
+                    if (!data.length) {
+                        suggestions.innerHTML = '<div class="list-group-item text-muted">Ürün bulunamadı</div>';
+                    } else {
+                        data.forEach(p => {
+                            const item = document.createElement('button');
+                            item.type = 'button';
+                            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                            item.innerHTML = `<span>${p.name}</span><small class="text-muted">${p.price}</small>`;
+                            item.addEventListener('click', () => selectProduct(p.id, p.name));
+                            suggestions.appendChild(item);
+                        });
+                    }
+                    suggestions.style.display = 'block';
+                })
+                .catch(() => { suggestions.style.display = 'none'; });
+        }, 300);
+    });
+
+    function selectProduct(id, name) {
+        hiddenInput.value = id;
+        badgeText.textContent = name;
+        badge.style.display = 'block';
+        searchInput.value = '';
+        suggestions.style.display = 'none';
+    }
+
+    function clearProduct() {
+        hiddenInput.value = '';
+        badgeText.textContent = '';
+        badge.style.display = 'none';
+        searchInput.value = '';
+        suggestions.style.display = 'none';
+    }
+
+    clearBtn.addEventListener('click', clearProduct);
+
+    // Dışarı tıklanınca önerileri kapat
+    document.addEventListener('click', function (e) {
+        if (!searchInput.contains(e.target) && !suggestions.contains(e.target)) {
+            suggestions.style.display = 'none';
+        }
+    });
+});
+</script>
+}

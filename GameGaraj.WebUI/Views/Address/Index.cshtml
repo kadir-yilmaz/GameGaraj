@@ -3,221 +3,367 @@
     ViewData["Title"] = "Adreslerim";
 }
 
+<style>
+    .premium-card {
+        background: #ffffff;
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 16px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.01), 0 2px 4px -1px rgba(0,0,0,0.006);
+    }
+
+    .premium-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.02);
+        border-color: #0d6efd40;
+    }
+
+    .premium-card.is-default {
+        border: 2px solid #0d6efd;
+        background: #f8f9ff;
+    }
+
+    .card-header-premium {
+        padding: 1.5rem;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        background: transparent;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .address-title-premium {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0;
+    }
+
+    .badge-default {
+        background: #0d6efd;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .card-body-premium {
+        padding: 1.5rem;
+        flex-grow: 1;
+    }
+
+    .address-info-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+        color: #4a4a4a;
+        font-size: 0.95rem;
+    }
+
+    .address-info-row i {
+        color: #0d6efd;
+        width: 16px;
+        margin-top: 4px;
+    }
+
+    .card-footer-premium {
+        padding: 1.25rem 1.5rem;
+        background: rgba(0,0,0,0.02);
+        border-top: 1px solid rgba(0,0,0,0.05);
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-action {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        border: 1px solid #e0e0e0;
+        background: white;
+        color: #4a4a4a;
+        text-decoration: none;
+    }
+
+    .btn-action:hover {
+        background: #f0f0f0;
+        color: #1a1a1a;
+    }
+
+    .btn-action.btn-edit:hover { background: #e7f1ff; color: #0d6efd; border-color: #0d6efd; }
+    .btn-action.btn-delete:hover { background: #fff5f5; color: #dc3545; border-color: #dc3545; }
+    .btn-action.btn-default:hover { background: #f0fff4; color: #198754; border-color: #198754; }
+
+    .add-new-card {
+        border: 2px dashed #0d6efd40;
+        background: #f8f9ff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 3rem 1.5rem;
+        cursor: pointer;
+        min-height: 300px;
+    }
+
+    .add-new-card:hover {
+        border-color: #0d6efd;
+        background: #f0f4ff;
+    }
+
+    .modern-tabs {
+        border: none;
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .modern-tabs .nav-link {
+        border: none;
+        background: transparent;
+        color: #6c757d;
+        font-weight: 600;
+        padding: 1rem 0;
+        position: relative;
+        transition: all 0.3s;
+    }
+
+    .modern-tabs .nav-link.active {
+        color: #0d6efd;
+        background: transparent;
+    }
+
+    .modern-tabs .nav-link.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: #0d6efd;
+        border-radius: 3px;
+    }
+
+    .page-header {
+        margin-bottom: 2.5rem;
+    }
+
+    .type-icon-box {
+        width: 45px;
+        height: 45px;
+        border-radius: 12px;
+        background: #f0f4ff;
+        color: #0d6efd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+</style>
+
 <div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Adreslerim</h5>
-                </div>
-                <div class="card-body">
+    <div class="page-header d-flex justify-content-between align-items-end">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Anasayfa</a></li>
+                    <li class="breadcrumb-item active">Profilim</li>
+                </ol>
+            </nav>
+            <h1 class="fw-bold mb-0">Adres Yönetimi</h1>
+            <p class="text-muted mb-0">Kayıtlı teslimat ve fatura adreslerinizi buradan yönetebilirsiniz.</p>
+        </div>
+    </div>
 
-                    @if (TempData["SuccessMessage"] != null)
-                    {
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <i class="fas fa-check-circle me-1"></i> @TempData["SuccessMessage"]
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    }
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success border-0 shadow-sm mb-4 py-3">
+            <i class="fas fa-check-circle me-2"></i> @TempData["SuccessMessage"]
+        </div>
+    }
 
-                    @if (TempData["ErrorMessage"] != null)
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <i class="fas fa-exclamation-circle me-1"></i> @TempData["ErrorMessage"]
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    }
+    <!-- Modern Tab Switching -->
+    <ul class="nav nav-tabs modern-tabs" id="addressTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link @(Model.ActiveTab == GameGaraj.WebUI.Models.Addresses.AddressType.Delivery ? "active" : "")" 
+                    id="delivery-tab" data-bs-toggle="tab" data-bs-target="#delivery" type="button">
+                <i class="fas fa-truck me-2"></i> Teslimat Adresleri (@Model.DeliveryAddresses.Count)
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(Model.ActiveTab == GameGaraj.WebUI.Models.Addresses.AddressType.Invoice ? "active" : "")" 
+                    id="invoice-tab" data-bs-toggle="tab" data-bs-target="#invoice" type="button">
+                <i class="fas fa-file-invoice me-2"></i> Fatura Adresleri (@Model.InvoiceAddresses.Count)
+            </button>
+        </li>
+    </ul>
 
-                    <!-- Tab Navigation -->
-                    <ul class="nav nav-tabs mb-4" id="addressTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link @(Model.ActiveTab == GameGaraj.WebUI.Models.Addresses.AddressType.Delivery ? "active" : "")" 
-                                    id="delivery-tab" data-bs-toggle="tab" data-bs-target="#delivery" 
-                                    type="button" role="tab">
-                                <i class="fas fa-truck me-1"></i> Teslimat Adreslerim
-                                <span class="badge bg-secondary ms-1">@Model.DeliveryAddresses.Count</span>
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link @(Model.ActiveTab == GameGaraj.WebUI.Models.Addresses.AddressType.Invoice ? "active" : "")" 
-                                    id="invoice-tab" data-bs-toggle="tab" data-bs-target="#invoice" 
-                                    type="button" role="tab">
-                                <i class="fas fa-file-invoice me-1"></i> Fatura Adreslerim
-                                <span class="badge bg-secondary ms-1">@Model.InvoiceAddresses.Count</span>
-                            </button>
-                        </li>
-                    </ul>
-
-                    <!-- Tab Content -->
-                    <div class="tab-content" id="addressTabsContent">
-                        
-                        <!-- Teslimat Adresleri -->
-                        <div class="tab-pane fade @(Model.ActiveTab == GameGaraj.WebUI.Models.Addresses.AddressType.Delivery ? "show active" : "")" 
-                             id="delivery" role="tabpanel">
-                            
-                            <div class="alert alert-info mb-4">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Maksimum 3 teslimat adresi ekleyebilirsiniz. Adres değişiklikleri geçmiş siparişleri etkilemez.
+    <div class="tab-content" id="addressTabsContent">
+        <!-- Teslimat Adresleri Paneli -->
+        <div class="tab-pane fade @(Model.ActiveTab == GameGaraj.WebUI.Models.Addresses.AddressType.Delivery ? "show active" : "")" id="delivery">
+            <div class="row g-4">
+                @if (Model.DeliveryAddresses.Count < 3)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <a asp-action="Create" asp-route-type="@GameGaraj.WebUI.Models.Addresses.AddressType.Delivery" class="text-decoration-none h-100">
+                            <div class="premium-card add-new-card">
+                                <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>
+                                <h6 class="fw-bold text-primary">Yeni Adres Ekle</h6>
+                                <p class="small text-muted mb-0">Farklı bir teslimat adresi tanımlayın.</p>
                             </div>
-
-                            @if (Model.DeliveryAddresses.Count < 3)
-                            {
-                                <a asp-action="Create" asp-route-type="@GameGaraj.WebUI.Models.Addresses.AddressType.Delivery" 
-                                   class="btn btn-primary mb-4">
-                                    <i class="fas fa-plus me-1"></i> Yeni Teslimat Adresi Ekle
-                                </a>
-                            }
-
-                            @if (Model.DeliveryAddresses.Any())
-                            {
-                                <div class="row">
-                                    @foreach (var address in Model.DeliveryAddresses)
-                                    {
-                                        <div class="col-md-6 mb-3">
-                                            <div class="card @(address.IsDefault ? "border-primary" : "")">
-                                                <div class="card-body">
-                                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                                        <h6 class="card-title mb-0">
-                                                            @address.Title
-                                                            @if (address.IsDefault)
-                                                            {
-                                                                <span class="badge bg-primary ms-2">Varsayılan</span>
-                                                            }
-                                                        </h6>
-                                                    </div>
-                                                    <p class="card-text mb-2">
-                                                        <strong>@address.FirstName @address.LastName</strong><br />
-                                                        @address.PhoneNumber<br />
-                                                        @address.AddressDetail<br />
-                                                        @address.Neighborhood, @address.District / @address.Province<br />
-                                                        @if (!string.IsNullOrEmpty(address.PostalCode))
-                                                        {
-                                                            <text>Posta Kodu: @address.PostalCode</text>
-                                                        }
-                                                    </p>
-                                                    <div class="btn-group btn-group-sm" role="group">
-                                                        <a asp-action="Edit" asp-route-id="@address.Id" class="btn btn-outline-primary">
-                                                            <i class="fas fa-edit"></i> Düzenle
-                                                        </a>
-                                                        @if (!address.IsDefault)
-                                                        {
-                                                            <form asp-action="SetDefault" method="post" class="d-inline">
-                                                                <input type="hidden" name="id" value="@address.Id" />
-                                                                <input type="hidden" name="type" value="@address.Type" />
-                                                                <button type="submit" class="btn btn-outline-success">
-                                                                    <i class="fas fa-star"></i> Varsayılan Yap
-                                                                </button>
-                                                            </form>
-                                                        }
-                                                        <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Bu adresi silmek istediğinizden emin misiniz?');">
-                                                            <input type="hidden" name="id" value="@address.Id" />
-                                                            <input type="hidden" name="tab" value="@address.Type" />
-                                                            <button type="submit" class="btn btn-outline-danger">
-                                                                <i class="fas fa-trash"></i> Sil
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="text-center text-muted py-5">
-                                    <i class="fas fa-map-marker-alt fa-3x mb-3"></i>
-                                    <p>Henüz teslimat adresi eklememişsiniz.</p>
-                                </div>
-                            }
-                        </div>
-
-                        <!-- Fatura Adresleri -->
-                        <div class="tab-pane fade @(Model.ActiveTab == GameGaraj.WebUI.Models.Addresses.AddressType.Invoice ? "show active" : "")" 
-                             id="invoice" role="tabpanel">
-                            
-                            <div class="alert alert-info mb-4">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Maksimum 3 fatura adresi ekleyebilirsiniz. Fatura adresi sadece bilgi amaçlıdır.
-                            </div>
-
-                            @if (Model.InvoiceAddresses.Count < 3)
-                            {
-                                <a asp-action="Create" asp-route-type="@GameGaraj.WebUI.Models.Addresses.AddressType.Invoice" 
-                                   class="btn btn-primary mb-4">
-                                    <i class="fas fa-plus me-1"></i> Yeni Fatura Adresi Ekle
-                                </a>
-                            }
-
-                            @if (Model.InvoiceAddresses.Any())
-                            {
-                                <div class="row">
-                                    @foreach (var address in Model.InvoiceAddresses)
-                                    {
-                                        <div class="col-md-6 mb-3">
-                                            <div class="card @(address.IsDefault ? "border-primary" : "")">
-                                                <div class="card-body">
-                                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                                        <h6 class="card-title mb-0">
-                                                            @address.Title
-                                                            @if (address.IsDefault)
-                                                            {
-                                                                <span class="badge bg-primary ms-2">Varsayılan</span>
-                                                            }
-                                                        </h6>
-                                                    </div>
-                                                    <p class="card-text mb-2">
-                                                        <strong>@address.FirstName @address.LastName</strong><br />
-                                                        @address.PhoneNumber<br />
-                                                        @address.AddressDetail<br />
-                                                        @address.Neighborhood, @address.District / @address.Province<br />
-                                                        @if (!string.IsNullOrEmpty(address.PostalCode))
-                                                        {
-                                                            <text>Posta Kodu: @address.PostalCode</text>
-                                                        }
-                                                    </p>
-                                                    <div class="btn-group btn-group-sm" role="group">
-                                                        <a asp-action="Edit" asp-route-id="@address.Id" class="btn btn-outline-primary">
-                                                            <i class="fas fa-edit"></i> Düzenle
-                                                        </a>
-                                                        @if (!address.IsDefault)
-                                                        {
-                                                            <form asp-action="SetDefault" method="post" class="d-inline">
-                                                                <input type="hidden" name="id" value="@address.Id" />
-                                                                <input type="hidden" name="type" value="@address.Type" />
-                                                                <button type="submit" class="btn btn-outline-success">
-                                                                    <i class="fas fa-star"></i> Varsayılan Yap
-                                                                </button>
-                                                            </form>
-                                                        }
-                                                        <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Bu adresi silmek istediğinizden emin misiniz?');">
-                                                            <input type="hidden" name="id" value="@address.Id" />
-                                                            <input type="hidden" name="tab" value="@address.Type" />
-                                                            <button type="submit" class="btn btn-outline-danger">
-                                                                <i class="fas fa-trash"></i> Sil
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="text-center text-muted py-5">
-                                    <i class="fas fa-file-invoice fa-3x mb-3"></i>
-                                    <p>Henüz fatura adresi eklememişsiniz.</p>
-                                </div>
-                            }
-                        </div>
-
+                        </a>
                     </div>
-                </div>
+                }
+
+                @foreach (var address in Model.DeliveryAddresses)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <div class="premium-card @(address.IsDefault ? "is-default" : "")">
+                            <div class="card-header-premium">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="type-icon-box">
+                                        <i class="fas fa-home"></i>
+                                    </div>
+                                    <h5 class="address-title-premium">@address.Title</h5>
+                                </div>
+                                @if (address.IsDefault)
+                                {
+                                    <span class="badge-default">Varsayılan</span>
+                                }
+                            </div>
+                            <div class="card-body-premium">
+                                <div class="address-info-row">
+                                    <i class="fas fa-user"></i>
+                                    <strong>@address.FirstName @address.LastName</strong>
+                                </div>
+                                <div class="address-info-row">
+                                    <i class="fas fa-phone"></i>
+                                    <span>@address.PhoneNumber</span>
+                                </div>
+                                <div class="address-info-row">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>
+                                        @address.AddressDetail<br />
+                                        @address.Neighborhood, @address.District / @address.Province
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-footer-premium">
+                                <a asp-action="Edit" asp-route-id="@address.Id" class="btn-action btn-edit" title="Düzenle">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                @if (!address.IsDefault)
+                                {
+                                    <form asp-action="SetDefault" method="post" class="d-inline">
+                                        <input type="hidden" name="id" value="@address.Id" />
+                                        <input type="hidden" name="type" value="@address.Type" />
+                                        <button type="submit" class="btn-action btn-default" title="Varsayılan Yap">
+                                            <i class="fas fa-star"></i>
+                                        </button>
+                                    </form>
+                                }
+                                <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Silmek istediğinize emin misiniz?');">
+                                    <input type="hidden" name="id" value="@address.Id" />
+                                    <input type="hidden" name="tab" value="@address.Type" />
+                                    <button type="submit" class="btn-action btn-delete" title="Sil">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
-            
+        </div>
+
+        <!-- Fatura Adresleri Paneli -->
+        <div class="tab-pane fade @(Model.ActiveTab == GameGaraj.WebUI.Models.Addresses.AddressType.Invoice ? "show active" : "")" id="invoice">
+            <div class="row g-4">
+                @if (Model.InvoiceAddresses.Count < 3)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <a asp-action="Create" asp-route-type="@GameGaraj.WebUI.Models.Addresses.AddressType.Invoice" class="text-decoration-none h-100">
+                            <div class="premium-card add-new-card">
+                                <i class="fas fa-file-invoice fa-3x text-primary mb-3"></i>
+                                <h6 class="fw-bold text-primary">Yeni Fatura Adresi</h6>
+                                <p class="small text-muted mb-0">Fatura bilgileriniz için yeni adres tanımlayın.</p>
+                            </div>
+                        </a>
+                    </div>
+                }
+
+                @foreach (var address in Model.InvoiceAddresses)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <div class="premium-card @(address.IsDefault ? "is-default" : "")">
+                            <div class="card-header-premium">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="type-icon-box" style="background: #fff8f0; color: #ff8c00;">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </div>
+                                    <h5 class="address-title-premium">@address.Title</h5>
+                                </div>
+                                @if (address.IsDefault)
+                                {
+                                    <span class="badge-default">Varsayılan</span>
+                                }
+                            </div>
+                            <!-- Benzer body ve footer yapısı -->
+                            <div class="card-body-premium">
+                                <div class="address-info-row">
+                                    <i class="fas fa-user"></i>
+                                    <strong>@address.FirstName @address.LastName</strong>
+                                </div>
+                                <div class="address-info-row">
+                                    <i class="fas fa-phone"></i>
+                                    <span>@address.PhoneNumber</span>
+                                </div>
+                                <div class="address-info-row">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>
+                                        @address.AddressDetail<br />
+                                        @address.Neighborhood, @address.District / @address.Province
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-footer-premium">
+                                <a asp-action="Edit" asp-route-id="@address.Id" class="btn-action btn-edit" title="Düzenle">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                @if (!address.IsDefault)
+                                {
+                                    <form asp-action="SetDefault" method="post" class="d-inline">
+                                        <input type="hidden" name="id" value="@address.Id" />
+                                        <input type="hidden" name="type" value="@address.Type" />
+                                        <button type="submit" class="btn-action btn-default" title="Varsayılan Yap">
+                                            <i class="fas fa-star"></i>
+                                        </button>
+                                    </form>
+                                }
+                                <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Silmek istediğinize emin misiniz?');">
+                                    <input type="hidden" name="id" value="@address.Id" />
+                                    <input type="hidden" name="tab" value="@address.Type" />
+                                    <button type="submit" class="btn-action btn-delete" title="Sil">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
         </div>
     </div>
 </div>
+

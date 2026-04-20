@@ -218,18 +218,26 @@ namespace GameGaraj.WebUI.Services.Concrete
 
         public async Task<List<CategoryViewModel>> GetAllCategoriesAsync()
         {
-            var response = await _httpClient.GetAsync("categories");
-
-            if (!response.IsSuccessStatusCode)
-                return new List<CategoryViewModel>();
-
-            var content = await response.Content.ReadAsStringAsync();
-            var categories = JsonSerializer.Deserialize<List<CategoryViewModel>>(content, new JsonSerializerOptions
+            try
             {
-                PropertyNameCaseInsensitive = true
-            });
+                var response = await _httpClient.GetAsync("categories");
 
-            return categories ?? new List<CategoryViewModel>();
+                if (!response.IsSuccessStatusCode)
+                    return new List<CategoryViewModel>();
+
+                var content = await response.Content.ReadAsStringAsync();
+                var categories = JsonSerializer.Deserialize<List<CategoryViewModel>>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                return categories ?? new List<CategoryViewModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CatalogService] Error fetching categories");
+                return new List<CategoryViewModel>();
+            }
         }
 
         public async Task<List<CategoryViewModel>> SearchCategoriesAsync(string keyword)

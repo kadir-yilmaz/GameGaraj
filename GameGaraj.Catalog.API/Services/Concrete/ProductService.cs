@@ -211,7 +211,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 Brand = dto.Brand,
                 Description = dto.Description,
                 Price = dto.Price,
-                TotalStock = dto.TotalStock,
+                Stock = dto.Stock,
                 ReservedStock = 0,
                 IsActive = dto.IsActive,
                 IsFeatured = dto.IsFeatured,
@@ -247,7 +247,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             product.Brand = dto.Brand;
             product.Description = dto.Description;
             product.Price = dto.Price;
-            product.TotalStock = dto.TotalStock;
+            product.Stock = dto.Stock;
             product.IsActive = dto.IsActive;
             product.IsFeatured = dto.IsFeatured;
             product.ImageUrls = dto.ImageUrls.Take(5).ToList();

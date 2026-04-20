@@ -1,8 +1,5 @@
 namespace GameGaraj.Order.Domain.Enums
 {
-    /// <summary>
-    /// Sipariş durumu
-    /// </summary>
     public enum OrderStatus
     {
         /// <summary>

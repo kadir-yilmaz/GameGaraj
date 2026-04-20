@@ -13,15 +13,15 @@
 </div>
 
 <div class="table-responsive">
-    <table class="table table-striped table-sm">
+    <table class="table table-hover align-middle">
         <thead>
             <tr>
-                <th>Resim</th>
-                <th>Ad</th>
-                <th>Fiyat</th>
-                <th>Stok</th>
-                <th>Kategori</th>
-                <th>İşlemler</th>
+                <th style="width: 120px;">Resim</th>
+                <th>Ürün Bilgisi</th>
+                <th style="width: 150px;">Fiyat</th>
+                <th style="width: 100px;">Stok</th>
+                <th style="width: 150px;">Kategori</th>
+                <th style="width: 200px;">İşlemler</th>
             </tr>
         </thead>
         <tbody>
@@ -29,26 +29,62 @@
             {
                 <tr>
                     <td>
-                        <img src="@item.FirstImageUrl" alt="@item.Name" width="50" class="img-thumbnail" />
+                        <div class="product-img-container">
+                            <img src="@item.FirstImageUrl" alt="@item.Name" class="product-list-img" />
+                        </div>
                     </td>
-                    <td>@item.Name</td>
-                    <td>@item.Price.ToString("C2")</td>
-                    <td>@item.Stock</td>
+                    <td>
+                        <div class="fw-bold">@item.Name</div>
+                        <small class="text-muted d-block text-truncate" style="max-width: 300px;">@item.Id</small>
+                    </td>
+                    <td class="fw-bold text-primary">@item.Price.ToString("C2")</td>
+                    <td>
+                        <span class="badge @(item.Stock > 0 ? "bg-success" : "bg-danger")">
+                            @item.Stock
+                        </span>
+                    </td>
                     <td>@item.CategoryName</td>
-                    <td class="d-flex gap-1">
-                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">
-                            <i class="fas fa-pen me-1"></i>Düzenle
-                        </a>
-                        <form asp-action="Delete" method="post"
-                            onsubmit="return confirm('Bu ürünü silmek istediğinize emin misiniz?');">
-                            <input type="hidden" name="id" value="@item.Id" />
-                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                <i class="fas fa-trash me-1"></i>Sil
-                            </button>
-                        </form>
+                    <td>
+                        <div class="btn-group">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i> Düzenle
+                            </a>
+                            <form asp-action="Delete" method="post" class="d-inline"
+                                onsubmit="return confirm('Bu ürünü silmek istediğinize emin misiniz?');">
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             }
         </tbody>
     </table>
 </div>
+
+<style>
+    .product-img-container {
+        width: 100px;
+        height: 100px;
+        overflow: hidden;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .product-list-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .table align-middle td {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+</style>

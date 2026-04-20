@@ -88,13 +88,15 @@ namespace GameGaraj.WebUI.Controllers
 
             var basket = await _basketService.GetBasketAsync();
             var favoriteIds = await _favoritesService.GetFavoriteProductIdsAsync();
+            var basketProductIds = basket?.Items?
+                .Select(x => x.ProductId?.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             
             foreach (var product in products)
             {
-                if (basket != null && basket.Items.Any())
-                {
-                    product.IsInBasket = basket.Items.Any(x => x.ProductId == product.Id);
-                }
+                product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
                 product.IsFavorite = favoriteIds.Contains(product.Id);
             }
 
@@ -109,10 +111,12 @@ namespace GameGaraj.WebUI.Controllers
                 return NotFound();
 
             var basket = await _basketService.GetBasketAsync();
-            if (basket != null && basket.Items.Any(x => x.ProductId == product.Id))
-            {
-                product.IsInBasket = true;
-            }
+            var basketProductIds = basket?.Items?
+                .Select(x => x.ProductId?.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
 
             product.IsFavorite = await _favoritesService.IsFavoriteAsync(product.Id);
 

@@ -12,6 +12,7 @@ namespace GameGaraj.WebUI.Settings
         public string DiscountUri { get; set; } = string.Empty;
         public string PaymentUri { get; set; } = string.Empty;
         public string OrderUri { get; set; } = string.Empty;
+        public string CampaignUri { get; set; } = string.Empty;
 
         public ServiceApi Catalog { get; set; } = new();
         public ServiceApi PhotoStock { get; set; } = new();
@@ -19,5 +20,6 @@ namespace GameGaraj.WebUI.Settings
         public ServiceApi Discount { get; set; } = new();
         public ServiceApi Payment { get; set; } = new();
         public ServiceApi Order { get; set; } = new();
+        public ServiceApi Campaign { get; set; } = new();
     }
 }

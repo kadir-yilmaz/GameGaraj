@@ -430,10 +430,24 @@
             <div class="row">
                 <!-- Basket Items -->
                 <div class="col-lg-8">
+                    @{
+                        var shippingSetting = ViewBag.ShippingSetting as GameGaraj.WebUI.Models.Campaigns.ShippingSettingViewModel;
+                        var isShippingFree = Model.TotalPrice >= (shippingSetting?.FreeShippingThreshold ?? 0) || !(shippingSetting?.IsActive ?? true);
+                        var remainingForFreeShipping = (shippingSetting?.FreeShippingThreshold ?? 0) - Model.TotalPrice;
+                    }
+
                     <!-- Campaign Info -->
                     <div class="campaign-box">
-                        <i class="fas fa-truck"></i>
-                        <span><strong>Tebrikler!</strong> Siparişiniz kargo bedava.</span>
+                        @if (isShippingFree)
+                        {
+                            <i class="fas fa-truck text-success"></i>
+                            <span><strong>Tebrikler!</strong> Siparişiniz kargo bedava.</span>
+                        }
+                        else
+                        {
+                            <i class="fas fa-truck text-warning"></i>
+                            <span>Kargo bedava olması için <strong>@remainingForFreeShipping.ToString("N2") TL</strong> daha alışveriş yapın!</span>
+                        }
                     </div>
 
                     <div class="basket-card">
@@ -442,10 +456,13 @@
                                 <span class="seller-badge">9.8</span>
                                 <span class="seller-name">GameGaraj</span>
                             </div>
-                            <div class="free-shipping-badge">
-                                <i class="fas fa-check-circle"></i>
-                                Ücretsiz Kargo
-                            </div>
+                            @if (isShippingFree)
+                            {
+                                <div class="free-shipping-badge">
+                                    <i class="fas fa-check-circle"></i>
+                                    Ücretsiz Kargo
+                                </div>
+                            }
                         </div>
 
                         @foreach (var item in Model.Items)
@@ -478,7 +495,7 @@
                                     </div>
                                     <div class="quantity-section">
                                         <div class="quantity-control">
-                                            <form asp-action="UpdateQuantity" method="post" class="d-inline">
+                                            <form asp-action="UpdateQuantity" method="post" class="d-inline ajax-cart-form">
                                                 <input type="hidden" name="productId" value="@item.ProductId" />
                                                 <input type="hidden" name="quantity" value="@(item.Quantity - 1)" />
                                                 <button type="submit" class="qty-btn" @(item.Quantity <= 1 ? "disabled" : "")>
@@ -486,7 +503,7 @@
                                                 </button>
                                             </form>
                                             <span class="qty-value">@item.Quantity</span>
-                                            <form asp-action="UpdateQuantity" method="post" class="d-inline">
+                                            <form asp-action="UpdateQuantity" method="post" class="d-inline ajax-cart-form">
                                                 <input type="hidden" name="productId" value="@item.ProductId" />
                                                 <input type="hidden" name="quantity" value="@(item.Quantity + 1)" />
                                                 <button type="submit" class="qty-btn">
@@ -494,7 +511,7 @@
                                                 </button>
                                             </form>
                                         </div>
-                                        <form asp-action="RemoveItem" method="post">
+                                        <form asp-action="RemoveItem" method="post" class="ajax-cart-form">
                                             <input type="hidden" name="productId" value="@item.ProductId" />
                                             <button type="submit" class="remove-btn" title="Sepetten Sil">
                                                 <i class="fas fa-trash-alt"></i>
@@ -518,22 +535,97 @@
                     <div class="summary-card">
                         <h2 class="summary-title">Sipariş Özeti</h2>
                         
+                        @{
+                            var discountResult = ViewBag.DiscountResult as GameGaraj.WebUI.Models.Campaigns.CalculateDiscountResponse;
+                            var rawTotal = Model.TotalPrice;
+                            
+                            // Kargo hesaplama
+                            var finalShippingFee = isShippingFree ? 0 : (shippingSetting?.DefaultShippingFee ?? 0);
+                            
+                            // Ürünlerin toplamına kampanya indirimini uygula, kargoyu ekle
+                            var finalItemsTotal = discountResult != null ? discountResult.FinalTotal : rawTotal;
+                            var finalTotal = finalItemsTotal + finalShippingFee;
+                        }
                         <div class="summary-row">
                             <span>Ürünlerin Toplamı</span>
-                            <span>@Model.TotalPrice.ToString("N2") TL</span>
+                            <span>@rawTotal.ToString("N2") TL</span>
                         </div>
-                        <div class="summary-row">
-                            <span>Kargo Toplam</span>
-                            <span>0,00 TL</span>
-                        </div>
-                        <div class="summary-row discount">
-                            <span>Kargo İndirimi</span>
-                            <span>-0,00 TL</span>
+                        
+                        @if (shippingSetting != null && shippingSetting.IsActive)
+                        {
+                            <div class="summary-row">
+                                <span>Kargo Toplam</span>
+                                <span>@shippingSetting.DefaultShippingFee.ToString("N2") TL</span>
+                            </div>
+                            @if (isShippingFree)
+                            {
+                                <div class="summary-row discount text-success" style="font-weight: 500;">
+                                    <span>Kargo İndirimi</span>
+                                    <span>-@shippingSetting.DefaultShippingFee.ToString("N2") TL</span>
+                                </div>
+                            }
+                        }
+
+                        @if (discountResult != null && discountResult.AppliedRules.Any())
+                        {
+                            foreach (var appliedRule in discountResult.AppliedRules)
+                            {
+                                <div class="summary-row discount" style="color: #e74c3c; font-weight: 600;">
+                                    <span><i class="fas fa-tags me-1"></i>@appliedRule.RuleName</span>
+                                    <span>-@appliedRule.DiscountAmount.ToString("N2") TL</span>
+                                </div>
+                            }
+                        }
+
+                        <!-- Coupon Code Section -->
+                        <div class="mt-4 mb-4 border-top pt-3">
+                            <h6 class="fw-bold mb-2 small"><i class="fas fa-ticket-alt me-1 text-primary"></i>Kupon Kodu</h6>
+                            
+                            @if (ViewBag.AppliedCoupon != null)
+                            {
+                                var coupon = ViewBag.AppliedCoupon as GameGaraj.WebUI.Models.Discounts.DiscountViewModel;
+                                var couponDiscAmount = finalTotal * (coupon.Rate / 100m);
+                                finalTotal -= couponDiscAmount;
+
+                                <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center">
+                                    <span class="text-success fw-bold small">
+                                        <i class="fas fa-check-circle me-1"></i>@coupon.Code (%@coupon.Rate)
+                                    </span>
+                                    <form asp-action="RemoveCoupon" method="post" class="m-0">
+                                        <button type="submit" class="btn btn-sm text-danger p-0"><i class="fas fa-times"></i></button>
+                                    </form>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between mt-2 text-success">
+                                    <span class="small">Kupon İndirimi</span>
+                                    <span class="fw-bold">-@couponDiscAmount.ToString("C2")</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <form asp-action="ApplyCoupon" method="post" class="input-group input-group-sm">
+                                    <input type="text" name="couponCode" class="form-control" placeholder="Kupon kodunuz">
+                                    <button class="btn btn-primary" type="submit">Uygula</button>
+                                </form>
+                                
+                                @if (TempData["CouponError"] != null)
+                                {
+                                    <div class="text-danger x-small mt-1" style="font-size: 0.75rem;">
+                                        <i class="fas fa-exclamation-circle me-1"></i>@TempData["CouponError"]
+                                    </div>
+                                }
+                                @if (TempData["CouponSuccess"] != null)
+                                {
+                                    <div class="text-success x-small mt-1" style="font-size: 0.75rem;">
+                                        <i class="fas fa-check-circle me-1"></i>@TempData["CouponSuccess"]
+                                    </div>
+                                }
+                            }
                         </div>
 
                         <div class="summary-total">
                             <span class="label">Toplam</span>
-                            <span class="value">@Model.TotalPrice.ToString("N2") TL</span>
+                            <span class="value">@finalTotal.ToString("N2") TL</span>
                         </div>
 
                         <a asp-controller="Order" asp-action="Checkout" class="checkout-btn">
@@ -564,3 +656,49 @@
         }
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Sepet formlarını global (event delegation) yakala ve sayfa yenilemeden gönder
+            document.body.addEventListener('submit', async function(e) {
+                if (e.target.classList.contains('ajax-cart-form')) {
+                    e.preventDefault();
+                    
+                    const currForm = e.target;
+                    const formData = new FormData(currForm);
+                    
+                    // Butona tıklanma animasyonu
+                    const btn = currForm.querySelector('button');
+                    if(btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    }
+
+                    try {
+                        const response = await fetch(currForm.getAttribute('action'), { 
+                            method: 'POST', 
+                            body: formData 
+                        });
+                        
+                        if (response.ok) {
+                            const html = await response.text();
+                            const doc = new DOMParser().parseFromString(html, "text/html");
+                            const newBasket = doc.querySelector('.basket-page');
+                            
+                            if (newBasket) {
+                                document.querySelector('.basket-page').innerHTML = newBasket.innerHTML;
+                            } else {
+                                window.location.reload(); // Fallback
+                            }
+                        } else {
+                            window.location.reload();
+                        }
+                    } catch (err) {
+                        window.location.reload();
+                    }
+                }
+            });
+        });
+    </script>
+}

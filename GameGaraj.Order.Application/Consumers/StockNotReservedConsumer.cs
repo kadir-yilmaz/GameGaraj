@@ -26,7 +26,7 @@ namespace GameGaraj.Order.Application.Consumers
 
             if (order != null)
             {
-                order.Status = OrderStatus.Failed;
+                order.Status = (int)OrderStatus.Failed;
                 await _context.SaveChangesAsync();
                 _logger.LogInformation($"[StockNotReservedConsumer] Order {order.Id} status updated to Failed due to insufficient stock.");
             }

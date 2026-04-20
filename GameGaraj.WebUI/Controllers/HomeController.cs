@@ -25,13 +25,15 @@ namespace GameGaraj.WebUI.Controllers
             var featuredProducts = await _catalogService.GetFeaturedProductsAsync();
             var basket = await _basketService.GetBasketAsync();
             var favoriteIds = await _favoritesService.GetFavoriteProductIdsAsync();
+            var basketProductIds = basket?.Items?
+                .Select(x => x.ProductId?.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var product in featuredProducts)
             {
-                if (basket != null && basket.Items.Any())
-                {
-                    product.IsInBasket = basket.Items.Any(x => x.ProductId == product.Id);
-                }
+                product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
                 product.IsFavorite = favoriteIds.Contains(product.Id);
             }
 
