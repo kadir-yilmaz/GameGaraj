@@ -291,9 +291,8 @@
                                                 <div class="accordion-body p-0">
                                                     @foreach (var child in category.Children)
                                                     {
-                                                        <a href="@Url.Action("Index", "Product", new { categoryId = child.Id })" 
+                                                        <a href="@Url.Action("Index", "Product", new { category = child.Slug })" 
                                                            class="category-child-link @(currentCategoryId == child.Id ? "active" : "")">
-                                                            <i class="fas fa-angle-right me-2"></i>
                                                             @child.Name
                                                         </a>
                                                     }
@@ -302,7 +301,7 @@
                                         }
                                         else
                                         {
-                                            <a href="@Url.Action("Index", "Product", new { categoryId = category.Id })" 
+                                            <a href="@Url.Action("Index", "Product", new { category = category.Slug } )" 
                                                class="category-link @(currentCategoryId == category.Id ? "active" : "")">
                                                 <i class="fas fa-folder me-2 text-primary"></i>
                                                 @category.Name

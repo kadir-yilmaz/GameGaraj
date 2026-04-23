@@ -1,7 +1,6 @@
 using GameGaraj.Catalog.API.Repositories.Abstract;
 using GameGaraj.Shared.Events;
 using MassTransit;
-using MongoDB.Bson;
 
 namespace GameGaraj.Catalog.API.Consumers
 {

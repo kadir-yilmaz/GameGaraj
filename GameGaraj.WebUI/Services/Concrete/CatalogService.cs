@@ -216,6 +216,23 @@ namespace GameGaraj.WebUI.Services.Concrete
             return product;
         }
 
+        public async Task<ProductViewModel?> GetProductBySlugAsync(string slug)
+        {
+            var response = await _httpClient.GetAsync($"products/slug/{slug}");
+
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var content = await response.Content.ReadAsStringAsync();
+            var product = JsonSerializer.Deserialize<ProductViewModel>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            SetProductImageUrls(product);
+            return product;
+        }
+
         public async Task<List<CategoryViewModel>> GetAllCategoriesAsync()
         {
             try
@@ -371,6 +388,22 @@ namespace GameGaraj.WebUI.Services.Concrete
         public async Task<CategoryViewModel?> GetCategoryByIdAsync(string id)
         {
             var response = await _httpClient.GetAsync($"categories/{id}");
+
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var content = await response.Content.ReadAsStringAsync();
+            var category = JsonSerializer.Deserialize<CategoryViewModel>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return category;
+        }
+
+        public async Task<CategoryViewModel?> GetCategoryBySlugAsync(string slug)
+        {
+            var response = await _httpClient.GetAsync($"categories/slug/{slug}");
 
             if (!response.IsSuccessStatusCode)
                 return null;

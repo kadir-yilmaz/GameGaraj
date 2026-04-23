@@ -1,5 +1,5 @@
 using GameGaraj.Catalog.API.Models;
-using MongoDB.Bson;
+using GameGaraj.Shared.Helpers;
 
 namespace GameGaraj.Catalog.API.Services.Seed
 {
@@ -19,9 +19,17 @@ namespace GameGaraj.Catalog.API.Services.Seed
 
             foreach (var (key, name) in mainCategories)
             {
-                var id = ObjectId.GenerateNewId().ToString();
+                var id = Guid.NewGuid().ToString();
                 categoryIds[key] = id;
-                categoryList.Add(new Category { Id = id, Name = name, ParentId = null, CreatedAt = now, UpdatedAt = now });
+                categoryList.Add(new Category 
+                { 
+                    Id = id, 
+                    Name = name, 
+                    Slug = UrlHelper.GenerateSlug(name),
+                    ParentId = null, 
+                    CreatedAt = now, 
+                    UpdatedAt = now 
+                });
             }
 
             var subCategories = new[]
@@ -46,9 +54,17 @@ namespace GameGaraj.Catalog.API.Services.Seed
 
             foreach (var (key, name, parentKey) in subCategories)
             {
-                var id = ObjectId.GenerateNewId().ToString();
+                var id = Guid.NewGuid().ToString();
                 categoryIds[key] = id;
-                categoryList.Add(new Category { Id = id, Name = name, ParentId = categoryIds[parentKey], CreatedAt = now, UpdatedAt = now });
+                categoryList.Add(new Category 
+                { 
+                    Id = id, 
+                    Name = name, 
+                    Slug = UrlHelper.GenerateSlug(name),
+                    ParentId = categoryIds[parentKey], 
+                    CreatedAt = now, 
+                    UpdatedAt = now 
+                });
             }
 
             return categoryList;
@@ -58,27 +74,27 @@ namespace GameGaraj.Catalog.API.Services.Seed
         {
             var attributes = new List<CategoryAttribute>
             {
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["islemci"], Name = "soket", DisplayName = "Soket", Type = AttributeType.Dropdown, Options = new() { "AM5", "LGA1700", "AM4" }, CreatedAt = now },
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["islemci"], Name = "cekirdek_sayisi", DisplayName = "Çekirdek Sayısı", Type = AttributeType.Dropdown, Options = new() { "6", "8", "12", "16", "24" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["islemci"], Name = "soket", DisplayName = "Soket", Type = AttributeType.Dropdown, Options = new() { "AM5", "LGA1700", "AM4" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["islemci"], Name = "cekirdek_sayisi", DisplayName = "Çekirdek Sayısı", Type = AttributeType.Dropdown, Options = new() { "6", "8", "12", "16", "24" }, CreatedAt = now },
 
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["ekran_karti"], Name = "vram", DisplayName = "VRAM", Type = AttributeType.Dropdown, Options = new() { "8GB", "12GB", "16GB", "24GB" }, CreatedAt = now },
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["ekran_karti"], Name = "cip", DisplayName = "Çip", Type = AttributeType.Text, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["ekran_karti"], Name = "vram", DisplayName = "VRAM", Type = AttributeType.Dropdown, Options = new() { "8GB", "12GB", "16GB", "24GB" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["ekran_karti"], Name = "cip", DisplayName = "Çip", Type = AttributeType.Text, CreatedAt = now },
 
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["ram"], Name = "kapasite", DisplayName = "Kapasite", Type = AttributeType.Dropdown, Options = new() { "8GB", "16GB", "32GB", "64GB" }, CreatedAt = now },
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["ram"], Name = "hiz", DisplayName = "Hız", Type = AttributeType.Dropdown, Options = new() { "3200MHz", "3600MHz", "5200MHz", "6000MHz", "6400MHz" }, CreatedAt = now },
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["ram"], Name = "tip", DisplayName = "Tip", Type = AttributeType.Dropdown, Options = new() { "DDR4", "DDR5" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["ram"], Name = "kapasite", DisplayName = "Kapasite", Type = AttributeType.Dropdown, Options = new() { "8GB", "16GB", "32GB", "64GB" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["ram"], Name = "hiz", DisplayName = "Hız", Type = AttributeType.Dropdown, Options = new() { "3200MHz", "3600MHz", "5200MHz", "6000MHz", "6400MHz" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["ram"], Name = "tip", DisplayName = "Tip", Type = AttributeType.Dropdown, Options = new() { "DDR4", "DDR5" }, CreatedAt = now },
 
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["klavye"], Name = "switch_tipi", DisplayName = "Switch Tipi", Type = AttributeType.Dropdown, Options = new() { "Cherry MX Red", "Cherry MX Blue", "Cherry MX Brown", "Cherry MX Speed", "Optik", "Mekanik Olmayan" }, CreatedAt = now },
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["klavye"], Name = "layout", DisplayName = "Layout", Type = AttributeType.Dropdown, Options = new() { "Full Size", "TKL", "60%", "65%" }, CreatedAt = now },
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["klavye"], Name = "baglanti", DisplayName = "Bağlantı", Type = AttributeType.Dropdown, Options = new() { "Kablolu", "Kablosuz", "Bluetooth" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["klavye"], Name = "switch_tipi", DisplayName = "Switch Tipi", Type = AttributeType.Dropdown, Options = new() { "Cherry MX Red", "Cherry MX Blue", "Cherry MX Brown", "Cherry MX Speed", "Optik", "Mekanik Olmayan" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["klavye"], Name = "layout", DisplayName = "Layout", Type = AttributeType.Dropdown, Options = new() { "Full Size", "TKL", "60%", "65%" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["klavye"], Name = "baglanti", DisplayName = "Bağlantı", Type = AttributeType.Dropdown, Options = new() { "Kablolu", "Kablosuz", "Bluetooth" }, CreatedAt = now },
 
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["mouse"], Name = "dpi", DisplayName = "DPI", Type = AttributeType.Dropdown, Options = new() { "16000", "20000", "25600", "30000", "32000" }, CreatedAt = now },
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["mouse"], Name = "baglanti", DisplayName = "Bağlantı", Type = AttributeType.Dropdown, Options = new() { "Kablolu", "Kablosuz" }, CreatedAt = now },
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["mouse"], Name = "agirlik", DisplayName = "Ağırlık", Type = AttributeType.Dropdown, Options = new() { "Hafif (<70g)", "Orta (70-90g)", "Ağır (>90g)" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["mouse"], Name = "dpi", DisplayName = "DPI", Type = AttributeType.Dropdown, Options = new() { "16000", "20000", "25600", "30000", "32000" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["mouse"], Name = "baglanti", DisplayName = "Bağlantı", Type = AttributeType.Dropdown, Options = new() { "Kablolu", "Kablosuz" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["mouse"], Name = "agirlik", DisplayName = "Ağırlık", Type = AttributeType.Dropdown, Options = new() { "Hafif (<70g)", "Orta (70-90g)", "Ağır (>90g)" }, CreatedAt = now },
 
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["kulaklik"], Name = "driver", DisplayName = "Driver Boyutu", Type = AttributeType.Dropdown, Options = new() { "40mm", "50mm", "53mm" }, CreatedAt = now },
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["kulaklik"], Name = "baglanti", DisplayName = "Bağlantı", Type = AttributeType.Dropdown, Options = new() { "Kablolu", "Kablosuz", "Bluetooth" }, CreatedAt = now },
-                new() { Id = ObjectId.GenerateNewId().ToString(), CategoryId = categoryIds["kulaklik"], Name = "mikrofon", DisplayName = "Mikrofon", Type = AttributeType.Dropdown, Options = new() { "Var", "Yok" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["kulaklik"], Name = "driver", DisplayName = "Driver Boyutu", Type = AttributeType.Dropdown, Options = new() { "40mm", "50mm", "53mm" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["kulaklik"], Name = "baglanti", DisplayName = "Bağlantı", Type = AttributeType.Dropdown, Options = new() { "Kablolu", "Kablosuz", "Bluetooth" }, CreatedAt = now },
+                new() { Id = Guid.NewGuid().ToString(), CategoryId = categoryIds["kulaklik"], Name = "mikrofon", DisplayName = "Mikrofon", Type = AttributeType.Dropdown, Options = new() { "Var", "Yok" }, CreatedAt = now },
             };
 
             return attributes;
@@ -148,36 +164,6 @@ namespace GameGaraj.Catalog.API.Services.Seed
                 CreateProduct("Beyerdynamic MMX 300", "Beyerdynamic", "Audiophile kalite oyun kulaklığı", 9500, 8, categoryIds["kulaklik"], false, new() { ["driver"] = "40mm", ["baglanti"] = "Kablolu", ["mikrofon"] = "Var" }, now),
             });
 
-            // Gaming Laptop
-            products.AddRange(new[]
-            {
-                CreateProduct("ASUS ROG Strix G18", "ASUS", "RTX 4090 18 inç canavar", 95000, 5, categoryIds["gaming_laptop"], true, new() { ["gpu"] = "RTX 4090", ["cpu"] = "i9-14900HX", ["ram"] = "32GB" }, now),
-                CreateProduct("MSI Titan 18 HX", "MSI", "RTX 4090 masaüstü alternatifi", 120000, 3, categoryIds["gaming_laptop"], false, new() { ["gpu"] = "RTX 4090", ["cpu"] = "i9-14900HX", ["ram"] = "64GB" }, now),
-                CreateProduct("Lenovo Legion Pro 7i", "Lenovo", "RTX 4080 güç ve değer dengesi", 75000, 8, categoryIds["gaming_laptop"], false, new() { ["gpu"] = "RTX 4080", ["cpu"] = "i9-14900HX", ["ram"] = "32GB" }, now),
-                CreateProduct("Razer Blade 16", "Razer", "RTX 4090 ince şık tasarım", 110000, 4, categoryIds["gaming_laptop"], false, new() { ["gpu"] = "RTX 4090", ["cpu"] = "i9-14900HX", ["ram"] = "32GB" }, now),
-                CreateProduct("ASUS TUF Gaming A15", "ASUS", "RTX 4060 bütçe dostu oyun laptopu", 42000, 15, categoryIds["gaming_laptop"], false, new() { ["gpu"] = "RTX 4060", ["cpu"] = "Ryzen 9 7940HS", ["ram"] = "16GB" }, now),
-            });
-
-            // İş Laptopu
-            products.AddRange(new[]
-            {
-                CreateProduct("Lenovo ThinkPad X1 Carbon", "Lenovo", "İş dünyasının tercihi ultrabook", 65000, 10, categoryIds["is_laptop"], false, new() { ["cpu"] = "i7-1365U", ["ram"] = "32GB", ["ekran"] = "14 inch" }, now),
-                CreateProduct("Dell XPS 15", "Dell", "Üretkenlik odaklı premium laptop", 58000, 12, categoryIds["is_laptop"], false, new() { ["cpu"] = "i7-13700H", ["ram"] = "32GB", ["ekran"] = "15.6 inch" }, now),
-                CreateProduct("HP EliteBook 860", "HP", "Kurumsal güvenlik ve performans", 52000, 15, categoryIds["is_laptop"], false, new() { ["cpu"] = "i7-1365U", ["ram"] = "16GB", ["ekran"] = "16 inch" }, now),
-                CreateProduct("Apple MacBook Pro 16", "Apple", "M3 Max çip olağanüstü performans", 145000, 6, categoryIds["is_laptop"], false, new() { ["cpu"] = "M3 Max", ["ram"] = "48GB", ["ekran"] = "16 inch" }, now),
-                CreateProduct("Microsoft Surface Laptop 6", "Microsoft", "Şık tasarım üretkenlik laptopu", 48000, 18, categoryIds["is_laptop"], false, new() { ["cpu"] = "i7-1365U", ["ram"] = "16GB", ["ekran"] = "15 inch" }, now),
-            });
-
-            // Öğrenci Laptopu
-            products.AddRange(new[]
-            {
-                CreateProduct("Lenovo IdeaPad Slim 5", "Lenovo", "Öğrenci favorisi hafif laptop", 22000, 30, categoryIds["ogrenci_laptop"], false, new() { ["cpu"] = "Ryzen 5 7530U", ["ram"] = "16GB", ["ekran"] = "15.6 inch" }, now),
-                CreateProduct("HP Pavilion 15", "HP", "Giriş seviye çok yönlü laptop", 18000, 35, categoryIds["ogrenci_laptop"], false, new() { ["cpu"] = "i5-1335U", ["ram"] = "8GB", ["ekran"] = "15.6 inch" }, now),
-                CreateProduct("ASUS VivoBook 15", "ASUS", "Taşınabilir günlük kullanım laptopu", 16000, 40, categoryIds["ogrenci_laptop"], false, new() { ["cpu"] = "Ryzen 5 5500U", ["ram"] = "8GB", ["ekran"] = "15.6 inch" }, now),
-                CreateProduct("Acer Aspire 5", "Acer", "Performans odaklı öğrenci laptopu", 14500, 45, categoryIds["ogrenci_laptop"], false, new() { ["cpu"] = "i5-1235U", ["ram"] = "8GB", ["ekran"] = "15.6 inch" }, now),
-                CreateProduct("Dell Inspiron 15", "Dell", "Güvenilir günlük kullanım laptopu", 19500, 28, categoryIds["ogrenci_laptop"], false, new() { ["cpu"] = "i5-1335U", ["ram"] = "16GB", ["ekran"] = "15.6 inch" }, now),
-            });
-
             return products;
         }
 
@@ -187,9 +173,10 @@ namespace GameGaraj.Catalog.API.Services.Seed
         {
             return new Product
             {
-                Id = ObjectId.GenerateNewId().ToString(),
+                Id = Guid.NewGuid().ToString(),
                 Name = name,
                 Brand = brand,
+                Slug = UrlHelper.GenerateSlug(brand, name),
                 Description = description,
                 Price = price,
                 Stock = stock,

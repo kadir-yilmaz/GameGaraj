@@ -3,9 +3,9 @@ using GameGaraj.Catalog.API.Dtos;
 using GameGaraj.Catalog.API.Models;
 using GameGaraj.Catalog.API.Repositories.Abstract;
 using GameGaraj.Catalog.API.Services.Abstract;
-using MongoDB.Bson;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
+using GameGaraj.Shared.Helpers;
 
 namespace GameGaraj.Catalog.API.Services.Concrete
 {
@@ -197,6 +197,21 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             return dto;
         }
 
+        public async Task<ProductDto?> GetBySlugAsync(string slug)
+        {
+            var product = await _productRepository.GetBySlugAsync(slug);
+            if (product == null)
+                return null;
+
+            var dto = _mapper.Map<ProductDto>(product);
+
+            // Get category name
+            var category = await _categoryRepository.GetByIdAsync(product.CategoryId);
+            dto.CategoryName = category?.Name;
+
+            return dto;
+        }
+
         public async Task<List<ProductDto>> GetByCategoryIdAsync(string categoryId)
         {
             return await GetAllAsync(categoryId);
@@ -206,9 +221,10 @@ namespace GameGaraj.Catalog.API.Services.Concrete
         {
             var product = new Product
             {
-                Id = ObjectId.GenerateNewId().ToString(),
+                Id = Guid.NewGuid().ToString(),
                 Name = dto.Name,
                 Brand = dto.Brand,
+                Slug = UrlHelper.GenerateSlug(dto.Brand, dto.Name),
                 Description = dto.Description,
                 Price = dto.Price,
                 Stock = dto.Stock,
@@ -245,6 +261,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
             product.Name = dto.Name;
             product.Brand = dto.Brand;
+            product.Slug = UrlHelper.GenerateSlug(dto.Brand, dto.Name);
             product.Description = dto.Description;
             product.Price = dto.Price;
             product.Stock = dto.Stock;

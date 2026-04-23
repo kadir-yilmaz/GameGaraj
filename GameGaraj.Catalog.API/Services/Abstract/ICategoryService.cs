@@ -6,6 +6,7 @@ namespace GameGaraj.Catalog.API.Services.Abstract
     {
         Task<List<CategoryDto>> GetAllAsync();
         Task<CategoryDto?> GetByIdAsync(string id);
+        Task<CategoryDto?> GetBySlugAsync(string slug);
         Task<CategoryDto> CreateAsync(CategoryCreateDto dto);
         Task<CategoryDto?> UpdateAsync(string id, CategoryCreateDto dto);
         Task<List<CategoryAttributeDto>> GetAttributesAsync(string categoryId);

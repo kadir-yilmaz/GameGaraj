@@ -7,6 +7,7 @@ namespace GameGaraj.Catalog.API.Services.Abstract
         Task<List<ProductDto>> GetAllAsync(string? categoryId = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, Dictionary<string, string>? specs = null);
         Task<List<ProductDto>> GetFeaturedProductsAsync();
         Task<ProductDto?> GetByIdAsync(string id);
+        Task<ProductDto?> GetBySlugAsync(string slug);
         Task<List<ProductDto>> GetByCategoryIdAsync(string categoryId);
         Task<ProductDto> CreateAsync(ProductCreateDto dto);
         Task<bool> UpdateAsync(ProductUpdateDto dto);

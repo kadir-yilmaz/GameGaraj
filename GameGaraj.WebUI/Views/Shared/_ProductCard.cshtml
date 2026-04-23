@@ -17,7 +17,7 @@
     <div class="card-body p-3 d-flex flex-column">
         <small class="text-primary fw-bold mb-1">@Model.CategoryName</small>
         <h5 class="card-title fw-bold mb-2" style="font-size: 0.95rem; line-height: 1.4;">
-            <a asp-controller="Product" asp-action="Detail" asp-route-id="@Model.Id"
+            <a asp-controller="Product" asp-action="Detail" asp-route-slug="@Model.Slug"
                 class="text-decoration-none text-dark stretched-link">
                 @Model.Name
             </a>

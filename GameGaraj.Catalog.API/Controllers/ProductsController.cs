@@ -59,6 +59,17 @@ namespace GameGaraj.Catalog.API.Controllers
             return Ok(result);
         }
 
+        // GET: api/products/slug/{slug}
+        [HttpGet("slug/{slug}")]
+        public async Task<IActionResult> GetBySlug(string slug)
+        {
+            var result = await _productService.GetBySlugAsync(slug);
+            if (result == null)
+                return NotFound(new { Message = "Ürün bulunamadı." });
+
+            return Ok(result);
+        }
+
         // GET: api/products/category/{categoryId}
         [HttpGet("category/{categoryId}")]
         public async Task<IActionResult> GetByCategoryId(string categoryId)

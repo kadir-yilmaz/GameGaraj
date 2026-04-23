@@ -1,5 +1,4 @@
 using GameGaraj.Catalog.API.Models;
-using MongoDB.Bson;
 
 namespace GameGaraj.Catalog.API.Repositories.Abstract
 {
@@ -7,6 +6,7 @@ namespace GameGaraj.Catalog.API.Repositories.Abstract
     {
         Task<List<Product>> GetAllAsync();
         Task<Product?> GetByIdAsync(string id);
+        Task<Product?> GetBySlugAsync(string slug);
         Task<List<Product>> GetByCategoryIdsAsync(List<string> categoryIds);
         Task<List<Product>> GetFeaturedAsync(int limit = 10);
         Task<Product> CreateAsync(Product product);

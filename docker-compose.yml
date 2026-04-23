@@ -1,14 +1,4 @@
 services:
-  # MongoDB for Catalog Service
-  mongodb:
-    image: mongo:7.0
-    container_name: gamegaraj-catalog-mongodb
-    ports:
-      - "27018:27017"
-    volumes:
-      - mongodb_data:/data/db
-    environment:
-      - MONGO_INITDB_DATABASE=GameGarajCatalogDb
 
   # PostgreSQL for Catalog Service
   catalogdb:
@@ -90,7 +80,6 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
     container_name: keycloak
-    restart: unless-stopped
     command: start-dev --import-realm
     environment:
       KC_DB: postgres
@@ -112,7 +101,6 @@ services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: gamegaraj-rabbitmq
-    restart: unless-stopped
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -147,7 +135,6 @@ services:
       - elasticsearch
 
 volumes:
-  mongodb_data:
   redis_data:
   postgres_data:
   sqlserver_data:

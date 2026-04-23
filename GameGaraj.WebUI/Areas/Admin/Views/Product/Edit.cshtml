@@ -32,6 +32,11 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="Brand" class="form-label">Marka</label>
+                <input asp-for="Brand" class="form-control" placeholder="Örn: AMD, MSI, ASUS" />
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="CategoryId" class="form-label">Kategori</label>
                 <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.Categories" id="categoryIdSelect">
                     <option value="">-- Kategori Seçiniz --</option>

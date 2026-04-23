@@ -1,8 +1,0 @@
-C:\Users\kadir\OneDrive\Desktop\Projeler\GameGaraj\GameGaraj.Catalog.API\Program.cs(191,74): error CS0246: The type or namespace name 'Product' could not be found (are you missing a using directive or an assembly reference?) [C:\Users\kadir\OneDrive\Desktop\Projeler\GameGaraj\GameGaraj.Catalog.API\GameGaraj.Catalog.API.csproj]
-C:\Users\kadir\OneDrive\Desktop\Projeler\GameGaraj\GameGaraj.Catalog.API\Program.cs(191,83): error CS1503: Argument 1: cannot convert from 'GameGaraj.Catalog.API.Models.Product' to 'Product' [C:\Users\kadir\OneDrive\Desktop\Projeler\GameGaraj\GameGaraj.Catalog.API\GameGaraj.Catalog.API.csproj]
-
-Build FAILED.
-    0 Warning(s)
-    2 Error(s)
-
-Time Elapsed 00:00:03.24

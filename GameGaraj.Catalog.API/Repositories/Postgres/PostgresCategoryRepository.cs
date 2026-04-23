@@ -41,6 +41,11 @@ namespace GameGaraj.Catalog.API.Repositories.Postgres
             return await _context.Categories.FindAsync(id);
         }
 
+        public async Task<Category?> GetBySlugAsync(string slug)
+        {
+            return await _context.Categories.FirstOrDefaultAsync(c => c.Slug == slug);
+        }
+
         public async Task<List<Category>> GetByParentIdAsync(string? parentId)
         {
             return await _context.Categories

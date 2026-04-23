@@ -17,16 +17,34 @@ namespace GameGaraj.WebUI.Controllers
             _favoritesService = favoritesService;
         }
 
-        public async Task<IActionResult> Index(string? categoryId, string? sortBy, decimal? minPrice, decimal? maxPrice, Dictionary<string, string[]>? specs, string? search, string? brand)
+        [Route("product/c/{category}")]
+        [Route("product")]
+        public async Task<IActionResult> Index(string? category, string? categoryId, string? sortBy, decimal? minPrice, decimal? maxPrice, Dictionary<string, string[]>? specs, string? search, string? brand)
         {
-            // Sanitize CategoryId (Remove accidental leading dashes or non-alphanumeric prefixes)
-            if (!string.IsNullOrEmpty(categoryId))
+            CategoryViewModel? categoryModel = null;
+
+            // 1. Resolve Category from Slug or ID
+            if (!string.IsNullOrEmpty(category))
             {
-                // Regex to keep only valid hex chars if it's a 24-char ObjectId
-                categoryId = System.Text.RegularExpressions.Regex.Replace(categoryId, @"^[^0-9a-fA-F]+", "");
+                categoryModel = await _catalogService.GetCategoryBySlugAsync(category);
+                if (categoryModel != null)
+                {
+                    categoryId = categoryModel.Id;
+                }
+            }
+            else if (!string.IsNullOrEmpty(categoryId))
+            {
+                categoryModel = await _catalogService.GetCategoryByIdAsync(categoryId);
+                
+                // SEO Redirect: If we have a slug, redirect to /product/c/{category}
+                if (categoryModel != null && !string.IsNullOrEmpty(categoryModel.Slug))
+                {
+                    return RedirectToActionPermanent("Index", new { category = categoryModel.Slug, sortBy, minPrice, maxPrice, specs, search, brand });
+                }
             }
 
-            // Fix: Check and remove categoryId from specs if it accidentally got in there due to model binding or query string issues
+            // ... (rest of the logic remains the same)
+            // Fix: Check and remove categoryId from specs
             if (specs != null)
             {
                 if (specs.ContainsKey("categoryId")) specs.Remove("categoryId");
@@ -35,11 +53,10 @@ namespace GameGaraj.WebUI.Controllers
 
             List<ProductViewModel> products;
 
-            // Brand search: use brand as keyword in Elasticsearch
+            // Brand search
             if (!string.IsNullOrWhiteSpace(brand))
             {
                 products = await _catalogService.SearchProductsAsync(brand);
-                // Elasticsearch already handles fuzzy matching on brand field
             }
             // Keyword search
             else if (!string.IsNullOrWhiteSpace(search))
@@ -47,7 +64,6 @@ namespace GameGaraj.WebUI.Controllers
                 search = search.Trim();
                 products = await _catalogService.SearchProductsAsync(search);
                 
-                // Apply remaining filters in-memory for search results
                 if (!string.IsNullOrEmpty(categoryId)) products = products.Where(p => p.CategoryId == categoryId).ToList();
                 if (minPrice.HasValue) products = products.Where(p => p.Price >= minPrice.Value).ToList();
                 if (maxPrice.HasValue) products = products.Where(p => p.Price <= maxPrice.Value).ToList();
@@ -56,29 +72,14 @@ namespace GameGaraj.WebUI.Controllers
             {
                 products = await _catalogService.GetAllProductsAsync(categoryId, sortBy, minPrice, maxPrice, specs);
             }
+
             var categories = await _catalogService.GetAllCategoriesAsync();
 
-            // Explicitly set CurrentCategoryName for the view header
-            ViewBag.CurrentCategoryName = "Tüm Ürünler";
-
-            if (!string.IsNullOrEmpty(categoryId))
-            {
-                var category = await _catalogService.GetCategoryByIdAsync(categoryId);
-                if (category != null)
-                {
-                    ViewBag.CurrentCategoryAttributes = category.Attributes;
-                    ViewBag.CurrentCategoryName = category.Name;
-                    ViewBag.CategoryId = categoryId; // Use the sanitized one
-                }
-                else
-                {
-                    ViewBag.CurrentCategoryName = "Kategori Bulunamadı";
-                }
-            }
-            else
-            {
-                ViewBag.CategoryId = null;
-            }
+            // Setup ViewBags
+            ViewBag.CurrentCategoryName = categoryModel?.Name ?? "Tüm Ürünler";
+            ViewBag.CurrentCategoryAttributes = categoryModel?.Attributes;
+            ViewBag.CategoryId = categoryId;
+            ViewBag.CategorySlug = categoryModel?.Slug;
             ViewBag.Categories = categories;
             ViewBag.SortBy = sortBy;
             ViewBag.MinPrice = minPrice;
@@ -103,9 +104,17 @@ namespace GameGaraj.WebUI.Controllers
             return View(products);
         }
 
-        public async Task<IActionResult> Detail(string id)
+        [Route("product/p/{slug}")]
+        public async Task<IActionResult> Detail(string slug)
         {
-            var product = await _catalogService.GetProductByIdAsync(id);
+            var product = await _catalogService.GetProductBySlugAsync(slug);
+
+            if (product == null)
+            {
+                product = await _catalogService.GetProductByIdAsync(slug);
+                if (product == null) return NotFound();
+                if (!string.IsNullOrEmpty(product.Slug)) return RedirectToActionPermanent("Detail", new { slug = product.Slug });
+            }
 
             if (product == null)
                 return NotFound();
@@ -138,7 +147,7 @@ namespace GameGaraj.WebUI.Controllers
                 {
                     id = c.Id,
                     name = c.Name,
-                    url = $"/Product?categoryId={c.Id}"
+                    url = $"/product/c/{c.Slug}"
                 })
                 .ToList();
 
@@ -162,7 +171,7 @@ namespace GameGaraj.WebUI.Controllers
                     name = p.Name,
                     price = p.Price.ToString("C2"),
                     imageUrl = p.FirstImageUrl,
-                    url = $"/Product/Detail/{p.Id}"
+                    url = $"/product/p/{p.Slug}"
                 })
                 .ToList();
 

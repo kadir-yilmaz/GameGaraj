@@ -53,6 +53,11 @@ namespace GameGaraj.Catalog.API.Repositories.Postgres
             return await _context.Products.FindAsync(id);
         }
 
+        public async Task<Product?> GetBySlugAsync(string slug)
+        {
+            return await _context.Products.FirstOrDefaultAsync(p => p.Slug == slug);
+        }
+
         public async Task<List<string>> GetDistinctValuesForAttributeAsync(List<string> categoryIds, string attributeName)
         {
             // PostgreSQL implementation for extracting distinct keys from JSONB column

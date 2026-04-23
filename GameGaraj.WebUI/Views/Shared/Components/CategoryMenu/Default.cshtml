@@ -111,7 +111,7 @@
                         {
                             @foreach (var child in category.Children)
                             {
-                                <a href="@Url.Action("Index", "Product", new { categoryId = child.Id })" 
+                                <a href="@Url.Action("Index", "Product", new { category = child.Slug })" 
                                    class="category-pill">
                                     @child.Name
                                 </a>

@@ -1,5 +1,4 @@
 using GameGaraj.Catalog.API.Models;
-using MongoDB.Bson;
 
 namespace GameGaraj.Catalog.API.Repositories.Abstract
 {

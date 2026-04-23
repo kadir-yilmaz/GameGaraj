@@ -4,8 +4,7 @@ using GameGaraj.Catalog.API.Dtos;
 using GameGaraj.Catalog.API.Models;
 using GameGaraj.Catalog.API.Repositories.Abstract;
 using GameGaraj.Catalog.API.Services.Abstract;
-using MongoDB.Bson;
-using MongoDB.Driver;
+using GameGaraj.Shared.Helpers;
 
 namespace GameGaraj.Catalog.API.Services.Concrete
 {
@@ -108,13 +107,23 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             return dto;
         }
 
+        public async Task<CategoryDto?> GetBySlugAsync(string slug)
+        {
+            var category = await _categoryRepository.GetBySlugAsync(slug);
+            if (category == null)
+                return null;
+
+            return await GetByIdAsync(category.Id); // Re-use GetById logic for attributes and descendants
+        }
+
         public async Task<CategoryDto> CreateAsync(CategoryCreateDto dto)
         {
             var now = DateTime.UtcNow;
             var category = new Category
             {
-                Id = ObjectId.GenerateNewId().ToString(),
+                Id = Guid.NewGuid().ToString(),
                 Name = dto.Name,
+                Slug = UrlHelper.GenerateSlug(dto.Name),
                 ParentId = dto.ParentId,
                 CreatedAt = now,
                 UpdatedAt = now
@@ -131,6 +140,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 return null;
 
             category.Name = dto.Name;
+            category.Slug = UrlHelper.GenerateSlug(dto.Name);
             category.ParentId = dto.ParentId;
             category.UpdatedAt = DateTime.UtcNow;
 
@@ -149,7 +159,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
         {
             var attribute = new CategoryAttribute
             {
-                Id = ObjectId.GenerateNewId().ToString(),
+                Id = Guid.NewGuid().ToString(),
                 Name = dto.Name,
                 DisplayName = dto.DisplayName,
                 Type = Enum.TryParse<AttributeType>(dto.Type, true, out var type) ? type : AttributeType.Text,

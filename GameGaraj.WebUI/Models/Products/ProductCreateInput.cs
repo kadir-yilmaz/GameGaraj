@@ -3,6 +3,8 @@ namespace GameGaraj.WebUI.Models.Products
     public class ProductCreateInput
     {
         public string Name { get; set; } = string.Empty;
+        public string Brand { get; set; } = string.Empty;
+        public string Slug { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public int Stock { get; set; }
         public bool IsActive { get; set; } = true;

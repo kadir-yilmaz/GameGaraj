@@ -472,7 +472,7 @@
                                 <div class="item-image">
                                     @if (!string.IsNullOrEmpty(item.ImageUrl))
                                     {
-                                        <a asp-controller="Product" asp-action="Detail" asp-route-id="@item.ProductId">
+                                        <a asp-controller="Product" asp-action="Detail" asp-route-slug="@item.ProductSlug">
                                             <img src="@item.ImageUrl" alt="@item.ProductName">
                                         </a>
                                     }
@@ -486,7 +486,7 @@
 
                                 <!-- Details -->
                                 <div class="item-details">
-                                    <a asp-controller="Product" asp-action="Detail" asp-route-id="@item.ProductId" class="item-name">
+                                    <a asp-controller="Product" asp-action="Detail" asp-route-slug="@item.ProductSlug" class="item-name">
                                         @item.ProductName
                                     </a>
                                     <div class="item-meta">

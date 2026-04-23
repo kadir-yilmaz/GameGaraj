@@ -4,6 +4,7 @@ namespace GameGaraj.WebUI.Models.Baskets
     {
         public string ProductId { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
+        public string ProductSlug { get; set; } = string.Empty;
         public string CategoryId { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public int Quantity { get; set; }

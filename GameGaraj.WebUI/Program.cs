@@ -46,6 +46,9 @@ builder.Services.AddSession(options =>
 // MVC
 builder.Services.AddControllersWithViews();
 
+// Routing - SEO için tüm URL'lerin küçük harf olmasını sağlar
+builder.Services.AddRouting(options => options.LowercaseUrls = true);
+
 // MassTransit
 builder.Services.AddMassTransit(x =>
 {
