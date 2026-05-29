@@ -74,6 +74,13 @@ Projede iki farklı indirim mekanizması bir arada sunulmuştur:
 - **Campaign Engine:** İş mantığının esnekliğini korumak adına **Strategy Pattern** ile kurgulanmıştır. "3 Al 2 Öde", "X TL Üzeri Sabit İndirim" gibi karmaşık kampanya türleri, mevcut koda dokunmadan (Open/Closed Principle) sisteme dahil edilebilir.
 - **Coupon Service:** Kullanıcı bazlı indirim kuponlarını yönetir. Yüksek trafik altında hızlı cevap verebilmesi adına **Dapper (Micro ORM)** ile optimize edilmiştir.
 
+### 7. CI/CD Pipeline & Kubernetes Deployment (DevOps)
+Modern DevOps pratikleri kullanılarak projenin Kubernetes (K8s) üzerinde tam entegre ve hataya dayanıklı çalışması sağlanmıştır:
+- **Self-Hosted Runner ile CI/CD:** GitHub Actions otomasyonu, "Self-Hosted Runner" mimarisiyle doğrudan lokal Kubernetes cluster'ına entegre edilmiştir. Otomatik imaj build ve K8s manifest apply süreçleri tek bir merkezden yönetilir.
+- **Self-Healing (Kendi Kendini Onarma):** K8s "Reconciliation Loop" sayesinde, çöken veya silinen Pod'lar milisaniyeler içinde tespit edilerek yerlerine yenileri otomatik olarak ayağa kaldırılır.
+- **Scaling & Load Balancing (Ölçekleme ve Yük Dengeleme):** Yoğun trafik durumunda servisler saniyeler içinde ölçeklenerek çoğaltılır. Service katmanı, gelen istekleri port çakışması yaratmadan iç IP'ler üzerinden kopyalara kusursuz dağıtır.
+- **Otomatik Sürüm Takibi (Versioning):** Deployment sırasında GitHub SHA Commit ID'si yakalanıp dinamik olarak WebUI uygulamasına enjekte edilir. Bu sayede canlıdaki versiyon takibi kesin olarak yapılır.
+
 ---
 
 ## Client

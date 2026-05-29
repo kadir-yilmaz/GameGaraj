@@ -44,3 +44,6 @@ ConsoleLogs/
 docker-compose.override.yml
 **/wwwroot/photos/
 **/wwwroot/images/
+
+# GitHub Actions Runner
+actions-runner-k8s/
