@@ -4,6 +4,52 @@ GameGaraj, .NET 8 mimarisi üzerine inşa edilmiş, modern mikroservis yaklaşı
 
 ---
 
+## 🚀 Hızlı Başlangıç
+
+### 1. Konfigürasyon Dosyalarını Hazırlayın
+
+Proje, hassas bilgileri korumak için `appsettings.example.json` dosyaları kullanır. Başlamadan önce:
+
+```bash
+# Her API klasöründe:
+cp appsettings.example.json appsettings.json
+
+# Veya PowerShell ile:
+Get-ChildItem -Recurse -Filter "appsettings.example.json" | ForEach-Object {
+    Copy-Item $_.FullName ($_.FullName -replace ".example.json", ".json")
+}
+```
+
+### 2. Environment Variables (.env)
+
+`.env` dosyasını oluşturun ve aşağıdaki değişkenleri doldurun:
+
+```env
+# Admin User Settings
+ADMIN_EMAIL=your-email@example.com
+ADMIN_PASSWORD=YourSecurePassword123
+
+# Email Settings
+EmailSettings__SmtpUsername=your-email@gmail.com
+EmailSettings__SmtpPassword=your-app-password
+
+# Iyzico Settings
+Iyzipay__ApiKey=your-iyzipay-api-key
+Iyzipay__SecretKey=your-iyzipay-secret-key
+```
+
+### 3. Docker Containerları Başlatın
+
+```bash
+docker-compose up -d
+```
+
+### 4. Uygulamayı Çalıştırın
+
+WebUI başlatıldığında, `.env` dosyasındaki admin kullanıcısı otomatik olarak Keycloak'ta oluşturulacaktır.
+
+---
+
 ## Proje Özeti ve Öne Çıkan Mimari Özellikler
 
 Bu proje, sadece bir e-ticaret uygulaması değil; karmaşık dağıtık sistem sorunlarına (consistency, scalability, SEO) getirilmiş modern çözümlerin bir bütünüdür. Bir "Senior Developer" gözüyle incelendiğinde öne çıkan temel yetkinlikler şunlardır:
@@ -37,6 +83,7 @@ Projede iki farklı indirim mekanizması bir arada sunulmuştur:
 - **Teknoloji:** ASP.NET Core MVC
 - **Önemli Bilgiler:** 
   - **SEO Mimari:** Dinamik slug-based yönlendirme sistemi (Ürünler için `/product/p/{slug}`, Kategoriler için `/product/c/{category}`).
+  - **Admin Seed:** Uygulama başlayınca `.env` dosyasındaki admin kullanıcısı otomatik oluşturulur.
 
 ---
 
@@ -130,5 +177,14 @@ Projede iki farklı indirim mekanizması bir arada sunulmuştur:
 | **Redis** | `6380` | Dağıtık önbellekleme ve sepet yönetimi. |
 | **Elasticsearch** | `9201` | Hızlı ürün arama ve katalog indeksleme. |
 | **Kibana** | `5601` | Elastic verilerini görselleştirme ve log izleme. |
+
+---
+
+## 🔒 Güvenlik Notları
+
+- **Hassas bilgiler** `.env` dosyasında saklanır ve Git'e commit edilmez
+- **appsettings.json** dosyaları `.gitignore`'da listelenmiştir
+- **Example dosyaları** yeni geliştiriciler için şablon olarak kullanılır
+- **Admin kullanıcısı** uygulama başlayınca otomatik seed edilir
 
 ---

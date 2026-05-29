@@ -13,6 +13,8 @@ using GameGaraj.Basket.API.Features.Favorites.AddFavorite;
 using GameGaraj.Basket.API.Features.Favorites.RemoveFavorite;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
+using StackExchange.Redis;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // File Logger ekle
@@ -24,10 +26,11 @@ builder.Logging.AddFileLogger("Basket.API");
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Redis Cache
+// Redis Cache - Direkt Master'a bağlan
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    var redisConnection = builder.Configuration.GetConnectionString("Redis");
+    options.Configuration = redisConnection;
 });
 
 // Services

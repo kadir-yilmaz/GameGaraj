@@ -22,6 +22,16 @@
 .env
 .env.*
 
+## [Configuration Files - Sensitive Data]
+# Ignore actual appsettings files (contain sensitive data)
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Production.json
+**/appsettings.*.json
+
+# Keep example files (templates for developers)
+!**/appsettings.example.json
+
 ## [Common]
 node_modules/
 dist/

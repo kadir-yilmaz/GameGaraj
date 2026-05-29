@@ -13,14 +13,109 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=GameGarajCatalogDb
 
-  # Redis for Basket API
-  redis:
-    image: redis:alpine
-    container_name: gamegaraj-basket-redis
+  # ============ REDIS SENTINEL CLUSTER (Basket API) ============
+
+  # Redis Master — Yazma + Okuma yapılır
+  redis-master:
+    image: redis:7-alpine
+    container_name: gamegaraj-redis-master
     ports:
       - "6380:6379"
     volumes:
-      - redis_data:/data
+      - redis_master_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Redis Replica 1 — Sadece okuma, master'dan otomatik veri çeker
+  redis-replica-1:
+    image: redis:7-alpine
+    container_name: gamegaraj-redis-replica-1
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis_replica1_data:/data
+    command: redis-server --appendonly yes --replicaof redis-master 6379
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Redis Replica 2 — Sadece okuma, master'dan otomatik veri çeker
+  redis-replica-2:
+    image: redis:7-alpine
+    container_name: gamegaraj-redis-replica-2
+    ports:
+      - "6382:6379"
+    volumes:
+      - redis_replica2_data:/data
+    command: redis-server --appendonly yes --replicaof redis-master 6379
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Redis Sentinel 1 — Master'ı izler, düşerse failover tetikler
+  redis-sentinel-1:
+    image: redis:7-alpine
+    container_name: gamegaraj-redis-sentinel-1
+    ports:
+      - "26379:26379"
+    volumes:
+      - ./redis/sentinel/sentinel1.conf:/etc/redis/sentinel.conf
+    command: redis-sentinel /etc/redis/sentinel.conf
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      redis-replica-1:
+        condition: service_healthy
+      redis-replica-2:
+        condition: service_healthy
+
+  # Redis Sentinel 2 — İkinci izleyici (quorum=2 için gerekli)
+  redis-sentinel-2:
+    image: redis:7-alpine
+    container_name: gamegaraj-redis-sentinel-2
+    ports:
+      - "26380:26379"
+    volumes:
+      - ./redis/sentinel/sentinel2.conf:/etc/redis/sentinel.conf
+    command: redis-sentinel /etc/redis/sentinel.conf
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      redis-replica-1:
+        condition: service_healthy
+      redis-replica-2:
+        condition: service_healthy
+
+  # Redis Sentinel 3 — Üçüncü izleyici (yüksek erişilebilirlik)
+  redis-sentinel-3:
+    image: redis:7-alpine
+    container_name: gamegaraj-redis-sentinel-3
+    ports:
+      - "26381:26379"
+    volumes:
+      - ./redis/sentinel/sentinel3.conf:/etc/redis/sentinel.conf
+    command: redis-sentinel /etc/redis/sentinel.conf
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      redis-replica-1:
+        condition: service_healthy
+      redis-replica-2:
+        condition: service_healthy
 
   # PostgreSQL for Discount API
   discountdb:
@@ -135,7 +230,9 @@ services:
       - elasticsearch
 
 volumes:
-  redis_data:
+  redis_master_data:
+  redis_replica1_data:
+  redis_replica2_data:
   postgres_data:
   sqlserver_data:
   campaign_sqlserver_data:

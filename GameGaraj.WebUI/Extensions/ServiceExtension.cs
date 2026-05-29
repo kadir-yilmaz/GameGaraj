@@ -18,6 +18,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<ICatalogService, CatalogService>(client =>
             {
                 client.BaseAddress = new Uri($"{serviceApiSettings!.CatalogUri}/");
+                client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
@@ -25,6 +26,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<IBasketService, BasketService>(client =>
             {
                 client.BaseAddress = new Uri($"{serviceApiSettings!.BasketUri}/");
+                client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
@@ -33,6 +35,7 @@ namespace GameGaraj.WebUI.Extensions
             {
                 // OrderUri zaten /api ile bitiyor, tekrar eklemeyelim
                 client.BaseAddress = new Uri($"{serviceApiSettings!.OrderUri}/");
+                client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
@@ -40,6 +43,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<IFavoritesService, FavoritesService>(client =>
             {
                 client.BaseAddress = new Uri($"{serviceApiSettings!.BasketUri}/");
+                client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
@@ -47,15 +51,20 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<IPaymentService, PaymentService>(client =>
             {
                 client.BaseAddress = new Uri($"{serviceApiSettings!.PaymentUri}/");
+                client.Timeout = TimeSpan.FromSeconds(10);
             });
             
             // Identity Service
-            services.AddHttpClient<IIdentityService, IdentityService>();
+            services.AddHttpClient<IIdentityService, IdentityService>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(10);
+            });
             
             // PhotoStock Service - Gateway üzerinden değil, direkt PhotoStock API'ye
             services.AddHttpClient<IPhotoStockService, PhotoStockService>(client =>
             {
                 client.BaseAddress = new Uri($"{serviceApiSettings!.PhotoStockUri}/");
+                client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
@@ -63,12 +72,14 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<ICampaignService, CampaignService>(client =>
             {
                 client.BaseAddress = new Uri($"{serviceApiSettings!.CampaignUri}/");
+                client.Timeout = TimeSpan.FromSeconds(10);
             });
 
             // Discount Service - Direkt Discount API'ye bağlan
             services.AddHttpClient<IDiscountService, DiscountService>(client =>
             {
                 client.BaseAddress = new Uri($"{serviceApiSettings!.DiscountUri}/");
+                client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
         }
