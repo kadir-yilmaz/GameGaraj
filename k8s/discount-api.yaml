@@ -1,0 +1,49 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discount-api
+  labels:
+    app: discount-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: discount-api
+  template:
+    metadata:
+      labels:
+        app: discount-api
+    spec:
+      containers:
+      - name: discount-api
+        image: discount-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        - name: RabbitMQUrl
+          value: "host.docker.internal"
+        - name: IdentityOption__Authority
+          value: "http://host.docker.internal:8080/realms/GameGaraj"
+        - name: ElasticSearchSettings__Uri
+          value: "http://host.docker.internal:9201"
+        - name: ConnectionStrings__PostgreSql
+          value: "User ID=admin;Password=Password12*;Server=host.docker.internal;Port=5432;Database=discountdb;Pooling=true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: discount-api
+spec:
+  type: NodePort
+  selector:
+    app: discount-api
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 30012

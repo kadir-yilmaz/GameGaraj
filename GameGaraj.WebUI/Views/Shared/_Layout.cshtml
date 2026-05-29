@@ -1,3 +1,4 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -210,7 +211,7 @@
             
             <div class="row align-items-center">
                 <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
-                    <p class="small mb-0">&copy; 2026 GameGaraj. Tüm hakları saklıdır.</p>
+                    <p class="small mb-0">&copy; 2026 GameGaraj. Tüm hakları saklıdır. <span class="text-muted ms-2" style="font-size: 0.85em;">Version: @(Configuration["APP_VERSION"] ?? "Local")</span></p>
                 </div>
                 <div class="col-md-6 text-center text-md-end">
                     <i class="fab fa-cc-visa fa-2x me-2 text-secondary"></i>

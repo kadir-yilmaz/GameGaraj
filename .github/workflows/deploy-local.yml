@@ -1,0 +1,115 @@
+name: Local K8s Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy To Local Kubernetes
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Verify Tooling
+      shell: powershell
+      run: |
+        docker version
+        kubectl version --client
+        kubectl get nodes
+
+    - name: Start Compose Infrastructure
+      shell: powershell
+      run: |
+        docker compose -f docker-compose.yml up -d
+        docker ps --format "table {{.Names}}\t{{.Status}}" | Select-String "gamegaraj-"
+
+    - name: Build Application Images
+      shell: powershell
+      run: |
+        docker compose -f docker-compose.build.yml build
+        if ($LASTEXITCODE -ne 0) {
+          throw "Docker build failed"
+        }
+
+    - name: Apply Application Manifests
+      shell: powershell
+      run: |
+        $shortSha = if ($env:GITHUB_SHA) { $env:GITHUB_SHA.Substring(0,7) } else { "Unknown" }
+        (Get-Content k8s/webui.yaml) -replace 'GITHUB_SHA_PLACEHOLDER', $shortSha | Set-Content k8s/webui.yaml
+
+        $manifests = @(
+          "k8s/gateway.yaml",
+          "k8s/catalog-api.yaml",
+          "k8s/photostock-api.yaml",
+          "k8s/basket-api.yaml",
+          "k8s/discount-api.yaml",
+          "k8s/order-api.yaml",
+          "k8s/payment-api.yaml",
+          "k8s/invoice-api.yaml",
+          "k8s/campaign-api.yaml",
+          "k8s/webui.yaml"
+        )
+
+        foreach ($manifest in $manifests) {
+          Write-Host "Applying $manifest..." -ForegroundColor Cyan
+          kubectl apply -f $manifest
+          if ($LASTEXITCODE -ne 0) {
+            throw "kubectl apply failed for $manifest"
+          }
+        }
+
+    - name: Restart Deployments
+      shell: powershell
+      run: |
+        $deployments = @(
+          "gateway",
+          "catalog-api",
+          "photostock-api",
+          "basket-api",
+          "discount-api",
+          "order-api",
+          "payment-api",
+          "invoice-api",
+          "campaign-api",
+          "webui"
+        )
+
+        foreach ($deployment in $deployments) {
+          kubectl rollout restart "deployment/$deployment"
+          if ($LASTEXITCODE -ne 0) {
+            throw "kubectl rollout restart failed for $deployment"
+          }
+        }
+
+    - name: Wait For Rollouts
+      shell: powershell
+      run: |
+        $deployments = @(
+          "gateway",
+          "catalog-api",
+          "photostock-api",
+          "basket-api",
+          "discount-api",
+          "order-api",
+          "payment-api",
+          "invoice-api",
+          "campaign-api",
+          "webui"
+        )
+
+        foreach ($deployment in $deployments) {
+          Write-Host "Waiting for $deployment rollout..." -ForegroundColor Yellow
+          kubectl rollout status "deployment/$deployment" --timeout=240s
+          if ($LASTEXITCODE -ne 0) {
+            throw "Rollout failed for $deployment"
+          }
+        }
+
+    - name: Post Deploy Checks
+      shell: powershell
+      run: |
+        kubectl get deploy
+        kubectl get pods -o wide
+        kubectl get svc
