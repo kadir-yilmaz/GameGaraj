@@ -47,3 +47,8 @@ docker-compose.override.yml
 
 # GitHub Actions Runner
 actions-runner-k8s/
+_diag/
+_work/
+*.log
+Runner_*.log
+

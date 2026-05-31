@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  catalog-api:
+    image: catalog-api:latest
+    ports:
+      - "31010:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - RabbitMQUrl=host.docker.internal
+      - IdentityOption__Authority=http://host.docker.internal:8080/realms/GameGaraj
+      - ElasticSearchSettings__Uri=http://host.docker.internal:9201
+      - ConnectionStrings__PostgresConnection=Host=host.docker.internal;Port=5434;Database=GameGarajCatalogDb;Username=postgres;Password=postgres
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure

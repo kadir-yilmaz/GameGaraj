@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  payment-api:
+    image: payment-api:latest
+    ports:
+      - "31014:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - RabbitMQUrl=host.docker.internal
+      - IdentityOption__Authority=http://host.docker.internal:8080/realms/GameGaraj
+      - ElasticSearchSettings__Uri=http://host.docker.internal:9201
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure

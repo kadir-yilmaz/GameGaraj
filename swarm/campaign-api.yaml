@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  campaign-api:
+    image: campaign-api:latest
+    ports:
+      - "31016:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - RabbitMQUrl=host.docker.internal
+      - IdentityOption__Authority=http://host.docker.internal:8080/realms/GameGaraj
+      - ElasticSearchSettings__Uri=http://host.docker.internal:9201
+      - ConnectionStrings__SqlServer=Server=host.docker.internal,1434;Database=CampaignDb;User Id=sa;Password=Password12*;TrustServerCertificate=true
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
