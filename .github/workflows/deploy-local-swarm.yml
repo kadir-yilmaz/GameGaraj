@@ -57,7 +57,7 @@ jobs:
           -c swarm/invoice-api.yaml `
           -c swarm/campaign-api.yaml `
           -c swarm/webui.yaml `
-          gamegaraj
+          gamegaraj_swarm
 
         if ($LASTEXITCODE -ne 0) {
           throw "Docker stack deploy failed"
@@ -73,5 +73,5 @@ jobs:
       shell: powershell
       run: |
         docker stack ls
-        docker stack services gamegaraj
+        docker stack services gamegaraj_swarm
         docker service ls
