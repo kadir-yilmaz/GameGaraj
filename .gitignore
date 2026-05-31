@@ -42,6 +42,11 @@ build/
 ## [App Specific]
 ConsoleLogs/
 docker-compose.override.yml
+
+# Ensure all frontend assets are tracked (overriding global dist/ etc.)
+!**/wwwroot/**
+
+# But ignore user-uploaded media files
 **/wwwroot/photos/
 **/wwwroot/images/
 
