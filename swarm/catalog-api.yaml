@@ -3,6 +3,8 @@ version: "3.8"
 services:
   catalog-api:
     image: catalog-api:latest
+    labels:
+      - "com.docker.compose.project=gamegaraj_swarm"
     ports:
       - "31010:8080"
     environment:

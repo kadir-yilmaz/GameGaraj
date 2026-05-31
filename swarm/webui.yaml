@@ -3,6 +3,8 @@ version: "3.8"
 services:
   webui:
     image: webui:latest
+    labels:
+      - "com.docker.compose.project=gamegaraj_swarm"
     ports:
       - "31075:8080"
     environment:

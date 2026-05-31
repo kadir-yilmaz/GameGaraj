@@ -3,6 +3,8 @@ version: "3.8"
 services:
   campaign-api:
     image: campaign-api:latest
+    labels:
+      - "com.docker.compose.project=gamegaraj_swarm"
     ports:
       - "31016:8080"
     environment:

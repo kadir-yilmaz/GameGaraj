@@ -3,6 +3,8 @@ version: "3.8"
 services:
   payment-api:
     image: payment-api:latest
+    labels:
+      - "com.docker.compose.project=gamegaraj_swarm"
     ports:
       - "31014:8080"
     environment:

@@ -1,0 +1,14 @@
+.git
+.vs
+.idea
+.vscode
+node_modules
+**/bin/
+**/obj/
+.env
+.env.*
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Production.json
+actions-runner-k8s/
+ConsoleLogs/

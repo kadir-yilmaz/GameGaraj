@@ -3,6 +3,8 @@ version: "3.8"
 services:
   invoice-api:
     image: invoice-api:latest
+    labels:
+      - "com.docker.compose.project=gamegaraj_swarm"
     ports:
       - "31017:8080"
     environment:

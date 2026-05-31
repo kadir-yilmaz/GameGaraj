@@ -3,6 +3,8 @@ version: "3.8"
 services:
   basket-api:
     image: basket-api:latest
+    labels:
+      - "com.docker.compose.project=gamegaraj_swarm"
     ports:
       - "31011:8080"
     environment:
