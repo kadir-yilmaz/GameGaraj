@@ -114,9 +114,6 @@ $(document).ready(function () {
                     alert('Bir hata oluştu: ' + (response.message || 'Bilinmeyen hata'));
                     $button.prop('disabled', false).html(originalContent);
                 }
-                    alert('Bir hata oluştu: ' + (response.message || 'Bilinmeyen hata'));
-                    $button.prop('disabled', false).html(originalContent);
-                }
             },
             error: function () {
                 alert('Bir hata oluştu.');

@@ -15,34 +15,27 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register Storage Service based on configuration
-var minioEndpoint = builder.Configuration["Minio:Endpoint"];
-if (!string.IsNullOrEmpty(minioEndpoint))
+// Register Storage Service (MinIO only)
+builder.Services.AddScoped<IMinioClient>(sp =>
 {
-    builder.Services.AddScoped<IMinioClient>(sp =>
+    var endpoint = builder.Configuration["Minio:Endpoint"] ?? string.Empty;
+    var accessKey = builder.Configuration["Minio:AccessKey"] ?? string.Empty;
+    var secretKey = builder.Configuration["Minio:SecretKey"] ?? string.Empty;
+    var secure = bool.TryParse(builder.Configuration["Minio:Secure"], out bool sec) && sec;
+
+    var client = new MinioClient()
+        .WithEndpoint(endpoint)
+        .WithCredentials(accessKey, secretKey);
+
+    if (secure)
     {
-        var accessKey = builder.Configuration["Minio:AccessKey"] ?? string.Empty;
-        var secretKey = builder.Configuration["Minio:SecretKey"] ?? string.Empty;
-        var secure = bool.TryParse(builder.Configuration["Minio:Secure"], out bool sec) && sec;
+        client.WithSSL();
+    }
 
-        var client = new MinioClient()
-            .WithEndpoint(minioEndpoint)
-            .WithCredentials(accessKey, secretKey);
+    return client.Build();
+});
 
-        if (secure)
-        {
-            client.WithSSL();
-        }
-
-        return client.Build();
-    });
-
-    builder.Services.AddScoped<IStorageService, MinioStorageService>();
-}
-else
-{
-    builder.Services.AddScoped<IStorageService, LocalStorageService>();
-}
+builder.Services.AddScoped<IStorageService, MinioStorageService>();
 
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

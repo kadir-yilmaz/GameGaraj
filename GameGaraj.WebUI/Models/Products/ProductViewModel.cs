@@ -21,7 +21,7 @@ namespace GameGaraj.WebUI.Models.Products
         public string CategoryName { get; set; } = string.Empty;
         public string FirstImageUrl => (ImageUrls != null && ImageUrls.Any())
             ? ImageUrls.First()
-            : "https://plus.unsplash.com/premium_photo-1682141882061-c7676602e111?w=800&auto=format&fit=crop&q=80";
+            : "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800&auto=format&fit=crop&q=80";
 
         public Dictionary<string, string> Specs { get; set; } = new();
     }
