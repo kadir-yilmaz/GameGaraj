@@ -14,6 +14,7 @@
 </div>
 
 <form asp-action="Edit" method="post" id="editProductForm" enctype="multipart/form-data">
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
     <input type="hidden" asp-for="Id" />
     <!-- Hidden inputs for existing ImageUrls will be appended here by JS or Razor -->
     @if (Model.ImageUrls != null)

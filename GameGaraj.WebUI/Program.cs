@@ -8,6 +8,10 @@ using MassTransit;
 using System.Text.Json;
 
 var cultureInfo = new System.Globalization.CultureInfo("tr-TR");
+cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
+cultureInfo.NumberFormat.NumberGroupSeparator = ",";
+cultureInfo.NumberFormat.CurrencyDecimalSeparator = ".";
+cultureInfo.NumberFormat.CurrencyGroupSeparator = ",";
 System.Globalization.CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 

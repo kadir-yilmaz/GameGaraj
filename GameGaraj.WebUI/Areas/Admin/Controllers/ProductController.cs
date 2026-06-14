@@ -41,6 +41,13 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
         {
             if (!ModelState.IsValid)
             {
+                foreach (var modelState in ModelState.Values)
+                {
+                    foreach (var error in modelState.Errors)
+                    {
+                        Console.WriteLine($"[ProductCreateValidation] Error: {error.ErrorMessage}, Exception: {error.Exception?.Message}");
+                    }
+                }
                 var roots = await _catalogService.GetAllCategoriesAsync();
                 var flattenedList = new List<CategoryDropdownViewModel>();
                 FlattenCategories(roots, flattenedList, "");
@@ -126,6 +133,13 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
         {
             if (!ModelState.IsValid)
             {
+                foreach (var modelState in ModelState.Values)
+                {
+                    foreach (var error in modelState.Errors)
+                    {
+                        Console.WriteLine($"[ProductEditValidation] Error: {error.ErrorMessage}, Exception: {error.Exception?.Message}");
+                    }
+                }
                 var roots = await _catalogService.GetAllCategoriesAsync();
                 var flattenedList = new List<CategoryDropdownViewModel>();
                 FlattenCategories(roots, flattenedList, "");
