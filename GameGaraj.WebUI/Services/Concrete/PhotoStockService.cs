@@ -13,12 +13,14 @@ namespace GameGaraj.WebUI.Services.Concrete
             _httpClient = httpClient;
         }
 
-        public async Task<List<string>> UploadPhotosAsync(IFormFileCollection photos)
+        public async Task<List<string>> UploadPhotosAsync(IFormFileCollection photos, string? brand, string? productName)
         {
             if (photos == null || photos.Count == 0)
                 return new List<string>();
 
             var multipartFormDataContent = new MultipartFormDataContent();
+            multipartFormDataContent.Add(new StringContent(brand ?? string.Empty), "brand");
+            multipartFormDataContent.Add(new StringContent(productName ?? string.Empty), "productName");
 
             foreach (var photo in photos)
             {

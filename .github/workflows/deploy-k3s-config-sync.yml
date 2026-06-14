@@ -1,0 +1,304 @@
+name: Deploy K3s With Config Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      namespace:
+        description: Kubernetes namespace to deploy into
+        required: true
+        default: default
+      install_k3s_if_missing:
+        description: Install k3s if it is missing on the self-hosted runner
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - ".github/workflows/deploy-k3s-config-sync.yml"
+      - "k8s/**"
+      - "GameGaraj.*/**"
+      - "docker-compose.build.yml"
+
+concurrency:
+  group: gamegaraj-k3s-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Sync Config And Deploy
+    runs-on: [self-hosted, Linux, X64]
+
+    env:
+      KUBECONFIG: /home/kadirserver/.kube/config
+      NAMESPACE: ${{ github.event.inputs.namespace || 'default' }}
+      K3S_SECRETS_JSON: ${{ secrets.K3S_SECRETS_JSON }}
+      K3S_SECRETS: ${{ secrets.K3S_SECRETS }}
+
+      KEYCLOAK_ADMIN_USERNAME: ${{ secrets.KEYCLOAK_ADMIN_USERNAME }}
+      KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      IYZICO_API_KEY: ${{ secrets.IYZICO_API_KEY }}
+      IYZICO_SECRET_KEY: ${{ secrets.IYZICO_SECRET_KEY }}
+
+      RABBITMQ_URL: ${{ secrets.RABBITMQ_URL }}
+      REDIS_CONNECTION: ${{ secrets.REDIS_CONNECTION }}
+      CATALOG_POSTGRES_CONNECTION: ${{ secrets.CATALOG_POSTGRES_CONNECTION }}
+      DISCOUNT_POSTGRES_CONNECTION: ${{ secrets.DISCOUNT_POSTGRES_CONNECTION }}
+      ORDER_SQLSERVER_CONNECTION: ${{ secrets.ORDER_SQLSERVER_CONNECTION }}
+      CAMPAIGN_SQLSERVER_CONNECTION: ${{ secrets.CAMPAIGN_SQLSERVER_CONNECTION }}
+
+      MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+      MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+      MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+      MINIO_BUCKET_NAME: ${{ secrets.MINIO_BUCKET_NAME }}
+      MINIO_SECURE: ${{ secrets.MINIO_SECURE }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Ensure K3s Exists
+        if: ${{ github.event.inputs.install_k3s_if_missing == 'true' }}
+        run: |
+          set -euo pipefail
+
+          if command -v k3s >/dev/null 2>&1 && systemctl is-active --quiet k3s; then
+            echo "k3s is already installed and running."
+            exit 0
+          fi
+
+          curl -sfL https://get.k3s.io | sudo sh -s - --docker
+          mkdir -p "$HOME/.kube"
+          sudo cp /etc/rancher/k3s/k3s.yaml "$HOME/.kube/config"
+          sudo chown "$USER:$USER" "$HOME/.kube/config"
+
+      - name: Verify Tooling
+        run: |
+          set -euo pipefail
+
+          docker version
+          kubectl version --client
+          kubectl get nodes -o wide
+
+      - name: Load Bundled K3s Secrets
+        run: |
+          set -euo pipefail
+
+          if [ -n "${K3S_SECRETS_JSON:-}" ]; then
+            python3 - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+
+          key_pattern = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+          github_env = os.environ["GITHUB_ENV"]
+
+          try:
+              values = json.loads(os.environ["K3S_SECRETS_JSON"])
+          except json.JSONDecodeError as exc:
+              print(f"::error::K3S_SECRETS_JSON is not valid JSON: {exc}", file=sys.stderr)
+              sys.exit(1)
+
+          if not isinstance(values, dict):
+              print("::error::K3S_SECRETS_JSON must be a JSON object.", file=sys.stderr)
+              sys.exit(1)
+
+          with open(github_env, "a", encoding="utf-8") as env_file:
+              for key, value in values.items():
+                  if not key_pattern.match(key):
+                      print(f"::error::Invalid key in K3S_SECRETS_JSON: {key}", file=sys.stderr)
+                      sys.exit(1)
+
+                  if isinstance(value, bool):
+                      value = str(value).lower()
+                  elif isinstance(value, (int, float)):
+                      value = str(value)
+                  elif value is None:
+                      value = ""
+                  elif not isinstance(value, str):
+                      print(f"::error::Value for {key} must be a string, number, boolean, or null.", file=sys.stderr)
+                      sys.exit(1)
+
+                  print(f"::add-mask::{value}")
+                  env_file.write(f"{key}<<__{key}_EOF__\n{value}\n__{key}_EOF__\n")
+          PY
+            exit 0
+          fi
+
+          if [ -z "${K3S_SECRETS:-}" ]; then
+            echo "K3S_SECRETS_JSON and K3S_SECRETS are empty. Falling back to individual GitHub secrets."
+            exit 0
+          fi
+
+          secrets_file="$(mktemp)"
+          printf '%s\n' "$K3S_SECRETS" | sed 's/\r$//' > "$secrets_file"
+
+          mapfile -t lines < "$secrets_file"
+          index=0
+
+          while [ "$index" -lt "${#lines[@]}" ]; do
+            key="${lines[$index]}"
+            index=$((index + 1))
+
+            if [ -z "$key" ]; then
+              continue
+            fi
+
+            if ! [[ "$key" =~ ^[A-Z_][A-Z0-9_]*$ ]]; then
+              echo "::error::Invalid key in K3S_SECRETS: ${key}"
+              exit 1
+            fi
+
+            if [ "$index" -ge "${#lines[@]}" ]; then
+              echo "::error::Missing value for ${key} in K3S_SECRETS"
+              exit 1
+            fi
+
+            value="${lines[$index]}"
+            index=$((index + 1))
+
+            echo "::add-mask::${value}"
+            {
+              echo "${key}<<__${key}_EOF__"
+              echo "${value}"
+              echo "__${key}_EOF__"
+            } >> "$GITHUB_ENV"
+          done
+
+      - name: Validate Required Secrets
+        run: |
+          set -euo pipefail
+
+          required=(
+            KEYCLOAK_ADMIN_USERNAME
+            KEYCLOAK_ADMIN_PASSWORD
+            ADMIN_EMAIL
+            ADMIN_PASSWORD
+            SMTP_USERNAME
+            SMTP_PASSWORD
+            IYZICO_API_KEY
+            IYZICO_SECRET_KEY
+            RABBITMQ_URL
+            REDIS_CONNECTION
+            CATALOG_POSTGRES_CONNECTION
+            DISCOUNT_POSTGRES_CONNECTION
+            ORDER_SQLSERVER_CONNECTION
+            CAMPAIGN_SQLSERVER_CONNECTION
+            MINIO_ENDPOINT
+            MINIO_ACCESS_KEY
+            MINIO_SECRET_KEY
+            MINIO_BUCKET_NAME
+            MINIO_SECURE
+          )
+
+          missing=0
+          for name in "${required[@]}"; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing GitHub secret: ${name}"
+              missing=1
+            fi
+          done
+
+          exit "$missing"
+
+      - name: Ensure Namespace
+        run: |
+          set -euo pipefail
+
+          kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Sync Kubernetes Secrets
+        run: |
+          set -euo pipefail
+
+          kubectl -n "$NAMESPACE" create secret generic gamegaraj-secrets \
+            --from-literal=keycloak-admin-username="$KEYCLOAK_ADMIN_USERNAME" \
+            --from-literal=keycloak-admin-password="$KEYCLOAK_ADMIN_PASSWORD" \
+            --from-literal=admin-email="$ADMIN_EMAIL" \
+            --from-literal=admin-password="$ADMIN_PASSWORD" \
+            --from-literal=smtp-username="$SMTP_USERNAME" \
+            --from-literal=smtp-password="$SMTP_PASSWORD" \
+            --from-literal=iyzico-api-key="$IYZICO_API_KEY" \
+            --from-literal=iyzico-secret-key="$IYZICO_SECRET_KEY" \
+            --from-literal=rabbitmq-url="$RABBITMQ_URL" \
+            --from-literal=redis-connection="$REDIS_CONNECTION" \
+            --from-literal=catalog-postgres-connection="$CATALOG_POSTGRES_CONNECTION" \
+            --from-literal=discount-postgres-connection="$DISCOUNT_POSTGRES_CONNECTION" \
+            --from-literal=order-sqlserver-connection="$ORDER_SQLSERVER_CONNECTION" \
+            --from-literal=campaign-sqlserver-connection="$CAMPAIGN_SQLSERVER_CONNECTION" \
+            --from-literal=minio-endpoint="$MINIO_ENDPOINT" \
+            --from-literal=minio-access-key="$MINIO_ACCESS_KEY" \
+            --from-literal=minio-secret-key="$MINIO_SECRET_KEY" \
+            --from-literal=minio-bucket-name="$MINIO_BUCKET_NAME" \
+            --from-literal=minio-secure="$MINIO_SECURE" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Sync Kubernetes ConfigMaps
+        run: |
+          set -euo pipefail
+
+          kubectl -n "$NAMESPACE" create configmap gamegaraj-keycloak-realm \
+            --from-file=realm-init.json=k8s/config/realm-init.json \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl -n "$NAMESPACE" create configmap gamegaraj-initdbs \
+            --from-file=init-dbs.sql=k8s/config/init-dbs.sql \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl -n "$NAMESPACE" create configmap gamegaraj-redis-sentinel \
+            --from-file=sentinel1.conf=k8s/config/redis/sentinel/sentinel1.conf \
+            --from-file=sentinel2.conf=k8s/config/redis/sentinel/sentinel2.conf \
+            --from-file=sentinel3.conf=k8s/config/redis/sentinel/sentinel3.conf \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Build Application Images
+        run: |
+          set -euo pipefail
+
+          docker compose -f docker-compose.build.yml build
+
+      - name: Apply Application Manifests
+        run: |
+          set -euo pipefail
+
+          short_sha="$(git rev-parse --short HEAD)"
+          sed -i "s/GITHUB_SHA_PLACEHOLDER/${short_sha}/g" k8s/webui.yaml
+
+          while IFS= read -r -d '' manifest; do
+            kubectl -n "$NAMESPACE" apply -f "$manifest"
+          done < <(find k8s -maxdepth 1 -type f \( -name '*.yaml' -o -name '*.yml' \) -print0)
+
+      - name: Restart Deployments
+        run: |
+          set -euo pipefail
+
+          kubectl -n "$NAMESPACE" rollout restart deployment
+
+      - name: Wait For Rollouts
+        run: |
+          set -euo pipefail
+
+          for deployment in $(kubectl -n "$NAMESPACE" get deploy -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
+            kubectl -n "$NAMESPACE" rollout status "deployment/${deployment}" --timeout=180s
+          done
+
+      - name: Post Deploy Checks
+        run: |
+          set -euo pipefail
+
+          kubectl -n "$NAMESPACE" get configmap gamegaraj-keycloak-realm gamegaraj-initdbs gamegaraj-redis-sentinel
+          kubectl -n "$NAMESPACE" get secret gamegaraj-secrets
+          kubectl -n "$NAMESPACE" get deployments -o wide
+          kubectl -n "$NAMESPACE" get pods -o wide
+          kubectl -n "$NAMESPACE" get services -o wide

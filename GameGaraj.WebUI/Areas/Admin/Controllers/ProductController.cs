@@ -59,7 +59,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             // Image Upload
             if (model.Photos != null && model.Photos.Count > 0)
             {
-                var uploadedUrls = await _photoStockService.UploadPhotosAsync(model.Photos);
+                var uploadedUrls = await _photoStockService.UploadPhotosAsync(model.Photos, model.Brand, model.Name);
                 if (uploadedUrls.Any())
                 {
                     // PhotoStock API "/photos/filename.jpg" dönüyor ama BaseAddress ServiceExtension'da ayarlı.
@@ -157,7 +157,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 if (spaceLeft > 0)
                 {
                     // Eğer yer kalmışsa, en fazla kalan yer kadar fotoğraf al (ya da IPhotoStockService içinden hata döner)
-                    var uploadedUrls = await _photoStockService.UploadPhotosAsync(model.Photos);
+                    var uploadedUrls = await _photoStockService.UploadPhotosAsync(model.Photos, model.Brand, model.Name);
                     if (uploadedUrls.Any())
                     {
                         if (model.ImageUrls == null) model.ImageUrls = new List<string>();

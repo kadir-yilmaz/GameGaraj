@@ -23,6 +23,24 @@ builder.Services.AddScoped<IMinioClient>(sp =>
     var secretKey = builder.Configuration["Minio:SecretKey"] ?? string.Empty;
     var secure = bool.TryParse(builder.Configuration["Minio:Secure"], out bool sec) && sec;
 
+    if (string.IsNullOrWhiteSpace(endpoint))
+    {
+        throw new InvalidOperationException("Minio:Endpoint configuration is required.");
+    }
+
+    if (string.IsNullOrWhiteSpace(accessKey) || string.IsNullOrWhiteSpace(secretKey))
+    {
+        throw new InvalidOperationException("Minio credentials are required.");
+    }
+
+    if (Uri.TryCreate(endpoint, UriKind.Absolute, out var endpointUri))
+    {
+        secure = endpointUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        endpoint = endpointUri.IsDefaultPort
+            ? endpointUri.Host
+            : $"{endpointUri.Host}:{endpointUri.Port}";
+    }
+
     var client = new MinioClient()
         .WithEndpoint(endpoint)
         .WithCredentials(accessKey, secretKey);

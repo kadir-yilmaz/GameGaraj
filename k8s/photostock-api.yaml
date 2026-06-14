@@ -15,32 +15,62 @@ spec:
         app: photostock-api
     spec:
       containers:
-      - name: photostock-api
-        image: photostock-api:latest
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 8080
-        env:
-        - name: ASPNETCORE_ENVIRONMENT
-          value: "Development"
-        - name: ASPNETCORE_URLS
-          value: "http://+:8080"
-        - name: RabbitMQUrl
-          value: "host.docker.internal"
-        - name: IdentityOption__Authority
-          value: "http://host.docker.internal:8080/realms/GameGaraj"
-        - name: ElasticSearchSettings__Uri
-          value: "http://host.docker.internal:9201"
-        - name: Minio__Endpoint
-          value: "minio-minio-qfsuzv:9000"
-        - name: Minio__AccessKey
-          value: "admin"
-        - name: Minio__SecretKey
-          value: "kadir12345"
-        - name: Minio__BucketName
-          value: "gamegaraj"
-        - name: Minio__Secure
-          value: "false"
+        - name: photostock-api
+          image: photostock-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+
+          env:
+            # ASP.NET
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
+            - name: ASPNETCORE_URLS
+              value: "http://+:8080"
+
+            # INTERNAL SERVICES (k3s içinde güvenli değil ama senin setup)
+            - name: RabbitMQUrl
+              value: "rabbitmq:5672"
+
+            - name: IdentityOption__Authority
+              value: "http://identity:8080/realms/GameGaraj"
+
+            - name: ElasticSearchSettings__Uri
+              value: "http://elasticsearch:9200"
+
+            # =========================
+            # MINIO (FIXED SECTION)
+            # =========================
+            - name: Minio__Endpoint
+              valueFrom:
+                secretKeyRef:
+                  name: gamegaraj-secrets
+                  key: minio-endpoint
+
+            - name: Minio__AccessKey
+              valueFrom:
+                secretKeyRef:
+                  name: gamegaraj-secrets
+                  key: minio-access-key
+
+            - name: Minio__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: gamegaraj-secrets
+                  key: minio-secret-key
+
+            - name: Minio__BucketName
+              valueFrom:
+                secretKeyRef:
+                  name: gamegaraj-secrets
+                  key: minio-bucket-name
+
+            - name: Minio__Secure
+              valueFrom:
+                secretKeyRef:
+                  name: gamegaraj-secrets
+                  key: minio-secure
+
 ---
 apiVersion: v1
 kind: Service

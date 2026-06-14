@@ -1,7 +1,8 @@
 using GameGaraj.PhotoStock.API.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
+using System.Globalization;
+using System.Text;
 
 namespace GameGaraj.PhotoStock.API.Controllers;
 
@@ -26,6 +27,8 @@ public class PhotosController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> UploadPhotos(
         [FromForm] List<IFormFile> photos,
+        [FromForm] string? brand,
+        [FromForm] string? productName,
         CancellationToken cancellationToken)
     {
         if (photos == null || photos.Count == 0)
@@ -49,7 +52,7 @@ public class PhotosController : ControllerBase
             try
             {
                 var ext = Path.GetExtension(photo.FileName).ToLowerInvariant();
-                var fileName = $"{Guid.NewGuid()}{ext}";
+                var fileName = BuildFileName(brand, productName, ext);
 
                 var url = await _storageService.UploadFileAsync(
                     photo,
@@ -115,6 +118,75 @@ public class PhotosController : ControllerBase
 
         return Ok(new { deleted, errors = errors.Count == 0 ? null : errors });
     }
+
+    private static string BuildFileName(string? brand, string? productName, string extension)
+    {
+        var prefixParts = new[]
+        {
+            ToSlug(brand),
+            ToSlug(productName)
+        }.Where(part => !string.IsNullOrWhiteSpace(part));
+
+        var prefix = string.Join("-", prefixParts);
+        if (string.IsNullOrWhiteSpace(prefix))
+        {
+            prefix = "product";
+        }
+
+        var randomId = Guid.NewGuid().ToString("N")[..10];
+        return $"{prefix}-{randomId}{extension}";
+    }
+
+    private static string ToSlug(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim()
+            .Replace('ı', 'i')
+            .Replace('İ', 'I')
+            .Replace('ğ', 'g')
+            .Replace('Ğ', 'G')
+            .Replace('ü', 'u')
+            .Replace('Ü', 'U')
+            .Replace('ş', 's')
+            .Replace('Ş', 'S')
+            .Replace('ö', 'o')
+            .Replace('Ö', 'O')
+            .Replace('ç', 'c')
+            .Replace('Ç', 'C')
+            .Normalize(NormalizationForm.FormD);
+
+        var builder = new StringBuilder(normalized.Length);
+        var previousDash = false;
+
+        foreach (var character in normalized)
+        {
+            var category = CharUnicodeInfo.GetUnicodeCategory(character);
+            if (category == UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(char.ToLowerInvariant(character));
+                previousDash = false;
+                continue;
+            }
+
+            if (!previousDash && builder.Length > 0)
+            {
+                builder.Append('-');
+                previousDash = true;
+            }
+        }
+
+        return builder.ToString().Trim('-');
+    }
+
     private string? Validate(IFormFile file)
     {
         if (file.Length > MaxFileSize)
