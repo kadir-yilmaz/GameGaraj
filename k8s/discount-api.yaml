@@ -1,4 +1,4 @@
-﻿apiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: discount-api
@@ -32,7 +32,7 @@ spec:
         - name: ElasticSearchSettings__Uri
           value: "http://host.docker.internal:9201"
         - name: ConnectionStrings__PostgreSql
-          value: "User ID=admin;Password=Password12*;Server=host.docker.internal;Port=5432;Database=discountdb;Pooling=true"
+          value: "User ID=admin;Password=Password12*;Server=host.docker.internal;Port=5435;Database=discountdb;Pooling=true"
 ---
 apiVersion: v1
 kind: Service

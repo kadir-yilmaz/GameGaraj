@@ -1,4 +1,4 @@
-﻿apiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: payment-api
@@ -31,6 +31,16 @@ spec:
           value: "http://host.docker.internal:8080/realms/GameGaraj"
         - name: ElasticSearchSettings__Uri
           value: "http://host.docker.internal:9201"
+        - name: Iyzipay__ApiKey
+          valueFrom:
+            secretKeyRef:
+              name: gamegaraj-secrets
+              key: iyzico-api-key
+        - name: Iyzipay__SecretKey
+          valueFrom:
+            secretKeyRef:
+              name: gamegaraj-secrets
+              key: iyzico-secret-key
 ---
 apiVersion: v1
 kind: Service

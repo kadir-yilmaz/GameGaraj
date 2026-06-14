@@ -1,4 +1,4 @@
-﻿apiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: photostock-api
@@ -31,6 +31,14 @@ spec:
           value: "http://host.docker.internal:8080/realms/GameGaraj"
         - name: ElasticSearchSettings__Uri
           value: "http://host.docker.internal:9201"
+        volumeMounts:
+        - mountPath: /app/wwwroot/photos
+          name: photostock-storage
+      volumes:
+      - name: photostock-storage
+        hostPath:
+          path: /home/kadirserver/gamegaraj/photos
+          type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service

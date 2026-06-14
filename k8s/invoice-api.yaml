@@ -1,4 +1,4 @@
-﻿apiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: invoice-api
@@ -31,6 +31,16 @@ spec:
           value: "http://host.docker.internal:8080/realms/GameGaraj"
         - name: ElasticSearchSettings__Uri
           value: "http://host.docker.internal:9201"
+        - name: EmailSettings__SmtpUsername
+          valueFrom:
+            secretKeyRef:
+              name: gamegaraj-secrets
+              key: smtp-username
+        - name: EmailSettings__SmtpPassword
+          valueFrom:
+            secretKeyRef:
+              name: gamegaraj-secrets
+              key: smtp-password
 ---
 apiVersion: v1
 kind: Service
