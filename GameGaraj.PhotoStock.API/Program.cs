@@ -1,5 +1,7 @@
 using GameGaraj.Shared.Logging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Minio;
+using GameGaraj.PhotoStock.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +14,35 @@ builder.Logging.AddFileLogger("PhotoStock.API");
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Register Storage Service based on configuration
+var minioEndpoint = builder.Configuration["Minio:Endpoint"];
+if (!string.IsNullOrEmpty(minioEndpoint))
+{
+    builder.Services.AddScoped<IMinioClient>(sp =>
+    {
+        var accessKey = builder.Configuration["Minio:AccessKey"] ?? string.Empty;
+        var secretKey = builder.Configuration["Minio:SecretKey"] ?? string.Empty;
+        var secure = bool.TryParse(builder.Configuration["Minio:Secure"], out bool sec) && sec;
+
+        var client = new MinioClient()
+            .WithEndpoint(minioEndpoint)
+            .WithCredentials(accessKey, secretKey);
+
+        if (secure)
+        {
+            client.WithSSL();
+        }
+
+        return client.Build();
+    });
+
+    builder.Services.AddScoped<IStorageService, MinioStorageService>();
+}
+else
+{
+    builder.Services.AddScoped<IStorageService, LocalStorageService>();
+}
 
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

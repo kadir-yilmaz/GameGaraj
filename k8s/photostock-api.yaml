@@ -31,14 +31,16 @@ spec:
           value: "http://host.docker.internal:8080/realms/GameGaraj"
         - name: ElasticSearchSettings__Uri
           value: "http://host.docker.internal:9201"
-        volumeMounts:
-        - mountPath: /app/wwwroot/photos
-          name: photostock-storage
-      volumes:
-      - name: photostock-storage
-        hostPath:
-          path: /home/kadirserver/gamegaraj/photos
-          type: DirectoryOrCreate
+        - name: Minio__Endpoint
+          value: "minio-minio-qfsuzv:9000"
+        - name: Minio__AccessKey
+          value: "admin"
+        - name: Minio__SecretKey
+          value: "kadir12345"
+        - name: Minio__BucketName
+          value: "gamegaraj"
+        - name: Minio__Secure
+          value: "false"
 ---
 apiVersion: v1
 kind: Service

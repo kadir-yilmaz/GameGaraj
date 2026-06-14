@@ -1,4 +1,4 @@
-﻿// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
+// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
 // for details on configuring this project to bundle and minify static web assets.
 
 // Write your JavaScript code.
@@ -114,6 +114,9 @@ $(document).ready(function () {
                     alert('Bir hata oluştu: ' + (response.message || 'Bilinmeyen hata'));
                     $button.prop('disabled', false).html(originalContent);
                 }
+                    alert('Bir hata oluştu: ' + (response.message || 'Bilinmeyen hata'));
+                    $button.prop('disabled', false).html(originalContent);
+                }
             },
             error: function () {
                 alert('Bir hata oluştu.');
@@ -180,4 +183,60 @@ $(document).ready(function () {
         });
     });
 
+    // Swipeable Product Card Sliders (Mouse Grab & Drag support)
+    function initCardSliders() {
+        $('.product-card-slider').each(function () {
+            var $slider = $(this);
+            var $dots = $slider.siblings('.product-card-dots').find('.dot');
+            var isDown = false;
+            var startX;
+            var scrollLeft;
+            var dragThreshold = 8;
+            var moved = false;
+
+            // Update dots active state on scroll
+            $slider.on('scroll', function () {
+                var width = $slider.outerWidth();
+                if (width <= 0) return;
+                var scrollLeftVal = $slider.scrollLeft();
+                var index = Math.round(scrollLeftVal / width);
+                $dots.removeClass('active').eq(index).addClass('active');
+            });
+
+            // Mouse events
+            $slider.on('mousedown', function (e) {
+                isDown = true;
+                $slider.css('cursor', 'grabbing');
+                startX = e.pageX - $slider.offset().left;
+                scrollLeft = $slider.scrollLeft();
+                moved = false;
+            });
+
+            $slider.on('mouseleave mouseup', function () {
+                isDown = false;
+                $slider.css('cursor', 'grab');
+            });
+
+            $slider.on('mousemove', function (e) {
+                if (!isDown) return;
+                e.preventDefault();
+                var x = e.pageX - $slider.offset().left;
+                var walk = (x - startX) * 1.5; // Drag sensitivity multiplier
+                if (Math.abs(walk) > dragThreshold) {
+                    moved = true;
+                }
+                $slider.scrollLeft(scrollLeft - walk);
+            });
+
+            // Prevent link navigation if drag occurred on slider
+            $slider.on('click', function (e) {
+                if (moved) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+        });
+    }
+
+    initCardSliders();
 });

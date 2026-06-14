@@ -1,3 +1,4 @@
+using GameGaraj.PhotoStock.API.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GameGaraj.PhotoStock.API.Controllers
@@ -6,14 +7,14 @@ namespace GameGaraj.PhotoStock.API.Controllers
     [Route("api/[controller]")]
     public class PhotosController : ControllerBase
     {
-        private readonly string _wwwrootPath;
+        private readonly IStorageService _storageService;
         private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
         private const int MaxPhotos = 5;
         private const long MaxFileSize = 5 * 1024 * 1024; // 5MB
 
-        public PhotosController(IWebHostEnvironment environment)
+        public PhotosController(IStorageService storageService)
         {
-            _wwwrootPath = environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot");
+            _storageService = storageService;
         }
 
         /// <summary>
@@ -32,12 +33,6 @@ namespace GameGaraj.PhotoStock.API.Controllers
             if (photos.Count > MaxPhotos)
             {
                 return BadRequest(new { error = $"Maksimum {MaxPhotos} resim yükleyebilirsiniz." });
-            }
-
-            var photosFolder = Path.Combine(_wwwrootPath, "photos");
-            if (!Directory.Exists(photosFolder))
-            {
-                Directory.CreateDirectory(photosFolder);
             }
 
             var uploadedUrls = new List<string>();
@@ -60,14 +55,17 @@ namespace GameGaraj.PhotoStock.API.Controllers
                     continue;
                 }
 
-                // Generate unique filename: GUID + original extension
-                var fileName = $"{Guid.NewGuid()}{extension}";
-                var filePath = Path.Combine(photosFolder, fileName);
-
-                using var stream = new FileStream(filePath, FileMode.Create);
-                await photo.CopyToAsync(stream, cancellationToken);
-
-                uploadedUrls.Add($"photos/{fileName}");
+                try
+                {
+                    // Generate unique filename: GUID + original extension
+                    var fileName = $"{Guid.NewGuid()}{extension}";
+                    var relativePath = await _storageService.UploadFileAsync(photo, fileName, cancellationToken);
+                    uploadedUrls.Add(relativePath);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"{photo.FileName}: Yükleme sırasında hata oluştu. Hata: {ex.Message}");
+                }
             }
 
             // If all files failed
@@ -87,33 +85,29 @@ namespace GameGaraj.PhotoStock.API.Controllers
         /// Delete a photo by filename
         /// </summary>
         [HttpDelete("{fileName}")]
-        public IActionResult DeletePhoto(string fileName)
+        public async Task<IActionResult> DeletePhoto(string fileName, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(fileName))
             {
                 return BadRequest(new { error = "Dosya adı gereklidir." });
             }
 
-            // Security: Prevent directory traversal
-            fileName = Path.GetFileName(fileName);
-
-            var filePath = Path.Combine(_wwwrootPath, "photos", fileName);
-
-            if (!System.IO.File.Exists(filePath))
+            try
             {
-                return NotFound(new { error = "Resim bulunamadı." });
+                await _storageService.DeleteFileAsync(fileName, cancellationToken);
+                return NoContent();
             }
-
-            System.IO.File.Delete(filePath);
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"Silme hatası: {ex.Message}" });
+            }
         }
 
         /// <summary>
         /// Delete multiple photos
         /// </summary>
         [HttpDelete]
-        public IActionResult DeletePhotos([FromBody] List<string> fileNames)
+        public async Task<IActionResult> DeletePhotos([FromBody] List<string> fileNames, CancellationToken cancellationToken)
         {
             if (fileNames == null || fileNames.Count == 0)
             {
@@ -121,29 +115,25 @@ namespace GameGaraj.PhotoStock.API.Controllers
             }
 
             var deleted = new List<string>();
-            var notFound = new List<string>();
+            var errors = new List<string>();
 
             foreach (var fileName in fileNames)
             {
-                // Security: Prevent directory traversal
-                var safeFileName = Path.GetFileName(fileName);
-                var filePath = Path.Combine(_wwwrootPath, "photos", safeFileName);
-
-                if (System.IO.File.Exists(filePath))
+                try
                 {
-                    System.IO.File.Delete(filePath);
-                    deleted.Add(safeFileName);
+                    await _storageService.DeleteFileAsync(fileName, cancellationToken);
+                    deleted.Add(fileName);
                 }
-                else
+                catch (Exception ex)
                 {
-                    notFound.Add(safeFileName);
+                    errors.Add($"{fileName}: Silme hatası. Hata: {ex.Message}");
                 }
             }
 
             return Ok(new
             {
                 deleted,
-                notFound = notFound.Count > 0 ? notFound : null
+                errors = errors.Count > 0 ? errors : null
             });
         }
     }

@@ -20,3 +20,239 @@ html {
 body {
   margin-bottom: 0;
 }
+
+/* ==========================================================================
+   Premium Product Card & Slider Styling (Samsung Style)
+   ========================================================================== */
+.product-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    padding: 12px;
+    border: 1px solid #eaeaea !important;
+}
+.product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important;
+}
+
+.product-img-container {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    margin-bottom: 8px;
+}
+
+/* Swipeable Card Slider */
+.product-card-slider-wrapper {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
+.product-card-slider {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    cursor: grab;
+    user-select: none;
+}
+
+.product-card-slider:active {
+    cursor: grabbing;
+}
+
+.product-card-slider::-webkit-scrollbar {
+    display: none;
+}
+
+.product-card-slide {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    position: relative;
+}
+
+.product-card-slide img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Slider Dots */
+.product-card-dots {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+    background: rgba(0,0,0,0.08);
+    padding: 4px 6px;
+    border-radius: 10px;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.product-card-dots .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.product-card-dots .dot.active {
+    background: #ff6000;
+    transform: scale(1.15);
+}
+
+/* Hızlı Bakış (Quick Look) Button */
+.btn-quick-look {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: #fff;
+    color: #333;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.2s, transform 0.2s, background-color 0.2s, color 0.2s;
+    text-decoration: none;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+}
+
+.product-card:hover .btn-quick-look {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.btn-quick-look:hover {
+    background: #f8f9fa;
+    color: #007bff;
+    border-color: #007bff;
+}
+
+/* Favorite Circular Heart Button */
+.btn-favorite {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #fff;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    color: #888;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    transition: color 0.2s, background-color 0.2s, transform 0.2s;
+}
+
+.btn-favorite:hover {
+    transform: scale(1.08);
+    color: #e74c3c;
+}
+
+.btn-favorite.active {
+    color: #e74c3c;
+}
+
+/* Promo Lightning Badge */
+.promo-badge {
+    background: #fff0f0;
+    color: #e74c3c;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+}
+
+/* Stock Warning Badge */
+.stock-warning-badge {
+    background: #fffbe6;
+    border: 1px solid #ffe58f;
+    border-radius: 6px;
+    color: #d46b08;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 6px 10px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Card Bottom Alignment */
+.card-bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    position: relative;
+    z-index: 5;
+}
+
+.card-price-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.card-price-main {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ff3b30;
+}
+
+.card-price-old {
+    font-size: 0.8rem;
+    color: #999;
+    text-decoration: line-through;
+}
+
+/* Mini Square Cart Button */
+.btn-mini-cart {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #f0f2f5;
+    color: #232f3e;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+}
+
+.btn-mini-cart:hover {
+    background: #e2e6ea;
+    color: #ff6000;
+}
+
+.btn-mini-cart.in-basket {
+    background: #28a745;
+    color: #fff;
+}
