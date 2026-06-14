@@ -1,5 +1,7 @@
 using GameGaraj.PhotoStock.API.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace GameGaraj.PhotoStock.API.Controllers;
 
@@ -14,6 +16,13 @@ public class PhotosController : ControllerBase
         _storageService = storageService;
     }
 
+    private const int MaxPhotos = 5;
+    private const long MaxFileSize = 5 * 1024 * 1024;
+
+    private static readonly string[] AllowedExtensions =
+        { ".jpg", ".jpeg", ".png", ".webp" };
+
+
     [HttpPost]
     public async Task<IActionResult> UploadPhotos(
         [FromForm] List<IFormFile> photos,
@@ -22,18 +31,18 @@ public class PhotosController : ControllerBase
         if (photos == null || photos.Count == 0)
             return BadRequest("En az bir resim gerekli.");
 
-        if (photos.Count > PhotoLimits.MaxPhotos)
-            return BadRequest($"Max {PhotoLimits.MaxPhotos} resim yüklenebilir.");
+        if (photos.Count > MaxPhotos)
+            return BadRequest($"Max {MaxPhotos} resim yüklenebilir.");
 
-        var response = new UploadPhotoResponse();
+        var urls = new List<string>();
+        var errors = new List<string>();
 
         foreach (var photo in photos)
         {
-            var validationError = PhotoValidator.Validate(photo);
+            var validationError = Validate(photo);
             if (validationError != null)
             {
-                response.Errors ??= new List<string>();
-                response.Errors.Add(validationError);
+                errors.Add(validationError);
                 continue;
             }
 
@@ -47,23 +56,24 @@ public class PhotosController : ControllerBase
                     fileName,
                     cancellationToken);
 
-                response.Urls.Add(url);
+                urls.Add(url);
             }
             catch (Exception ex)
             {
-                response.Errors ??= new List<string>();
-                response.Errors.Add($"{photo.FileName}: {ex.Message}");
+                errors.Add($"{photo.FileName}: {ex.Message}");
             }
         }
 
-        if (response.Urls.Count == 0)
-            return BadRequest(response);
+        if (urls.Count == 0)
+            return BadRequest(new { urls, errors });
 
-        return Ok(response);
+        return Ok(new { urls, errors = errors.Count == 0 ? null : errors });
     }
 
     [HttpDelete("{fileName}")]
-    public async Task<IActionResult> DeletePhoto(string fileName, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeletePhoto(
+        string fileName,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(fileName))
             return BadRequest("Dosya adı gerekli.");
@@ -87,25 +97,34 @@ public class PhotosController : ControllerBase
         if (fileNames == null || fileNames.Count == 0)
             return BadRequest("Silinecek dosya yok.");
 
-        var result = new
-        {
-            deleted = new List<string>(),
-            errors = new List<string>()
-        };
+        var deleted = new List<string>();
+        var errors = new List<string>();
 
         foreach (var fileName in fileNames)
         {
             try
             {
                 await _storageService.DeleteFileAsync(fileName, cancellationToken);
-                result.deleted.Add(fileName);
+                deleted.Add(fileName);
             }
             catch (Exception ex)
             {
-                result.errors.Add($"{fileName}: {ex.Message}");
+                errors.Add($"{fileName}: {ex.Message}");
             }
         }
 
-        return Ok(result);
+        return Ok(new { deleted, errors = errors.Count == 0 ? null : errors });
+    }
+    private string? Validate(IFormFile file)
+    {
+        if (file.Length > MaxFileSize)
+            return $"{file.FileName}: Max 5MB olabilir.";
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+        if (!AllowedExtensions.Contains(ext))
+            return $"{file.FileName}: Geçersiz format.";
+
+        return null;
     }
 }
