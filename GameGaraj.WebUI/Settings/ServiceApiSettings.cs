@@ -5,6 +5,7 @@ namespace GameGaraj.WebUI.Settings
         public string IdentityBaseUri { get; set; } = string.Empty;
         public string GatewayBaseUri { get; set; } = string.Empty;
         public string PhotoStockUri { get; set; } = string.Empty;
+        public string PhotoBaseUrl { get; set; } = string.Empty;
         
         // Direkt API URL'leri (Gateway olmadan)
         public string CatalogUri { get; set; } = string.Empty;
