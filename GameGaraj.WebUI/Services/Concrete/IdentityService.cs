@@ -83,12 +83,15 @@ namespace GameGaraj.WebUI.Services.Concrete
                 // 1. Admin token al (Keycloak'a kullanıcı eklemek için)
                 var adminTokenEndpoint = $"{_serviceApiSettings.IdentityBaseUri.Replace("/realms/GameGaraj", "")}/realms/master/protocol/openid-connect/token";
                 
+                var adminUsername = Environment.GetEnvironmentVariable("KEYCLOAK_ADMIN_USERNAME") ?? "admin";
+                var adminPassword = Environment.GetEnvironmentVariable("KEYCLOAK_ADMIN_PASSWORD") ?? "admin";
+
                 var adminTokenContent = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     { "client_id", "admin-cli" },
                     { "grant_type", "password" },
-                    { "username", "admin" },
-                    { "password", "admin" }
+                    { "username", adminUsername },
+                    { "password", adminPassword }
                 });
 
                 var adminTokenResponse = await _httpClient.PostAsync(adminTokenEndpoint, adminTokenContent);

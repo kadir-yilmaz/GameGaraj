@@ -29,6 +29,22 @@ spec:
           value: "host.docker.internal"
         - name: IdentityOption__Authority
           value: "http://host.docker.internal:8080/realms/GameGaraj"
+        - name: ServiceApiSettings__IdentityBaseUri
+          value: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
+        - name: KEYCLOAK_ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: gamegaraj-secrets
+              key: keycloak-admin-username
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gamegaraj-secrets
+              key: keycloak-admin-password
+        - name: ADMIN_EMAIL
+          value: "kadiryilmaz.dev@gmail.com"
+        - name: ADMIN_PASSWORD
+          value: "Kadir+1234"
         - name: ElasticSearchSettings__Uri
           value: "http://host.docker.internal:9201"
         - name: APP_VERSION
