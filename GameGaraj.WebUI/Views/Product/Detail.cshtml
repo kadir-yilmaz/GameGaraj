@@ -1232,5 +1232,26 @@
             currentImageIndex = (currentImageIndex + 1) % images.length;
             selectModalImage(currentImageIndex, images[currentImageIndex]);
         }
+
+        // Keyboard arrow navigation
+        document.addEventListener('keydown', function (e) {
+            if (images && images.length > 1) {
+                if (e.key === 'ArrowLeft') {
+                    const modalEl = document.getElementById('imageGalleryModal');
+                    if (modalEl && modalEl.classList.contains('show')) {
+                        prevModalImage();
+                    } else {
+                        prevImage();
+                    }
+                } else if (e.key === 'ArrowRight') {
+                    const modalEl = document.getElementById('imageGalleryModal');
+                    if (modalEl && modalEl.classList.contains('show')) {
+                        nextModalImage();
+                    } else {
+                        nextImage();
+                    }
+                }
+            }
+        });
     </script>
 }

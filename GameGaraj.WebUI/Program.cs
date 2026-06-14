@@ -7,6 +7,10 @@ using GameGaraj.Shared.Logging;
 using MassTransit;
 using System.Text.Json;
 
+var cultureInfo = new System.Globalization.CultureInfo("tr-TR");
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // File Logger ekle
