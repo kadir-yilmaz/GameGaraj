@@ -7,13 +7,13 @@
     <h1 class="h2">Ürün Düzenle</h1>
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a asp-action="Index">Ürünler</a></li>
+            <li class="breadcrumb-item"><a asp-area="Admin" asp-controller="Product" asp-action="Index">Ürünler</a></li>
             <li class="breadcrumb-item active" aria-current="page">Düzenle</li>
         </ol>
     </nav>
 </div>
 
-<form asp-action="Edit" method="post" id="editProductForm" enctype="multipart/form-data">
+<form asp-area="Admin" asp-controller="Product" asp-action="Edit" method="post" id="editProductForm" enctype="multipart/form-data">
     <div asp-validation-summary="All" class="text-danger mb-3"></div>
     <input type="hidden" asp-for="Id" />
     <!-- Hidden inputs for existing ImageUrls will be appended here by JS or Razor -->
@@ -153,7 +153,7 @@
     <button class="btn btn-primary btn-lg" type="submit">
         <i class="fas fa-save me-2"></i>Güncelle
     </button>
-    <a asp-action="Index" class="btn btn-secondary btn-lg">İptal</a>
+    <a asp-area="Admin" asp-controller="Product" asp-action="Index" class="btn btn-secondary btn-lg">İptal</a>
 </form>
 
 @section Scripts {

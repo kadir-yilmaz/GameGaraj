@@ -1,3 +1,4 @@
+@model GameGaraj.WebUI.Areas.Admin.Models.DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
@@ -7,16 +8,80 @@
     <div class="row mb-4">
         <div class="col-12">
             <h2><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h2>
-            <p class="text-muted">GameGaraj Yönetim Paneline Hoş Geldiniz</p>
+            <p class="text-muted">GameGaraj yönetim paneline hoş geldiniz</p>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 metric-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-muted small">Ürün</div>
+                            <div class="fs-3 fw-bold">@Model.ProductCount</div>
+                        </div>
+                        <span class="metric-icon text-success"><i class="fas fa-box"></i></span>
+                    </div>
+                    <div class="small text-muted mt-2">@Model.FeaturedProductCount vitrin ürünü</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 metric-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-muted small">Kategori</div>
+                            <div class="fs-3 fw-bold">@Model.CategoryCount</div>
+                        </div>
+                        <span class="metric-icon text-warning"><i class="fas fa-th-list"></i></span>
+                    </div>
+                    <div class="small text-muted mt-2">Alt kategoriler dahil</div>
+                </div>
+            </div>
+        </div>
+
+        @if (User.IsInRole("admin"))
+        {
+            <div class="col-sm-6 col-xl-3">
+                <div class="card border-0 shadow-sm h-100 metric-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="text-muted small">Sipariş</div>
+                                <div class="fs-3 fw-bold">@Model.OrderCount</div>
+                            </div>
+                            <span class="metric-icon text-primary"><i class="fas fa-shopping-cart"></i></span>
+                        </div>
+                        <div class="small text-muted mt-2">@Model.TotalRevenue.ToString("C2") toplam ciro</div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 metric-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-muted small">Düşük Stok</div>
+                            <div class="fs-3 fw-bold">@Model.LowStockProductCount</div>
+                        </div>
+                        <span class="metric-icon text-danger"><i class="fas fa-exclamation-triangle"></i></span>
+                    </div>
+                    <div class="small text-muted mt-2">5 veya daha az kullanılabilir stok</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="row g-4">
-        @* Sipariş Yönetimi - Sadece Admin *@
         @if (User.IsInRole("admin"))
         {
             <div class="col-md-6 col-lg-3">
-                <div class="card border-0 shadow-sm h-100">
+                <div class="card border-0 shadow-sm h-100 action-card">
                     <div class="card-body text-center">
                         <div class="mb-3">
                             <i class="fas fa-shopping-cart fa-3x text-primary"></i>
@@ -31,9 +96,8 @@
             </div>
         }
 
-        @* Ürün Yönetimi - Admin ve Editor *@
         <div class="col-md-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100 action-card">
                 <div class="card-body text-center">
                     <div class="mb-3">
                         <i class="fas fa-box fa-3x text-success"></i>
@@ -47,9 +111,8 @@
             </div>
         </div>
 
-        @* Kategori Yönetimi - Admin ve Editor *@
         <div class="col-md-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100 action-card">
                 <div class="card-body text-center">
                     <div class="mb-3">
                         <i class="fas fa-th-list fa-3x text-warning"></i>
@@ -63,9 +126,8 @@
             </div>
         </div>
 
-        @* Site - Herkes *@
         <div class="col-md-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100 action-card">
                 <div class="card-body text-center">
                     <div class="mb-3">
                         <i class="fas fa-globe fa-3x text-info"></i>
@@ -79,63 +141,39 @@
             </div>
         </div>
     </div>
-
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Hoş Geldiniz
-                    </h5>
-                    <p class="mb-2">
-                        <strong>@(User.IsInRole("admin") ? "Admin" : "Editor") Paneli</strong> üzerinden GameGaraj'ın yönetim işlemlerini gerçekleştirebilirsiniz.
-                    </p>
-                    <ul class="list-unstyled mb-0">
-                        @if (User.IsInRole("admin"))
-                        {
-                            <li class="mb-2">
-                                <i class="fas fa-check text-success me-2"></i>
-                                Siparişleri görüntüleyin ve durumlarını güncelleyin
-                            </li>
-                        }
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Ürünleri ekleyin, düzenleyin veya silin
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Kategorileri yönetin
-                        </li>
-                        @if (User.IsInRole("editor"))
-                        {
-                            <li class="mb-2">
-                                <i class="fas fa-info text-info me-2"></i>
-                                Editor olarak sadece ürün ve kategori yönetimi yapabilirsiniz
-                            </li>
-                        }
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <style>
-    .card {
-        transition: transform 0.3s, box-shadow 0.3s;
+    .action-card,
+    .metric-card {
+        border-radius: 8px;
     }
 
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+    .action-card {
+        transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    .card-body i.fa-3x {
-        transition: transform 0.3s;
+    .action-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
     }
 
-    .card:hover .card-body i.fa-3x {
-        transform: scale(1.1);
+    .action-card .fa-3x {
+        transition: transform 0.2s;
+    }
+
+    .action-card:hover .fa-3x {
+        transform: scale(1.08);
+    }
+
+    .metric-icon {
+        width: 44px;
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: #f8f9fa;
+        font-size: 1.35rem;
     }
 </style>

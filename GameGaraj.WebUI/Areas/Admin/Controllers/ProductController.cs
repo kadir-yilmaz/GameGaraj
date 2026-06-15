@@ -81,7 +81,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 return View(model);
             }
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), "Product", new { area = "Admin" });
         }
 
         private void FlattenCategories(List<CategoryViewModel> categories, List<CategoryDropdownViewModel> result, string prefix)
@@ -103,7 +103,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             if (product == null)
             {
                 TempData["Error"] = "Ürün bulunamadı.";
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(Index), "Product", new { area = "Admin" });
             }
 
             var roots = await _catalogService.GetAllCategoriesAsync();
@@ -116,6 +116,8 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 Id = product.Id,
                 Name = product.Name,
                 Description = product.Description,
+                Brand = product.Brand,
+                Slug = product.Slug,
                 Price = product.Price,
                 Stock = product.Stock,
                 IsActive = product.IsActive,
@@ -187,7 +189,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             }
 
             TempData["Success"] = "Ürün başarıyla güncellendi.";
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), "Product", new { area = "Admin" });
         }
         public async Task<IActionResult> GetCategoryAttributes(string id)
         {
@@ -211,7 +213,42 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             {
                 TempData["Error"] = "Ürün silinirken bir hata oluştu.";
             }
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), "Product", new { area = "Admin" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleFeatured(string id, bool isFeatured)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return BadRequest(new { success = false, message = "Ürün id gerekli." });
+            }
+
+            var product = await _catalogService.GetProductByIdAsync(id);
+            if (product == null)
+            {
+                return NotFound(new { success = false, message = "Ürün bulunamadı." });
+            }
+
+            var model = new ProductUpdateInput
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Brand = product.Brand,
+                Slug = product.Slug,
+                Description = product.Description,
+                Price = product.Price,
+                Stock = product.Stock,
+                IsActive = product.IsActive,
+                IsFeatured = isFeatured,
+                CategoryId = product.CategoryId,
+                ImageUrls = product.ImageUrls,
+                Specs = product.Specs
+            };
+
+            var result = await _catalogService.UpdateProductAsync(model);
+            return Json(new { success = result, isFeatured });
         }
     }
 }

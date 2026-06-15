@@ -7,7 +7,7 @@
     <h1 class="h2">Yeni Ürün Ekle</h1>
 </div>
 
-<form asp-action="Create" method="post" enctype="multipart/form-data">
+<form asp-area="Admin" asp-controller="Product" asp-action="Create" method="post" enctype="multipart/form-data">
     <div asp-validation-summary="All" class="text-danger mb-3"></div>
     <div class="row">
         <div class="col-md-8">
@@ -82,7 +82,7 @@
     <hr class="my-4">
 
     <button class="btn btn-primary btn-lg" type="submit">Kaydet</button>
-    <a asp-action="Index" class="btn btn-secondary btn-lg">İptal</a>
+    <a asp-area="Admin" asp-controller="Product" asp-action="Index" class="btn btn-secondary btn-lg">İptal</a>
 </form>
 
 @section Scripts {

@@ -6,13 +6,17 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Ürünler</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <a asp-action="Create" class="btn btn-sm btn-outline-primary">
+        <a asp-area="Admin" asp-controller="Product" asp-action="Create" class="btn btn-sm btn-outline-primary">
             <i class="fas fa-plus"></i> Yeni Ürün
         </a>
     </div>
 </div>
 
 <div class="table-responsive">
+    <form id="antiForgeryForm" class="d-none">
+        @Html.AntiForgeryToken()
+    </form>
+
     <table class="table table-hover align-middle">
         <thead>
             <tr>
@@ -20,6 +24,7 @@
                 <th>Ürün Bilgisi</th>
                 <th style="width: 150px;">Fiyat</th>
                 <th style="width: 100px;">Stok</th>
+                <th style="width: 130px;">Showcase</th>
                 <th style="width: 150px;">Kategori</th>
                 <th style="width: 200px;">İşlemler</th>
             </tr>
@@ -43,14 +48,24 @@
                             @item.Stock
                         </span>
                     </td>
+                    <td>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input js-featured-switch"
+                                   type="checkbox"
+                                   role="switch"
+                                   title="Showcase"
+                                   data-product-id="@item.Id"
+                                   @(item.IsFeatured ? "checked" : "") />
+                        </div>
+                    </td>
                     <td>@item.CategoryName</td>
                     <td>
                         <div class="btn-group">
-                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">
+                            <a asp-area="Admin" asp-controller="Product" asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-edit"></i> Düzenle
                             </a>
-                            <form asp-action="Delete" method="post" class="d-inline"
-                                onsubmit="return confirm('Bu ürünü silmek istediğinize emin misiniz?');">
+                            <form asp-area="Admin" asp-controller="Product" asp-action="Delete" method="post" class="d-inline"
+                                  onsubmit="return confirm('Bu ürünü silmek istediğinize emin misiniz?');">
                                 <input type="hidden" name="id" value="@item.Id" />
                                 <button type="submit" class="btn btn-sm btn-outline-danger">
                                     <i class="fas fa-trash"></i>
@@ -83,8 +98,46 @@
         object-fit: cover;
     }
 
-    .table align-middle td {
+    .table.align-middle td {
         padding-top: 1rem;
         padding-bottom: 1rem;
     }
+
+    .js-featured-switch {
+        cursor: pointer;
+    }
 </style>
+
+@section Scripts {
+    <script>
+        $(document).on('change', '.js-featured-switch', function () {
+            const checkbox = $(this);
+            const previousValue = !checkbox.prop('checked');
+            const token = $('#antiForgeryForm input[name="__RequestVerificationToken"]').val();
+
+            checkbox.prop('disabled', true);
+
+            $.ajax({
+                url: '@Url.Action("ToggleFeatured", "Product", new { area = "Admin" })',
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                data: {
+                    id: checkbox.data('product-id'),
+                    isFeatured: checkbox.prop('checked')
+                }
+            }).done(function (response) {
+                if (!response || !response.success) {
+                    checkbox.prop('checked', previousValue);
+                    alert('Showcase durumu güncellenemedi.');
+                }
+            }).fail(function () {
+                checkbox.prop('checked', previousValue);
+                alert('Showcase durumu güncellenirken hata oluştu.');
+            }).always(function () {
+                checkbox.prop('disabled', false);
+            });
+        });
+    </script>
+}
