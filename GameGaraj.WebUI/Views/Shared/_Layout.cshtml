@@ -168,7 +168,7 @@
                                             <div class="search-suggestion-title">${p.name}</div>
                                             <div class="search-suggestion-meta">${p.price || ''}</div>
                                         </div>
-                                        <div class="search-suggestion-type">Ürün</div>
+                                        <div class="search-suggestion-type">ÃœrÃ¼n</div>
                                     </a>
                                 `).join('');
                             }
@@ -207,7 +207,7 @@
                                 suggestionsContainer.innerHTML = html;
                                 suggestionsContainer.style.display = 'block';
                             } else {
-                                suggestionsContainer.innerHTML = '<div class="p-3 text-muted text-center">Sonuç bulunamadı</div>';
+                                suggestionsContainer.innerHTML = '<div class="p-3 text-muted text-center">SonuÃ§ bulunamadÄ±</div>';
                                 suggestionsContainer.style.display = 'block';
                             }
                         })
@@ -230,103 +230,104 @@
             @RenderBody()
         </main>
     </div>
-<footer class="mt-auto pt-5 pb-4" style="background-color: #0d0d0d; color: #b0b0b0; border-top: 1px solid #222;">
-        <div class="container">
-            <div class="row">
-                <!-- Brand & About -->
-                <div class="col-lg-3 col-md-6 mb-4">
+    <footer class="mt-auto pt-5 pb-4" style="background-color: #0d0d0d; color: #b0b0b0; border-top: 1px solid #222;">
+        <div class="container text-center">
+            <!-- Tüm içeriği mobilde ve PC'de ortalamak için text-center eklendi -->
+            <div class="row justify-content-center">
+                <!-- Row içeriğini ortaladık -->
+                <!-- Marka & Sosyal Medya -->
+                <div class="col-lg-4 col-md-6 mb-4">
                     <h5 class="text-white mb-3" style="font-weight: 700; letter-spacing: 1px;">GAMEGARAJ</h5>
-                    <p class="small" style="line-height: 1.6;">En yeni nesil oyuncu bilgisayarları, yüksek performanslı ekipmanlar ve benzersiz sistem toplama sihirbazı ile oyun dünyasının kurallarını baştan yazın.</p>
-                    <div class="mt-4">
-                        <a href="#" class="text-white me-3 social-icon"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="text-white me-3 social-icon"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="text-white me-3 social-icon"><i class="fab fa-instagram"></i></a>
-                        <a href="#" class="text-white social-icon"><i class="fab fa-youtube"></i></a>
+                    <div class="mt-3">
+                        <a href="#" class="text-white mx-2 social-icon"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-white mx-2 social-icon"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-white mx-2 social-icon"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-white mx-2 social-icon"><i class="fab fa-youtube"></i></a>
                     </div>
                 </div>
 
-                <!-- Quick Links -->
-                <div class="col-lg-3 col-md-6 mb-4">
-                    <h5 class="text-white mb-3">Hızlı Erişim</h5>
-                    <ul class="list-unstyled small">
-                        <li class="mb-2"><a href="/" class="footer-link">Anasayfa</a></li>
-                        <li class="mb-2"><a href="/Product" class="footer-link">Tüm Ürünler</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link">Hazır Sistemler</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link">Kampanyalar</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link">Hakkımızda</a></li>
+                <!-- Kurumsal Linkler -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <h5 class="text-white mb-3" style="font-weight: 600;">Kurumsal</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#" class="text-decoration-none" style="color: #b0b0b0; transition: color 0.2s;">Biz Kimiz?</a></li>
+                        <li class="mb-2"><a href="#" class="text-decoration-none" style="color: #b0b0b0; transition: color 0.2s;">Kariyer</a></li>
+                        <li class="mb-2"><a href="#" class="text-decoration-none" style="color: #b0b0b0; transition: color 0.2s;">Gizlilik Politikası</a></li>
                     </ul>
                 </div>
 
-                <!-- Customer Service -->
-                <div class="col-lg-3 col-md-6 mb-4">
-                    <h5 class="text-white mb-3">Müşteri Hizmetleri</h5>
-                    <ul class="list-unstyled small">
-                        <li class="mb-2"><a href="#" class="footer-link">Sipariş Takibi</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link">İade ve Değişim</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link">Teslimat Koşulları</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link">Gizlilik Politikası</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link">İletişim</a></li>
+                <!-- İletişim Linkleri -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <h5 class="text-white mb-3" style="font-weight: 600;">İletişim</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#" class="text-decoration-none" style="color: #b0b0b0; transition: color 0.2s;">İletişim Kanalları</a></li>
+                        <li class="mb-2"><a href="#" class="text-decoration-none" style="color: #b0b0b0; transition: color 0.2s;">Destek / SSS</a></li>
+                        <li class="mb-2" style="font-size: 0.9em;"><i class="fas fa-envelope me-2"></i> info@gamegaraj.com</li>
                     </ul>
                 </div>
 
-                <!-- Contact Info -->
-                <div class="col-lg-3 col-md-6 mb-4">
-                    <h5 class="text-white mb-3">Bize Ulaşın</h5>
-                    <ul class="list-unstyled small">
-                        <li class="mb-3 d-flex"><i class="fas fa-map-marker-alt text-danger me-3 mt-1"></i> <span>Teknoloji Vadisi, No: 123<br>Maslak, İstanbul</span></li>
-                        <li class="mb-3 d-flex"><i class="fas fa-phone text-danger me-3 mt-1"></i> +90 0850 123 45 67</li>
-                        <li class="mb-3 d-flex"><i class="fas fa-envelope text-danger me-3 mt-1"></i> destek@gamegaraj.com</li>
-                        <li class="d-flex"><i class="fas fa-clock text-danger me-3 mt-1"></i> Pzt - Cum: 09:00 - 18:00</li>
-                    </ul>
-                </div>
             </div>
-            
+
             <hr style="border-color: #333; margin: 20px 0;">
-            
-            <div class="row align-items-center">
-                <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
-                    <p class="small mb-0">&copy; 2026 GameGaraj. Tüm hakları saklıdır. <span class="text-muted ms-2" style="font-size: 0.85em;">Version: @(Configuration["APP_VERSION"] ?? "Local")</span></p>
-                </div>
-                <div class="col-md-6 text-center text-md-end">
-                    <i class="fab fa-cc-visa fa-2x me-2 text-secondary"></i>
-                    <i class="fab fa-cc-mastercard fa-2x me-2 text-secondary"></i>
-                    <i class="fab fa-cc-amex fa-2x text-secondary"></i>
+
+            <!-- Telif Hakkı & Versiyon -->
+            <div class="row">
+                <div class="col-12 text-center">
+                    <p class="small mb-0">
+                        &copy; 2026 GameGaraj. Tüm hakları saklıdır.
+                        <span class="text-muted ms-2" style="font-size: 0.85em;">Version: @(Configuration["APP_VERSION"] ?? "Local")</span>
+                    </p>
                 </div>
             </div>
         </div>
-        
-        <style>
-            .footer-link {
-                color: #b0b0b0;
-                text-decoration: none;
-                transition: color 0.3s ease;
-            }
-            .footer-link:hover {
-                color: #fff;
-                padding-left: 5px;
-            }
-            .social-icon {
-                transition: transform 0.3s;
-                display: inline-block;
-            }
-            .social-icon:hover {
-                transform: translateY(-3px);
-                color: #f39c12 !important;
-            }
-        </style>
     </footer>
 
     <!-- Toast Notification Container -->
-    <div class="position-fixed end-0 p-3" style="z-index: 1100; top: 80px;">
-        <div id="liveToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="fas fa-check-circle"></i> Ürün sepete eklendi!
+    <div class="toast-container position-fixed end-0 bottom-0 p-4" style="z-index: 1100;">
+        <div id="liveToast" class="toast app-toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex align-items-center">
+                <div class="toast-body d-flex align-items-center gap-3">
+                    <i class="fas fa-check-circle app-toast-icon"></i>
+                    <span class="app-toast-message">&Uuml;r&uuml;n sepete eklendi!</span>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white me-3 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     </div>
+
+    <style>
+        .app-toast {
+            min-width: min(380px, calc(100vw - 2rem));
+            border-radius: 12px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
+            overflow: hidden;
+        }
+
+        .app-toast .toast-body {
+            min-height: 72px;
+            padding: 1rem 1.15rem;
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .app-toast-icon {
+            font-size: 1.45rem;
+        }
+
+        @@media (max-width: 575px) {
+            .toast-container {
+                left: 0;
+                right: 0;
+                padding: 1rem !important;
+            }
+
+            .app-toast {
+                width: 100%;
+                min-width: 0;
+            }
+        }
+    </style>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -337,9 +338,7 @@
         @if (TempData["BasketNotification"] != null)
         {
             <text>
-            var toastEl = document.getElementById('liveToast');
-            var toast = new bootstrap.Toast(toastEl, { delay: 3000 });
-            toast.show();
+            window.showAppToast && window.showAppToast('success', '&Uuml;r&uuml;n sepete eklendi!');
             </text>
         }
     </script>

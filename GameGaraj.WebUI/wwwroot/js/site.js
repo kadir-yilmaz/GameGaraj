@@ -49,10 +49,41 @@ window.updateBasketBadge = function (count) {
     });
 };
 
+window.showAppToast = function (type, message) {
+    var toastEl = document.getElementById('liveToast');
+    if (!toastEl || !window.bootstrap) return;
+
+    var $toast = $(toastEl);
+    var $message = $toast.find('.app-toast-message');
+    var $icon = $toast.find('.app-toast-icon');
+
+    $toast.removeClass('bg-success bg-danger bg-warning bg-info');
+    $icon.removeClass('fa-check-circle fa-times-circle fa-heart fa-info-circle');
+
+    if (type === 'danger') {
+        $toast.addClass('bg-danger');
+        $icon.addClass('fa-times-circle');
+    } else if (type === 'favorite') {
+        $toast.addClass('bg-success');
+        $icon.addClass('fa-heart');
+    } else {
+        $toast.addClass('bg-success');
+        $icon.addClass('fa-check-circle');
+    }
+
+    $message.html(message);
+
+    var toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3200 });
+    toast.show();
+};
+
 $(document).ready(function () {
-    function buildGoToBasketButton(buttonClassName) {
-        var classes = buttonClassName || 'btn btn-secondary w-100 mt-auto position-relative';
-        return '<a href="/Basket/Index" class="' + classes + '" style="z-index: 2; background-color: #28a745; border-color: #28a745; color: white;"><i class="fas fa-check me-2"></i>Sepete Git</a>';
+    function buildGoToBasketButton(isMiniButton) {
+        if (isMiniButton) {
+            return '<a href="/Basket/Index" class="btn-mini-cart btn-mini-cart-success" title="Sepete Git"><i class="fas fa-check"></i></a>';
+        }
+
+        return '<a href="/Basket/Index" class="btn btn-secondary w-100 mt-auto position-relative" style="z-index: 2; background-color: #28a745; border-color: #28a745; color: white;"><i class="fas fa-check me-2"></i>Sepete Git</a>';
     }
 
     // Generic AJAX Form Handler for Add to Cart
@@ -73,15 +104,7 @@ $(document).ready(function () {
             headers: { "X-Requested-With": "XMLHttpRequest" },
             success: function (response) {
                 if (response.success) {
-                    // Show Toast
-                    var toastEl = document.getElementById('liveToast');
-                    if (toastEl) {
-                        var toast = new bootstrap.Toast(toastEl, { delay: 3000 });
-                        toast.show();
-                    } else {
-                        // Fallback alert if toast element is missing
-                        // alert('Ürün sepete eklendi!');
-                    }
+                    window.showAppToast('success', '&Uuml;r&uuml;n sepete eklendi!');
 
                     // Update Basket Count Badge
                     if (response.count !== undefined) {
@@ -89,10 +112,10 @@ $(document).ready(function () {
                     }
 
                     if ($form.closest('.product-card').length) {
-                        $form.replaceWith(buildGoToBasketButton('btn btn-secondary w-100 mt-auto position-relative'));
+                        $form.replaceWith(buildGoToBasketButton(true));
                     } else if ($form.attr('id') === 'addToCartForm') {
                         var detailButtonClasses = ($button.attr('class') || 'add-to-cart-btn') + ' in-cart';
-                        $form.replaceWith(buildGoToBasketButton(detailButtonClasses));
+                        $form.replaceWith(buildGoToBasketButton(false));
                     } else {
                         $button.prop('disabled', false).html(originalContent);
                         $button.addClass('in-cart');
@@ -111,12 +134,12 @@ $(document).ready(function () {
                     }
 
                 } else {
-                    alert('Bir hata oluştu: ' + (response.message || 'Bilinmeyen hata'));
+                    window.showAppToast('danger', 'Bir hata olu&#351;tu: ' + (response.message || 'Bilinmeyen hata'));
                     $button.prop('disabled', false).html(originalContent);
                 }
             },
             error: function () {
-                alert('Bir hata oluştu.');
+                window.showAppToast('danger', 'Bir hata olu&#351;tu.');
                 $button.prop('disabled', false).html(originalContent);
             }
         });
@@ -150,7 +173,7 @@ $(document).ready(function () {
             },
             success: function (response) {
                 if (!response.success) {
-                    console.error('Favori işlemi başarısız oldu.');
+                    console.error('Favori iÅŸlemi baÅŸarÄ±sÄ±z oldu.');
                     $button.prop('disabled', false);
                     return;
                 }
@@ -160,11 +183,13 @@ $(document).ready(function () {
                     $icon.removeClass('fas').addClass('far');
                     $button.attr('title', 'Favorilere Ekle');
                     window.updateFavoritesBadge(-1);
+                    window.showAppToast('success', '&Uuml;r&uuml;n favorilerden kald&#305;r&#305;ld&#305;.');
                 } else {
                     $button.addClass('active');
                     $icon.removeClass('far').addClass('fas');
-                    $button.attr('title', 'Favorilerden Çıkar');
+                    $button.attr('title', 'Favorilerden Ã‡Ä±kar');
                     window.updateFavoritesBadge(1);
+                    window.showAppToast('favorite', '&Uuml;r&uuml;n favorilere eklendi.');
 
                     // Heartbeat animation
                     $icon.css('transform', 'scale(1.2)');
@@ -174,7 +199,7 @@ $(document).ready(function () {
                 $button.prop('disabled', false);
             },
             error: function () {
-                console.error('Favori işlemi başarısız oldu.');
+                console.error('Favori iÅŸlemi baÅŸarÄ±sÄ±z oldu.');
                 $button.prop('disabled', false);
             }
         });
@@ -185,12 +210,18 @@ $(document).ready(function () {
         if (!images || images.length === 0) return;
 
         var normalizedIndex = Math.max(0, Math.min(index, images.length - 1));
+        var $image = $gallery.find('.product-img');
         $gallery.data('cardImageIndex', normalizedIndex);
-        $gallery.find('.product-img').attr('src', images[normalizedIndex]);
+        $image.attr('src', images[normalizedIndex]);
         $gallery.find('.product-card-image-dot')
             .removeClass('active')
             .eq(normalizedIndex)
             .addClass('active');
+
+        $image.off('load.productCardOrientation').on('load.productCardOrientation', function () {
+            var isPortrait = this.naturalHeight > this.naturalWidth * 1.1;
+            $(this).toggleClass('product-img-portrait', isPortrait);
+        });
     }
 
     $('.product-card-gallery').each(function () {
@@ -215,15 +246,50 @@ $(document).ready(function () {
 
         var offset = $gallery.offset();
         var width = $gallery.outerWidth();
-        if (!offset || width <= 0) return;
+        if (!offset || !width) return;
 
-        var relativeX = e.pageX - offset.left;
-        var index = Math.floor((relativeX / width) * images.length);
-        setProductCardImage($gallery, index);
+        var relativeX = Math.max(0, Math.min(e.pageX - offset.left, width - 1));
+        var nextIndex = Math.floor((relativeX / width) * images.length);
+
+        if ($gallery.data('cardImageIndex') !== nextIndex) {
+            setProductCardImage($gallery, nextIndex);
+        }
     });
 
     $(document).on('mouseleave', '.product-card-gallery', function () {
-        setProductCardImage($(this), 0);
+        var $gallery = $(this);
+        var images = $gallery.data('cardImagesParsed');
+        if (!images || images.length <= 1) return;
+
+        setProductCardImage($gallery, 0);
+    });
+
+    $(document).on('click', '.product-card', function (e) {
+        if ($(e.target).closest('a, button, form, .btn-favorite, .js-add-to-cart-form').length) {
+            return;
+        }
+
+        var url = $(this).data('product-url');
+        if (url) {
+            window.location.href = url;
+        }
+    });
+
+    $(document).on('keydown', '.product-card', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') {
+            return;
+        }
+
+        if ($(e.target).closest('a, button, form, .btn-favorite, .js-add-to-cart-form').length) {
+            return;
+        }
+
+        e.preventDefault();
+
+        var url = $(this).data('product-url');
+        if (url) {
+            window.location.href = url;
+        }
     });
 
     // Swipeable Product Card Sliders (Mouse Grab & Drag support)

@@ -299,53 +299,63 @@
 
     /* Attribute Variants */
     .variant-section {
-        margin: 1.5rem 0;
-        padding: 1.25rem 0;
+        margin: 1rem 0 1.5rem;
+        padding: 1.1rem 0;
         border-top: 1px solid var(--border-color);
         border-bottom: 1px solid var(--border-color);
     }
 
-    .variant-label {
-        font-size: 0.9rem;
-        color: var(--text-muted);
-        margin-bottom: 0.5rem;
+    .variant-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem 2rem;
     }
 
-    .variant-label strong {
-        color: var(--dark-blue);
-        font-weight: 600;
-    }
-
-    .variant-options {
+    .variant-group {
+        min-width: 0;
         display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        margin-top: 0.5rem;
+        align-items: baseline;
+        gap: 0.35rem;
+        font-size: 0.95rem;
+        line-height: 1.45;
     }
 
-    .variant-btn {
-        padding: 0.55rem 1.25rem;
-        border: 2px solid var(--border-color);
-        border-radius: 8px;
-        background: white;
-        font-size: 0.88rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: var(--transition);
-        color: var(--text-main);
+    .variant-label {
+        color: var(--text-muted);
     }
 
-    .variant-btn:hover {
-        border-color: var(--primary);
-        color: var(--primary);
-    }
-
-    .variant-btn.active {
-        border-color: var(--primary);
-        background: var(--primary-light);
-        color: var(--primary);
+    .variant-value {
+        color: var(--dark-blue);
         font-weight: 700;
-        box-shadow: 0 2px 8px rgba(255, 96, 0, 0.08);
+    }
+
+    .stock-strip {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin: 0.35rem 0 0;
+        padding: 0.85rem 1rem;
+        border: 1px solid #bbf7d0;
+        border-radius: 8px;
+        background: #f0fdf4;
+        color: #008f58;
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
+    .stock-strip.out-of-stock {
+        border-color: #fecaca;
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .stock-strip-note {
+        color: var(--text-muted);
+        font-size: 0.82rem;
+        font-weight: 500;
+        text-align: right;
     }
 
     /* Add To Cart & Actions */
@@ -353,8 +363,25 @@
         margin-top: 1.5rem;
     }
 
+    .cart-actions-row {
+        display: flex;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .cart-actions-row form {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .cart-actions-row > .add-to-cart-btn {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
     .add-to-cart-btn {
         width: 100%;
+        height: 60px;
         padding: 1.1rem;
         background: var(--primary);
         border: none;
@@ -400,14 +427,21 @@
     .action-buttons {
         display: flex;
         gap: 0.75rem;
-        margin-top: 1rem;
-        flex-wrap: wrap;
+        flex: 0 0 auto;
+    }
+
+    .cart-actions-row .btn-favorite {
+        position: static !important;
+        inset: auto !important;
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
     }
 
     .action-btn {
-        flex: 1;
-        min-width: 140px;
-        padding: 0.85rem;
+        width: 60px;
+        height: 60px;
+        padding: 0;
         border: 1px solid var(--border-color);
         border-radius: 8px;
         background: white;
@@ -415,8 +449,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
+        font-size: 1.35rem;
         font-weight: 600;
         color: var(--text-muted);
         transition: var(--transition);
@@ -443,6 +476,12 @@
         margin-top: 1.5rem;
         padding-top: 1.25rem;
         border-top: 1px solid var(--border-color);
+    }
+
+    .sidebar-card .delivery-section {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
     }
 
     .delivery-title {
@@ -601,11 +640,10 @@
     }
 
     .tab-nav {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         border-bottom: 1px solid var(--border-color);
         background: var(--bg-light);
-        overflow-x: auto;
-        scrollbar-width: none;
     }
 
     .tab-nav::-webkit-scrollbar {
@@ -613,7 +651,9 @@
     }
 
     .tab-btn {
-        padding: 1.1rem 1.75rem;
+        width: 100%;
+        min-width: 0;
+        padding: 1.1rem 1rem;
         background: none;
         border: none;
         border-bottom: 3px solid transparent;
@@ -621,7 +661,8 @@
         font-weight: 600;
         color: var(--text-muted);
         cursor: pointer;
-        white-space: nowrap;
+        white-space: normal;
+        text-align: center;
         transition: var(--transition);
     }
 
@@ -756,6 +797,10 @@
             grid-template-columns: 1fr;
             gap: 0;
         }
+
+        .tab-nav {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
     }
 
     @@media (max-width: 575px) {
@@ -778,23 +823,50 @@
             font-size: 0.85rem;
         }
 
+        .variant-grid {
+            grid-template-columns: 1fr;
+            gap: 0.85rem;
+        }
+
+        .stock-strip {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .stock-strip-note {
+            text-align: left;
+        }
+
         .info-icons {
             gap: 1rem;
             padding: 1rem;
         }
 
         .action-buttons {
-            flex-direction: column;
+            gap: 0.5rem;
         }
 
         .action-btn {
-            width: 100%;
+            width: 52px;
+            height: 52px;
+            font-size: 1.15rem;
+        }
+
+        .cart-actions-row .btn-favorite {
+            width: 52px;
+            height: 52px;
+        }
+
+        .add-to-cart-btn {
+            height: 52px;
+            font-size: 1rem;
         }
     }
 
     /* Gallery Modal */
     .modal-backdrop.show {
-        opacity: 0 !important;
+        opacity: 0.58 !important;
+        background: #111827;
     }
 
     .gallery-modal.fade .modal-dialog,
@@ -803,61 +875,94 @@
     }
 
     .gallery-modal .modal-dialog {
-        max-width: min(1500px, calc(100vw - 4rem));
-        height: min(800px, calc(100vh - 4rem));
-        margin: 2rem auto;
+        max-width: min(1180px, calc(100vw - 4rem));
+        height: auto;
+        margin: 1.5rem auto;
     }
 
     .gallery-modal .modal-content {
-        height: 100%;
+        min-height: min(760px, calc(100vh - 5rem));
         background: #ffffff;
         border: none;
         border-radius: 8px;
-        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
         overflow: hidden;
     }
 
     .gallery-modal .modal-body {
         padding: 0;
-        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
         position: relative;
+    }
+
+    .gallery-shell {
+        width: min(1120px, calc(100vw - 5rem));
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 0.85rem;
+    }
+
+    .gallery-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
     }
 
     .modal-image-container {
         width: 100%;
-        height: 100%;
+        min-height: min(680px, calc(100vh - 10rem));
         background: #fff;
         display: flex;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
     }
 
     .modal-main-image {
         flex-grow: 1;
-        height: 100%;
+        min-height: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 3rem;
+        padding: 1.5rem;
         position: relative;
         min-width: 0;
+        background: #fff;
     }
 
     .modal-main-image img {
-        max-width: 100%;
-        max-height: 100%;
+        width: auto;
+        height: auto;
+        max-width: min(680px, 100%);
+        max-height: min(500px, 64vh);
         object-fit: contain;
     }
 
+    .modal-main-image img.is-portrait {
+        max-width: min(500px, 56%);
+        max-height: min(620px, 70vh);
+    }
+
+    .modal-main-image img.is-landscape {
+        max-width: min(720px, 76%);
+        max-height: min(460px, 56vh);
+    }
+
     .modal-thumbnails {
-        width: 210px;
-        height: 100%;
+        width: 164px;
         overflow-y: auto;
         display: grid;
-        grid-template-columns: repeat(2, 82px);
+        grid-template-columns: 1fr;
         align-content: start;
-        gap: 14px;
-        padding: 5rem 24px 24px;
+        gap: 10px;
+        padding: 0.85rem;
         border-left: 1px solid #e5e7eb;
-        background: #fff;
+        background: #f8fafc;
     }
 
     .modal-thumbnails::-webkit-scrollbar {
@@ -870,8 +975,8 @@
     }
 
     .modal-thumb-item {
-        width: 82px;
-        height: 82px;
+        width: 100%;
+        aspect-ratio: 1 / 1;
         position: relative;
         border: 1px solid #d9dee7;
         border-radius: 8px;
@@ -882,13 +987,10 @@
     }
 
     .modal-thumb-item img {
-        position: absolute;
-        top: 0;
-        left: 0;
         width: 100%;
         height: 100%;
         object-fit: contain;
-        padding: 4px;
+        padding: 6px;
     }
 
     .modal-thumb-item:hover,
@@ -898,10 +1000,6 @@
     }
 
     .modal-close-btn {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        z-index: 10;
         width: 42px;
         height: 42px;
         display: inline-flex;
@@ -924,28 +1022,39 @@
     @@media (max-width: 768px) {
         .gallery-modal .modal-dialog {
             max-width: calc(100vw - 1rem);
-            height: calc(100vh - 1rem);
             margin: 0.5rem auto;
+        }
+
+        .gallery-shell {
+            width: calc(100vw - 1rem);
+            padding: 0.5rem;
         }
 
         .modal-image-container {
             flex-direction: column;
+            min-height: calc(100vh - 9rem);
         }
 
         .modal-main-image {
             min-height: 0;
-            padding: 4rem 1rem 1rem;
+            padding: 1rem;
         }
 
         .modal-thumbnails {
             width: 100%;
-            height: 118px;
             display: flex;
             flex-direction: row;
             gap: 10px;
             padding: 16px;
             border-left: 0;
             border-top: 1px solid #e5e7eb;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .modal-thumb-item {
+            width: 78px;
+            min-width: 78px;
         }
     }
 </style>
@@ -982,7 +1091,7 @@
                                 </button>
                             }
                             <img src="@Model.FirstImageUrl" alt="@Model.Name" id="mainImage"
-                                onclick="openGalleryModal()" title="Büyütmek için tıklayın"
+                                onclick="openGalleryModal()" title="B&uuml;y&uuml;tmek i&ccedil;in t&#305;klay&#305;n"
                                 onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
                         </div>
 
@@ -1024,15 +1133,9 @@
                                 <i class="fas fa-star-half-alt"></i>
                             </span>
                             <span>4.5</span>
-                            <a href="#reviews" class="rating-count">38 Değerlendirme</a>
+                            <a href="#reviews" class="rating-count">38 De&#287;erlendirme</a>
                         </div>
 
-                        <!-- Seller Info -->
-                        <div class="seller-info">
-                            <span>Satıcı:</span>
-                            <a href="#" class="product-brand">GameGaraj</a>
-                            <span class="seller-badge">9.8</span>
-                        </div>
 
                         <!-- Price -->
                         <div class="price-section">
@@ -1041,10 +1144,32 @@
                             </div>
                             <div class="installment-info">
                                 <i class="far fa-credit-card"></i>
-                                <span>Peşin Fiyatına</span>
+                                <span>Pe&#351;in Fiyat&#305;na</span>
                                 <span class="installment-badge">9 x @((Model.Price / 9).ToString("N2")) TL</span>
                             </div>
                         </div>
+
+                        @if (Model.AvailableStock > 0 || (Model.AvailableStock == 0 && Model.Stock > 0))
+                        {
+                            <div class="stock-strip">
+                                <span>
+                                    <i class="fas fa-check-circle"></i>
+                                    Stokta (@(Model.AvailableStock > 0 ? Model.AvailableStock : Model.Stock) adet)
+                                </span>
+                                <span class="stock-strip-note">
+                                    15 saat 34 dk i&ccedil;inde sipari&#351; ver, bug&uuml;n kargoda
+                                </span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="stock-strip out-of-stock">
+                                <span>
+                                    <i class="fas fa-times-circle"></i>
+                                    Stokta yok
+                                </span>
+                            </div>
+                        }
 
                         <!-- Variants (if specs exist) -->
                         @if (Model.Specs.Any())
@@ -1053,69 +1178,54 @@
                                 @{
                                     var displayedSpecs = Model.Specs.Take(2).ToList();
                                 }
-                                @foreach (var spec in displayedSpecs)
-                                {
-                                    <div class="variant-label">
-                                        <span>@spec.Key:</span> <strong>@spec.Value</strong>
-                                    </div>
-                                    <div class="variant-options">
-                                        <button class="variant-btn active">@spec.Value</button>
-                                    </div>
-                                }
+                                <div class="variant-grid">
+                                    @foreach (var spec in displayedSpecs)
+                                    {
+                                        <div class="variant-group">
+                                            <span class="variant-label">@spec.Key:</span>
+                                            <span class="variant-value">@spec.Value</span>
+                                        </div>
+                                    }
+                                </div>
                             </div>
                         }
 
                         <!-- Add to Cart -->
                         <div class="cart-section">
-                            @if (Model.AvailableStock > 0 || (Model.AvailableStock == 0 && Model.Stock > 0))
-                            {
-                                <form asp-controller="Basket" asp-action="AddItem" method="post" id="addToCartForm"
-                                    class="js-add-to-cart-form">
-                                    <input type="hidden" name="productId" value="@Model.Id" />
-                                    <input type="hidden" name="quantity" value="1" id="quantityInput" />
-                                    <button type="submit" class="add-to-cart-btn @(Model.IsInBasket ? "in-cart" : "")">
-                                        <i class="fas @(Model.IsInBasket ? "fa-check" : "fa-shopping-cart")"></i>
-                                        <span>@(Model.IsInBasket ? "Sepete Eklendi" : "Sepete Ekle")</span>
+                            <div class="cart-actions-row">
+                                @if (Model.AvailableStock > 0 || (Model.AvailableStock == 0 && Model.Stock > 0))
+                                {
+                                    <form asp-controller="Basket" asp-action="AddItem" method="post" id="addToCartForm"
+                                        class="js-add-to-cart-form">
+                                        <input type="hidden" name="productId" value="@Model.Id" />
+                                        <input type="hidden" name="quantity" value="1" id="quantityInput" />
+                                        <button type="submit" class="add-to-cart-btn @(Model.IsInBasket ? "in-cart" : "")"
+                                            @(Model.IsInBasket ? "disabled" : "")>
+                                            <i class="fas @(Model.IsInBasket ? "fa-check" : "fa-cart-plus")"></i>
+                                            <span>@(Model.IsInBasket ? "Sepete Eklendi" : "Sepete Ekle")</span>
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <button class="add-to-cart-btn" disabled>
+                                        <i class="fas fa-ban"></i>
+                                        Stokta Yok
                                     </button>
-                                </form>
-                            }
-                            else
-                            {
-                                <button class="add-to-cart-btn" disabled>
-                                    <i class="fas fa-ban"></i>
-                                    Stokta Yok
-                                </button>
-                            }
+                                }
 
-                            <div class="action-buttons">
-                                <button class="action-btn btn-favorite @(Model.IsFavorite ? "active" : "")"
-                                    data-product-id="@Model.Id">
-                                    <i class="@(Model.IsFavorite ? "fas" : "far") fa-heart"></i>
-                                    Favorilere Ekle
-                                </button>
-                                <button class="action-btn" onclick="shareProduct()">
-                                    <i class="fas fa-share-alt"></i>
-                                    Paylaş
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Delivery -->
-                        <div class="delivery-section">
-                            <div class="delivery-title">Teslimat Seçenekleri</div>
-                            <div class="delivery-option">
-                                <i class="fas fa-truck delivery-icon"></i>
-                                <div class="delivery-text">
-                                    <strong>Ücretsiz Kargo</strong> ile yarın kapınızda!
-                                </div>
-                            </div>
-                            <div class="delivery-option">
-                                <i class="fas fa-store delivery-icon"></i>
-                                <div class="delivery-text">
-                                    <strong>Mağazadan Teslim</strong> - Bugün teslim al
+                                <div class="action-buttons">
+                                    <button type="button" class="action-btn" aria-label="Kaydet" title="Kaydet">
+                                        <i class="far fa-bookmark"></i>
+                                    </button>
+                                    <button type="button" class="action-btn btn-favorite @(Model.IsFavorite ? "active" : "")"
+                                        data-product-id="@Model.Id" aria-label="Favorilere Ekle" title="Favorilere Ekle">
+                                        <i class="@(Model.IsFavorite ? "fas" : "far") fa-heart"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
 
@@ -1130,45 +1240,33 @@
                             </div>
                             <div class="campaign-item">
                                 <i class="fas fa-check-circle campaign-icon"></i>
-                                <span>150 TL üzeri kargo bedava</span>
+                                <span>150 TL &uuml;zeri kargo bedava</span>
                             </div>
                             <div class="campaign-item">
                                 <i class="fas fa-check-circle campaign-icon"></i>
-                                <span>Kredi kartına 9 taksit</span>
+                                <span>Kredi kart&#305;na 9 taksit</span>
                             </div>
                         </div>
 
-                        <!-- Premium Box -->
-                        <div class="premium-box">
-                            <div class="premium-title">PREMIUM</div>
-                            <div class="premium-text">
-                                Premium üye ol, tüm avantajlardan faydalan!
-                                <a href="#" style="color: #ff6000;">Hepsipara kazan &gt;</a>
-                            </div>
-                        </div>
-
-                        <!-- Stock Info -->
                         <div class="sidebar-card">
                             <div class="sidebar-title">
-                                <i class="fas fa-box campaign-icon"></i>
-                                Stok Durumu
+                                <i class="fas fa-truck campaign-icon"></i>
+                                Teslimat Se&ccedil;enekleri
                             </div>
-                            @if (Model.AvailableStock > 0 || (Model.AvailableStock == 0 && Model.Stock > 0))
-                            {
-                                <div style="color: #00a365; font-weight: 600;">
-                                    <i class="fas fa-check-circle"></i> Stokta (@(Model.AvailableStock > 0 ?
-                                Model.AvailableStock : Model.Stock) adet)
+                            <div class="delivery-section">
+                                <div class="delivery-option">
+                                    <i class="fas fa-truck delivery-icon"></i>
+                                    <div class="delivery-text">
+                                        <strong>&Uuml;cretsiz Kargo</strong> ile yar&#305;n kap&#305;n&#305;zda!
+                                    </div>
                                 </div>
-                                <div class="mt-2" style="font-size: 0.8rem; color: #666;">
-                                    <i class="fas fa-clock"></i> 15 saat 34 dk içinde sipariş ver, bugün kargoda
+                                <div class="delivery-option">
+                                    <i class="fas fa-store delivery-icon"></i>
+                                    <div class="delivery-text">
+                                        <strong>Ma&#287;azadan Teslim</strong> - Bug&uuml;n teslim al
+                                    </div>
                                 </div>
-                            }
-                            else
-                            {
-                                <div style="color: #e74c3c; font-weight: 600;">
-                                    <i class="fas fa-times-circle"></i> Stokta yok
-                                </div>
-                            }
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1179,9 +1277,9 @@
         <div class="tabs-section">
             <!-- Tab Navigation -->
             <div class="tab-nav">
-                <button class="tab-btn active" onclick="openTab(event, 'description')">Ürün Açıklaması</button>
-                <button class="tab-btn" onclick="openTab(event, 'specs')">Teknik Özellikler</button>
-                <button class="tab-btn" onclick="openTab(event, 'reviews')">Değerlendirmeler <span
+                <button class="tab-btn active" onclick="openTab(event, 'description')">&Uuml;r&uuml;n A&ccedil;&#305;klamas&#305;</button>
+                <button class="tab-btn" onclick="openTab(event, 'specs')">Teknik &Ouml;zellikler</button>
+                <button class="tab-btn" onclick="openTab(event, 'reviews')">De&#287;erlendirmeler <span
                         style="background: #ff6000; color: white; padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.7rem; margin-left: 0.25rem;">38</span></button>
                 <button class="tab-btn" onclick="openTab(event, 'qa')">Soru & Cevap</button>
             </div>
@@ -1190,7 +1288,7 @@
             <div class="tab-content">
                 <!-- Description Tab -->
                 <div id="description" class="tab-pane active">
-                    <h2 class="specs-header">Ürün Açıklaması</h2>
+                    <h2 class="specs-header">&Uuml;r&uuml;n A&ccedil;&#305;klamas&#305;</h2>
                     <p style="font-size: 0.95rem; line-height: 1.8; color: #333;">
                         <strong>@Model.Name</strong>
                     </p>
@@ -1204,7 +1302,7 @@
 
                 <!-- Specs Tab -->
                 <div id="specs" class="tab-pane">
-                    <h2 class="specs-header">Ürün Özellikleri</h2>
+                    <h2 class="specs-header">&Uuml;r&uuml;n &Ouml;zellikleri</h2>
 
                     <!-- Info Icons -->
                     @if (Model.Specs.Any())
@@ -1232,17 +1330,17 @@
                     }
                     else
                     {
-                        <p class="text-muted">Bu ürün için teknik özellik bilgisi bulunmamaktadır.</p>
+                        <p class="text-muted">Bu &uuml;r&uuml;n i&ccedil;in teknik &ouml;zellik bilgisi bulunmamaktad&#305;r.</p>
                     }
                 </div>
 
                 <!-- Reviews Tab -->
                 <div id="reviews" class="tab-pane">
-                    <h2 class="specs-header">Değerlendirmeler</h2>
+                    <h2 class="specs-header">De&#287;erlendirmeler</h2>
                     <div class="text-center py-5">
                         <i class="far fa-comment-dots fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">Henüz değerlendirme yapılmamış.</p>
-                        <button class="btn btn-outline-primary">İlk Değerlendirmeyi Yaz</button>
+                        <p class="text-muted">Hen&uuml;z de&#287;erlendirme yap&#305;lmam&#305;&#351;.</p>
+                        <button class="btn btn-outline-primary">&#304;lk De&#287;erlendirmeyi Yaz</button>
                     </div>
                 </div>
 
@@ -1251,7 +1349,7 @@
                     <h2 class="specs-header">Soru & Cevap</h2>
                     <div class="text-center py-5">
                         <i class="far fa-question-circle fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">Henüz soru sorulmamış.</p>
+                        <p class="text-muted">Hen&uuml;z soru sorulmam&#305;&#351;.</p>
                         <button class="btn btn-outline-primary">Soru Sor</button>
                     </div>
                 </div>
@@ -1262,17 +1360,13 @@
 
 <!-- Fullscreen Image Gallery Modal -->
 <div class="modal fade gallery-modal" id="imageGalleryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <!-- Click Event on modal-body to close if clicking outside container -->
             <div class="modal-body"
                 onclick="if(event.target === this) { const m = bootstrap.Modal.getInstance(document.getElementById('imageGalleryModal')); if(m) m.hide(); }">
-                <!-- Wrapper to position header and container together -->
-                <div style="width: 80%; max-width: 1000px; display: flex; flex-direction: column; gap: 15px;">
-
-                    <!-- Header Actions -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                        <div class="modal-title-bar" title="@Model.Name">
+                <div class="gallery-shell">
+                    <div class="gallery-header">
+                        <div class="modal-title-bar" title="B&uuml;y&uuml;tmek i&ccedil;in t&#305;klay&#305;n">
                             @Model.Name
                         </div>
                         <button type="button" class="modal-close-btn" data-bs-dismiss="modal" aria-label="Close">
@@ -1280,16 +1374,14 @@
                         </button>
                     </div>
 
-                    <!-- Inner White Box -->
                     <div class="modal-image-container" onclick="event.stopPropagation();">
-                        <!-- Main Modal Image -->
                         <div class="modal-main-image">
                             @if (displayImageUrls.Count > 1)
                             {
-                                <button class="image-nav-btn prev" onclick="prevModalImage()">
+                                <button type="button" class="image-nav-btn prev" onclick="prevModalImage()">
                                     <i class="fas fa-chevron-left"></i>
                                 </button>
-                                <button class="image-nav-btn next" onclick="nextModalImage()">
+                                <button type="button" class="image-nav-btn next" onclick="nextModalImage()">
                                     <i class="fas fa-chevron-right"></i>
                                 </button>
                             }
@@ -1297,7 +1389,6 @@
                                  onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
                         </div>
 
-                        <!-- Modal Thumbnails -->
                         @if (displayImageUrls.Count > 1)
                         {
                             <div class="modal-thumbnails">
@@ -1311,8 +1402,8 @@
                                 }
                             </div>
                         }
-                    </div> <!-- modal-image-container -->
-                </div> <!-- wrapper -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1322,6 +1413,14 @@
     <script>
         let currentImageIndex = 0;
         const images = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(displayImageUrls));
+
+        function applyGalleryImageOrientation(imgElement) {
+            if (!imgElement) return;
+
+            const isPortrait = imgElement.naturalHeight > imgElement.naturalWidth * 1.08;
+            imgElement.classList.remove('is-portrait', 'is-landscape');
+            imgElement.classList.add(isPortrait ? 'is-portrait' : 'is-landscape');
+        }
 
         function selectImage(index, src) {
             currentImageIndex = index;
@@ -1366,7 +1465,7 @@
                 });
             } else {
                 navigator.clipboard.writeText(window.location.href);
-                alert('Link kopyalandı!');
+                alert('Link kopyaland\\u0131!');
             }
         }
         // Modal Gallery functionality
@@ -1374,6 +1473,7 @@
         document.addEventListener("DOMContentLoaded", function () {
             // Initialize Bootstrap modal instance
             let modalEl = document.getElementById('imageGalleryModal');
+            const modalMainImage = document.getElementById('modalMainImage');
             if (modalEl) {
                 modal = new bootstrap.Modal(modalEl);
 
@@ -1381,6 +1481,16 @@
                 modalEl.addEventListener('hidden.bs.modal', function () {
                     selectImage(currentImageIndex, images[currentImageIndex]);
                 });
+            }
+
+            if (modalMainImage) {
+                if (modalMainImage.complete) {
+                    applyGalleryImageOrientation(modalMainImage);
+                } else {
+                    modalMainImage.addEventListener('load', function () {
+                        applyGalleryImageOrientation(modalMainImage);
+                    });
+                }
             }
         });
 
@@ -1394,11 +1504,20 @@
 
         function selectModalImage(index, src) {
             currentImageIndex = index;
-            document.getElementById('modalMainImage').src = src;
+            const modalMainImage = document.getElementById('modalMainImage');
+            modalMainImage.src = src;
 
             document.querySelectorAll('.modal-thumb-item').forEach((item, i) => {
                 item.classList.toggle('active', i === index);
             });
+
+            if (modalMainImage.complete) {
+                applyGalleryImageOrientation(modalMainImage);
+            } else {
+                modalMainImage.onload = function () {
+                    applyGalleryImageOrientation(modalMainImage);
+                };
+            }
         }
 
         function prevModalImage() {

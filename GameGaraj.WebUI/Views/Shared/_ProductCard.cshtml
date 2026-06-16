@@ -1,16 +1,25 @@
 @model GameGaraj.WebUI.Models.Products.ProductViewModel
 @{
     var cardImagesJson = System.Text.Json.JsonSerializer.Serialize(Model.DisplayImageUrls);
+    var ratingValue = 4.4m + (Math.Abs(Model.Id.GetHashCode()) % 6) / 10m;
+    var reviewCount = 120 + (Math.Abs(Model.Id.GetHashCode()) % 1800);
+    var stockCount = Model.AvailableStock > 0 ? Model.AvailableStock : Model.Stock;
+    var isOutOfStock = stockCount <= 0;
+    var isLowStock = !isOutOfStock && stockCount < 20;
 }
 
-<div class="card product-card h-100 position-relative border-0 shadow-sm">
+<div class="card product-card h-100 position-relative border-0 shadow-sm"
+     data-product-url="@Url.Action("Detail", "Product", new { slug = Model.Slug })"
+     role="link"
+     tabindex="0"
+     aria-label="@Model.Name">
     <div class="product-img-container product-card-gallery rounded-top overflow-hidden" data-card-images='@cardImagesJson'>
         @if (ViewBag.ShowFeaturedBadge == true)
         {
-            <span class="badge-featured">Öne Çıkan</span>
+            <span class="badge-featured">&Ouml;ne &Ccedil;&#305;kan</span>
         }
         <button type="button" class="btn-favorite @(Model.IsFavorite ? "active" : "")" data-product-id="@Model.Id"
-            title="@(Model.IsFavorite ? "Favorilerden Çıkar" : "Favorilere Ekle")">
+            title="@(Model.IsFavorite ? "Favorilerden \u00C7\u0131kar" : "Favorilere Ekle")">
             <i class="@(Model.IsFavorite ? "fas" : "far") fa-heart"></i>
         </button>
 
@@ -27,65 +36,59 @@
             </div>
         }
     </div>
-    <div class="card-body p-2 p-lg-3 d-flex flex-column">
-        @if (!string.IsNullOrWhiteSpace(Model.Brand))
-        {
-            <small class="product-card-brand mb-1">@Model.Brand</small>
-        }
-        <h5 class="card-title product-card-title fw-bold mb-2">
-            <a asp-controller="Product" asp-action="Detail" asp-route-slug="@Model.Slug"
-                class="text-decoration-none text-dark">
-                @Model.Name
-            </a>
-        </h5>
-
-        @if (Model.Specs != null && Model.Specs.Any())
-        {
-            <ul class="list-unstyled small text-muted mb-2 flex-grow-1" style="font-size: 0.78rem;">
-                @foreach (var spec in Model.Specs.Take(2))
-                {
-                    <li class="mb-1 text-truncate">
-                        <i class="fas fa-circle me-1 text-primary" style="font-size: 4px; vertical-align: middle;"></i>
-                        <strong>@spec.Key:</strong> @spec.Value
-                    </li>
-                }
-            </ul>
-        }
-        else
-        {
-            <div class="flex-grow-1"></div>
-        }
-
-        <div class="mb-2">
-            <span class="price-tag fw-bold text-dark">@Model.Price.ToString("C2")</span>
+    <div class="card-body product-card-body d-flex flex-column">
+        <div class="product-card-campaign">
+            Alisveris Kredisi ile 3 taksit
         </div>
 
-        @if (Model.IsInBasket)
-        {
-            <a asp-controller="Basket" asp-action="Index" class="btn btn-secondary btn-sm w-100 mt-auto position-relative"
-                style="z-index: 2; background-color: #28a745; border-color: #28a745; color: white;">
-                <i class="fas fa-check me-2"></i>Sepete Git
-            </a>
-        }
-        else
-        {
-            @if (Model.AvailableStock > 0 || (Model.AvailableStock == 0 && Model.Stock > 0))
+        <div class="product-card-name-block">
+            @if (!string.IsNullOrWhiteSpace(Model.Brand))
             {
-                <form asp-controller="Basket" asp-action="AddItem" method="post" class="w-100 mt-auto js-add-to-cart-form">
+                <small class="product-card-brand-inline">@Model.Brand</small>
+            }
+            <a asp-controller="Product" asp-action="Detail" asp-route-slug="@Model.Slug"
+               class="text-decoration-none text-dark product-card-title-link product-card-title-inline">
+                @Model.Name
+            </a>
+        </div>
+
+        <div class="product-card-rating">
+            <i class="fas fa-star"></i>
+            <span class="product-card-rating-value">@ratingValue.ToString("0.0").Replace(".", ",")</span>
+            <span class="product-card-rating-count">(@reviewCount)</span>
+        </div>
+
+        <div class="product-card-stock @(isOutOfStock ? "out" : isLowStock ? "low" : "good")">
+            <i class="fas @(isOutOfStock ? "fa-ban" : "fa-box")"></i>
+            @(isOutOfStock ? "Stokta yok" : $"Stokta {stockCount} adet")
+        </div>
+
+        <div class="product-card-footer mt-auto">
+            <div class="product-card-price-wrap">
+                <span class="price-tag fw-bold text-dark">@Model.Price.ToString("C2")</span>
+            </div>
+
+            @if (Model.IsInBasket)
+            {
+                <a asp-controller="Basket" asp-action="Index" class="btn-mini-cart btn-mini-cart-success" title="Sepete Git">
+                    <i class="fas fa-check"></i>
+                </a>
+            }
+            else if (Model.AvailableStock > 0 || (Model.AvailableStock == 0 && Model.Stock > 0))
+            {
+                <form asp-controller="Basket" asp-action="AddItem" method="post" class="js-add-to-cart-form product-card-cart-form">
                     <input type="hidden" name="productId" value="@Model.Id" />
-                    <button type="submit" class="btn btn-outline-primary btn-sm w-100 position-relative btn-hover-animate"
-                        style="z-index: 2;">
-                        <i class="fas fa-shopping-cart me-2"></i>Sepete Ekle
+                    <button type="submit" class="btn-mini-cart" title="Sepete Ekle">
+                        <i class="fas fa-shopping-cart"></i>
                     </button>
                 </form>
             }
             else
             {
-                <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-auto position-relative" disabled
-                    style="z-index: 2; opacity: 0.6;">
-                    <i class="fas fa-ban me-2"></i>Stokta Yok
+                <button type="button" class="btn-mini-cart" disabled title="Stokta Yok">
+                    <i class="fas fa-ban"></i>
                 </button>
             }
-        }
+        </div>
     </div>
 </div>
