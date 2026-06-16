@@ -1,4 +1,5 @@
 using GameGaraj.WebUI.Models.Products;
+using GameGaraj.WebUI.Models.Common;
 
 namespace GameGaraj.WebUI.Services.Abstract
 {
@@ -17,6 +18,7 @@ namespace GameGaraj.WebUI.Services.Abstract
         Task<SearchIndexStatusViewModel?> GetSearchIndexStatusAsync();
         Task<SearchIndexDocumentPageViewModel> GetSearchIndexDocumentPreviewsAsync(int page = 1, int pageSize = 100);
         Task<ReindexResultViewModel?> ReindexSearchIndexAsync();
+        Task<PagedResultViewModel<ProductViewModel>> GetAdminProductsPageAsync(string? query = null, string? categoryId = null, bool? isFeatured = null, bool? isActive = null, string? stockState = null, int page = 1, int pageSize = 20);
 
         // Admin Methods
         Task<CategoryViewModel?> CreateCategoryAsync(CategoryCreateInput model);

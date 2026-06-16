@@ -43,6 +43,8 @@ jobs:
       KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
       ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
 
       SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
       SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
@@ -168,6 +170,8 @@ jobs:
             KEYCLOAK_ADMIN_PASSWORD
             ADMIN_EMAIL
             ADMIN_PASSWORD
+            GOOGLE_CLIENT_ID
+            GOOGLE_CLIENT_SECRET
             SMTP_USERNAME
             SMTP_PASSWORD
             IYZICO_API_KEY
@@ -210,6 +214,8 @@ jobs:
             --from-literal=keycloak-admin-password="$KEYCLOAK_ADMIN_PASSWORD" \
             --from-literal=admin-email="$ADMIN_EMAIL" \
             --from-literal=admin-password="$ADMIN_PASSWORD" \
+            --from-literal=google-client-id="$GOOGLE_CLIENT_ID" \
+            --from-literal=google-client-secret="$GOOGLE_CLIENT_SECRET" \
             --from-literal=smtp-username="$SMTP_USERNAME" \
             --from-literal=smtp-password="$SMTP_PASSWORD" \
             --from-literal=iyzico-api-key="$IYZICO_API_KEY" \

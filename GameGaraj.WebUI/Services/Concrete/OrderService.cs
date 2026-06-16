@@ -1,5 +1,6 @@
 using GameGaraj.WebUI.Models.Addresses;
 using GameGaraj.WebUI.Models.Baskets;
+using GameGaraj.WebUI.Models.Common;
 using GameGaraj.WebUI.Models.Orders;
 using GameGaraj.WebUI.Services.Abstract;
 using System.Text;
@@ -379,6 +380,45 @@ namespace GameGaraj.WebUI.Services.Concrete
             {
                 _logger.LogError(ex, "[OrderService] Error fetching all orders");
                 return new List<OrderViewModel>();
+            }
+        }
+
+        public async Task<PagedResultViewModel<OrderViewModel>> GetAdminOrdersPageAsync(string? query = null, int? status = null, DateTime? dateFrom = null, DateTime? dateTo = null, int page = 1, int pageSize = 12)
+        {
+            try
+            {
+                var queryParams = new List<string>
+                {
+                    $"page={page}",
+                    $"pageSize={pageSize}"
+                };
+
+                if (!string.IsNullOrWhiteSpace(query))
+                    queryParams.Add($"q={Uri.EscapeDataString(query)}");
+
+                if (status.HasValue)
+                    queryParams.Add($"status={status.Value}");
+
+                if (dateFrom.HasValue)
+                    queryParams.Add($"dateFrom={dateFrom.Value:yyyy-MM-dd}");
+
+                if (dateTo.HasValue)
+                    queryParams.Add($"dateTo={dateTo.Value:yyyy-MM-dd}");
+
+                var response = await _httpClient.GetAsync($"api/orders/admin?{string.Join("&", queryParams)}");
+                if (!response.IsSuccessStatusCode)
+                    return new PagedResultViewModel<OrderViewModel> { Page = page, PageSize = pageSize };
+
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<PagedResultViewModel<OrderViewModel>>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? new PagedResultViewModel<OrderViewModel> { Page = page, PageSize = pageSize };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[OrderService] Error fetching admin orders page");
+                return new PagedResultViewModel<OrderViewModel> { Page = page, PageSize = pageSize };
             }
         }
 

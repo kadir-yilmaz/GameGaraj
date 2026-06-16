@@ -5,6 +5,7 @@ namespace GameGaraj.Catalog.API.Services.Abstract
     public interface IProductQueryService
     {
         Task<List<ProductDto>> GetAllAsync(string? categoryId = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, Dictionary<string, string>? specs = null, string? brand = null);
+        Task<PagedResultDto<ProductDto>> GetAdminPageAsync(string? query = null, string? categoryId = null, bool? isFeatured = null, bool? isActive = null, string? stockState = null, int page = 1, int pageSize = 20);
         Task<List<ProductDto>> GetFeaturedProductsAsync();
         Task<ProductDto?> GetByIdAsync(string id);
         Task<ProductDto?> GetBySlugAsync(string slug);

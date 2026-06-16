@@ -1,78 +1,194 @@
-@model List<GameGaraj.WebUI.Models.Products.ProductViewModel>
+@model GameGaraj.WebUI.Areas.Admin.Models.ProductAdminIndexViewModel
 @{
-    ViewData["Title"] = "Ürünler";
+    ViewData["Title"] = "Urunler";
+    var items = Model.Results.Items;
+    var currentUrl = Context.Request.Path + Context.Request.QueryString;
+    var featuredCount = items.Count(item => item.IsFeatured);
+    var activeCount = items.Count(item => item.IsActive);
+    var lowStockCount = items.Count(item => item.Stock > 0 && item.Stock < 20);
+    var outOfStockCount = items.Count(item => item.Stock <= 0);
 }
 
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Ürünler</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a asp-area="Admin" asp-controller="Product" asp-action="Create" class="btn btn-sm btn-outline-primary">
-            <i class="fas fa-plus"></i> Yeni Ürün
+<div class="d-flex justify-content-between flex-wrap align-items-center gap-3 pt-3 pb-2 mb-4 border-bottom">
+    <div>
+        <h1 class="h2 mb-1">Urunler</h1>
+        <div class="text-muted small">
+            Toplam <strong>@Model.Results.TotalCount</strong> kayit, sayfa <strong>@Model.Results.Page</strong> / <strong>@Math.Max(Model.Results.TotalPages, 1)</strong>
+        </div>
+    </div>
+    <div class="btn-toolbar">
+        <a asp-area="Admin" asp-controller="Product" asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Yeni Urun
         </a>
     </div>
 </div>
 
-<div class="table-responsive">
+<div class="admin-stat-grid mb-4">
+    <section class="admin-stat-card">
+        <div class="admin-stat-label">Listelenen urun</div>
+        <div class="admin-stat-value">@items.Count</div>
+        <div class="admin-stat-meta">Toplam kayit: @Model.Results.TotalCount</div>
+    </section>
+    <section class="admin-stat-card">
+        <div class="admin-stat-label">Showcase</div>
+        <div class="admin-stat-value">@featuredCount</div>
+        <div class="admin-stat-meta">Bu sayfadaki one cikan urunler</div>
+    </section>
+    <section class="admin-stat-card">
+        <div class="admin-stat-label">Aktif</div>
+        <div class="admin-stat-value">@activeCount</div>
+        <div class="admin-stat-meta">Yayinda olan urunler</div>
+    </section>
+    <section class="admin-stat-card">
+        <div class="admin-stat-label">Stok riski</div>
+        <div class="admin-stat-value">@lowStockCount</div>
+        <div class="admin-stat-meta">Dusuk stoklu urun (&lt; 20)</div>
+        <div class="admin-stat-submeta">Tukenmis urun: @outOfStockCount</div>
+    </section>
+</div>
+
+<form method="get" class="admin-filter-panel mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-xl-4 col-lg-6">
+            <label class="form-label">Ara</label>
+            <input asp-for="Query" class="form-control" placeholder="Urun adi, marka, slug veya id" />
+        </div>
+        <div class="col-xl-3 col-lg-6">
+            <label class="form-label">Kategori</label>
+            <select asp-for="CategoryId" asp-items="Model.CategoryOptions" class="form-select"></select>
+        </div>
+        <div class="col-xl-2 col-md-4">
+            <label class="form-label">Showcase</label>
+            <select asp-for="IsFeatured" class="form-select">
+                <option value="">Tumu</option>
+                <option value="true">Showcase</option>
+                <option value="false">Showcase Degil</option>
+            </select>
+        </div>
+        <div class="col-xl-2 col-md-4">
+            <label class="form-label">Durum</label>
+            <select asp-for="IsActive" class="form-select">
+                <option value="">Tumu</option>
+                <option value="true">Aktif</option>
+                <option value="false">Pasif</option>
+            </select>
+        </div>
+        <div class="col-xl-1 col-md-4">
+            <label class="form-label">Stok</label>
+            <select asp-for="StockState" class="form-select">
+                <option value="">Tum</option>
+                <option value="in">Var</option>
+                <option value="out">Yok</option>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <label class="form-label">Sayfa Boyutu</label>
+            <select asp-for="PageSize" class="form-select">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+        <div class="col-lg-10 col-md-8 d-flex justify-content-between align-items-center gap-2 flex-wrap">
+            <div class="filter-hint">
+                Liste admin tarafi icin dogrudan catalog veritabanindan okunur.
+            </div>
+            <div class="d-flex gap-2">
+                <a asp-action="Index" class="btn btn-light border">Temizle</a>
+                <button type="submit" class="btn btn-dark">
+                    <i class="fas fa-filter me-2"></i>Filtrele
+                </button>
+            </div>
+        </div>
+    </div>
+    <input type="hidden" name="Page" value="1" />
+</form>
+
+<div class="table-responsive admin-table-shell">
     <form id="antiForgeryForm" class="d-none">
         @Html.AntiForgeryToken()
     </form>
 
-    <table class="table table-hover align-middle">
+    <table class="table table-hover align-middle mb-0">
         <thead>
             <tr>
-                <th style="width: 120px;">Resim</th>
-                <th>Ürün Bilgisi</th>
-                <th style="width: 150px;">Fiyat</th>
-                <th style="width: 100px;">Stok</th>
-                <th style="width: 130px;">Showcase</th>
-                <th style="width: 150px;">Kategori</th>
-                <th style="width: 200px;">İşlemler</th>
+                <th style="width: 96px;">Gorsel</th>
+                <th>Urun</th>
+                <th style="width: 130px;">Marka</th>
+                <th style="width: 120px;">Fiyat</th>
+                <th style="width: 90px;">Stok</th>
+                <th style="width: 110px;">Durum</th>
+                <th style="width: 110px;">Showcase</th>
+                <th style="width: 180px;">Kategori</th>
+                <th style="width: 170px;" class="text-end">Islemler</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in Model)
+            @if (items.Any())
+            {
+                foreach (var item in items)
+                {
+                    <tr>
+                        <td>
+                            <div class="product-img-container">
+                                <img src="@item.FirstImageUrl" alt="@item.Name" class="product-list-img"
+                                     onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">@item.Name</div>
+                            <div class="small text-muted text-truncate" style="max-width: 320px;">@item.Id</div>
+                        </td>
+                        <td>@item.Brand</td>
+                        <td class="fw-semibold text-primary">@item.Price.ToString("C2")</td>
+                        <td>
+                            <span class="badge @(item.Stock > 0 ? "bg-success-subtle text-success-emphasis" : "bg-danger-subtle text-danger-emphasis") px-3 py-2">
+                                @item.Stock
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge @(item.IsActive ? "bg-success-subtle text-success-emphasis" : "bg-secondary-subtle text-secondary-emphasis") px-3 py-2">
+                                @(item.IsActive ? "Aktif" : "Pasif")
+                            </span>
+                        </td>
+                        <td>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input js-featured-switch"
+                                       type="checkbox"
+                                       role="switch"
+                                       title="Showcase"
+                                       data-product-id="@item.Id"
+                                       @(item.IsFeatured ? "checked" : "") />
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-truncate" style="max-width: 170px;">@item.CategoryName</div>
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <a asp-area="Admin" asp-controller="Product" asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-pen me-1"></i>Duzenle
+                                </a>
+                                <form asp-area="Admin" asp-controller="Product" asp-action="Delete" method="post" class="d-inline"
+                                      onsubmit="return confirm('Bu urunu silmek istediginize emin misiniz?');">
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <input type="hidden" name="returnUrl" value="@currentUrl" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+            else
             {
                 <tr>
-                    <td>
-                        <div class="product-img-container">
-                            <img src="@item.FirstImageUrl" alt="@item.Name" class="product-list-img"
-                                 onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
-                        </div>
-                    </td>
-                    <td>
-                        <div class="fw-bold">@item.Name</div>
-                        <small class="text-muted d-block text-truncate" style="max-width: 300px;">@item.Id</small>
-                    </td>
-                    <td class="fw-bold text-primary">@item.Price.ToString("C2")</td>
-                    <td>
-                        <span class="badge @(item.Stock > 0 ? "bg-success" : "bg-danger")">
-                            @item.Stock
-                        </span>
-                    </td>
-                    <td>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input js-featured-switch"
-                                   type="checkbox"
-                                   role="switch"
-                                   title="Showcase"
-                                   data-product-id="@item.Id"
-                                   @(item.IsFeatured ? "checked" : "") />
-                        </div>
-                    </td>
-                    <td>@item.CategoryName</td>
-                    <td>
-                        <div class="btn-group">
-                            <a asp-area="Admin" asp-controller="Product" asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-edit"></i> Düzenle
-                            </a>
-                            <form asp-area="Admin" asp-controller="Product" asp-action="Delete" method="post" class="d-inline"
-                                  onsubmit="return confirm('Bu ürünü silmek istediğinize emin misiniz?');">
-                                <input type="hidden" name="id" value="@item.Id" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                        </div>
+                    <td colspan="9" class="py-5 text-center text-muted">
+                        <div class="mb-2"><i class="fas fa-box-open fa-2x"></i></div>
+                        Filtrelere uygun urun bulunamadi.
                     </td>
                 </tr>
             }
@@ -80,14 +196,111 @@
     </table>
 </div>
 
+@if (Model.Results.TotalPages > 1)
+{
+    <nav class="mt-4" aria-label="Product pagination">
+        <ul class="pagination justify-content-center flex-wrap gap-2">
+            <li class="page-item @(Model.Results.HasPreviousPage ? string.Empty : "disabled")">
+                <a class="page-link" asp-action="Index"
+                   asp-route-Query="@Model.Query"
+                   asp-route-CategoryId="@Model.CategoryId"
+                   asp-route-IsFeatured="@Model.IsFeatured"
+                   asp-route-IsActive="@Model.IsActive"
+                   asp-route-StockState="@Model.StockState"
+                   asp-route-Page="@(Model.Results.Page - 1)"
+                   asp-route-PageSize="@Model.PageSize">Onceki</a>
+            </li>
+            @for (var i = Math.Max(1, Model.Results.Page - 2); i <= Math.Min(Model.Results.TotalPages, Model.Results.Page + 2); i++)
+            {
+                <li class="page-item @(i == Model.Results.Page ? "active" : string.Empty)">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-Query="@Model.Query"
+                       asp-route-CategoryId="@Model.CategoryId"
+                       asp-route-IsFeatured="@Model.IsFeatured"
+                       asp-route-IsActive="@Model.IsActive"
+                       asp-route-StockState="@Model.StockState"
+                       asp-route-Page="@i"
+                       asp-route-PageSize="@Model.PageSize">@i</a>
+                </li>
+            }
+            <li class="page-item @(Model.Results.HasNextPage ? string.Empty : "disabled")">
+                <a class="page-link" asp-action="Index"
+                   asp-route-Query="@Model.Query"
+                   asp-route-CategoryId="@Model.CategoryId"
+                   asp-route-IsFeatured="@Model.IsFeatured"
+                   asp-route-IsActive="@Model.IsActive"
+                   asp-route-StockState="@Model.StockState"
+                   asp-route-Page="@(Model.Results.Page + 1)"
+                   asp-route-PageSize="@Model.PageSize">Sonraki</a>
+            </li>
+        </ul>
+    </nav>
+}
+
 <style>
+    .admin-filter-panel {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .admin-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .admin-stat-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1rem 1.1rem;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .admin-stat-label {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 0.35rem;
+    }
+
+    .admin-stat-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1.1;
+    }
+
+    .admin-stat-meta,
+    .filter-hint {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin-top: 0.4rem;
+    }
+
+    .admin-stat-submeta {
+        color: #94a3b8;
+        font-size: 0.8rem;
+        margin-top: 0.2rem;
+    }
+
+    .admin-table-shell {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
     .product-img-container {
-        width: 100px;
-        height: 100px;
+        width: 72px;
+        height: 72px;
         overflow: hidden;
         border-radius: 8px;
-        border: 1px solid #dee2e6;
-        background-color: #f8f9fa;
+        border: 1px solid #e5e7eb;
+        background-color: #f8fafc;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -99,13 +312,31 @@
         object-fit: cover;
     }
 
-    .table.align-middle td {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-
     .js-featured-switch {
         cursor: pointer;
+    }
+
+    .page-link {
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        color: #111827;
+    }
+
+    .page-item.active .page-link {
+        background: #111827;
+        border-color: #111827;
+    }
+
+    @@media (max-width: 1200px) {
+        .admin-stat-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .admin-stat-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
@@ -131,11 +362,11 @@
             }).done(function (response) {
                 if (!response || !response.success) {
                     checkbox.prop('checked', previousValue);
-                    alert('Showcase durumu güncellenemedi.');
+                    alert('Showcase durumu guncellenemedi.');
                 }
             }).fail(function () {
                 checkbox.prop('checked', previousValue);
-                alert('Showcase durumu güncellenirken hata oluştu.');
+                alert('Showcase durumu guncellenirken hata olustu.');
             }).always(function () {
                 checkbox.prop('disabled', false);
             });

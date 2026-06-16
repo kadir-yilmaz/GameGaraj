@@ -1,4 +1,5 @@
 using GameGaraj.WebUI.Models.Addresses;
+using GameGaraj.WebUI.Models.Common;
 using GameGaraj.WebUI.Models.Orders;
 
 namespace GameGaraj.WebUI.Services.Abstract
@@ -10,6 +11,7 @@ namespace GameGaraj.WebUI.Services.Abstract
         
         // Admin Methods
         Task<List<OrderViewModel>> GetAllOrdersAsync();
+        Task<PagedResultViewModel<OrderViewModel>> GetAdminOrdersPageAsync(string? query = null, int? status = null, DateTime? dateFrom = null, DateTime? dateTo = null, int page = 1, int pageSize = 12);
         Task<bool> UpdateOrderStatusAsync(int orderId, int status);
         Task<bool> ShipOrderAsync(int orderId);
         

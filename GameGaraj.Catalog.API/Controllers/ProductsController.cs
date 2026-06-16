@@ -30,6 +30,20 @@ namespace GameGaraj.Catalog.API.Controllers
             return Ok(result);
         }
 
+        [HttpGet("admin")]
+        public async Task<IActionResult> GetAdminPage(
+            [FromQuery] string? q = null,
+            [FromQuery] string? categoryId = null,
+            [FromQuery] bool? isFeatured = null,
+            [FromQuery] bool? isActive = null,
+            [FromQuery] string? stockState = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var result = await _queries.GetAdminPageAsync(q, categoryId, isFeatured, isActive, stockState, page, pageSize);
+            return Ok(result);
+        }
+
         [HttpGet("search")]
         public async Task<IActionResult> Search([FromQuery] string q)
         {

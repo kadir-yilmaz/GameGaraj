@@ -118,6 +118,100 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             return await GetAllFromPostgresAsync(categoryId, sortBy, minPrice, maxPrice, specs, brand);
         }
 
+        public async Task<PagedResultDto<ProductDto>> GetAdminPageAsync(
+            string? query = null,
+            string? categoryId = null,
+            bool? isFeatured = null,
+            bool? isActive = null,
+            string? stockState = null,
+            int page = 1,
+            int pageSize = 20)
+        {
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 10, 100);
+
+            var productsQuery = _context.Products.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var normalizedQuery = query.Trim().ToLower();
+                var pattern = $"%{normalizedQuery}%";
+                productsQuery = productsQuery.Where(product =>
+                    EF.Functions.Like((product.Id ?? string.Empty).ToLower(), pattern) ||
+                    EF.Functions.Like((product.Name ?? string.Empty).ToLower(), pattern) ||
+                    EF.Functions.Like((product.Brand ?? string.Empty).ToLower(), pattern) ||
+                    EF.Functions.Like((product.Slug ?? string.Empty).ToLower(), pattern));
+            }
+
+            if (!string.IsNullOrWhiteSpace(categoryId))
+            {
+                productsQuery = productsQuery.Where(product => product.CategoryId == categoryId);
+            }
+
+            if (isFeatured.HasValue)
+            {
+                productsQuery = productsQuery.Where(product => product.IsFeatured == isFeatured.Value);
+            }
+
+            if (isActive.HasValue)
+            {
+                productsQuery = productsQuery.Where(product => product.IsActive == isActive.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(stockState))
+            {
+                productsQuery = stockState.ToLowerInvariant() switch
+                {
+                    "in" => productsQuery.Where(product => product.Stock > 0),
+                    "out" => productsQuery.Where(product => product.Stock <= 0),
+                    _ => productsQuery
+                };
+            }
+
+            var totalCount = await productsQuery.LongCountAsync();
+            var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var products = await productsQuery
+                .OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt)
+                .ThenBy(product => product.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var productDtos = _mapper.Map<List<ProductDto>>(products);
+
+            if (products.Any())
+            {
+                var categoryIds = products
+                    .Select(product => product.CategoryId)
+                    .Where(category => !string.IsNullOrWhiteSpace(category))
+                    .Distinct()
+                    .ToList();
+
+                var categoryNames = await _context.Categories
+                    .Where(category => categoryIds.Contains(category.Id))
+                    .ToDictionaryAsync(category => category.Id, category => category.Name);
+
+                foreach (var dto in productDtos)
+                {
+                    if (!string.IsNullOrWhiteSpace(dto.CategoryId) &&
+                        categoryNames.TryGetValue(dto.CategoryId, out var categoryName))
+                    {
+                        dto.CategoryName = categoryName;
+                    }
+                }
+            }
+
+            return new PagedResultDto<ProductDto>
+            {
+                Items = productDtos,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = totalPages
+            };
+        }
+
         private async Task<List<ProductDto>?> GetAllFromElasticAsync(
             string? categoryId = null,
             string? sortBy = null,

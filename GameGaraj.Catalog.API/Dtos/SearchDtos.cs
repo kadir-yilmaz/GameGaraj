@@ -1,5 +1,14 @@
 namespace GameGaraj.Catalog.API.Dtos
 {
+    public class PagedResultDto<T>
+    {
+        public List<T> Items { get; set; } = new();
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public long TotalCount { get; set; }
+        public int TotalPages { get; set; }
+    }
+
     public class ReindexResultDto
     {
         public int Total { get; set; }

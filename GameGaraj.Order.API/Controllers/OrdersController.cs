@@ -33,6 +33,8 @@ namespace GameGaraj.Order.API.Controllers
             Console.WriteLine($"[OrdersController] GetOrders called for userId: {userId}");
 
             var orders = await _context.Orders
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Include(x => x.OrderItems)
                 .Include(x => x.OrderPricingLedgers)
                 .Include(x => x.DeliveryAddress)
@@ -64,6 +66,8 @@ namespace GameGaraj.Order.API.Controllers
             Console.WriteLine($"[OrdersController] GetAllOrders called");
 
             var orders = await _context.Orders
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Include(x => x.OrderItems)
                 .Include(x => x.OrderPricingLedgers)
                 .Include(x => x.DeliveryAddress)
@@ -75,6 +79,77 @@ namespace GameGaraj.Order.API.Controllers
 
             var orderDtos = ObjectMapper.Mapper.Map<List<OrderDto>>(orders);
             return Ok(orderDtos);
+        }
+
+        [HttpGet("admin")]
+        public async Task<IActionResult> GetAdminOrders(
+            [FromQuery] string? q = null,
+            [FromQuery] int? status = null,
+            [FromQuery] DateTime? dateFrom = null,
+            [FromQuery] DateTime? dateTo = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12)
+        {
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 6, 60);
+
+            var ordersQuery = _context.Orders
+                .AsNoTracking()
+                .AsSplitQuery()
+                .Include(x => x.OrderItems)
+                .Include(x => x.OrderPricingLedgers)
+                .Include(x => x.DeliveryAddress)
+                .Include(x => x.InvoiceAddress)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var normalizedQuery = q.Trim().ToLower();
+                var pattern = $"%{normalizedQuery}%";
+                ordersQuery = ordersQuery.Where(order =>
+                    EF.Functions.Like(order.Id.ToString(), pattern) ||
+                    EF.Functions.Like((order.BuyerId ?? string.Empty).ToLower(), pattern) ||
+                    EF.Functions.Like(((order.DeliveryAddress.FirstName ?? string.Empty) + " " + (order.DeliveryAddress.LastName ?? string.Empty)).ToLower(), pattern) ||
+                    EF.Functions.Like((order.DeliveryAddress.Email ?? string.Empty).ToLower(), pattern) ||
+                    EF.Functions.Like((order.DeliveryAddress.PhoneNumber ?? string.Empty).ToLower(), pattern));
+            }
+
+            if (status.HasValue)
+            {
+                ordersQuery = ordersQuery.Where(order => order.Status == status.Value);
+            }
+
+            if (dateFrom.HasValue)
+            {
+                var from = dateFrom.Value.Date;
+                ordersQuery = ordersQuery.Where(order => order.CreatedDate >= from);
+            }
+
+            if (dateTo.HasValue)
+            {
+                var toExclusive = dateTo.Value.Date.AddDays(1);
+                ordersQuery = ordersQuery.Where(order => order.CreatedDate < toExclusive);
+            }
+
+            var totalCount = await ordersQuery.LongCountAsync();
+            var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var orders = await ordersQuery
+                .OrderByDescending(order => order.CreatedDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var orderDtos = ObjectMapper.Mapper.Map<List<OrderDto>>(orders);
+
+            return Ok(new PagedResultDto<OrderDto>
+            {
+                Items = orderDtos,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = totalPages
+            });
         }
 
         /// <summary>

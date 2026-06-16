@@ -1,4 +1,5 @@
 using GameGaraj.WebUI.Models.Baskets;
+using GameGaraj.WebUI.Models.Common;
 using GameGaraj.WebUI.Models.Products;
 using GameGaraj.WebUI.Services.Abstract;
 using GameGaraj.WebUI.Settings;
@@ -205,6 +206,51 @@ namespace GameGaraj.WebUI.Services.Concrete
             {
                 _logger.LogError(ex, "[CatalogService] Error fetching products");
                 return new List<ProductViewModel>();
+            }
+        }
+
+        public async Task<PagedResultViewModel<ProductViewModel>> GetAdminProductsPageAsync(string? query = null, string? categoryId = null, bool? isFeatured = null, bool? isActive = null, string? stockState = null, int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var queryParams = new List<string>
+                {
+                    $"page={page}",
+                    $"pageSize={pageSize}"
+                };
+
+                if (!string.IsNullOrWhiteSpace(query))
+                    queryParams.Add($"q={Uri.EscapeDataString(query)}");
+
+                if (!string.IsNullOrWhiteSpace(categoryId))
+                    queryParams.Add($"categoryId={Uri.EscapeDataString(categoryId)}");
+
+                if (isFeatured.HasValue)
+                    queryParams.Add($"isFeatured={isFeatured.Value.ToString().ToLowerInvariant()}");
+
+                if (isActive.HasValue)
+                    queryParams.Add($"isActive={isActive.Value.ToString().ToLowerInvariant()}");
+
+                if (!string.IsNullOrWhiteSpace(stockState))
+                    queryParams.Add($"stockState={Uri.EscapeDataString(stockState)}");
+
+                var response = await _httpClient.GetAsync($"products/admin?{string.Join("&", queryParams)}");
+                if (!response.IsSuccessStatusCode)
+                    return new PagedResultViewModel<ProductViewModel> { Page = page, PageSize = pageSize };
+
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<PagedResultViewModel<ProductViewModel>>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? new PagedResultViewModel<ProductViewModel> { Page = page, PageSize = pageSize };
+
+                SetProductImageUrls(result.Items);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CatalogService] Error fetching admin products page");
+                return new PagedResultViewModel<ProductViewModel> { Page = page, PageSize = pageSize };
             }
         }
 

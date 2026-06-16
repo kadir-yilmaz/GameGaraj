@@ -1,6 +1,8 @@
+using GameGaraj.WebUI.Areas.Admin.Models;
 using GameGaraj.WebUI.Services.Abstract;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace GameGaraj.WebUI.Areas.Admin.Controllers
 {
@@ -17,43 +19,61 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index([FromQuery] OrderAdminIndexViewModel filter)
         {
-            var orders = await _orderService.GetAllOrdersAsync();
-            return View(orders);
+            filter.StatusOptions = new List<SelectListItem>
+            {
+                new("Tum durumlar", string.Empty),
+                new("Beklemede", "0"),
+                new("Tamamlandi", "1"),
+                new("Basarisiz", "2"),
+                new("Hazirlaniyor", "3"),
+                new("Kargoda", "4"),
+                new("Teslim edildi", "5")
+            };
+
+            filter.Results = await _orderService.GetAdminOrdersPageAsync(
+                filter.Query,
+                filter.Status,
+                filter.DateFrom,
+                filter.DateTo,
+                filter.Page,
+                filter.PageSize);
+
+            return View(filter);
         }
 
         [HttpPost]
-        public async Task<IActionResult> UpdateStatus(int orderId, int status)
+        public async Task<IActionResult> UpdateStatus(int orderId, int status, string? returnUrl = null)
         {
             var result = await _orderService.UpdateOrderStatusAsync(orderId, status);
-            
-            if (result)
-            {
-                TempData["Success"] = "Sipariş durumu güncellendi";
-            }
-            else
-            {
-                TempData["Error"] = "Sipariş durumu güncellenemedi";
-            }
 
-            return RedirectToAction(nameof(Index));
+            TempData[result ? "Success" : "Error"] = result
+                ? "Siparis durumu guncellendi."
+                : "Siparis durumu guncellenemedi.";
+
+            return RedirectToLocalOrIndex(returnUrl);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Ship(int orderId, string cargoCompany, string trackingNumber)
+        public async Task<IActionResult> Ship(int orderId, string cargoCompany, string trackingNumber, string? returnUrl = null)
         {
-            _logger.LogInformation($"[Ship] Shipping order {orderId} with {cargoCompany}, tracking: {trackingNumber}");
-            
+            _logger.LogInformation("[Ship] Shipping order {OrderId} with {CargoCompany}, tracking: {TrackingNumber}", orderId, cargoCompany, trackingNumber);
+
             var result = await _orderService.ShipOrderAsync(orderId);
-            
-            if (result)
+
+            TempData[result ? "Success" : "Error"] = result
+                ? $"Siparis kargoya verildi. Kargo: {cargoCompany}, Takip No: {trackingNumber}"
+                : "Siparis kargoya verilemedi.";
+
+            return RedirectToLocalOrIndex(returnUrl);
+        }
+
+        private IActionResult RedirectToLocalOrIndex(string? returnUrl)
+        {
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             {
-                TempData["Success"] = $"Sipariş kargoya verildi. Kargo: {cargoCompany}, Takip No: {trackingNumber}";
-            }
-            else
-            {
-                TempData["Error"] = "Sipariş kargoya verilemedi";
+                return LocalRedirect(returnUrl);
             }
 
             return RedirectToAction(nameof(Index));

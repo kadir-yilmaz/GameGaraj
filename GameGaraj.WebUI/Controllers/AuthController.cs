@@ -72,9 +72,90 @@ namespace GameGaraj.WebUI.Controllers
 
         public new async Task<IActionResult> SignOut()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             await _identityService.RevokeRefreshToken(); // Opsiyonel: Keycloak'tan da oturumu kapatmak için
-            return RedirectToAction("Index", "Home");
+
+            var properties = new AuthenticationProperties
+            {
+                RedirectUri = Url.Action("Index", "Home")
+            };
+
+            return SignOut(
+                properties,
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                "Keycloak");
+        }
+
+        [HttpGet]
+        public IActionResult GoogleSignIn(string? returnUrl = null, bool popup = false)
+        {
+            var redirectUrl = Url.Action(nameof(GoogleSignInCallback), new { returnUrl, popup }) ?? Url.Action("Index", "Home")!;
+            var properties = new AuthenticationProperties
+            {
+                RedirectUri = redirectUrl
+            };
+
+            properties.Items["kc_idp_hint"] = "google";
+            properties.Items["prompt"] = "select_account";
+
+            return Challenge(properties, "Keycloak");
+        }
+
+        [HttpGet]
+        public IActionResult GoogleSignInCallback(string? returnUrl = null, bool popup = false)
+        {
+            if (popup)
+            {
+                var targetUrl = GetPostLoginRedirectUrl(returnUrl);
+                var escapedTargetUrl = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(targetUrl);
+
+                return Content($$"""
+                <!DOCTYPE html>
+                <html lang="tr">
+                <head>
+                    <meta charset="utf-8" />
+                    <title>Giriş tamamlandı</title>
+                </head>
+                <body>
+                    <script>
+                        (function () {
+                            var payload = { type: 'gamegaraj:auth-complete', targetUrl: '{{escapedTargetUrl}}' };
+                            try {
+                                if (window.opener && !window.opener.closed) {
+                                    window.opener.postMessage(payload, window.location.origin);
+                                }
+                            } catch (e) {
+                            }
+                            window.close();
+                            document.body.innerText = 'Giriş tamamlandı. Bu pencereyi kapatabilirsiniz.';
+                        })();
+                    </script>
+                </body>
+                </html>
+                """, "text/html");
+            }
+
+            return Redirect(GetPostLoginRedirectUrl(returnUrl));
+        }
+
+        private string GetPostLoginRedirectUrl(string? returnUrl)
+        {
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                if (returnUrl.StartsWith("/auth/signin", StringComparison.OrdinalIgnoreCase) ||
+                    returnUrl.StartsWith("/auth/signup", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Url.Action("Index", "Home") ?? "/";
+                }
+
+                return returnUrl;
+            }
+
+            if (User.IsInRole("admin") || User.IsInRole("editor"))
+            {
+                return Url.Action("Index", "Dashboard", new { area = "Admin" }) ?? "/";
+            }
+
+            return Url.Action("Index", "Home") ?? "/";
         }
     }
 }

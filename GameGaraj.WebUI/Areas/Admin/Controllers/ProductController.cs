@@ -1,5 +1,6 @@
 using GameGaraj.WebUI.Models.Products;
 using GameGaraj.WebUI.Services.Abstract;
+using GameGaraj.WebUI.Areas.Admin.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -21,10 +22,27 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index([FromQuery] ProductAdminIndexViewModel filter)
         {
-            var products = await _catalogService.GetAllProductsAsync();
-            return View(products);
+            var roots = await _catalogService.GetAllCategoriesAsync();
+            var flattenedList = new List<CategoryDropdownViewModel>();
+            FlattenCategories(roots, flattenedList, "");
+
+            filter.CategoryOptions = flattenedList
+                .Select(category => new SelectListItem(category.DisplayName, category.Id))
+                .Prepend(new SelectListItem("Tum kategoriler", string.Empty))
+                .ToList();
+
+            filter.Results = await _catalogService.GetAdminProductsPageAsync(
+                filter.Query,
+                filter.CategoryId,
+                filter.IsFeatured,
+                filter.IsActive,
+                filter.StockState,
+                filter.Page,
+                filter.PageSize);
+
+            return View(filter);
         }
 
         [HttpGet]
@@ -269,7 +287,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(string id, string? returnUrl = null)
         {
             var result = await _catalogService.DeleteProductAsync(id);
             if (result)
@@ -280,6 +298,11 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             {
                 TempData["Error"] = "Ürün silinirken bir hata oluştu.";
             }
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return LocalRedirect(returnUrl);
+            }
+
             return RedirectToAction(nameof(Index), "Product", new { area = "Admin" });
         }
 

@@ -13,13 +13,19 @@ namespace GameGaraj.Catalog.API.Services.Concrete
     {
         private readonly CatalogDbContext _context;
         private readonly IMapper _mapper;
+        private readonly IProductIndexService _productIndexService;
+        private readonly ILogger<ProductCommandService> _logger;
 
         public ProductCommandService(
             CatalogDbContext context,
-            IMapper mapper)
+            IMapper mapper,
+            IProductIndexService productIndexService,
+            ILogger<ProductCommandService> logger)
         {
             _context = context;
             _mapper = mapper;
+            _productIndexService = productIndexService;
+            _logger = logger;
         }
 
         public async Task<ProductDto> CreateAsync(ProductCreateDto dto)
@@ -48,6 +54,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             _context.Products.Add(product);
             EnqueueIndexingJob(product.Id, IndexingJobOperation.Upsert);
             await _context.SaveChangesAsync();
+            await TryIndexProductImmediatelyAsync(product);
 
             return _mapper.Map<ProductDto>(product);
         }
@@ -76,6 +83,10 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             _context.Products.Update(product);
             EnqueueIndexingJob(product.Id, IndexingJobOperation.Upsert);
             var updated = await _context.SaveChangesAsync() > 0;
+            if (updated)
+            {
+                await TryIndexProductImmediatelyAsync(product);
+            }
 
             return updated;
         }
@@ -89,8 +100,36 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             _context.Products.Remove(product);
             EnqueueIndexingJob(id, IndexingJobOperation.Delete);
             var deleted = await _context.SaveChangesAsync() > 0;
+            if (deleted)
+            {
+                await TryDeleteProductFromIndexImmediatelyAsync(id);
+            }
 
             return deleted;
+        }
+
+        private async Task TryIndexProductImmediatelyAsync(Product product)
+        {
+            try
+            {
+                await _productIndexService.IndexAsync(product);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Immediate product indexing failed for {ProductId}. Queued indexing job will retry.", product.Id);
+            }
+        }
+
+        private async Task TryDeleteProductFromIndexImmediatelyAsync(string productId)
+        {
+            try
+            {
+                await _productIndexService.DeleteAsync(productId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Immediate product index delete failed for {ProductId}. Queued indexing job will retry.", productId);
+            }
         }
 
         private void EnqueueIndexingJob(string entityId, string operation)

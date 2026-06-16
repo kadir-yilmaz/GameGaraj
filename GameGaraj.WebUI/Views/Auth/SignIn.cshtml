@@ -7,9 +7,7 @@
     .auth-page {
         min-height: 560px;
         padding: 48px 16px 56px;
-        background:
-            linear-gradient(135deg, rgba(35, 47, 62, 0.96), rgba(16, 24, 39, 0.92)),
-            url('/default.jpg') center/cover no-repeat;
+        background: linear-gradient(135deg, #2f3947, #1f2937);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -251,10 +249,10 @@
 
                 <div class="auth-divider">veya</div>
 
-                <button type="button" class="btn auth-google-btn" disabled title="Google ile giriş yakında eklenecek">
+                <a asp-action="GoogleSignIn" class="btn auth-google-btn js-google-auth-trigger">
                     <i class="fab fa-google"></i>
                     Google ile giriş yap
-                </button>
+                </a>
 
                 <p class="auth-switch">
                     Hesabınız yok mu?
@@ -278,6 +276,33 @@
             icon.classList.toggle('fa-eye', !isHidden);
             icon.classList.toggle('fa-eye-slash', isHidden);
             this.setAttribute('aria-label', isHidden ? 'Şifreyi gizle' : 'Şifreyi göster');
+        });
+
+        document.querySelector('.js-google-auth-trigger')?.addEventListener('click', function (event) {
+            event.preventDefault();
+
+            const popupUrl = `${this.href}${this.href.includes('?') ? '&' : '?'}popup=true&returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+            const width = 520;
+            const height = 720;
+            const left = Math.max(0, window.screenX + ((window.outerWidth - width) / 2));
+            const top = Math.max(0, window.screenY + ((window.outerHeight - height) / 2));
+            const popup = window.open(
+                popupUrl,
+                'gamegaraj-google-auth',
+                `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=no`
+            );
+
+            if (!popup) {
+                window.location.href = popupUrl;
+            }
+        });
+
+        window.addEventListener('message', function (event) {
+            if (event.origin !== window.location.origin || !event.data || event.data.type !== 'gamegaraj:auth-complete') {
+                return;
+            }
+
+            window.location.href = event.data.targetUrl || '/';
         });
     </script>
 }

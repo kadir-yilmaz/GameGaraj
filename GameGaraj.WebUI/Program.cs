@@ -4,6 +4,9 @@ using GameGaraj.WebUI.Services.Concrete;
 using GameGaraj.WebUI.Settings;
 using GameGaraj.Shared.Logging;
 using MassTransit;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using System.Security.Claims;
 using System.Text.Json;
 
 var cultureInfo = new System.Globalization.CultureInfo("tr-TR");
@@ -33,15 +36,98 @@ builder.Services.AddHttpContextAccessor();
 // HttpClient Services
 builder.Services.AddHttpClientServices(builder.Configuration);
 
+var serviceApiSettings = builder.Configuration.GetSection("ServiceApiSettings").Get<ServiceApiSettings>() ?? new ServiceApiSettings();
+
 // Authentication
-builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme, options =>
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    })
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
     {
         options.LoginPath = "/Auth/SignIn";
         options.AccessDeniedPath = "/Admin/Auth/AccessDenied";
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
         options.Cookie.Name = "GameGarajWebCookie";
+    })
+    .AddOpenIdConnect("Keycloak", options =>
+    {
+        options.Authority = serviceApiSettings.IdentityBaseUri;
+        options.ClientId = "web-ui";
+        options.ResponseType = "code";
+        options.RequireHttpsMetadata = false;
+        options.SaveTokens = true;
+        options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.CallbackPath = "/signin-oidc";
+        options.GetClaimsFromUserInfoEndpoint = true;
+
+        options.Scope.Clear();
+        options.Scope.Add("openid");
+        options.Scope.Add("profile");
+        options.Scope.Add("email");
+
+        options.TokenValidationParameters.NameClaimType = "preferred_username";
+        options.TokenValidationParameters.RoleClaimType = ClaimTypes.Role;
+
+        options.Events = new OpenIdConnectEvents
+        {
+            OnRedirectToIdentityProvider = context =>
+            {
+                if (context.Properties.Items.TryGetValue("kc_idp_hint", out var idpHint) &&
+                    !string.IsNullOrWhiteSpace(idpHint))
+                {
+                    context.ProtocolMessage.SetParameter("kc_idp_hint", idpHint);
+                }
+
+                if (context.Properties.Items.TryGetValue("prompt", out var prompt) &&
+                    !string.IsNullOrWhiteSpace(prompt))
+                {
+                    context.ProtocolMessage.Prompt = prompt;
+                }
+
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                if (context.Principal?.Identity is not ClaimsIdentity identity)
+                {
+                    return Task.CompletedTask;
+                }
+
+                var realmAccessClaim = identity.FindFirst("realm_access")?.Value;
+                if (string.IsNullOrWhiteSpace(realmAccessClaim))
+                {
+                    return Task.CompletedTask;
+                }
+
+                try
+                {
+                    var realmAccess = JsonSerializer.Deserialize<JsonElement>(realmAccessClaim);
+                    if (realmAccess.ValueKind == JsonValueKind.Object &&
+                        realmAccess.TryGetProperty("roles", out var roles) &&
+                        roles.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var role in roles.EnumerateArray()
+                            .Select(item => item.GetString())
+                            .Where(item => !string.IsNullOrWhiteSpace(item)))
+                        {
+                            if (!identity.HasClaim(ClaimTypes.Role, role!))
+                            {
+                                identity.AddClaim(new Claim(ClaimTypes.Role, role!));
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Keep login flow alive even if role parsing fails.
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
 // Session

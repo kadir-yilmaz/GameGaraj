@@ -1,290 +1,261 @@
-@model List<GameGaraj.WebUI.Models.Orders.OrderViewModel>
+@model GameGaraj.WebUI.Areas.Admin.Models.OrderAdminIndexViewModel
 @{
-    ViewData["Title"] = "Sipariş Yönetimi";
+    ViewData["Title"] = "Siparis Yonetimi";
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+
+    var orders = Model.Results.Items;
+    var currentUrl = Context.Request.Path + Context.Request.QueryString;
+    var totalRevenue = orders.Sum(order => order.TotalPaidAmount > 0
+        ? order.TotalPaidAmount
+        : order.OrderItems.Sum(item => item.Price * item.Quantity));
+    var pendingCount = orders.Count(order => order.Status == 0 || order.Status == 1);
+    var shippingCount = orders.Count(order => order.Status == 4);
+    var deliveredCount = orders.Count(order => order.Status == 5);
+
+    static (string Text, string Theme, string Icon) GetStatusMeta(int status) => status switch
+    {
+        0 => ("Beklemede", "warning", "fa-clock"),
+        1 => ("Tamamlandi", "success", "fa-check-circle"),
+        2 => ("Basarisiz", "danger", "fa-times-circle"),
+        3 => ("Hazirlaniyor", "primary", "fa-cog"),
+        4 => ("Kargoda", "info", "fa-truck"),
+        5 => ("Teslim edildi", "success", "fa-box-open"),
+        _ => ("Bilinmiyor", "secondary", "fa-question-circle")
+    };
 }
 
 <div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-4">
         <div>
-            <h2 class="mb-1"><i class="fas fa-shopping-cart me-2 text-primary"></i>Sipariş Yönetimi</h2>
-            <p class="text-muted mb-0">Tüm siparişleri görüntüleyin ve yönetin</p>
+            <h2 class="mb-1"><i class="fas fa-shopping-cart me-2 text-primary"></i>Siparis Yonetimi</h2>
+            <p class="text-muted mb-0">Toplam <strong>@Model.Results.TotalCount</strong> siparis, sayfa <strong>@Model.Results.Page</strong> / <strong>@Math.Max(Model.Results.TotalPages, 1)</strong></p>
         </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-primary" onclick="filterOrders('all')">
-                <i class="fas fa-list me-1"></i> Tümü (@Model.Count)
-            </button>
-            <button class="btn btn-outline-warning" onclick="filterOrders('pending')">
-                <i class="fas fa-clock me-1"></i> Beklemede (@Model.Count(x => x.Status == 0))
-            </button>
-            <button class="btn btn-outline-info" onclick="filterOrders('processing')">
-                <i class="fas fa-cog me-1"></i> Hazırlanıyor (@Model.Count(x => x.Status == 3))
-            </button>
-            <button class="btn btn-outline-primary" onclick="filterOrders('shipped')">
-                <i class="fas fa-truck me-1"></i> Kargoda (@Model.Count(x => x.Status == 4))
-            </button>
+        <div class="admin-toolbar-note">
+            Son guncel filtrelerle calisiyorsunuz.
         </div>
     </div>
 
-    <!-- Orders Grid -->
-    <div class="row g-3" id="ordersContainer">
-        @if (Model != null && Model.Any())
+    <div class="admin-stat-grid mb-4">
+        <section class="admin-stat-card">
+            <div class="admin-stat-label">Bu sayfadaki ciro</div>
+            <div class="admin-stat-value">@totalRevenue.ToString("C2")</div>
+            <div class="admin-stat-meta">@orders.Count siparis goruntuleniyor</div>
+        </section>
+        <section class="admin-stat-card">
+            <div class="admin-stat-label">Aksiyon bekleyen</div>
+            <div class="admin-stat-value">@pendingCount</div>
+            <div class="admin-stat-meta">Beklemede veya tamamlandi</div>
+        </section>
+        <section class="admin-stat-card">
+            <div class="admin-stat-label">Kargoda</div>
+            <div class="admin-stat-value">@shippingCount</div>
+            <div class="admin-stat-meta">Takip sureci devam eden</div>
+        </section>
+        <section class="admin-stat-card">
+            <div class="admin-stat-label">Teslim edildi</div>
+            <div class="admin-stat-value">@deliveredCount</div>
+            <div class="admin-stat-meta">Bu sayfadaki tamamlananlar</div>
+        </section>
+    </div>
+
+    <form method="get" class="admin-filter-panel mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-xl-4 col-lg-6">
+                <label class="form-label">Ara</label>
+                <input asp-for="Query" class="form-control" placeholder="Siparis no, musteri, e-posta, telefon" />
+            </div>
+            <div class="col-xl-3 col-lg-6">
+                <label class="form-label">Durum</label>
+                <select asp-for="Status" asp-items="Model.StatusOptions" class="form-select"></select>
+            </div>
+            <div class="col-xl-2 col-md-4">
+                <label class="form-label">Baslangic</label>
+                <input asp-for="DateFrom" type="date" class="form-control" />
+            </div>
+            <div class="col-xl-2 col-md-4">
+                <label class="form-label">Bitis</label>
+                <input asp-for="DateTo" type="date" class="form-control" />
+            </div>
+            <div class="col-xl-1 col-md-4">
+                <label class="form-label">Boyut</label>
+                <select asp-for="PageSize" class="form-select">
+                    <option value="12">12</option>
+                    <option value="24">24</option>
+                    <option value="36">36</option>
+                    <option value="48">48</option>
+                </select>
+            </div>
+            <div class="col-12 d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <div class="filter-hint">
+                    Tarih araligi bitis gununu de kapsar.
+                </div>
+                <div class="d-flex gap-2">
+                    <a asp-action="Index" class="btn btn-light border">Temizle</a>
+                    <button type="submit" class="btn btn-dark">
+                        <i class="fas fa-filter me-2"></i>Filtrele
+                    </button>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" name="Page" value="1" />
+    </form>
+
+    <div class="order-grid">
+        @if (orders.Any())
         {
-            foreach (var order in Model)
+            foreach (var order in orders)
             {
-                var statusClass = order.Status switch
-                {
-                    0 => "warning",
-                    1 => "success",
-                    2 => "danger",
-                    3 => "primary",
-                    4 => "info",
-                    5 => "success",
-                    _ => "secondary"
-                };
+                var status = GetStatusMeta(order.Status);
+                var orderTotal = order.TotalPaidAmount > 0
+                    ? order.TotalPaidAmount
+                    : order.OrderItems.Sum(item => item.Price * item.Quantity);
+                var customerName = string.IsNullOrWhiteSpace(order.Address?.FirstName)
+                    ? "-"
+                    : $"{order.Address.FirstName} {order.Address.LastName}";
 
-                var statusText = order.Status switch
-                {
-                    0 => "Beklemede",
-                    1 => "Tamamlandı",
-                    2 => "Başarısız",
-                    3 => "Hazırlanıyor",
-                    4 => "Kargoda",
-                    5 => "Teslim Edildi",
-                    _ => "Bilinmiyor"
-                };
+                <article class="order-card">
+                    <div class="order-card-top">
+                        <div>
+                            <div class="order-number">#@order.Id</div>
+                            <div class="order-date">@order.CreatedDate.ToString("dd.MM.yyyy HH:mm")</div>
+                        </div>
+                        <span class="badge bg-@status.Theme-subtle text-@status.Theme-emphasis order-status-badge">
+                            <i class="fas @status.Icon me-1"></i>@status.Text
+                        </span>
+                    </div>
 
-                var statusIcon = order.Status switch
-                {
-                    0 => "fa-clock",
-                    1 => "fa-check-circle",
-                    2 => "fa-times-circle",
-                    3 => "fa-cog fa-spin",
-                    4 => "fa-truck",
-                    5 => "fa-box-open",
-                    _ => "fa-question"
-                };
+                    <div class="order-card-body">
+                        <div class="order-meta">
+                            <div class="order-meta-label">Musteri</div>
+                            <div class="order-meta-value">@customerName</div>
+                            <div class="order-meta-sub text-truncate">@order.Address?.Email</div>
+                        </div>
 
-                <div class="col-12 order-card" data-status="@order.Status">
-                    <div class="card shadow-sm border-0 h-100 hover-card">
-                        <div class="card-body">
-                            <div class="row align-items-center">
-                                <!-- Sipariş Bilgileri -->
-                                <div class="col-md-2">
-                                    <div class="text-center">
-                                        <h5 class="mb-1 text-primary">#@order.Id</h5>
-                                        <small class="text-muted">
-                                            @order.CreatedDate.ToString("dd.MM.yyyy")<br/>
-                                            @order.CreatedDate.ToString("HH:mm")
-                                        </small>
-                                    </div>
-                                </div>
+                        <div class="order-meta">
+                            <div class="order-meta-label">Telefon</div>
+                            <div class="order-meta-value">@(!string.IsNullOrWhiteSpace(order.Address?.PhoneNumber) ? order.Address.PhoneNumber : "-")</div>
+                            <div class="order-meta-sub">@order.OrderItems.Count urun satiri</div>
+                        </div>
 
-                                <!-- Müşteri Bilgileri -->
-                                <div class="col-md-2">
-                                    @if (order.Address != null && !string.IsNullOrEmpty(order.Address.FirstName))
-                                    {
-                                        <div>
-                                            <i class="fas fa-user text-muted me-1"></i>
-                                            <strong>@order.Address.FirstName @order.Address.LastName</strong>
-                                        </div>
-                                        <small class="text-muted">
-                                            <i class="fas fa-phone me-1"></i>@order.Address.PhoneNumber
-                                        </small>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">-</span>
-                                    }
-                                </div>
-
-                                <!-- Ürünler -->
-                                <div class="col-md-3">
-                                    <div class="product-list">
-                                        @foreach (var item in order.OrderItems.Take(2))
-                                        {
-                                            <div class="mb-1">
-                                                <small class="text-truncate d-block">
-                                                    <i class="fas fa-box text-muted me-1"></i>@item.ProductName
-                                                </small>
-                                            </div>
-                                        }
-                                        @if (order.OrderItems.Count > 2)
-                                        {
-                                            <small class="text-muted">+@(order.OrderItems.Count - 2) ürün daha</small>
-                                        }
-                                    </div>
-                                </div>
-
-                                <!-- Toplam -->
-                                <div class="col-md-2 text-center">
-                                    <h4 class="mb-0 text-success">
-                                        ₺@order.OrderItems.Sum(x => x.Price).ToString("N2")
-                                    </h4>
-                                    <small class="text-muted">Toplam</small>
-                                </div>
-
-                                <!-- Durum -->
-                                <div class="col-md-2 text-center">
-                                    <span class="badge bg-@statusClass fs-6 px-3 py-2">
-                                        <i class="fas @statusIcon me-1"></i>@statusText
-                                    </span>
-                                </div>
-
-                                <!-- İşlemler -->
-                                <div class="col-md-1 text-end">
-                                    <div class="d-flex flex-column gap-2">
-                                        @if (order.Status == 1) // Completed - Ödeme tamamlandı
-                                        {
-                                            <button type="button" 
-                                                    class="btn btn-primary btn-sm w-100" 
-                                                    onclick="showPrepareConfirm(@order.Id)"
-                                                    title="Hazırlanıyor">
-                                                <i class="fas fa-cog me-1"></i> Hazırla
-                                            </button>
-                                        }
-                                        @if (order.Status == 3) // Processing - Hazırlanıyor
-                                        {
-                                            <button type="button" 
-                                                    class="btn btn-info btn-sm w-100" 
-                                                    onclick="showShipConfirm(@order.Id)"
-                                                    title="Kargoya Ver">
-                                                <i class="fas fa-truck me-1"></i> Kargola
-                                            </button>
-                                        }
-                                        @if (order.Status == 4) // Shipped - Kargoda
-                                        {
-                                                <button type="button" 
-                                                        class="btn btn-success btn-sm w-100" 
-                                                        onclick="showDeliverConfirm(@order.Id)"
-                                                        title="Teslim Edildi">
-                                                    <i class="fas fa-box-open me-1"></i> Teslim
-                                                </button>
-                                        }
-                                        <button type="button" 
-                                                class="btn btn-outline-secondary btn-sm w-100" 
-                                                onclick="showOrderDetail(@order.Id)"
-                                                title="Detaylar">
-                                            <i class="fas fa-eye me-1"></i> Detay
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="order-meta text-end">
+                            <div class="order-meta-label">Tutar</div>
+                            <div class="order-meta-value text-success-emphasis">@orderTotal.ToString("C2")</div>
+                            <div class="order-meta-sub">@order.OrderItems.Sum(item => item.Quantity) adet</div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Kargolama Modal -->
+                    <div class="order-items-preview">
+                        @foreach (var item in order.OrderItems.Take(3))
+                        {
+                            <div class="order-item-line">
+                                <span class="text-truncate">@item.ProductName</span>
+                                <span class="text-muted">@((item.Price * item.Quantity).ToString("C2"))</span>
+                            </div>
+                        }
+                        @if (order.OrderItems.Count > 3)
+                        {
+                            <div class="small text-muted mt-1">+@(order.OrderItems.Count - 3) urun daha</div>
+                        }
+                    </div>
+
+                    <div class="order-card-actions">
+                        @if (order.Status == 1)
+                        {
+                            <button type="button" class="btn btn-sm btn-primary" onclick="showPrepareConfirm(@order.Id)">
+                                <i class="fas fa-cog me-1"></i>Hazirla
+                            </button>
+                        }
+                        @if (order.Status == 3)
+                        {
+                            <button type="button" class="btn btn-sm btn-info text-white" onclick="showShipModal(@order.Id)">
+                                <i class="fas fa-truck me-1"></i>Kargola
+                            </button>
+                        }
+                        @if (order.Status == 4)
+                        {
+                            <button type="button" class="btn btn-sm btn-success" onclick="showDeliverConfirm(@order.Id)">
+                                <i class="fas fa-box-open me-1"></i>Teslim et
+                            </button>
+                        }
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showOrderDetail(@order.Id)">
+                            <i class="fas fa-eye me-1"></i>Detay
+                        </button>
+                    </div>
+                </article>
+
                 <div class="modal fade" id="shipModal@(order.Id)" tabindex="-1">
                     <div class="modal-dialog">
                         <div class="modal-content">
                             <div class="modal-header bg-info text-white">
-                                <h5 class="modal-title">
-                                    <i class="fas fa-truck me-2"></i>Kargoya Ver - Sipariş #@order.Id
-                                </h5>
+                                <h5 class="modal-title"><i class="fas fa-truck me-2"></i>Kargoya ver - Siparis #@order.Id</h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
                             <form asp-action="Ship" method="post">
                                 <div class="modal-body">
                                     <input type="hidden" name="orderId" value="@order.Id" />
-                                    
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        Bu siparişi kargoya vermek üzeresiniz. Müşteriye bilgilendirme e-postası gönderilecektir.
-                                    </div>
+                                    <input type="hidden" name="returnUrl" value="@currentUrl" />
 
                                     <div class="mb-3">
-                                        <label class="form-label"><strong>Kargo Firması</strong></label>
+                                        <label class="form-label"><strong>Kargo firmasi</strong></label>
                                         <select name="cargoCompany" class="form-select" required>
-                                            <option value="">Seçiniz...</option>
-                                            <option value="Yurtiçi Kargo">Yurtiçi Kargo</option>
+                                            <option value="">Seciniz...</option>
+                                            <option value="Yurtici Kargo">Yurtici Kargo</option>
                                             <option value="Aras Kargo">Aras Kargo</option>
                                             <option value="MNG Kargo">MNG Kargo</option>
                                             <option value="PTT Kargo">PTT Kargo</option>
-                                            <option value="Sürat Kargo">Sürat Kargo</option>
+                                            <option value="Surat Kargo">Surat Kargo</option>
                                         </select>
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="form-label"><strong>Kargo Takip No</strong></label>
-                                        <input type="text" name="trackingNumber" class="form-control" 
-                                               placeholder="Örn: 1234567890" required />
-                                    </div>
-
-                                    <div class="card bg-light">
-                                        <div class="card-body">
-                                            <h6 class="mb-2">Teslimat Adresi:</h6>
-                                            @if (order.Address != null)
-                                            {
-                                                <p class="mb-1"><strong>@order.Address.FirstName @order.Address.LastName</strong></p>
-                                                <p class="mb-1">@order.Address.PhoneNumber</p>
-                                                <p class="mb-1">@order.Address.AddressDetail</p>
-                                                <p class="mb-0">@order.Address.District / @order.Address.Province</p>
-                                            }
-                                        </div>
+                                        <label class="form-label"><strong>Takip no</strong></label>
+                                        <input type="text" name="trackingNumber" class="form-control" placeholder="Orn: 1234567890" required />
                                     </div>
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                        <i class="fas fa-times me-1"></i> İptal
-                                    </button>
-                                    <button type="submit" class="btn btn-info">
-                                        <i class="fas fa-truck me-1"></i> Kargoya Ver
-                                    </button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Iptal</button>
+                                    <button type="submit" class="btn btn-info text-white"><i class="fas fa-truck me-1"></i>Kargoya ver</button>
                                 </div>
                             </form>
                         </div>
                     </div>
                 </div>
 
-                <!-- Detay Modal -->
                 <div class="modal fade" id="detailModal@(order.Id)" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
+                    <div class="modal-dialog modal-lg modal-dialog-scrollable">
                         <div class="modal-content">
                             <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title">
-                                    <i class="fas fa-file-invoice me-2"></i>Sipariş #@order.Id Detayları
-                                </h5>
+                                <h5 class="modal-title"><i class="fas fa-file-invoice me-2"></i>Siparis #@order.Id detaylari</h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
-                                <div class="row mb-4">
+                                <div class="row g-3 mb-4">
                                     <div class="col-md-6">
-                                        <div class="card bg-light">
-                                            <div class="card-body">
-                                                <h6 class="mb-3"><i class="fas fa-user me-2"></i>Müşteri Bilgileri</h6>
-                                                @if (order.Address != null)
-                                                {
-                                                    <p class="mb-1"><strong>Ad Soyad:</strong> @order.Address.FirstName @order.Address.LastName</p>
-                                                    <p class="mb-1"><strong>Telefon:</strong> @order.Address.PhoneNumber</p>
-                                                    <p class="mb-0"><strong>Email:</strong> @order.Address.Email</p>
-                                                }
-                                            </div>
+                                        <div class="detail-panel h-100">
+                                            <h6 class="mb-3">Musteri bilgileri</h6>
+                                            <div><strong>@customerName</strong></div>
+                                            <div class="text-muted">@order.Address?.PhoneNumber</div>
+                                            <div class="text-muted">@order.Address?.Email</div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="card bg-light">
-                                            <div class="card-body">
-                                                <h6 class="mb-3"><i class="fas fa-map-marker-alt me-2"></i>Teslimat Adresi</h6>
-                                                @if (order.Address != null)
-                                                {
-                                                    <p class="mb-1">@order.Address.AddressDetail</p>
-                                                    <p class="mb-1">@order.Address.Neighborhood</p>
-                                                    <p class="mb-0">@order.Address.District / @order.Address.Province - @order.Address.PostalCode</p>
-                                                }
-                                            </div>
+                                        <div class="detail-panel h-100">
+                                            <h6 class="mb-3">Teslimat adresi</h6>
+                                            <div>@order.Address?.AddressDetail</div>
+                                            <div class="text-muted">@order.Address?.Neighborhood</div>
+                                            <div class="text-muted">@order.Address?.District / @order.Address?.Province @order.Address?.PostalCode</div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <h6 class="mb-3"><i class="fas fa-box me-2"></i>Sipariş Ürünleri</h6>
                                 <div class="table-responsive">
-                                    <table class="table table-hover">
+                                    <table class="table table-sm align-middle">
                                         <thead class="table-light">
                                             <tr>
-                                                <th>Ürün Adı</th>
-                                                <th class="text-end">Fiyat</th>
+                                                <th>Urun</th>
+                                                <th class="text-center">Adet</th>
+                                                <th class="text-end">Birim fiyat</th>
+                                                <th class="text-end">Tutar</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -292,14 +263,16 @@
                                             {
                                                 <tr>
                                                     <td>@item.ProductName</td>
-                                                    <td class="text-end">₺@item.Price.ToString("N2")</td>
+                                                    <td class="text-center">@item.Quantity</td>
+                                                    <td class="text-end">@item.Price.ToString("C2")</td>
+                                                    <td class="text-end">@((item.Price * item.Quantity).ToString("C2"))</td>
                                                 </tr>
                                             }
                                         </tbody>
-                                        <tfoot class="table-light">
+                                        <tfoot>
                                             <tr>
-                                                <th>TOPLAM</th>
-                                                <th class="text-end text-success">₺@order.OrderItems.Sum(x => x.Price).ToString("N2")</th>
+                                                <th colspan="3">Toplam</th>
+                                                <th class="text-end text-success">@orderTotal.ToString("C2")</th>
                                             </tr>
                                         </tfoot>
                                     </table>
@@ -312,235 +285,310 @@
         }
         else
         {
-            <div class="col-12">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body text-center py-5">
-                        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
-                        <h5 class="text-muted">Henüz sipariş bulunmamaktadır</h5>
-                        <p class="text-muted">Yeni siparişler burada görünecektir.</p>
-                    </div>
-                </div>
+            <div class="empty-state">
+                <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
+                <h5 class="mb-2">Sonuc bulunamadi</h5>
+                <p class="text-muted mb-0">Filtreleri degistirip tekrar deneyin.</p>
             </div>
         }
     </div>
+
+    @if (Model.Results.TotalPages > 1)
+    {
+        <nav class="mt-4" aria-label="Order pagination">
+            <ul class="pagination justify-content-center flex-wrap gap-2">
+                <li class="page-item @(Model.Results.HasPreviousPage ? string.Empty : "disabled")">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-Query="@Model.Query"
+                       asp-route-Status="@Model.Status"
+                       asp-route-DateFrom="@(Model.DateFrom?.ToString("yyyy-MM-dd"))"
+                       asp-route-DateTo="@(Model.DateTo?.ToString("yyyy-MM-dd"))"
+                       asp-route-Page="@(Model.Results.Page - 1)"
+                       asp-route-PageSize="@Model.PageSize">Onceki</a>
+                </li>
+                @for (var i = Math.Max(1, Model.Results.Page - 2); i <= Math.Min(Model.Results.TotalPages, Model.Results.Page + 2); i++)
+                {
+                    <li class="page-item @(i == Model.Results.Page ? "active" : string.Empty)">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-Query="@Model.Query"
+                           asp-route-Status="@Model.Status"
+                           asp-route-DateFrom="@(Model.DateFrom?.ToString("yyyy-MM-dd"))"
+                           asp-route-DateTo="@(Model.DateTo?.ToString("yyyy-MM-dd"))"
+                           asp-route-Page="@i"
+                           asp-route-PageSize="@Model.PageSize">@i</a>
+                    </li>
+                }
+                <li class="page-item @(Model.Results.HasNextPage ? string.Empty : "disabled")">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-Query="@Model.Query"
+                       asp-route-Status="@Model.Status"
+                       asp-route-DateFrom="@(Model.DateFrom?.ToString("yyyy-MM-dd"))"
+                       asp-route-DateTo="@(Model.DateTo?.ToString("yyyy-MM-dd"))"
+                       asp-route-Page="@(Model.Results.Page + 1)"
+                       asp-route-PageSize="@Model.PageSize">Sonraki</a>
+                </li>
+            </ul>
+        </nav>
+    }
 </div>
 
-<!-- Toast Notification (Sol Alt) -->
+<div class="modal fade" id="prepareConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Siparisi hazirla</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Bu siparisi hazirlamaya baslamak istediginize emin misiniz?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Iptal</button>
+                <form asp-action="UpdateStatus" method="post">
+                    <input type="hidden" name="orderId" id="prepareOrderId" />
+                    <input type="hidden" name="status" value="3" />
+                    <input type="hidden" name="returnUrl" value="@currentUrl" />
+                    <button type="submit" class="btn btn-primary">Hazirlamaya basla</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deliverConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-box-open me-2"></i>Siparisi teslim et</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Bu siparisi teslim edildi olarak isaretlemek istediginize emin misiniz?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Iptal</button>
+                <form asp-action="UpdateStatus" method="post">
+                    <input type="hidden" name="orderId" id="deliverOrderId" />
+                    <input type="hidden" name="status" value="5" />
+                    <input type="hidden" name="returnUrl" value="@currentUrl" />
+                    <button type="submit" class="btn btn-success">Teslim edildi</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="position-fixed bottom-0 start-0 p-3" style="z-index: 1050;">
     <div id="orderToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
-            <div class="toast-body">
-                <i class="fas fa-check-circle me-2"></i>
-                <span id="toastMessage"></span>
-            </div>
+            <div class="toast-body"></div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
 
-<!-- Hazırla Onay Modal -->
-<div class="modal fade" id="prepareConfirmModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-cog me-2"></i>Siparişi Hazırla
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-3">
-                    <i class="fas fa-box-open fa-3x text-primary mb-3"></i>
-                    <h6>Bu siparişi hazırlamaya başlamak istediğinize emin misiniz?</h6>
-                </div>
-                <div class="alert alert-info mb-0">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <small>Sipariş durumu "Hazırlanıyor" olarak güncellenecek ve müşteriye bilgilendirme e-postası gönderilecektir.</small>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i> İptal
-                </button>
-                <form id="prepareForm" asp-action="UpdateStatus" method="post" style="display: inline;">
-                    <input type="hidden" name="orderId" id="prepareOrderId" />
-                    <input type="hidden" name="status" value="3" />
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-cog me-1"></i> Hazırlamaya Başla
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Deliver Onay Modal -->
-<div class="modal fade" id="deliverConfirmModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-box-open me-2"></i>Siparişi Teslim Et
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-3">
-                    <i class="fas fa-check-double fa-3x text-success mb-3"></i>
-                    <h6>Bu siparişi <strong>"Teslim Edildi"</strong> olarak işaretlemek istediğinize emin misiniz?</h6>
-                </div>
-                <div class="alert alert-success mb-0">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <small>Bu işlem sipariş sürecini tamamlayacak ve siparişi arşive taşıyacaktır.</small>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i> İptal
-                </button>
-                <form id="deliverForm" asp-action="UpdateStatus" method="post" style="display: inline;">
-                    <input type="hidden" name="orderId" id="deliverOrderId" />
-                    <input type="hidden" name="status" value="5" />
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check me-1"></i> Evet, Teslim Edildi
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
 <style>
-    .hover-card {
-        transition: all 0.3s ease;
+    .admin-filter-panel,
+    .admin-stat-card,
+    .order-card,
+    .detail-panel {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
     }
 
-    .hover-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+    .admin-filter-panel,
+    .order-card,
+    .detail-panel {
+        padding: 1rem;
     }
 
-    .product-list {
-        max-height: 60px;
-        overflow: hidden;
+    .admin-toolbar-note,
+    .filter-hint {
+        color: #64748b;
+        font-size: 0.9rem;
     }
 
-    .order-card {
-        transition: opacity 0.3s ease;
+    .admin-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
     }
 
-    .order-card.hidden {
-        display: none;
+    .admin-stat-card {
+        padding: 1rem 1.1rem;
+    }
+
+    .admin-stat-label {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 0.35rem;
+    }
+
+    .admin-stat-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1.1;
+    }
+
+    .admin-stat-meta {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin-top: 0.4rem;
+    }
+
+    .order-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1rem;
+    }
+
+    .order-card-top,
+    .order-card-body,
+    .order-card-actions,
+    .order-item-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .order-card-top {
+        margin-bottom: 1rem;
+    }
+
+    .order-card-body {
+        align-items: stretch;
+        margin-bottom: 1rem;
+    }
+
+    .order-meta {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .order-number {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .order-date,
+    .order-meta-label,
+    .order-meta-sub {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+
+    .order-meta-value {
+        font-weight: 600;
+        color: #111827;
+        line-height: 1.35;
+    }
+
+    .order-status-badge {
+        padding: 0.55rem 0.8rem;
+        border-radius: 999px;
+    }
+
+    .order-items-preview {
+        padding-top: 0.85rem;
+        border-top: 1px solid #f1f5f9;
+        margin-bottom: 1rem;
+    }
+
+    .order-item-line + .order-item-line {
+        margin-top: 0.4rem;
+    }
+
+    .order-card-actions {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .empty-state {
+        background: #fff;
+        border: 1px dashed #d1d5db;
+        border-radius: 8px;
+        padding: 3rem 1.5rem;
+        text-align: center;
+    }
+
+    .page-link {
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        color: #111827;
+    }
+
+    .page-item.active .page-link {
+        background: #111827;
+        border-color: #111827;
+    }
+
+    @@media (max-width: 1200px) {
+        .admin-stat-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .admin-stat-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .order-card-body {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .order-meta.text-end {
+            text-align: left !important;
+        }
     }
 </style>
 
-<script>
-    let currentShipOrderId = null;
+@section Scripts {
+    <script>
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('orderToast');
+            const toastBody = toast.querySelector('.toast-body');
 
-    // Toast göster
-    function showToast(message, type = 'success') {
-        const toast = document.getElementById('orderToast');
-        const toastBody = toast.querySelector('.toast-body');
-        const toastMessage = document.getElementById('toastMessage');
-        
-        // Renk ayarla
-        toast.classList.remove('bg-success', 'bg-danger', 'bg-info');
-        if (type === 'success') {
-            toast.classList.add('bg-success', 'text-white');
-            toastBody.innerHTML = '<i class="fas fa-check-circle me-2"></i><span>' + message + '</span>';
-        } else if (type === 'error') {
-            toast.classList.add('bg-danger', 'text-white');
-            toastBody.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i><span>' + message + '</span>';
-        } else {
-            toast.classList.add('bg-info', 'text-white');
-            toastBody.innerHTML = '<i class="fas fa-info-circle me-2"></i><span>' + message + '</span>';
+            toast.classList.remove('bg-success', 'bg-danger');
+            toast.classList.add(type === 'success' ? 'bg-success' : 'bg-danger', 'text-white');
+            toastBody.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i><span>${message}</span>`;
+
+            bootstrap.Toast.getOrCreateInstance(toast, { delay: 4000 }).show();
         }
-        
-        const bsToast = new bootstrap.Toast(toast, { delay: 4000 });
-        bsToast.show();
-    }
 
-    // Hazırla onay popup
-    function showPrepareConfirm(orderId) {
-        document.getElementById('prepareOrderId').value = orderId;
-        const modal = new bootstrap.Modal(document.getElementById('prepareConfirmModal'));
-        modal.show();
-    }
-
-    // Kargola onay popup
-    function showShipConfirm(orderId) {
-        currentShipOrderId = orderId;
-        const modal = new bootstrap.Modal(document.getElementById('shipConfirmModal'));
-        modal.show();
-    }
-
-    // Teslim onay popup
-    function showDeliverConfirm(orderId) {
-        document.getElementById('deliverOrderId').value = orderId;
-        const modal = new bootstrap.Modal(document.getElementById('deliverConfirmModal'));
-        modal.show();
-    }
-
-    // Kargola modal göster
-    function showShipModal(orderId) {
-        currentShipOrderId = orderId;
-        const shipModal = new bootstrap.Modal(document.getElementById('shipModal' + orderId));
-        shipModal.show();
-    }
-
-    // Kargola onay
-    document.getElementById('confirmShipBtn')?.addEventListener('click', function() {
-        if (currentShipOrderId) {
-            const confirmModal = document.getElementById('shipConfirmModal');
-            
-            // Onay modalını kapat
-            bootstrap.Modal.getInstance(confirmModal).hide();
-            
-            // Kargo modalını göster
-            setTimeout(() => {
-                showShipModal(currentShipOrderId);
-            }, 300);
+        function showPrepareConfirm(orderId) {
+            document.getElementById('prepareOrderId').value = orderId;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('prepareConfirmModal')).show();
         }
-    });
 
-    function showOrderDetail(orderId) {
-        const modal = new bootstrap.Modal(document.getElementById('detailModal' + orderId));
-        modal.show();
-    }
+        function showDeliverConfirm(orderId) {
+            document.getElementById('deliverOrderId').value = orderId;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('deliverConfirmModal')).show();
+        }
 
-    function filterOrders(status) {
-        const cards = document.querySelectorAll('.order-card');
-        
-        cards.forEach(card => {
-            const orderStatus = card.getAttribute('data-status');
-            
-            if (status === 'all') {
-                card.classList.remove('hidden');
-            } else if (status === 'pending' && orderStatus === '0') {
-                card.classList.remove('hidden');
-            } else if (status === 'processing' && orderStatus === '3') {
-                card.classList.remove('hidden');
-            } else if (status === 'shipped' && orderStatus === '4') {
-                card.classList.remove('hidden');
-            } else {
-                card.classList.add('hidden');
+        function showShipModal(orderId) {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('shipModal' + orderId)).show();
+        }
+
+        function showOrderDetail(orderId) {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal' + orderId)).show();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            @if (TempData["Success"] != null)
+            {
+                <text>showToast('@TempData["Success"]', 'success');</text>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <text>showToast('@TempData["Error"]', 'error');</text>
             }
         });
-    }
-
-    // Sayfa yüklendiğinde TempData'dan mesaj göster
-    document.addEventListener('DOMContentLoaded', function() {
-        @if (TempData["Success"] != null)
-        {
-            <text>
-            showToast('@TempData["Success"]', 'success');
-            </text>
-        }
-        @if (TempData["Error"] != null)
-        {
-            <text>
-            showToast('@TempData["Error"]', 'error');
-            </text>
-        }
-    });
-</script>
+    </script>
+}

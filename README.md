@@ -28,6 +28,8 @@ Get-ChildItem -Recurse -Filter "appsettings.example.json" | ForEach-Object {
 # Admin User Settings
 ADMIN_EMAIL=your-email@example.com
 ADMIN_PASSWORD=YourSecurePassword123
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # Email Settings
 EmailSettings__SmtpUsername=your-email@gmail.com
@@ -123,6 +125,9 @@ Aktif workflow'lar: `.github/workflows/k3s-config-sync.yml`, `.github/workflows/
 - **Önemli Bilgiler:** 
   - Merkezi kimlik doğrulama ve yetkilendirme sağlar. 
   - Microservices ekosisteminde JWT tabanlı güvenlik sunar.
+  - Google ile giriş için Keycloak realm import dosyası `GOOGLE_CLIENT_ID` ve `GOOGLE_CLIENT_SECRET` environment variable'larını bekler.
+  - Google Cloud Console tarafında yetkili redirect URI olarak `https://keycloak.kadiryilmaz.online/realms/GameGaraj/broker/google/endpoint` tanımlanmalıdır.
+  - Local Keycloak ile test edilecekse ek olarak `http://localhost:8080/realms/GameGaraj/broker/google/endpoint` redirect URI'si de eklenmelidir.
 
 ---
 
@@ -209,5 +214,6 @@ Aktif workflow'lar: `.github/workflows/k3s-config-sync.yml`, `.github/workflows/
 - **appsettings.json** dosyaları `.gitignore`'da listelenmiştir
 - **Example dosyaları** yeni geliştiriciler için şablon olarak kullanılır
 - **Admin kullanıcısı** Keycloak realm import sırasında oluşturulur
+- **GitHub Secrets** tarafında en az şu isimler bulunmalıdır: `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `IYZICO_API_KEY`, `IYZICO_SECRET_KEY`, `RABBITMQ_URL`, `REDIS_CONNECTION`, `CATALOG_POSTGRES_CONNECTION`, `DISCOUNT_POSTGRES_CONNECTION`, `ORDER_SQLSERVER_CONNECTION`, `CAMPAIGN_SQLSERVER_CONNECTION`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`, `MINIO_SECURE`
 
 ---
