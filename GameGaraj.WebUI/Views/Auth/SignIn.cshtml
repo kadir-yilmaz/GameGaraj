@@ -3,67 +3,281 @@
     ViewData["Title"] = "Giriş Yap";
 }
 
-<div class="row">
-    <div class="col-md-4 offset-md-4">
-        <h4 class="mb-3">Giriş Yap</h4>
-        <form asp-action="SignIn" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            
-            <div class="mb-3">
-                <label asp-for="Email" class="form-label"></label>
-                <input asp-for="Email" class="form-control" />
-                <span asp-validation-for="Email" class="text-danger"></span>
-            </div>
-            
-            <div class="mb-3">
-                <label asp-for="Password" class="form-label"></label>
-                <div class="input-group">
-                    <input asp-for="Password" type="password" class="form-control" id="signInPassword" />
-                    <button class="btn btn-outline-secondary" type="button" id="toggleSignInPassword">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </div>
-                <span asp-validation-for="Password" class="text-danger"></span>
-            </div>
-            
-            <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" asp-for="IsRemember" />
-                <label class="form-check-label" asp-for="IsRemember"></label>
-            </div>
-            
-            <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary">Giriş Yap</button>
+<style>
+    .auth-page {
+        min-height: 560px;
+        padding: 48px 16px 56px;
+        background:
+            linear-gradient(135deg, rgba(35, 47, 62, 0.96), rgba(16, 24, 39, 0.92)),
+            url('/default.jpg') center/cover no-repeat;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .auth-shell {
+        width: min(600px, 100%);
+        margin: 0 auto;
+    }
+
+    .auth-card {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.97);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+        padding: 34px;
+    }
+
+    .auth-card-header {
+        margin-bottom: 24px;
+    }
+
+    .auth-kicker {
+        color: #ff6b00;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .auth-card h2 {
+        margin: 7px 0 6px;
+        color: #111827;
+        font-size: 1.75rem;
+        font-weight: 800;
+        letter-spacing: 0;
+    }
+
+    .auth-card-subtitle {
+        color: #64748b;
+        margin: 0;
+    }
+
+    .auth-field {
+        margin-bottom: 18px;
+    }
+
+    .auth-label {
+        color: #1f2937;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .auth-input-group {
+        display: flex;
+        align-items: stretch;
+        border: 1px solid #d7dee8;
+        border-radius: 8px;
+        background: #fff;
+        overflow: hidden;
+        transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .auth-input-group:focus-within {
+        border-color: #ff8a00;
+        box-shadow: 0 0 0 4px rgba(255, 138, 0, 0.13);
+    }
+
+    .auth-input-icon,
+    .auth-password-toggle {
+        width: 48px;
+        border: 0;
+        background: #f8fafc;
+        color: #64748b;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 48px;
+    }
+
+    .auth-password-toggle {
+        border-left: 1px solid #e5e7eb;
+    }
+
+    .auth-input-group .form-control {
+        border: 0;
+        min-height: 48px;
+        box-shadow: none;
+        padding-left: 0;
+    }
+
+    .auth-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 6px 0 20px;
+    }
+
+    .auth-check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #475569;
+        font-weight: 600;
+    }
+
+    .auth-primary-btn,
+    .auth-google-btn {
+        width: 100%;
+        min-height: 48px;
+        border-radius: 8px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .auth-primary-btn {
+        border: 1px solid #ff8a00;
+        background: #ff8a00;
+        color: #111827;
+    }
+
+    .auth-primary-btn:hover {
+        background: #f97316;
+        border-color: #f97316;
+        color: #111827;
+    }
+
+    .auth-divider {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: #94a3b8;
+        font-weight: 700;
+        font-size: 0.88rem;
+        margin: 20px 0;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+        content: "";
+        height: 1px;
+        background: #e5e7eb;
+        flex: 1;
+    }
+
+    .auth-google-btn {
+        border: 1px solid #d7dee8;
+        background: #fff;
+        color: #1f2937;
+    }
+
+    .auth-google-btn:hover {
+        border-color: #cbd5e1;
+        background: #f8fafc;
+        color: #111827;
+    }
+
+    .auth-switch {
+        text-align: center;
+        color: #64748b;
+        margin: 22px 0 0;
+    }
+
+    .auth-switch a {
+        color: #ff6b00;
+        font-weight: 800;
+        text-decoration: none;
+    }
+
+    .validation-summary-errors {
+        border-radius: 8px;
+        padding: 12px 14px;
+        background: #fff1f2;
+        color: #be123c;
+        margin-bottom: 18px;
+        border: 1px solid #fecdd3;
+    }
+
+    @@media (max-width: 576px) {
+        .auth-page {
+            padding: 24px 12px 32px;
+        }
+
+        .auth-card {
+            padding: 24px;
+        }
+    }
+</style>
+
+<section class="auth-page">
+    <div class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-card-header">
+                <div class="auth-kicker">Üye girişi</div>
+                <h2>Giriş Yap</h2>
+                <p class="auth-card-subtitle">GameGaraj hesabınızla devam edin.</p>
             </div>
 
-            <div class="text-center mt-3">
-                <p class="text-muted mb-0">
-                    Hesabınız yok mu? 
-                    <a asp-action="SignUp" class="text-primary fw-semibold text-decoration-none">
-                        Kayıt Ol
-                    </a>
+            <form asp-action="SignIn" method="post">
+                <div asp-validation-summary="ModelOnly"></div>
+
+                <div class="auth-field">
+                    <label asp-for="Email" class="form-label auth-label">Email adresiniz</label>
+                    <div class="auth-input-group">
+                        <span class="auth-input-icon"><i class="fas fa-envelope"></i></span>
+                        <input asp-for="Email" class="form-control" autocomplete="email" placeholder="ornek@email.com" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="auth-field">
+                    <label asp-for="Password" class="form-label auth-label">Şifreniz</label>
+                    <div class="auth-input-group">
+                        <span class="auth-input-icon"><i class="fas fa-lock"></i></span>
+                        <input asp-for="Password" type="password" class="form-control" id="signInPassword" autocomplete="current-password" placeholder="Şifrenizi girin" />
+                        <button class="auth-password-toggle" type="button" id="toggleSignInPassword" aria-label="Şifreyi göster">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+
+                <div class="auth-actions">
+                    <label class="auth-check">
+                        <input type="checkbox" class="form-check-input m-0" asp-for="IsRemember" />
+                        <span>Beni hatırla</span>
+                    </label>
+                    <a href="#" class="text-decoration-none fw-bold" style="color:#ff6b00;">Şifremi unuttum</a>
+                </div>
+
+                <button type="submit" class="btn auth-primary-btn">
+                    <i class="fas fa-right-to-bracket"></i>
+                    Giriş Yap
+                </button>
+
+                <div class="auth-divider">veya</div>
+
+                <button type="button" class="btn auth-google-btn" disabled title="Google ile giriş yakında eklenecek">
+                    <i class="fab fa-google"></i>
+                    Google ile giriş yap
+                </button>
+
+                <p class="auth-switch">
+                    Hesabınız yok mu?
+                    <a asp-action="SignUp">Kayıt Ol</a>
                 </p>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
+</section>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    
+
     <script>
-        document.getElementById('toggleSignInPassword').addEventListener('click', function() {
+        document.getElementById('toggleSignInPassword')?.addEventListener('click', function () {
             const passwordInput = document.getElementById('signInPassword');
             const icon = this.querySelector('i');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
+            const isHidden = passwordInput.type === 'password';
+
+            passwordInput.type = isHidden ? 'text' : 'password';
+            icon.classList.toggle('fa-eye', !isHidden);
+            icon.classList.toggle('fa-eye-slash', isHidden);
+            this.setAttribute('aria-label', isHidden ? 'Şifreyi gizle' : 'Şifreyi göster');
         });
     </script>
 }

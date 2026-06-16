@@ -15,6 +15,23 @@ on:
         options:
           - "false"
           - "true"
+      service:
+        description: Application image to build
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - gateway
+          - catalog-api
+          - photostock-api
+          - basket-api
+          - discount-api
+          - order-api
+          - payment-api
+          - invoice-api
+          - campaign-api
+          - webui
 
 concurrency:
   group: gamegaraj-k3s-app-deploy
@@ -28,6 +45,7 @@ jobs:
     env:
       KUBECONFIG: /home/kadirserver/.kube/config
       NAMESPACE: ${{ github.event.inputs.namespace || 'default' }}
+      BUILD_SERVICE: ${{ github.event.inputs.service || 'all' }}
       K3S_SECRETS_JSON: ${{ secrets.K3S_SECRETS_JSON }}
       K3S_SECRETS: ${{ secrets.K3S_SECRETS }}
 
@@ -261,16 +279,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          docker build -t gateway:latest -f GameGaraj.Gateway/Dockerfile .
-          docker build -t catalog-api:latest -f GameGaraj.Catalog.API/Dockerfile .
-          docker build -t photostock-api:latest -f GameGaraj.PhotoStock.API/Dockerfile .
-          docker build -t basket-api:latest -f GameGaraj.Basket.API/Dockerfile .
-          docker build -t discount-api:latest -f GameGaraj.Discount.API/Dockerfile .
-          docker build -t order-api:latest -f GameGaraj.Order.API/Dockerfile .
-          docker build -t payment-api:latest -f GameGaraj.Payment.API/Dockerfile .
-          docker build -t invoice-api:latest -f GameGaraj.Invoice.API/Dockerfile .
-          docker build -t campaign-api:latest -f GameGaraj.Campaign.API/Dockerfile .
-          docker build -t webui:latest -f GameGaraj.WebUI/Dockerfile .
+          if [ "$BUILD_SERVICE" = "all" ]; then
+            docker compose -f docker-compose.build.yml build
+          else
+            docker compose -f docker-compose.build.yml build "$BUILD_SERVICE"
+          fi
 
       - name: Apply Kubernetes Manifests
         run: |

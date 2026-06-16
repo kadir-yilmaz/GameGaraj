@@ -3,138 +3,297 @@
     ViewData["Title"] = "Kayıt Ol";
 }
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-5">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-user-plus fa-3x text-primary mb-3"></i>
-                        <h3 class="fw-bold">Kayıt Ol</h3>
-                        <p class="text-muted">GameGaraj'a hoş geldiniz</p>
-                    </div>
+<style>
+    .auth-page {
+        min-height: 620px;
+        padding: 48px 16px 56px;
+        background:
+            linear-gradient(135deg, rgba(35, 47, 62, 0.96), rgba(16, 24, 39, 0.92)),
+            url('/default.jpg') center/cover no-repeat;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-                    <form asp-action="SignUp" method="post">
-                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="FirstName" class="form-label fw-semibold"></label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="fas fa-user text-muted"></i>
-                                    </span>
-                                    <input asp-for="FirstName" class="form-control border-start-0" placeholder="Adınız" />
-                                </div>
-                                <span asp-validation-for="FirstName" class="text-danger small"></span>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="LastName" class="form-label fw-semibold"></label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="fas fa-user text-muted"></i>
-                                    </span>
-                                    <input asp-for="LastName" class="form-control border-start-0" placeholder="Soyadınız" />
-                                </div>
-                                <span asp-validation-for="LastName" class="text-danger small"></span>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label asp-for="Email" class="form-label fw-semibold"></label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0">
-                                    <i class="fas fa-envelope text-muted"></i>
-                                </span>
-                                <input asp-for="Email" class="form-control border-start-0" placeholder="ornek@email.com" />
-                            </div>
-                            <span asp-validation-for="Email" class="text-danger small"></span>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label asp-for="Password" class="form-label fw-semibold"></label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0">
-                                    <i class="fas fa-lock text-muted"></i>
-                                </span>
-                                <input asp-for="Password" type="password" class="form-control border-start-0 border-end-0" placeholder="••••••••" id="signUpPassword" />
-                                <button class="btn btn-outline-secondary border-start-0" type="button" id="toggleSignUpPassword">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                            <span asp-validation-for="Password" class="text-danger small"></span>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label asp-for="ConfirmPassword" class="form-label fw-semibold"></label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0">
-                                    <i class="fas fa-lock text-muted"></i>
-                                </span>
-                                <input asp-for="ConfirmPassword" type="password" class="form-control border-start-0 border-end-0" placeholder="••••••••" id="signUpConfirmPassword" />
-                                <button class="btn btn-outline-secondary border-start-0" type="button" id="toggleConfirmPassword">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
-                        </div>
-                        
-                        <div class="d-grid gap-2 mb-3">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-user-plus me-2"></i>
-                                Kayıt Ol
-                            </button>
-                        </div>
+    .auth-shell {
+        width: min(680px, 100%);
+        margin: 0 auto;
+    }
 
-                        <div class="text-center">
-                            <p class="text-muted mb-0">
-                                Zaten hesabınız var mı? 
-                                <a asp-action="SignIn" class="text-primary fw-semibold text-decoration-none">
-                                    Giriş Yap
-                                </a>
-                            </p>
-                        </div>
-                    </form>
-                </div>
+    .auth-card {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.97);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+        padding: 32px;
+    }
+
+    .auth-card-header {
+        margin-bottom: 22px;
+    }
+
+    .auth-kicker {
+        color: #ff6b00;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .auth-card h2 {
+        margin: 7px 0 6px;
+        color: #111827;
+        font-size: 1.75rem;
+        font-weight: 800;
+        letter-spacing: 0;
+    }
+
+    .auth-card-subtitle {
+        color: #64748b;
+        margin: 0;
+    }
+
+    .auth-field {
+        margin-bottom: 16px;
+    }
+
+    .auth-label {
+        color: #1f2937;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .auth-input-group {
+        display: flex;
+        align-items: stretch;
+        border: 1px solid #d7dee8;
+        border-radius: 8px;
+        background: #fff;
+        overflow: hidden;
+        transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .auth-input-group:focus-within {
+        border-color: #ff8a00;
+        box-shadow: 0 0 0 4px rgba(255, 138, 0, 0.13);
+    }
+
+    .auth-input-icon,
+    .auth-password-toggle {
+        width: 46px;
+        border: 0;
+        background: #f8fafc;
+        color: #64748b;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 46px;
+    }
+
+    .auth-password-toggle {
+        border-left: 1px solid #e5e7eb;
+    }
+
+    .auth-input-group .form-control {
+        border: 0;
+        min-height: 46px;
+        box-shadow: none;
+        padding-left: 0;
+    }
+
+    .auth-primary-btn,
+    .auth-google-btn {
+        width: 100%;
+        min-height: 48px;
+        border-radius: 8px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .auth-primary-btn {
+        border: 1px solid #ff8a00;
+        background: #ff8a00;
+        color: #111827;
+    }
+
+    .auth-primary-btn:hover {
+        background: #f97316;
+        border-color: #f97316;
+        color: #111827;
+    }
+
+    .auth-divider {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: #94a3b8;
+        font-weight: 700;
+        font-size: 0.88rem;
+        margin: 18px 0;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+        content: "";
+        height: 1px;
+        background: #e5e7eb;
+        flex: 1;
+    }
+
+    .auth-google-btn {
+        border: 1px solid #d7dee8;
+        background: #fff;
+        color: #1f2937;
+    }
+
+    .auth-google-btn:hover {
+        border-color: #cbd5e1;
+        background: #f8fafc;
+        color: #111827;
+    }
+
+    .auth-switch {
+        text-align: center;
+        color: #64748b;
+        margin: 20px 0 0;
+    }
+
+    .auth-switch a {
+        color: #ff6b00;
+        font-weight: 800;
+        text-decoration: none;
+    }
+
+    .validation-summary-errors {
+        border-radius: 8px;
+        padding: 12px 14px;
+        background: #fff1f2;
+        color: #be123c;
+        margin-bottom: 18px;
+        border: 1px solid #fecdd3;
+    }
+
+    @@media (max-width: 576px) {
+        .auth-page {
+            padding: 24px 12px 32px;
+        }
+
+        .auth-card {
+            padding: 24px;
+        }
+    }
+</style>
+
+<section class="auth-page">
+    <div class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-card-header">
+                <div class="auth-kicker">Yeni hesap</div>
+                <h2>Kayıt Ol</h2>
+                <p class="auth-card-subtitle">Birkaç bilgiyle GameGaraj hesabınızı açın.</p>
             </div>
+
+            <form asp-action="SignUp" method="post">
+                <div asp-validation-summary="ModelOnly"></div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="auth-field">
+                            <label asp-for="FirstName" class="form-label auth-label">Ad</label>
+                            <div class="auth-input-group">
+                                <span class="auth-input-icon"><i class="fas fa-user"></i></span>
+                                <input asp-for="FirstName" class="form-control" autocomplete="given-name" placeholder="Adınız" />
+                            </div>
+                            <span asp-validation-for="FirstName" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="auth-field">
+                            <label asp-for="LastName" class="form-label auth-label">Soyad</label>
+                            <div class="auth-input-group">
+                                <span class="auth-input-icon"><i class="fas fa-user"></i></span>
+                                <input asp-for="LastName" class="form-control" autocomplete="family-name" placeholder="Soyadınız" />
+                            </div>
+                            <span asp-validation-for="LastName" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="auth-field">
+                    <label asp-for="Email" class="form-label auth-label">Email adresiniz</label>
+                    <div class="auth-input-group">
+                        <span class="auth-input-icon"><i class="fas fa-envelope"></i></span>
+                        <input asp-for="Email" class="form-control" autocomplete="email" placeholder="ornek@email.com" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="auth-field">
+                    <label asp-for="Password" class="form-label auth-label">Şifre</label>
+                    <div class="auth-input-group">
+                        <span class="auth-input-icon"><i class="fas fa-lock"></i></span>
+                        <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" placeholder="En az 6 karakter" id="signUpPassword" />
+                        <button class="auth-password-toggle" type="button" id="toggleSignUpPassword" aria-label="Şifreyi göster">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+
+                <div class="auth-field">
+                    <label asp-for="ConfirmPassword" class="form-label auth-label">Şifre tekrar</label>
+                    <div class="auth-input-group">
+                        <span class="auth-input-icon"><i class="fas fa-lock"></i></span>
+                        <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" placeholder="Şifrenizi tekrar girin" id="signUpConfirmPassword" />
+                        <button class="auth-password-toggle" type="button" id="toggleConfirmPassword" aria-label="Şifreyi göster">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn auth-primary-btn mt-1">
+                    <i class="fas fa-user-plus"></i>
+                    Kayıt Ol
+                </button>
+
+                <div class="auth-divider">veya</div>
+
+                <button type="button" class="btn auth-google-btn" disabled title="Google ile kayıt yakında eklenecek">
+                    <i class="fab fa-google"></i>
+                    Google ile kayıt ol
+                </button>
+
+                <p class="auth-switch">
+                    Zaten hesabınız var mı?
+                    <a asp-action="SignIn">Giriş Yap</a>
+                </p>
+            </form>
         </div>
     </div>
-</div>
+</section>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    
-    <script>
-        // Şifre göster/gizle
-        document.getElementById('toggleSignUpPassword').addEventListener('click', function() {
-            const passwordInput = document.getElementById('signUpPassword');
-            const icon = this.querySelector('i');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
-        });
 
-        document.getElementById('toggleConfirmPassword').addEventListener('click', function() {
-            const passwordInput = document.getElementById('signUpConfirmPassword');
-            const icon = this.querySelector('i');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
-        });
+    <script>
+        function bindPasswordToggle(buttonId, inputId) {
+            document.getElementById(buttonId)?.addEventListener('click', function () {
+                const passwordInput = document.getElementById(inputId);
+                const icon = this.querySelector('i');
+                const isHidden = passwordInput.type === 'password';
+
+                passwordInput.type = isHidden ? 'text' : 'password';
+                icon.classList.toggle('fa-eye', !isHidden);
+                icon.classList.toggle('fa-eye-slash', isHidden);
+                this.setAttribute('aria-label', isHidden ? 'Şifreyi gizle' : 'Şifreyi göster');
+            });
+        }
+
+        bindPasswordToggle('toggleSignUpPassword', 'signUpPassword');
+        bindPasswordToggle('toggleConfirmPassword', 'signUpConfirmPassword');
     </script>
 }

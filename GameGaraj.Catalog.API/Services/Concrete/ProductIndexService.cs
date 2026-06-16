@@ -170,7 +170,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 status.Status = "Online";
                 status.IndexedProductCount = await GetIndexedProductCountAsync(searchResponse.Documents.Count);
                 status.LastIndexedAt = searchResponse.Documents
-                    .Select(product => (DateTime?)(product.UpdatedAt ?? product.CreatedAt))
+                    .Select(product => product.IndexedAt ?? product.UpdatedAt ?? product.CreatedAt)
                     .Max();
 
                 return status;
@@ -228,7 +228,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                     SpecValues = product.SpecValues,
                     SearchText = product.SearchText,
                     CreatedAt = product.CreatedAt,
-                    LastIndexedAt = product.UpdatedAt ?? product.CreatedAt
+                    LastIndexedAt = product.IndexedAt ?? product.UpdatedAt ?? product.CreatedAt
                 })
                 .ToList();
 
@@ -364,6 +364,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                         ["imageUrls"] = new { type = "keyword", index = false },
                         ["createdAt"] = new { type = "date" },
                         ["updatedAt"] = new { type = "date" },
+                        ["indexedAt"] = new { type = "date" },
                         ["categoryId"] = new { type = "keyword" },
                         ["categoryName"] = new
                         {
@@ -430,6 +431,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 ImageUrls = product.ImageUrls,
                 CreatedAt = product.CreatedAt,
                 UpdatedAt = product.UpdatedAt,
+                IndexedAt = DateTime.UtcNow,
                 CategoryId = product.CategoryId,
                 CategoryName = categoryName,
                 CategorySlug = category?.Slug ?? string.Empty,

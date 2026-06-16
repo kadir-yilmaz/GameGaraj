@@ -92,6 +92,8 @@ Deployment süreci artık home server üzerinde çalışan **self-hosted GitHub 
 
 Aktif workflow'lar: `.github/workflows/k3s-config-sync.yml`, `.github/workflows/k3s-app-deploy.yml`, `.github/workflows/k3s-dashboard-install.yml`
 
+`K3s App Deploy` workflow'u `service` input'u ile tum image'lari (`all`) veya tek bir servisi (`webui`, `catalog-api`, vb.) build edebilir.
+
 ---
 
 ## Client

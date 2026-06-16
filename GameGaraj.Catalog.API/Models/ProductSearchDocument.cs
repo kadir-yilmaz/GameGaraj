@@ -17,6 +17,7 @@ namespace GameGaraj.Catalog.API.Models
         public List<string> ImageUrls { get; set; } = new();
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public DateTime? IndexedAt { get; set; }
         public string CategoryId { get; set; } = string.Empty;
         public string CategoryName { get; set; } = string.Empty;
         public string CategorySlug { get; set; } = string.Empty;
