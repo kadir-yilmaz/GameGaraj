@@ -16,6 +16,7 @@
 <form asp-area="Admin" asp-controller="Product" asp-action="Edit" method="post" id="editProductForm" enctype="multipart/form-data">
     <div asp-validation-summary="All" class="text-danger mb-3"></div>
     <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="CoverImageKey" id="coverImageKey" />
     <!-- Hidden inputs for existing ImageUrls will be appended here by JS or Razor -->
     @if (Model.ImageUrls != null)
     {
@@ -27,14 +28,17 @@
 
     <div class="row">
         <div class="col-md-8">
-            <div class="mb-3">
-                <label asp-for="Name" class="form-label">Ürün Adı</label>
-                <input asp-for="Name" class="form-control" required />
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="Brand" class="form-label">Marka</label>
-                <input asp-for="Brand" class="form-control" placeholder="Örn: AMD, MSI, ASUS" />
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label asp-for="Name" class="form-label">Ürün Adı</label>
+                    <input asp-for="Name" class="form-control" required />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Brand" class="form-label">Marka</label>
+                    <input asp-for="Brand" class="form-control js-brand-input" list="brandSuggestions" placeholder="Örn: ASUS" autocomplete="off" />
+                    <datalist id="brandSuggestions"></datalist>
+                    <div class="form-text">Listede yoksa elle yazabilirsiniz.</div>
+                </div>
             </div>
 
             <div class="mb-3">
@@ -68,13 +72,20 @@
                     <div class="row g-2" id="existingPhotosContainer">
                         @for (int i = 0; i < Model.ImageUrls.Count; i++)
                         {
-                            <div class="col-auto position-relative photo-item" data-index="@i">
+                            <div class="col-auto position-relative photo-item" data-index="@i" data-image-url="@Model.ImageUrls[i]">
                                 <img src="@Model.ImageUrls[i]" alt="Product Image" class="img-thumbnail"
-                                    style="height: 100px; width: 100px; object-fit: cover;" />
+                                    style="height: 100px; width: 100px; object-fit: cover;"
+                                    onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
+                                <span class="badge bg-primary position-absolute top-0 start-0 m-1 cover-badge @(i == 0 ? "" : "d-none")">Vitrin</span>
                                 <button type="button"
                                     class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle btn-remove-photo"
                                     data-index="@i" title="Fotoğrafı Sil">
                                     <i class="fas fa-times"></i>
+                                </button>
+                                <button type="button"
+                                    class="btn btn-light btn-sm position-absolute bottom-0 start-50 translate-middle-x mb-1 btn-set-cover"
+                                    title="Vitrin görseli yap">
+                                    <i class="fas fa-star me-1"></i>Vitrin
                                 </button>
                             </div>
                         }
@@ -159,6 +170,17 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
+            $.getJSON('/data/brands.json', function (brands) {
+                var dataList = $('#brandSuggestions');
+                dataList.empty();
+                (brands || [])
+                    .filter(function (brand) { return typeof brand === 'string' && brand.trim().length > 0; })
+                    .sort(function (a, b) { return a.localeCompare(b, 'tr', { sensitivity: 'base' }); })
+                    .forEach(function (brand) {
+                        dataList.append($('<option>').attr('value', brand));
+                    });
+            });
+
             $('#categoryIdSelect').change(function () {
                 var categoryId = $(this).val();
                 var container = $('#dynamicSpecsContainer');
@@ -212,6 +234,43 @@
                 });
             });
 
+            function rebuildExistingImageInputs() {
+                $('.existing-image-input').remove();
+
+                $('.photo-item').each(function (index) {
+                    var imageUrl = $(this).data('image-url');
+                    $('<input>', {
+                        type: 'hidden',
+                        name: 'ImageUrls',
+                        value: imageUrl,
+                        class: 'existing-image-input',
+                        'data-index': index
+                    }).appendTo('#editProductForm');
+
+                    $(this).attr('data-index', index);
+                    $(this).find('.btn-remove-photo').attr('data-index', index);
+                });
+
+                var currentCount = $('.photo-item').length;
+                $('#currentPhotoCount').text(currentCount);
+                $('#remainingPhotoCount').text(5 - currentCount);
+                $('.cover-badge').addClass('d-none');
+                $('.photo-item:first .cover-badge').removeClass('d-none');
+
+                var firstImageUrl = $('.photo-item:first').data('image-url') || '';
+                if (firstImageUrl) {
+                    $('#coverImageKey').val('existing:' + firstImageUrl);
+                }
+            }
+
+            rebuildExistingImageInputs();
+
+            $(document).on('click', '.btn-set-cover', function () {
+                var item = $(this).closest('.photo-item');
+                $('#existingPhotosContainer').prepend(item);
+                rebuildExistingImageInputs();
+            });
+
             // Photo Removal Logic
             $('.btn-remove-photo').click(function () {
                 var index = $(this).data('index');
@@ -221,6 +280,7 @@
 
                 // Remove the hidden input so it's not sent to the server
                 $(`.existing-image-input[data-index="${index}"]`).remove();
+                rebuildExistingImageInputs();
 
                 // Update counts
                 var currentCount = $('.existing-image-input').length;
@@ -231,6 +291,53 @@
                     $('#existingPhotosContainer').parent().append('<div class="alert alert-secondary py-2">Tüm mevcut fotoğrafları sildiniz. Yeni fotoğraf ekleyebilirsiniz.</div>');
                     $('#photoLimitText').hide();
                 }
+            });
+
+            var selectedNewPhotoFiles = [];
+
+            function setNewCoverPhoto(index) {
+                if (index < 0 || index >= selectedNewPhotoFiles.length) return;
+
+                $('#coverImageKey').val('new:' + index);
+                $('.photo-item .cover-badge').addClass('d-none');
+                renderNewPhotoPreviews();
+            }
+
+            function renderNewPhotoPreviews() {
+                var previewContainer = $('#newPhotosPreviewContainer');
+                var previewLabel = $('#newPhotosPreviewLabel');
+                previewContainer.empty();
+
+                if (selectedNewPhotoFiles.length === 0) {
+                    previewLabel.addClass('d-none');
+                    return;
+                }
+
+                previewLabel.removeClass('d-none');
+
+                selectedNewPhotoFiles.forEach((file, index) => {
+                    if (!file.type.startsWith('image/')) return;
+
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        var isCover = $('#coverImageKey').val() === 'new:' + index;
+                        var html = `
+                            <div class="col-auto position-relative">
+                                <img src="${e.target.result}" class="img-thumbnail" style="height: 100px; width: 100px; object-fit: cover;" alt="Preview">
+                                <span class="badge bg-primary position-absolute top-0 start-0 m-1 cover-badge ${isCover ? '' : 'd-none'}">Vitrin</span>
+                                <button type="button" class="btn btn-light btn-sm position-absolute bottom-0 start-50 translate-middle-x mb-1 btn-new-set-cover" data-index="${index}" title="Vitrin görseli yap">
+                                    <i class="fas fa-star me-1"></i>Vitrin
+                                </button>
+                            </div>
+                        `;
+                        previewContainer.append(html);
+                    }
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            $(document).on('click', '.btn-new-set-cover', function() {
+                setNewCoverPhoto(parseInt($(this).data('index'), 10));
             });
 
             // New Photo Preview Logic
@@ -245,27 +352,17 @@
                     if (this.files.length > remainingSlots) {
                         alert('Maksimum 5 fotoğraf limitine ulaştınız. En fazla ' + remainingSlots + ' yeni fotoğraf yükleyebilirsiniz.');
                         $(this).val('');
+                        selectedNewPhotoFiles = [];
+                        $('#coverImageKey').val($('.photo-item:first').data('image-url') ? 'existing:' + $('.photo-item:first').data('image-url') : '');
                         previewLabel.addClass('d-none');
                         return;
                     }
 
-                    previewLabel.removeClass('d-none');
-                    
-                    Array.from(this.files).forEach(file => {
-                        if (file.type.startsWith('image/')) {
-                            var reader = new FileReader();
-                            reader.onload = function(e) {
-                                var html = `
-                                    <div class="col-auto">
-                                        <img src="${e.target.result}" class="img-thumbnail" style="height: 100px; width: 100px; object-fit: cover;" alt="Preview">
-                                    </div>
-                                `;
-                                previewContainer.append(html);
-                            }
-                            reader.readAsDataURL(file);
-                        }
-                    });
+                    selectedNewPhotoFiles = Array.from(this.files);
+                    renderNewPhotoPreviews();
                 } else {
+                    selectedNewPhotoFiles = [];
+                    $('#coverImageKey').val($('.photo-item:first').data('image-url') ? 'existing:' + $('.photo-item:first').data('image-url') : '');
                     previewLabel.addClass('d-none');
                 }
             });

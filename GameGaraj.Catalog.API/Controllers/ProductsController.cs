@@ -1,6 +1,6 @@
 using GameGaraj.Catalog.API.Dtos;
+using GameGaraj.Catalog.API.Exceptions;
 using GameGaraj.Catalog.API.Services.Abstract;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GameGaraj.Catalog.API.Controllers
@@ -9,109 +9,151 @@ namespace GameGaraj.Catalog.API.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly IProductService _productService;
+        private readonly IProductQueryService _queries;
+        private readonly IProductCommandService _commands;
+        private readonly IProductIndexService _productIndexService;
 
-        public ProductsController(IProductService productService)
+        public ProductsController(
+            IProductQueryService queries,
+            IProductCommandService commands,
+            IProductIndexService productIndexService)
         {
-            _productService = productService;
+            _queries = queries;
+            _commands = commands;
+            _productIndexService = productIndexService;
         }
 
-        // GET: api/products
         [HttpGet]
-        public async Task<IActionResult> GetAll(string? categoryId = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, [FromQuery] Dictionary<string, string>? specs = null)
+        public async Task<IActionResult> GetAll(string? categoryId = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, string? brand = null, [FromQuery] Dictionary<string, string>? specs = null)
         {
-            var result = await _productService.GetAllAsync(categoryId, sortBy, minPrice, maxPrice, specs);
+            var result = await _queries.GetAllAsync(categoryId, sortBy, minPrice, maxPrice, specs, brand);
             return Ok(result);
         }
 
-        // GET: api/products/search?q=keyword
         [HttpGet("search")]
         public async Task<IActionResult> Search([FromQuery] string q)
         {
-            var result = await _productService.SearchAsync(q);
+            var result = await _queries.SearchAsync(q);
             return Ok(result);
         }
 
-        // GET: api/products/brands?q=keyword
         [HttpGet("brands")]
         public async Task<IActionResult> GetBrands([FromQuery] string q)
         {
-            var result = await _productService.GetBrandsByKeywordAsync(q);
+            var result = await _queries.GetBrandsByKeywordAsync(q);
             return Ok(result);
         }
 
-        // GET: api/products/featured
+        [HttpPost("search/reindex")]
+        public async Task<IActionResult> ReindexSearch()
+        {
+            var result = await _productIndexService.ReindexAllAsync();
+            return Ok(result);
+        }
+
+        [HttpGet("search/status")]
+        public async Task<IActionResult> GetSearchIndexStatus()
+        {
+            var result = await _productIndexService.GetStatusAsync();
+            return Ok(result);
+        }
+
+        [HttpGet("search/documents")]
+        public async Task<IActionResult> GetSearchIndexDocuments([FromQuery] int page = 1, [FromQuery] int pageSize = 100)
+        {
+            var result = await _productIndexService.GetDocumentPreviewsAsync(page, pageSize);
+            return Ok(result);
+        }
+
+        [HttpGet("search/suggestions")]
+        public async Task<IActionResult> GetSuggestions([FromQuery] string q)
+        {
+            var result = await _queries.GetSuggestionsAsync(q);
+            return Ok(result);
+        }
+
+        [HttpGet("search/facets")]
+        public async Task<IActionResult> GetSearchFacets([FromQuery] string? q)
+        {
+            var result = await _queries.GetSearchFacetsAsync(q);
+            return Ok(result);
+        }
+
         [HttpGet("featured")]
         public async Task<IActionResult> GetFeatured()
         {
-            var result = await _productService.GetFeaturedProductsAsync();
+            var result = await _queries.GetFeaturedProductsAsync();
             return Ok(result);
         }
 
-        // GET: api/products/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var result = await _productService.GetByIdAsync(id);
+            var result = await _queries.GetByIdAsync(id);
             if (result == null)
-                return NotFound(new { Message = "Ürün bulunamadı." });
+                return NotFound(new { Message = "Urun bulunamadi." });
 
             return Ok(result);
         }
 
-        // GET: api/products/slug/{slug}
         [HttpGet("slug/{slug}")]
         public async Task<IActionResult> GetBySlug(string slug)
         {
-            var result = await _productService.GetBySlugAsync(slug);
+            var result = await _queries.GetBySlugAsync(slug);
             if (result == null)
-                return NotFound(new { Message = "Ürün bulunamadı." });
+                return NotFound(new { Message = "Urun bulunamadi." });
 
             return Ok(result);
         }
 
-        // GET: api/products/category/{categoryId}
         [HttpGet("category/{categoryId}")]
         public async Task<IActionResult> GetByCategoryId(string categoryId)
         {
-            var result = await _productService.GetByCategoryIdAsync(categoryId);
+            var result = await _queries.GetByCategoryIdAsync(categoryId);
             return Ok(result);
         }
 
-        // POST: api/products
         [HttpPost]
-        // [Authorize]
         public async Task<IActionResult> Create(ProductCreateDto dto)
         {
-            var result = await _productService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            try
+            {
+                var result = await _commands.CreateAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            }
+            catch (CatalogValidationException ex)
+            {
+                return BadRequest(new { Message = "Urun kaydedilemedi.", Errors = ex.Errors });
+            }
         }
 
-        // PUT: api/products
         [HttpPut]
-        // [Authorize]
         public async Task<IActionResult> Update(ProductUpdateDto dto)
         {
-            var result = await _productService.UpdateAsync(dto);
-            if (!result)
-                return NotFound(new { Message = "Ürün güncellenemedi." });
+            try
+            {
+                var result = await _commands.UpdateAsync(dto);
+                if (!result)
+                    return NotFound(new { Message = "Urun guncellenemedi." });
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (CatalogValidationException ex)
+            {
+                return BadRequest(new { Message = "Urun guncellenemedi.", Errors = ex.Errors });
+            }
         }
 
-        // DELETE: api/products/{id}
         [HttpDelete("{id}")]
-        // [Authorize]
         public async Task<IActionResult> Delete(string id)
         {
-            var result = await _productService.DeleteAsync(id);
+            var result = await _commands.DeleteAsync(id);
             if (!result)
-                return NotFound(new { Message = "Ürün silinemedi." });
+                return NotFound(new { Message = "Urun silinemedi." });
 
             return NoContent();
         }
 
-        // DEBUG: api/products/debug/category-test/{categoryId}
         [HttpGet("debug/category-test/{categoryId}")]
         public async Task<IActionResult> DebugCategoryTest(string categoryId)
         {
@@ -122,7 +164,7 @@ namespace GameGaraj.Catalog.API.Controllers
                 Message = "Check server logs for detailed trace"
             };
 
-            var result = await _productService.GetByCategoryIdAsync(categoryId);
+            var result = await _queries.GetByCategoryIdAsync(categoryId);
 
             return Ok(new
             {

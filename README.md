@@ -46,7 +46,7 @@ docker-compose up -d
 
 ### 4. Uygulamayı Çalıştırın
 
-WebUI başlatıldığında, `.env` dosyasındaki admin kullanıcısı otomatik olarak Keycloak'ta oluşturulacaktır.
+Keycloak ilk kez realm import ederken `.env` dosyasındaki `ADMIN_EMAIL` ve `ADMIN_PASSWORD` değerleriyle admin kullanıcısını oluşturur.
 
 ---
 
@@ -57,8 +57,15 @@ Bu proje, sadece bir e-ticaret uygulaması değil; karmaşık dağıtık sistem 
 ### 1. Advanced SEO & Dynamic Routing
 Standart GUID tabanlı URL yapıları yerine, tüm sistem **Slug-based** bir mimari üzerine kurulmuştur. Ürün ve kategori ağacı için `/product/c/{category}` ve `/product/p/{slug}` formatında, arama motoru dostu ve kullanıcı deneyimi yüksek bir yönlendirme katmanı sunar.
 
-### 2. PostgreSQL JSON Column Approach (Flexible Schema)
-Katalog servisinde, her ürünün değişen teknik özelliklerini (Specs) yönetmek için geleneksel EAV (Entity-Attribute-Value) modeli yerine **PostgreSQL JSONB** sütun yaklaşımı tercih edilmiştir. Bu sayede ilişkisel bir veritabanı (RDBMS) içinde **şemasız (schema-less) veri esnekliği** elde edilmiş, karmaşık filtreleme operasyonları JSONB indeksleri üzerinden yüksek performansla sunulmuştur.
+### 2. Catalog CQRS: PostgreSQL JSONB Write Model + Elasticsearch Read Model
+Katalog servisinde okuma ve yazma sorumlulukları MediatR kullanmadan, sade servis katmanları ile ayrılmıştır. Ürün oluşturma/güncelleme/silme işlemleri **PostgreSQL** üzerinde tutulur; ürünün kategoriye göre değişebilen teknik özellikleri ise `Specs` alanında **JSONB** olarak saklanır.
+
+Bu tercih write tarafında bilinçlidir:
+- **PostgreSQL ana doğruluk kaynağıdır:** Ürün fiyatı, stok, kategori, aktiflik ve teknik özellikler transactional olarak tek yerde tutulur.
+- **JSONB esneklik sağlar:** Mouse, ekran kartı, RAM veya laptop gibi farklı kategoriler aynı ürün tablosunda farklı attribute setleriyle yönetilebilir. EAV modeliyle oluşacak çok sayıda join ve bakım maliyeti azaltılır.
+- **Admin operasyonları daha güvenlidir:** Kategori attribute değişikliklerinde ürün spec temizliği/güncellemesi write modelde kontrollü yapılır.
+
+Read tarafında ise listeleme, arama, öneri ve facet senaryoları için **Elasticsearch** kullanılır. Böylece typo toleransı, autocomplete, marka/kategori önerileri ve hızlı filtreleme gibi kullanıcıya dönük okuma ihtiyaçları PostgreSQL sorgularını karmaşıklaştırmadan, ayrı bir read model üzerinden karşılanır.
 
 ### 3. Event-Driven Architecture & SAGA Pattern
 Mikroservisler arası iletişim, **MassTransit** ve **RabbitMQ** üzerinden asenkron olarak yönetilir. Sipariş süreçleri (Ordering), ödeme (Payment) ve fatura (Invoice) işlemleri arasındaki veri tutarlılığı, dağıtık sistemlerdeki en kritik konulardan biri olan **SAGA Pattern** yaklaşımları ile koordine edilir.
@@ -66,19 +73,24 @@ Mikroservisler arası iletişim, **MassTransit** ve **RabbitMQ** üzerinden asen
 ### 4. Identity Management (Keycloak)
 Güvenlik katmanı, endüstri standardı olan **Keycloak** (OIDC/OAuth2) ile merkezi olarak yönetilir. JWT tabanlı yetkilendirme mimarisi, gateway ve mikroservisler arasında tam güvenli bir ekosistem sağlar.
 
-### 5. High Performance Search (Elasticsearch)
-Ürün aramaları ve indeksleme işlemleri için **Elasticsearch** kullanılarak, milisaniyeler seviyesinde arama ve auto-complete yetenekleri kazandırılmıştır.
+### 5. High Performance Search & Smart Suggestions (Elasticsearch)
+Ürün aramaları, autocomplete, marka/kategori önerileri ve arama facetleri için **Elasticsearch** kullanılır. Catalog API, ürün write işlemlerinden sonra Elasticsearch indeksini günceller; ihtiyaç halinde admin panelden indeks yeniden oluşturulabilir. Bu yapı arama deneyimini hızlandırırken PostgreSQL'i transactional write model olarak temiz tutar.
 
 ### 6. Comprehensive Campaign & Coupon Management
 Projede iki farklı indirim mekanizması bir arada sunulmuştur:
 - **Campaign Engine:** İş mantığının esnekliğini korumak adına **Strategy Pattern** ile kurgulanmıştır. "3 Al 2 Öde", "X TL Üzeri Sabit İndirim" gibi karmaşık kampanya türleri, mevcut koda dokunmadan (Open/Closed Principle) sisteme dahil edilebilir.
 - **Coupon Service:** Kullanıcı bazlı indirim kuponlarını yönetir. Yüksek trafik altında hızlı cevap verebilmesi adına **Dapper (Micro ORM)** ile optimize edilmiştir.
 
-### 7. CI/CD Pipeline & Deployment (K8s & Swarm)
-Modern DevOps pratikleri kullanılarak projenin lokal ortamda tam entegre çalışması sağlanmıştır:
-- **Self-Hosted Runner ile CI/CD:** GitHub Actions otomasyonu, "Self-Hosted Runner" mimarisiyle doğrudan lokal ortama (Kubernetes veya Docker Swarm) entegre edilmiştir. 
-- **Docker Swarm & Kubernetes Seçeneği:** Proje hem K8s üzerinde (port: 300xx) hem de Swarm üzerinde (port: 310xx) çalışacak şekilde dizayn edilmiştir. Her ikisini aynı anda test edebilirsiniz.
-- **Otomatik Sürüm Takibi:** Deployment sırasında GitHub SHA Commit ID'si yakalanıp dinamik olarak WebUI uygulamasına enjekte edilir.
+### 7. CI/CD Pipeline & Home Server Deployment (K3s)
+Deployment süreci artık home server üzerinde çalışan **self-hosted GitHub Actions runner** ile yönetilir. Ana hedef ortam hafif Kubernetes dağıtımı olan **K3s**'tir.
+
+- **Self-hosted runner:** Workflow, home server üzerindeki Linux/X64 runner'da çalışır ve `/home/kadirserver/.kube/config` üzerinden K3s cluster'a bağlanır.
+- **Config sync:** `k8s/config/**` altındaki dosyalar Kubernetes ConfigMap olarak senkronize edilir.
+- **Secret yönetimi:** Hassas bilgiler GitHub Secrets üzerinden alınır. Tek tek secret değerleri veya `K3S_SECRETS_JSON` ile toplu secret aktarımı desteklenir.
+- **K8s rollout:** Manifestler `k8s/**` altından uygulanır, deployment'lar restart edilir ve rollout status kontrolü yapılır.
+- **Manuel kurulum opsiyonu:** Workflow dispatch ile istenirse home server üzerinde K3s eksikse otomatik kurulabilir.
+
+Aktif workflow'lar: `.github/workflows/k3s-config-sync.yml`, `.github/workflows/k3s-app-deploy.yml`, `.github/workflows/k3s-dashboard-install.yml`
 
 ---
 
@@ -89,7 +101,7 @@ Modern DevOps pratikleri kullanılarak projenin lokal ortamda tam entegre çalı
 - **Teknoloji:** ASP.NET Core MVC
 - **Önemli Bilgiler:** 
   - **SEO Mimari:** Dinamik slug-based yönlendirme sistemi (Ürünler için `/product/p/{slug}`, Kategoriler için `/product/c/{category}`).
-  - **Admin Seed:** Uygulama başlayınca `.env` dosyasındaki admin kullanıcısı otomatik oluşturulur.
+  - **Admin Kullanıcısı:** Keycloak realm import sırasında `.env` dosyasındaki `ADMIN_EMAIL` ve `ADMIN_PASSWORD` ile oluşturulur.
 
 ---
 
@@ -117,10 +129,13 @@ Modern DevOps pratikleri kullanılarak projenin lokal ortamda tam entegre çalı
 ### Catalog API
 - **Port:** `5011`
 - **DB:** PostgreSQL (Port: `5434`)
-- **Teknoloji:** Entity Framework Core (EF Core)
+- **Teknoloji:** Entity Framework Core (EF Core), Elasticsearch
 - **Önemli Bilgiler:** 
-  - **SEO Destekli:** PostgreSQL JSONB ve Slug mekanizması ile esnek ve hızlı kategori/ürün yapısı.
-  - **Elasticsearch:** Arama sonuçlarını optimize etmek için Elasticsearch ile senkronize çalışır.
+  - **Write Model:** Ürün, kategori ve attribute verileri PostgreSQL'de tutulur. Kategoriye göre değişen ürün özellikleri `Specs` JSONB alanında saklanır.
+  - **Read Model:** Ürün listeleme, arama, öneri ve facet ihtiyaçları Elasticsearch read modeli üzerinden karşılanır.
+  - **CQRS:** MediatR kullanmadan sade query/command servisleri ile okuma ve yazma operasyonları ayrılmıştır.
+  - **SEO Destekli:** Slug mekanizması ile ürün ve kategori URL'leri kullanıcı ve arama motoru dostudur.
+  - **Admin Index Yönetimi:** Admin panelden Elasticsearch bağlantı durumu görülebilir ve ürün indeksi yeniden oluşturulabilir.
 
 ### PhotoStock API
 - **Port:** `5012`
@@ -191,6 +206,6 @@ Modern DevOps pratikleri kullanılarak projenin lokal ortamda tam entegre çalı
 - **Hassas bilgiler** `.env` dosyasında saklanır ve Git'e commit edilmez
 - **appsettings.json** dosyaları `.gitignore`'da listelenmiştir
 - **Example dosyaları** yeni geliştiriciler için şablon olarak kullanılır
-- **Admin kullanıcısı** uygulama başlayınca otomatik seed edilir
+- **Admin kullanıcısı** Keycloak realm import sırasında oluşturulur
 
 ---

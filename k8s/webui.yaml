@@ -41,10 +41,6 @@ spec:
             secretKeyRef:
               name: gamegaraj-secrets
               key: keycloak-admin-password
-        - name: ADMIN_EMAIL
-          value: "kadiryilmaz.dev@gmail.com"
-        - name: ADMIN_PASSWORD
-          value: "Kadir+1234"
         - name: ElasticSearchSettings__Uri
           value: "http://host.docker.internal:9201"
         - name: APP_VERSION

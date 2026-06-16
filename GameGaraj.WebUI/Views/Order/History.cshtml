@@ -66,10 +66,11 @@
                                     <div class="order-item-row mb-3 pb-3 border-bottom last-border-0">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div class="d-flex align-items-center">
-                                                @if (!string.IsNullOrEmpty(item.PictureUrl))
-                                                {
-                                                    <img src="@item.PictureUrl" class="rounded border me-3" style="width: 50px; height: 50px; object-fit: cover;" alt="@item.ProductName" />
-                                                }
+                                                <img src="@(string.IsNullOrWhiteSpace(item.PictureUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.PictureUrl)"
+                                                     class="rounded border me-3"
+                                                     style="width: 50px; height: 50px; object-fit: cover;"
+                                                     alt="@item.ProductName"
+                                                     onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
                                                 <div>
                                                     <div class="fw-bold text-dark">@item.ProductName</div>
                                                     <div class="text-secondary small">@((item.Quantity > 0 ? item.Quantity : 1)) Adet x @item.Price.ToString("C2")</div>

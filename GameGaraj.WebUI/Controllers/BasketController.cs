@@ -121,7 +121,8 @@ namespace GameGaraj.WebUI.Controllers
                 CategoryId = product.CategoryId, // Map Category
                 Price = product.Price,
                 Quantity = quantity,
-                ImageUrl = product.ImageUrls.FirstOrDefault() ?? ""
+                ImageUrl = product.FirstImageUrl,
+                ProductSlug = product.Slug
             };
 
             await _basketService.AddItemAsync(item);
@@ -171,7 +172,8 @@ namespace GameGaraj.WebUI.Controllers
                     CategoryId = product.CategoryId, // Map Category
                     Price = product.Price,
                     Quantity = quantity,
-                    ImageUrl = product.ImageUrls.FirstOrDefault() ?? ""
+                    ImageUrl = product.FirstImageUrl,
+                    ProductSlug = product.Slug
                 };
 
                 await _basketService.AddItemAsync(item);

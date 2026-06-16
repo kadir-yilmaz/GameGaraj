@@ -470,18 +470,11 @@
                             <div class="basket-item">
                                 <!-- Image -->
                                 <div class="item-image">
-                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
-                                    {
-                                        <a asp-controller="Product" asp-action="Detail" asp-route-slug="@item.ProductSlug">
-                                            <img src="@item.ImageUrl" alt="@item.ProductName">
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <div class="item-image-placeholder">
-                                            <i class="fas fa-image fa-2x"></i>
-                                        </div>
-                                    }
+                                    <a asp-controller="Product" asp-action="Detail" asp-route-slug="@item.ProductSlug">
+                                        <img src="@(string.IsNullOrWhiteSpace(item.ImageUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.ImageUrl)"
+                                             alt="@item.ProductName"
+                                             onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
+                                    </a>
                                 </div>
 
                                 <!-- Details -->
@@ -581,9 +574,8 @@
                         <div class="mt-4 mb-4 border-top pt-3">
                             <h6 class="fw-bold mb-2 small"><i class="fas fa-ticket-alt me-1 text-primary"></i>Kupon Kodu</h6>
                             
-                            @if (ViewBag.AppliedCoupon != null)
+                            @if (ViewBag.AppliedCoupon is GameGaraj.WebUI.Models.Discounts.DiscountViewModel coupon)
                             {
-                                var coupon = ViewBag.AppliedCoupon as GameGaraj.WebUI.Models.Discounts.DiscountViewModel;
                                 var couponDiscAmount = finalTotal * (coupon.Rate / 100m);
                                 finalTotal -= couponDiscAmount;
 

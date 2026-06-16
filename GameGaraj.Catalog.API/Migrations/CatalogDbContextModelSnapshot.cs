@@ -47,6 +47,11 @@ namespace GameGaraj.Catalog.API.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
                     b.ToTable("Categories");
                 });
 
@@ -84,7 +89,61 @@ namespace GameGaraj.Catalog.API.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CategoryId", "Name")
+                        .IsUnique();
+
                     b.ToTable("CategoryAttributes");
+                });
+
+            modelBuilder.Entity("GameGaraj.Catalog.API.Models.IndexingJob", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("EntityType", "EntityId", "Status");
+
+                    b.ToTable("IndexingJobs");
                 });
 
             modelBuilder.Entity("GameGaraj.Catalog.API.Models.Product", b =>
@@ -143,7 +202,57 @@ namespace GameGaraj.Catalog.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Products");
+                    b.HasIndex("Brand");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("IsFeatured");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.HasIndex("Specs");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Specs"), "gin");
+
+                    b.ToTable("Products", t =>
+                        {
+                            t.HasCheckConstraint("CK_Products_Price_NonNegative", "\"Price\" >= 0");
+
+                            t.HasCheckConstraint("CK_Products_ReservedStock_LessOrEqualStock", "\"ReservedStock\" <= \"Stock\"");
+
+                            t.HasCheckConstraint("CK_Products_ReservedStock_NonNegative", "\"ReservedStock\" >= 0");
+
+                            t.HasCheckConstraint("CK_Products_Stock_NonNegative", "\"Stock\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("GameGaraj.Catalog.API.Models.Category", b =>
+                {
+                    b.HasOne("GameGaraj.Catalog.API.Models.Category", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("GameGaraj.Catalog.API.Models.CategoryAttribute", b =>
+                {
+                    b.HasOne("GameGaraj.Catalog.API.Models.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GameGaraj.Catalog.API.Models.Product", b =>
+                {
+                    b.HasOne("GameGaraj.Catalog.API.Models.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

@@ -1,170 +1,310 @@
 @model List<GameGaraj.WebUI.Models.Products.CategoryViewModel>
+@{
+    var categories = Model ?? new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
+    var rootCategories = categories.Where(x => string.IsNullOrWhiteSpace(x.ParentId)).ToList();
+    if (!rootCategories.Any())
+    {
+        rootCategories = categories;
+    }
+
+    string CategoryUrl(GameGaraj.WebUI.Models.Products.CategoryViewModel category)
+    {
+        return !string.IsNullOrWhiteSpace(category.Slug)
+            ? Url.Action("Index", "Product", new { category = category.Slug })!
+            : Url.Action("Index", "Product", new { categoryId = category.Id })!;
+    }
+}
 
 <style>
-    .category-bar {
-        background: #232f3e;
+    .gg-category-bar {
         position: relative;
         z-index: 100;
+        background: #22303f;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.18);
     }
-    
-    .category-scroll-wrapper {
-        position: relative;
+
+    .gg-category-main {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.6rem;
+        min-height: 58px;
     }
-    
-    .category-nav-btn {
-        flex-shrink: 0;
-        width: 36px;
-        height: 36px;
-        border: none;
-        background: #f39c12;
-        color: white;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex;
+
+    .gg-category-scroll-btn {
+        width: 46px;
+        height: 46px;
+        flex: 0 0 46px;
+        display: none;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s;
-        opacity: 0.9;
+        border: 0;
+        border-radius: 50%;
+        background: #f39c12;
+        color: #fff;
+        transition: background 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
     }
-    
-    .category-nav-btn:hover {
-        background: #e67e22;
-        opacity: 1;
-        transform: scale(1.05);
+
+    .gg-category-bar.is-overflowing .gg-category-scroll-btn {
+        display: inline-flex;
     }
-    
-    .category-nav-btn:disabled {
-        opacity: 0.3;
-        cursor: not-allowed;
+
+    .gg-category-scroll-btn:hover {
+        background: #f6a821;
+        transform: translateY(-1px);
+    }
+
+    .gg-category-scroll-btn:disabled {
+        opacity: 0.35;
         transform: none;
+        cursor: default;
     }
-    
-    .category-scroll {
+
+    .gg-category-scroll {
+        flex: 1 1 auto;
         display: flex;
-        gap: 0.5rem;
+        align-items: center;
+        gap: 0.65rem;
         overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 0.5rem 0;
-        flex: 1;
-        scrollbar-width: none;
         scroll-behavior: smooth;
+        scrollbar-width: none;
+        padding: 0.45rem 0;
     }
-    
-    .category-scroll::-webkit-scrollbar {
+
+    .gg-category-scroll::-webkit-scrollbar {
         display: none;
     }
-    
-    .category-pill {
-        flex-shrink: 0;
-        padding: 0.5rem 1rem;
-        background: rgba(255,255,255,0.1);
-        color: white;
-        text-decoration: none;
+
+    .gg-category-main-link {
+        flex: 0 0 auto;
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        padding: 0.55rem 1.2rem;
+        border: 1px solid rgba(255,255,255,0.18);
         border-radius: 8px;
-        font-weight: 500;
-        font-size: 0.85rem;
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1;
+        text-decoration: none;
         white-space: nowrap;
-        transition: all 0.2s;
-        border: 1px solid rgba(255,255,255,0.15);
+        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
-    
-    .category-pill:hover {
-        background: rgba(255,255,255,0.2);
-        color: white;
-        border-color: rgba(255,255,255,0.3);
+
+    .gg-category-main-link:hover,
+    .gg-category-main-link:focus,
+    .gg-category-main-link.is-active {
+        background: rgba(255,255,255,0.16);
+        border-color: rgba(255,255,255,0.34);
+        color: #fff;
+        outline: none;
     }
-    
-    .category-pill.active {
-        background: #f39c12;
-        border-color: #f39c12;
-        color: white;
+
+    .gg-category-subbar {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #1d1f23;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        box-shadow: 0 16px 28px rgba(0,0,0,0.22);
     }
-    
-    /* Smaller buttons on mobile */
+
+    .gg-category-subbar.is-visible {
+        display: block;
+    }
+
+    .gg-category-sub-list {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        gap: 2rem;
+        min-height: 62px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: 0.75rem 0;
+    }
+
+    .gg-category-sub-list::-webkit-scrollbar {
+        display: none;
+    }
+
+    .gg-category-sub-list.is-active {
+        display: flex;
+    }
+
+    .gg-category-sub-link {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: #d5d9df;
+        font-size: 0.98rem;
+        font-weight: 700;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: color 0.2s ease;
+    }
+
+    .gg-category-sub-link:hover,
+    .gg-category-sub-link:focus {
+        color: #fff;
+        outline: none;
+    }
+
+    .gg-category-count {
+        color: rgba(255,255,255,0.62);
+        font-weight: 800;
+    }
+
     @@media (max-width: 768px) {
-        .category-nav-btn {
-            width: 28px;
-            height: 28px;
-            font-size: 0.75rem;
+        .gg-category-main {
+            min-height: 52px;
+            gap: 0.45rem;
+        }
+
+        .gg-category-scroll-btn {
+            width: 38px;
+            height: 38px;
+            flex-basis: 38px;
+        }
+
+        .gg-category-main-link {
+            min-height: 38px;
+            padding: 0.5rem 0.9rem;
+            font-size: 0.88rem;
+        }
+
+        .gg-category-sub-list {
+            justify-content: flex-start;
+            gap: 1.25rem;
+            min-height: 52px;
+            padding: 0.65rem 0;
+        }
+
+        .gg-category-sub-link {
+            font-size: 0.9rem;
         }
     }
 </style>
 
-<div class="category-bar">
-    <div class="container">
-        <div class="category-scroll-wrapper">
-            <!-- Left Arrow -->
-            <button class="category-nav-btn" id="categoryPrev" onclick="scrollCategories(-1)">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            
-            <!-- Categories -->
-            <div class="category-scroll" id="categoryScroll">
-                @if (Model != null && Model.Any())
-                {
-                    @foreach (var category in Model)
+@if (rootCategories.Any())
+{
+    <nav class="gg-category-bar" data-category-menu aria-label="Kategoriler">
+        <div class="container">
+            <div class="gg-category-main">
+                <button class="gg-category-scroll-btn" type="button" data-category-scroll-prev aria-label="Önceki kategoriler">
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                </button>
+
+                <div class="gg-category-scroll" data-category-scroll>
+                    @foreach (var category in rootCategories)
                     {
-                        @if (category.Children != null && category.Children.Any())
-                        {
-                            @foreach (var child in category.Children)
-                            {
-                                <a href="@Url.Action("Index", "Product", new { category = child.Slug })" 
-                                   class="category-pill">
-                                    @child.Name
-                                </a>
-                            }
-                        }
+                        <a href="@CategoryUrl(category)"
+                           class="gg-category-main-link"
+                           data-category-id="@category.Id"
+                           data-has-children="@((category.Children?.Any() == true).ToString().ToLowerInvariant())">
+                            @category.Name
+                            <span class="gg-category-count">(@category.ProductCount)</span>
+                        </a>
                     }
+                </div>
+
+                <button class="gg-category-scroll-btn" type="button" data-category-scroll-next aria-label="Sonraki kategoriler">
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="gg-category-subbar" data-category-subbar>
+            <div class="container">
+                @foreach (var category in rootCategories.Where(x => x.Children?.Any() == true))
+                {
+                    <div class="gg-category-sub-list" data-category-panel="@category.Id">
+                        @foreach (var child in category.Children)
+                        {
+                            <a href="@CategoryUrl(child)" class="gg-category-sub-link">
+                                @child.Name
+                                <span class="gg-category-count">(@child.ProductCount)</span>
+                            </a>
+                        }
+                    </div>
                 }
             </div>
-            
-            <!-- Right Arrow -->
-            <button class="category-nav-btn" id="categoryNext" onclick="scrollCategories(1)">
-                <i class="fas fa-chevron-right"></i>
-            </button>
         </div>
-    </div>
-</div>
+    </nav>
+}
 
 <script>
-    function scrollCategories(direction) {
-        const container = document.getElementById('categoryScroll');
-        if (!container) return;
-        
-        const scrollAmount = 200;
-        container.scrollBy({
-            left: direction * scrollAmount,
-            behavior: 'smooth'
-        });
-    }
-    
-    function updateNavButtons() {
-        const container = document.getElementById('categoryScroll');
-        const prevBtn = document.getElementById('categoryPrev');
-        const nextBtn = document.getElementById('categoryNext');
-        
-        if (!container || !prevBtn || !nextBtn) return;
-        
-        prevBtn.disabled = container.scrollLeft <= 0;
-        nextBtn.disabled = container.scrollLeft >= container.scrollWidth - container.clientWidth - 5;
-    }
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        const container = document.getElementById('categoryScroll');
-        if (container) {
-            container.addEventListener('scroll', updateNavButtons);
-            updateNavButtons();
-            
-            // Also enable mouse wheel scroll
-            container.addEventListener('wheel', function(e) {
-                if (e.deltaY !== 0) {
-                    e.preventDefault();
-                    container.scrollLeft += e.deltaY * 2;
+    (function () {
+        const menus = document.querySelectorAll('[data-category-menu]');
+
+        menus.forEach(menu => {
+            const scroller = menu.querySelector('[data-category-scroll]');
+            const prev = menu.querySelector('[data-category-scroll-prev]');
+            const next = menu.querySelector('[data-category-scroll-next]');
+            const links = menu.querySelectorAll('[data-category-id]');
+            const subbar = menu.querySelector('[data-category-subbar]');
+            const panels = menu.querySelectorAll('[data-category-panel]');
+
+            if (!scroller || !prev || !next) return;
+
+            const updateScrollState = () => {
+                const hasOverflow = scroller.scrollWidth > scroller.clientWidth + 4;
+                menu.classList.toggle('is-overflowing', hasOverflow);
+                prev.disabled = scroller.scrollLeft <= 2;
+                next.disabled = scroller.scrollLeft >= scroller.scrollWidth - scroller.clientWidth - 4;
+            };
+
+            const showPanel = (categoryId) => {
+                let visible = false;
+
+                links.forEach(link => link.classList.toggle('is-active', link.dataset.categoryId === categoryId));
+                panels.forEach(panel => {
+                    const isActive = panel.dataset.categoryPanel === categoryId;
+                    panel.classList.toggle('is-active', isActive);
+                    visible = visible || isActive;
+                });
+
+                if (subbar) {
+                    subbar.classList.toggle('is-visible', visible);
                 }
+            };
+
+            prev.addEventListener('click', () => {
+                scroller.scrollBy({ left: -Math.round(scroller.clientWidth * 0.75), behavior: 'smooth' });
+            });
+
+            next.addEventListener('click', () => {
+                scroller.scrollBy({ left: Math.round(scroller.clientWidth * 0.75), behavior: 'smooth' });
+            });
+
+            links.forEach(link => {
+                const activate = () => showPanel(link.dataset.categoryId);
+                link.addEventListener('mouseenter', activate);
+                link.addEventListener('focus', activate);
+            });
+
+            menu.addEventListener('mouseleave', () => {
+                links.forEach(link => link.classList.remove('is-active'));
+                panels.forEach(panel => panel.classList.remove('is-active'));
+                if (subbar) subbar.classList.remove('is-visible');
+            });
+
+            scroller.addEventListener('scroll', updateScrollState, { passive: true });
+            scroller.addEventListener('wheel', event => {
+                if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+                event.preventDefault();
+                scroller.scrollLeft += event.deltaY;
             }, { passive: false });
-        }
-    });
+
+            window.addEventListener('resize', updateScrollState);
+            updateScrollState();
+        });
+    })();
 </script>

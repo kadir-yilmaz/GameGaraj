@@ -12,11 +12,13 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
     {
         private readonly ICatalogService _catalogService;
         private readonly IPhotoStockService _photoStockService;
+        private readonly ILogger<ProductController> _logger;
 
-        public ProductController(ICatalogService catalogService, IPhotoStockService photoStockService)
+        public ProductController(ICatalogService catalogService, IPhotoStockService photoStockService, ILogger<ProductController> logger)
         {
             _catalogService = catalogService;
             _photoStockService = photoStockService;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index()
@@ -59,9 +61,33 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             // Image Upload
             if (model.Photos != null && model.Photos.Count > 0)
             {
-                var uploadedUrls = await _photoStockService.UploadPhotosAsync(model.Photos, model.Brand, model.Name);
+                List<string> uploadedUrls;
+                try
+                {
+                    uploadedUrls = await _photoStockService.UploadPhotosAsync(model.Photos, model.Brand, model.Name);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[ProductCreate] Photo upload failed");
+                    ModelState.AddModelError("", "Fotoğraf yüklenirken bir hata oluştu.");
+                    var roots = await _catalogService.GetAllCategoriesAsync();
+                    var flattenedList = new List<CategoryDropdownViewModel>();
+                    FlattenCategories(roots, flattenedList, "");
+
+                    ViewBag.Categories = new SelectList(flattenedList, "Id", "DisplayName");
+                    return View(model);
+                }
                 if (uploadedUrls.Any())
                 {
+                    if (model.CoverImageKey.StartsWith("new:", StringComparison.OrdinalIgnoreCase)
+                        && int.TryParse(model.CoverImageKey.Substring("new:".Length), out var coverIndex)
+                        && coverIndex >= 0
+                        && coverIndex < uploadedUrls.Count)
+                    {
+                        var coverUrl = uploadedUrls[coverIndex];
+                        uploadedUrls.RemoveAt(coverIndex);
+                        uploadedUrls.Insert(0, coverUrl);
+                    }
                     // PhotoStock API "/photos/filename.jpg" dönüyor ama BaseAddress ServiceExtension'da ayarlı.
                     // ImageUrls db'ye kaydederken tam endpoint yazmıyoruz, Catalog API'si/UI tarafında PhotoStockUrl ile merge edilecek
                     model.ImageUrls = uploadedUrls;
@@ -149,6 +175,8 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 return View(model);
             }
 
+            var uploadedUrlsForCover = new List<string>();
+
             // Image Upload for Edit
             if (model.Photos != null && model.Photos.Count > 0)
             {
@@ -159,11 +187,27 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 if (spaceLeft > 0)
                 {
                     // Eğer yer kalmışsa, en fazla kalan yer kadar fotoğraf al (ya da IPhotoStockService içinden hata döner)
-                    var uploadedUrls = await _photoStockService.UploadPhotosAsync(model.Photos, model.Brand, model.Name);
+                    List<string> uploadedUrls;
+                    try
+                    {
+                        uploadedUrls = await _photoStockService.UploadPhotosAsync(model.Photos, model.Brand, model.Name);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[ProductEdit] Photo upload failed for product {ProductId}", model.Id);
+                        ModelState.AddModelError("", "Fotoğraf yüklenirken bir hata oluştu.");
+                        var roots = await _catalogService.GetAllCategoriesAsync();
+                        var flattenedList = new List<CategoryDropdownViewModel>();
+                        FlattenCategories(roots, flattenedList, "");
+                        ViewBag.Categories = new SelectList(flattenedList, "Id", "DisplayName", model.CategoryId);
+                        return View(model);
+                    }
+
                     if (uploadedUrls.Any())
                     {
                         if (model.ImageUrls == null) model.ImageUrls = new List<string>();
-                        model.ImageUrls.AddRange(uploadedUrls.Take(spaceLeft));
+                        uploadedUrlsForCover = uploadedUrls.Take(spaceLeft).ToList();
+                        model.ImageUrls.AddRange(uploadedUrlsForCover);
                     }
                 }
                 else
@@ -174,6 +218,29 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                     FlattenCategories(roots, flattenedList, "");
                     ViewBag.Categories = new SelectList(flattenedList, "Id", "DisplayName", model.CategoryId);
                     return View(model);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.CoverImageKey) && model.ImageUrls != null && model.ImageUrls.Any())
+            {
+                string? coverImageUrl = null;
+
+                if (model.CoverImageKey.StartsWith("existing:", StringComparison.OrdinalIgnoreCase))
+                {
+                    coverImageUrl = model.CoverImageKey.Substring("existing:".Length);
+                }
+                else if (model.CoverImageKey.StartsWith("new:", StringComparison.OrdinalIgnoreCase)
+                    && int.TryParse(model.CoverImageKey.Substring("new:".Length), out var newImageIndex)
+                    && newImageIndex >= 0
+                    && newImageIndex < uploadedUrlsForCover.Count)
+                {
+                    coverImageUrl = uploadedUrlsForCover[newImageIndex];
+                }
+
+                if (!string.IsNullOrWhiteSpace(coverImageUrl) && model.ImageUrls.Contains(coverImageUrl))
+                {
+                    model.ImageUrls.Remove(coverImageUrl);
+                    model.ImageUrls.Insert(0, coverImageUrl);
                 }
             }
 

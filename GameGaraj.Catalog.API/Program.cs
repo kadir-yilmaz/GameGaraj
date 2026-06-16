@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using GameGaraj.Catalog.API.Data;
-using GameGaraj.Catalog.API.Repositories.Abstract;
-using GameGaraj.Catalog.API.Repositories.Postgres;
 using GameGaraj.Catalog.API.Services.Abstract;
 using GameGaraj.Catalog.API.Services.Concrete;
 using MassTransit;
@@ -10,6 +8,7 @@ using GameGaraj.Shared.Logging;
 using Npgsql;
 using Elastic.Clients.Elasticsearch;
 using GameGaraj.Catalog.API.Models;
+using GameGaraj.Catalog.API.Services.Hosted;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,17 +20,13 @@ builder.Logging.AddFileLogger("Catalog.API");
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
 
-// Repositories Configuration (PostgreSQL)
+// PostgreSQL Configuration
 var dataSourceBuilder = new NpgsqlDataSourceBuilder(builder.Configuration.GetConnectionString("PostgresConnection"));
 dataSourceBuilder.EnableDynamicJson();
 var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<CatalogDbContext>(options =>
     options.UseNpgsql(dataSource));
-
-builder.Services.AddScoped<IProductRepository, PostgresProductRepository>();
-builder.Services.AddScoped<ICategoryRepository, PostgresCategoryRepository>();
-builder.Services.AddScoped<IAttributeRepository, PostgresAttributeRepository>();
 
 // ElasticSearch Configuration
 var elasticUri = builder.Configuration["ElasticSearchSettings:Uri"] ?? "http://localhost:9200";
@@ -44,8 +39,12 @@ var elasticClient = new ElasticsearchClient(settings);
 builder.Services.AddSingleton(elasticClient);
 
 // Services
-builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ICategoryQueryService, CategoryQueryService>();
+builder.Services.AddScoped<ICategoryCommandService, CategoryCommandService>();
+builder.Services.AddScoped<IProductQueryService, ProductQueryService>();
+builder.Services.AddScoped<IProductCommandService, ProductCommandService>();
+builder.Services.AddScoped<IProductIndexService, ProductIndexService>();
+builder.Services.AddHostedService<IndexingJobWorker>();
 
 // Controllers
 builder.Services.AddControllers();

@@ -7,18 +7,22 @@
     <h1 class="h2">Yeni Ürün Ekle</h1>
 </div>
 
-<form asp-area="Admin" asp-controller="Product" asp-action="Create" method="post" enctype="multipart/form-data">
+<form asp-area="Admin" asp-controller="Product" asp-action="Create" method="post" enctype="multipart/form-data" id="createProductForm">
     <div asp-validation-summary="All" class="text-danger mb-3"></div>
+    <input type="hidden" asp-for="CoverImageKey" id="coverImageKey" />
     <div class="row">
         <div class="col-md-8">
-            <div class="mb-3">
-                <label asp-for="Name" class="form-label">Ürün Adı</label>
-                <input asp-for="Name" class="form-control" required />
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="Brand" class="form-label">Marka</label>
-                <input asp-for="Brand" class="form-control" placeholder="Örn: AMD, MSI, ASUS" />
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label asp-for="Name" class="form-label">Ürün Adı</label>
+                    <input asp-for="Name" class="form-control" required />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Brand" class="form-label">Marka</label>
+                    <input asp-for="Brand" class="form-control js-brand-input" list="brandSuggestions" placeholder="Örn: ASUS" autocomplete="off" />
+                    <datalist id="brandSuggestions"></datalist>
+                    <div class="form-text">Listede yoksa elle yazabilirsiniz.</div>
+                </div>
             </div>
 
             <div class="mb-3">
@@ -88,6 +92,17 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
+            $.getJSON('/data/brands.json', function (brands) {
+                var dataList = $('#brandSuggestions');
+                dataList.empty();
+                (brands || [])
+                    .filter(function (brand) { return typeof brand === 'string' && brand.trim().length > 0; })
+                    .sort(function (a, b) { return a.localeCompare(b, 'tr', { sensitivity: 'base' }); })
+                    .forEach(function (brand) {
+                        dataList.append($('<option>').attr('value', brand));
+                    });
+            });
+
             $('#categoryIdSelect').change(function () {
                 var categoryId = $(this).val();
                 var container = $('#dynamicSpecsContainer');
@@ -141,6 +156,50 @@
                 });
             });
 
+            var selectedPhotoFiles = [];
+
+            function setCreateCoverPhoto(index) {
+                if (index < 0 || index >= selectedPhotoFiles.length) return;
+                $('#coverImageKey').val('new:' + index);
+                renderCreatePhotoPreviews();
+            }
+
+            function renderCreatePhotoPreviews() {
+                var previewContainer = $('#newPhotosPreviewContainer');
+                var previewLabel = $('#newPhotosPreviewLabel');
+                previewContainer.empty();
+
+                if (selectedPhotoFiles.length === 0) {
+                    previewLabel.addClass('d-none');
+                    return;
+                }
+
+                previewLabel.removeClass('d-none');
+
+                selectedPhotoFiles.forEach((file, index) => {
+                    if (!file.type.startsWith('image/')) return;
+
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        var html = `
+                            <div class="col-auto position-relative new-photo-preview" data-index="${index}">
+                                <img src="${e.target.result}" class="img-thumbnail" style="height: 100px; width: 100px; object-fit: cover;" alt="Preview">
+                        <span class="badge bg-primary position-absolute top-0 start-0 m-1 cover-badge ${($('#coverImageKey').val() || 'new:0') === 'new:' + index ? '' : 'd-none'}">Vitrin</span>
+                                <button type="button" class="btn btn-light btn-sm position-absolute bottom-0 start-50 translate-middle-x mb-1 btn-create-set-cover" data-index="${index}" title="Vitrin görseli yap">
+                                    <i class="fas fa-star me-1"></i>Vitrin
+                                </button>
+                            </div>
+                        `;
+                        previewContainer.append(html);
+                    }
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            $(document).on('click', '.btn-create-set-cover', function() {
+                setCreateCoverPhoto(parseInt($(this).data('index'), 10));
+            });
+
             // New Photo Preview Logic
             $('#newPhotosInput').on('change', function() {
                 var previewContainer = $('#newPhotosPreviewContainer');
@@ -155,23 +214,12 @@
                         return;
                     }
 
-                    previewLabel.removeClass('d-none');
-                    
-                    Array.from(this.files).forEach(file => {
-                        if (file.type.startsWith('image/')) {
-                            var reader = new FileReader();
-                            reader.onload = function(e) {
-                                var html = `
-                                    <div class="col-auto">
-                                        <img src="${e.target.result}" class="img-thumbnail" style="height: 100px; width: 100px; object-fit: cover;" alt="Preview">
-                                    </div>
-                                `;
-                                previewContainer.append(html);
-                            }
-                            reader.readAsDataURL(file);
-                        }
-                    });
+                    selectedPhotoFiles = Array.from(this.files);
+                    $('#coverImageKey').val('new:0');
+                    renderCreatePhotoPreviews();
                 } else {
+                    selectedPhotoFiles = [];
+                    $('#coverImageKey').val('');
                     previewLabel.addClass('d-none');
                 }
             });

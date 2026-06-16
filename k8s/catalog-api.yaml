@@ -26,13 +26,19 @@ spec:
         - name: ASPNETCORE_URLS
           value: "http://+:8080"
         - name: RabbitMQUrl
-          value: "host.docker.internal"
+          valueFrom:
+            secretKeyRef:
+              name: gamegaraj-secrets
+              key: rabbitmq-url
         - name: IdentityOption__Authority
           value: "http://host.docker.internal:8080/realms/GameGaraj"
         - name: ElasticSearchSettings__Uri
           value: "http://host.docker.internal:9201"
         - name: ConnectionStrings__PostgresConnection
-          value: "Host=host.docker.internal;Port=5434;Database=GameGarajCatalogDb;Username=postgres;Password=postgres"
+          valueFrom:
+            secretKeyRef:
+              name: gamegaraj-secrets
+              key: catalog-postgres-connection
 ---
 apiVersion: v1
 kind: Service

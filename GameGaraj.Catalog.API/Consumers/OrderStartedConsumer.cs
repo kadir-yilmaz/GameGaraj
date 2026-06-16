@@ -1,4 +1,4 @@
-using GameGaraj.Catalog.API.Repositories.Abstract;
+using GameGaraj.Catalog.API.Data;
 using GameGaraj.Shared.Events;
 using MassTransit;
 
@@ -6,16 +6,16 @@ namespace GameGaraj.Catalog.API.Consumers
 {
     public class OrderStartedConsumer : IConsumer<OrderStarted>
     {
-        private readonly IProductRepository _productRepository;
+        private readonly CatalogDbContext _context;
         private readonly ILogger<OrderStartedConsumer> _logger;
         private readonly IPublishEndpoint _publishEndpoint;
 
         public OrderStartedConsumer(
-            IProductRepository productRepository,
+            CatalogDbContext context,
             ILogger<OrderStartedConsumer> logger,
             IPublishEndpoint publishEndpoint)
         {
-            _productRepository = productRepository;
+            _context = context;
             _logger = logger;
             _publishEndpoint = publishEndpoint;
         }
@@ -29,7 +29,7 @@ namespace GameGaraj.Catalog.API.Consumers
 
             foreach (var item in context.Message.OrderItems)
             {
-                var product = await _productRepository.GetByIdAsync(item.ProductId);
+                var product = await _context.Products.FindAsync(item.ProductId);
                 if (product == null)
                 {
                     allReserved = false;
@@ -46,7 +46,7 @@ namespace GameGaraj.Catalog.API.Consumers
 
                 // Stok rezerve et
                 product.ReservedStock += item.Quantity;
-                await _productRepository.UpdateAsync(product);
+                await _context.SaveChangesAsync();
                 _logger.LogInformation($"[OrderStartedConsumer] Reserved {item.Quantity} for {product.Name}");
             }
 

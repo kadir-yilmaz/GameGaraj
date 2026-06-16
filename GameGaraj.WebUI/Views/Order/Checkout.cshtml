@@ -532,10 +532,8 @@
             <div class="card-body">
                 <h5 class="card-title mb-3">Sipariş Özeti</h5>
 
-                @if (ViewBag.Basket != null)
+                @if (ViewBag.Basket is GameGaraj.WebUI.Models.Baskets.BasketViewModel basket)
                 {
-                    var basket = ViewBag.Basket as GameGaraj.WebUI.Models.Baskets.BasketViewModel;
-
                     <div class="mb-3">
                         @foreach (var item in basket.Items)
                         {
@@ -603,9 +601,8 @@
                     <div class="mt-4 mb-4">
                         <h6 class="fw-bold mb-2 small"><i class="fas fa-ticket-alt me-1 text-primary"></i>Kupon Kodu</h6>
                         
-                        @if (ViewBag.AppliedCoupon != null)
+                        @if (ViewBag.AppliedCoupon is GameGaraj.WebUI.Models.Discounts.DiscountViewModel coupon)
                         {
-                            var coupon = ViewBag.AppliedCoupon as GameGaraj.WebUI.Models.Discounts.DiscountViewModel;
                             decimal couponDiscAmount = 0;
                             string couponDisplay = coupon.Code;
 

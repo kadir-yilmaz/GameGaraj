@@ -1,0 +1,95 @@
+name: K3s Dashboard Install
+
+on:
+  workflow_dispatch:
+    inputs:
+      node_port:
+        description: NodePort for Kubernetes Dashboard HTTPS access
+        required: true
+        default: "30443"
+      server_ip:
+        description: Home server IP shown in the workflow summary
+        required: true
+        default: "192.168.1.56"
+
+concurrency:
+  group: gamegaraj-k3s-dashboard
+  cancel-in-progress: false
+
+jobs:
+  install:
+    name: Install Kubernetes Dashboard
+    runs-on: [self-hosted, Linux, X64]
+
+    env:
+      KUBECONFIG: /home/kadirserver/.kube/config
+      DASHBOARD_NODE_PORT: ${{ github.event.inputs.node_port || '30443' }}
+      DASHBOARD_SERVER_IP: ${{ github.event.inputs.server_ip || '192.168.1.56' }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify Tooling
+        run: |
+          set -euo pipefail
+
+          kubectl version --client
+          kubectl get nodes -o wide
+
+          if ! command -v helm >/dev/null 2>&1; then
+            echo "::error::helm is required on the self-hosted runner."
+            exit 1
+          fi
+
+          helm version
+
+      - name: Install Kubernetes Dashboard
+        run: |
+          set -euo pipefail
+
+          helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+          helm repo update
+
+          helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+            --namespace kubernetes-dashboard \
+            --create-namespace
+
+      - name: Create Dashboard Admin Token
+        run: |
+          set -euo pipefail
+
+          kubectl apply -f k8s/observability/dashboard-admin.yaml
+
+      - name: Expose Dashboard With NodePort
+        run: |
+          set -euo pipefail
+
+          current_node_port="$(kubectl -n kubernetes-dashboard get svc kubernetes-dashboard-kong-proxy -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || true)"
+
+          if [ -n "$current_node_port" ]; then
+            node_port_operation="replace"
+          else
+            node_port_operation="add"
+          fi
+
+          kubectl -n kubernetes-dashboard patch svc kubernetes-dashboard-kong-proxy \
+            --type='json' \
+            -p="[
+              {\"op\":\"replace\",\"path\":\"/spec/type\",\"value\":\"NodePort\"},
+              {\"op\":\"${node_port_operation}\",\"path\":\"/spec/ports/0/nodePort\",\"value\":${DASHBOARD_NODE_PORT}}
+            ]"
+
+      - name: Print Access Info
+        run: |
+          set -euo pipefail
+
+          echo "Dashboard URL: https://${DASHBOARD_SERVER_IP}:${DASHBOARD_NODE_PORT}"
+          echo
+          echo "Login token:"
+          kubectl -n kubernetes-dashboard get secret gamegaraj-dashboard-admin-token \
+            -o jsonpath="{.data.token}" | base64 -d
+          echo
+          echo
+          kubectl -n kubernetes-dashboard get pods -o wide
+          kubectl -n kubernetes-dashboard get svc -o wide

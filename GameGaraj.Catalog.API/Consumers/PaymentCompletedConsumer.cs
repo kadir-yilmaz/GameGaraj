@@ -1,4 +1,4 @@
-using GameGaraj.Catalog.API.Repositories.Abstract;
+using GameGaraj.Catalog.API.Data;
 using GameGaraj.Shared.Events;
 using MassTransit;
 
@@ -6,14 +6,14 @@ namespace GameGaraj.Catalog.API.Consumers
 {
     public class PaymentCompletedConsumer : IConsumer<PaymentCompleted>
     {
-        private readonly IProductRepository _productRepository;
+        private readonly CatalogDbContext _context;
         private readonly ILogger<PaymentCompletedConsumer> _logger;
 
         public PaymentCompletedConsumer(
-            IProductRepository productRepository,
+            CatalogDbContext context,
             ILogger<PaymentCompletedConsumer> logger)
         {
-            _productRepository = productRepository;
+            _context = context;
             _logger = logger;
         }
 
@@ -23,7 +23,7 @@ namespace GameGaraj.Catalog.API.Consumers
 
             foreach (var item in context.Message.OrderItems)
             {
-                var product = await _productRepository.GetByIdAsync(item.ProductId);
+                var product = await _context.Products.FindAsync(item.ProductId);
                 if (product != null)
                 {
                     _logger.LogInformation($"[PaymentCompletedConsumer] Processing stock for {product.Name}. Current Total: {product.Stock}, Current Reserved: {product.ReservedStock}");
@@ -43,7 +43,7 @@ namespace GameGaraj.Catalog.API.Consumers
                          product.ReservedStock = 0;
                      }
  
-                     await _productRepository.UpdateAsync(product);
+                     await _context.SaveChangesAsync();
                      _logger.LogInformation($"[PaymentCompletedConsumer] Stock finalized for {product.Name}. New Total: {product.Stock}, New Reserved: {product.ReservedStock}");
                 }
             }

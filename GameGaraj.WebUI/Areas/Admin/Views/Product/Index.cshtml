@@ -35,7 +35,8 @@
                 <tr>
                     <td>
                         <div class="product-img-container">
-                            <img src="@item.FirstImageUrl" alt="@item.Name" class="product-list-img" />
+                            <img src="@item.FirstImageUrl" alt="@item.Name" class="product-list-img"
+                                 onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
                         </div>
                     </td>
                     <td>

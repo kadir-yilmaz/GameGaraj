@@ -180,6 +180,52 @@ $(document).ready(function () {
         });
     });
 
+    function setProductCardImage($gallery, index) {
+        var images = $gallery.data('cardImagesParsed');
+        if (!images || images.length === 0) return;
+
+        var normalizedIndex = Math.max(0, Math.min(index, images.length - 1));
+        $gallery.data('cardImageIndex', normalizedIndex);
+        $gallery.find('.product-img').attr('src', images[normalizedIndex]);
+        $gallery.find('.product-card-image-dot')
+            .removeClass('active')
+            .eq(normalizedIndex)
+            .addClass('active');
+    }
+
+    $('.product-card-gallery').each(function () {
+        var $gallery = $(this);
+        var rawImages = $gallery.attr('data-card-images');
+        var images = [];
+
+        try {
+            images = JSON.parse(rawImages || '[]');
+        } catch (e) {
+            images = [];
+        }
+
+        $gallery.data('cardImagesParsed', images);
+        $gallery.data('cardImageIndex', 0);
+    });
+
+    $(document).on('mousemove', '.product-card-gallery', function (e) {
+        var $gallery = $(this);
+        var images = $gallery.data('cardImagesParsed');
+        if (!images || images.length <= 1) return;
+
+        var offset = $gallery.offset();
+        var width = $gallery.outerWidth();
+        if (!offset || width <= 0) return;
+
+        var relativeX = e.pageX - offset.left;
+        var index = Math.floor((relativeX / width) * images.length);
+        setProductCardImage($gallery, index);
+    });
+
+    $(document).on('mouseleave', '.product-card-gallery', function () {
+        setProductCardImage($(this), 0);
+    });
+
     // Swipeable Product Card Sliders (Mouse Grab & Drag support)
     function initCardSliders() {
         $('.product-card-slider').each(function () {

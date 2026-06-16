@@ -66,7 +66,7 @@ namespace GameGaraj.WebUI.Controllers
             // Giriş yapmış kullanıcı bilgilerini ön tanımlı olarak getir
             var model = new CheckoutInfoInput();
             
-            if (User.Identity.IsAuthenticated)
+            if (User.Identity?.IsAuthenticated == true)
             {
                 model.CustomerName = User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.GivenName)?.Value 
                                      ?? User.Claims.FirstOrDefault(x => x.Type == "name")?.Value ?? "";
@@ -131,23 +131,25 @@ namespace GameGaraj.WebUI.Controllers
                 return View(checkoutInfoInput);
             }
 
-            await EnsureBasketCategoryIdsAsync(basket2);
+            var orderBasket = basket2;
+
+            await EnsureBasketCategoryIdsAsync(orderBasket);
 
             _logger.LogInformation($"[OrderController] Basket before session:");
-            _logger.LogInformation($"  - UserId: {basket2?.UserId}");
-            _logger.LogInformation($"  - Items Count: {basket2?.Items?.Count ?? 0}");
-            if (basket2?.Items != null)
+            _logger.LogInformation($"  - UserId: {orderBasket.UserId}");
+            _logger.LogInformation($"  - Items Count: {orderBasket.Items.Count}");
+            if (orderBasket.Items != null)
             {
-                foreach (var item in basket2.Items)
+                foreach (var item in orderBasket.Items)
                 {
                     _logger.LogInformation($"    * ProductId: {item.ProductId}, ProductName: '{item.ProductName}', Price: {item.Price}, Qty: {item.Quantity}");
                 }
             }
 
-            HttpContext.Session.SetString("OrderBasket", JsonSerializer.Serialize(basket2));
+            HttpContext.Session.SetString("OrderBasket", JsonSerializer.Serialize(orderBasket));
 
             // Sipariş oluştur
-            var pricingSnapshot = await BuildOrderPricingSnapshotAsync(basket2!);
+            var pricingSnapshot = await BuildOrderPricingSnapshotAsync(orderBasket);
             var orderResult = await _orderService.CreateOrder(checkoutInfoInput, pricingSnapshot);
 
             if (!orderResult.IsSuccessful)
@@ -176,11 +178,12 @@ namespace GameGaraj.WebUI.Controllers
             // Adresi kaydet (RabbitMQ / Event-Driven)
             if (checkoutInfoInput.SaveAddress)
             {
-                _logger.LogInformation($"[OrderController] SaveAddress is true. Publishing UserAddressSaveRequested for user: {basket2.UserId}");
+                var basketUserId = orderBasket.UserId ?? string.Empty;
+                _logger.LogInformation($"[OrderController] SaveAddress is true. Publishing UserAddressSaveRequested for user: {basketUserId}");
 
                 var addressEvent = new UserAddressSaveRequested
                 {
-                    UserId = basket2.UserId,
+                    UserId = basketUserId,
                     Type = 1, // Delivery
                     Title = checkoutInfoInput.AddressTitle,
                     FirstName = checkoutInfoInput.CustomerName,

@@ -1,0 +1,250 @@
+@using System.Text.Json
+@model GameGaraj.WebUI.Areas.Admin.Models.SearchIndexDashboardViewModel
+
+@{
+    ViewData["Title"] = "Arama Indeksi";
+    var status = Model?.Status;
+    var documentPage = Model?.Documents ?? new GameGaraj.WebUI.Models.Products.SearchIndexDocumentPageViewModel();
+    var documents = documentPage.Items;
+    var isOnline = status?.IsConnected == true;
+    var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+}
+
+<style>
+    .index-dashboard { display: grid; gap: 1.25rem; }
+    .index-hero {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 12px;
+        background: #fff; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+    .index-hero h1 { margin: 0; font-size: 1.75rem; font-weight: 800; color: #111827; }
+    .index-hero p { margin: 0.35rem 0 0; color: #6b7280; }
+    .index-status-pill {
+        display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.8rem;
+        border-radius: 999px; font-weight: 700;
+        background: @(isOnline ? "#dcfce7" : "#fee2e2");
+        color: @(isOnline ? "#166534" : "#991b1b");
+        white-space: nowrap;
+    }
+    .index-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+    .index-card {
+        padding: 1.15rem; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    }
+    .index-card-label {
+        display: flex; align-items: center; gap: 0.55rem; color: #6b7280;
+        font-weight: 700; font-size: 0.88rem; text-transform: uppercase;
+    }
+    .index-card-value { margin-top: 0.75rem; color: #111827; font-size: 1.65rem; font-weight: 800; }
+    .index-card-note { margin-top: 0.35rem; color: #6b7280; font-size: 0.92rem; }
+    .index-error {
+        padding: 1rem; border: 1px solid #fecaca; border-radius: 10px; background: #fef2f2;
+        color: #991b1b; word-break: break-word;
+    }
+    .index-preview {
+        border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; overflow: hidden;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    }
+    .index-preview-header {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        padding: 1rem 1.15rem; border-bottom: 1px solid #e5e7eb;
+    }
+    .index-preview-title { margin: 0; font-size: 1.05rem; font-weight: 800; color: #111827; }
+    .index-preview-subtitle { margin: 0.2rem 0 0; color: #6b7280; font-size: 0.92rem; }
+    .index-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; flex-wrap: wrap; }
+    .index-doc-list { display: grid; gap: 0.85rem; padding: 1rem; background: #f8fafc; }
+    .index-doc {
+        border: 1px solid #dbe3ef; border-radius: 10px; background: #fff; overflow: hidden;
+    }
+    .index-doc summary {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        padding: 0.85rem 1rem; cursor: pointer; list-style: none; background: #fff;
+    }
+    .index-doc summary::-webkit-details-marker { display: none; }
+    .index-doc-title { min-width: 0; }
+    .index-doc-title strong { color: #111827; font-size: 0.98rem; }
+    .index-doc-title span { display: block; color: #64748b; margin-top: 0.18rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .index-doc-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+    .index-mono { font-family: Consolas, Monaco, "Courier New", monospace; font-size: 0.82rem; }
+    .index-cell-muted { color: #64748b; font-size: 0.82rem; margin-top: 0.25rem; }
+    .index-json-shell {
+        margin: 0; max-height: min(70vh, 760px); overflow: auto;
+        padding: 1rem; border-top: 1px solid #dbe3ef;
+        background: #0f172a; color: #dbeafe; white-space: pre; tab-size: 2;
+        font-size: 0.86rem; line-height: 1.5;
+    }
+    .index-badge {
+        display: inline-flex; align-items: center; padding: 0.35rem 0.55rem; border-radius: 999px;
+        font-weight: 700; font-size: 0.8rem; white-space: nowrap;
+    }
+    .index-badge-active { background: #dcfce7; color: #166534; }
+    .index-badge-passive { background: #fee2e2; color: #991b1b; }
+    .index-empty { padding: 2rem; text-align: center; color: #64748b; }
+    .index-pagination {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        padding: 1rem 1.15rem; border-top: 1px solid #e5e7eb; background: #f8fafc;
+    }
+    .index-page-buttons { display: flex; align-items: center; gap: 0.5rem; }
+    @@media (max-width: 768px) {
+        .index-hero, .index-preview-header, .index-pagination {
+            align-items: flex-start; flex-direction: column;
+        }
+        .index-header-actions, .index-header-actions form, .index-header-actions .btn { width: 100%; }
+        .index-doc summary { align-items: flex-start; flex-direction: column; }
+        .index-doc-meta { justify-content: flex-start; }
+    }
+</style>
+
+<div class="index-dashboard">
+    <div class="index-hero">
+        <div>
+            <h1>Arama Indeksi</h1>
+            <p>Elasticsearch baglantisi, indekslenen dokumanlar ve read model onizlemesi.</p>
+        </div>
+        <span class="index-status-pill">
+            <i class="fas @(isOnline ? "fa-circle-check" : "fa-circle-xmark")"></i>
+            @(isOnline ? "Bagli" : "Baglanti Yok")
+        </span>
+    </div>
+
+    <div class="index-grid">
+        <div class="index-card">
+            <div class="index-card-label"><i class="fas fa-database"></i> Toplam Dokuman</div>
+            <div class="index-card-value">@(status?.IndexedProductCount ?? 0)</div>
+        </div>
+        <div class="index-card">
+            <div class="index-card-label"><i class="fas fa-clock"></i> Son Indeksleme</div>
+            <div class="index-card-value" style="font-size:1.1rem;">
+                @(status?.LastIndexedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")
+            </div>
+            <div class="index-card-note">En son guncellenen indeks kaydi.</div>
+        </div>
+        <div class="index-card">
+            <div class="index-card-label"><i class="fas fa-list-check"></i> Bekleyen Kuyruk</div>
+            <div class="index-card-value">@(status?.PendingIndexQueueCount ?? 0)</div>
+            <div class="index-card-note">Kalici kuyruk eklendiginde buradan izlenecek.</div>
+        </div>
+        <div class="index-card">
+            <div class="index-card-label"><i class="fas fa-triangle-exclamation"></i> Basarisiz Indeksleme</div>
+            <div class="index-card-value">@(status?.FailedIndexingCount ?? 0)</div>
+            <div class="index-card-note">
+                Son hata: @(status?.LastFailedIndexingAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")
+            </div>
+        </div>
+        <div class="index-card">
+            <div class="index-card-label"><i class="fas fa-heart-pulse"></i> Son Kontrol</div>
+            <div class="index-card-value" style="font-size:1.1rem;">
+                @((status?.CheckedAt ?? DateTime.UtcNow).ToLocalTime().ToString("dd.MM.yyyy HH:mm"))
+            </div>
+            <div class="index-card-note">@((status?.Status ?? "Offline"))</div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(status?.ErrorMessage))
+    {
+        <div class="index-error">
+            <strong>Elasticsearch hatasi:</strong> @status.ErrorMessage
+        </div>
+    }
+
+    <div class="index-preview">
+        <div class="index-preview-header">
+            <div>
+                <h2 class="index-preview-title">products Indeksi</h2>
+                <p class="index-preview-subtitle">
+                    Sayfa @documentPage.Page / @(documentPage.TotalPages == 0 ? 1 : documentPage.TotalPages) ·
+                    @documentPage.PageSize kayit/sayfa · Toplam @documentPage.TotalCount dokuman
+                </p>
+            </div>
+            <div class="index-header-actions">
+                <span class="index-badge index-badge-active">ES dokuman gorunumu</span>
+                <form asp-area="Admin" asp-controller="SearchIndex" asp-action="Rebuild" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-warning fw-bold">
+                        <i class="fas fa-rotate me-2"></i> Indeksi Yeniden Olustur
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        @if (documents.Any())
+        {
+            <div class="index-doc-list">
+                @for (var i = 0; i < documents.Count; i++)
+                {
+                    var item = documents[i];
+                    var esDocument = new
+                    {
+                        _index = "products",
+                        _id = item.Id,
+                        _source = new
+                        {
+                            id = item.Id,
+                            name = item.Name,
+                            brand = item.Brand,
+                            slug = item.Slug,
+                            categoryId = item.CategoryId,
+                            categoryName = item.CategoryName,
+                            categorySlug = item.CategorySlug,
+                            price = item.Price,
+                            stock = item.Stock,
+                            reservedStock = item.ReservedStock,
+                            availableStock = item.AvailableStock,
+                            isActive = item.IsActive,
+                            isFeatured = item.IsFeatured,
+                            inStock = item.InStock,
+                            imageUrls = item.ImageUrls,
+                            specs = item.Specs,
+                            specValues = item.SpecValues,
+                            searchText = item.SearchText,
+                            createdAt = item.CreatedAt,
+                            updatedAt = item.LastIndexedAt
+                        }
+                    };
+
+                    <details class="index-doc" open="@(i < 3 ? "open" : null)">
+                        <summary>
+                            <div class="index-doc-title">
+                                <strong>@item.Name</strong>
+                                <span class="index-mono">_id: @item.Id</span>
+                            </div>
+                            <div class="index-doc-meta">
+                                <span class="index-badge index-badge-active">@item.Brand</span>
+                                <span class="index-badge @(item.IsActive ? "index-badge-active" : "index-badge-passive")">isActive: @item.IsActive</span>
+                                <span class="index-cell-muted">@item.CategoryName</span>
+                            </div>
+                        </summary>
+                        <pre class="index-json-shell index-mono">@JsonSerializer.Serialize(esDocument, jsonOptions)</pre>
+                    </details>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="index-empty">
+                Indekste onizlenecek dokuman bulunamadi. PostgreSQL'de urun varsa indeksi yeniden olusturmayi deneyin.
+            </div>
+        }
+
+        <div class="index-pagination">
+            <div>
+                @(documentPage.TotalCount == 0
+                    ? "Kayit yok"
+                    : $"{((documentPage.Page - 1) * documentPage.PageSize) + 1}-{Math.Min(documentPage.Page * documentPage.PageSize, (int)documentPage.TotalCount)} arasi gosteriliyor")
+            </div>
+            <div class="index-page-buttons">
+                <a class="btn btn-outline-secondary @(documentPage.Page <= 1 ? "disabled" : "")"
+                   asp-area="Admin" asp-controller="SearchIndex" asp-action="Index"
+                   asp-route-page="@(documentPage.Page - 1)">
+                    <i class="fas fa-chevron-left"></i> Onceki
+                </a>
+                <span class="index-mono">@documentPage.Page / @(documentPage.TotalPages == 0 ? 1 : documentPage.TotalPages)</span>
+                <a class="btn btn-outline-secondary @(documentPage.Page >= documentPage.TotalPages ? "disabled" : "")"
+                   asp-area="Admin" asp-controller="SearchIndex" asp-action="Index"
+                   asp-route-page="@(documentPage.Page + 1)">
+                    Sonraki <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

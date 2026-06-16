@@ -15,45 +15,49 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register Storage Service (MinIO only)
-builder.Services.AddScoped<IMinioClient>(sp =>
+var useLocalStorage = builder.Configuration.GetValue<bool>("Minio:UseLocalStorage");
+var minioEndpoint = builder.Configuration["Minio:Endpoint"];
+
+if (useLocalStorage || string.IsNullOrWhiteSpace(minioEndpoint))
 {
-    var endpoint = builder.Configuration["Minio:Endpoint"] ?? string.Empty;
-    var accessKey = builder.Configuration["Minio:AccessKey"] ?? string.Empty;
-    var secretKey = builder.Configuration["Minio:SecretKey"] ?? string.Empty;
-    var secure = bool.TryParse(builder.Configuration["Minio:Secure"], out bool sec) && sec;
-
-    if (string.IsNullOrWhiteSpace(endpoint))
+    builder.Services.AddScoped<IStorageService, LocalStorageService>();
+}
+else
+{
+    builder.Services.AddScoped<IMinioClient>(sp =>
     {
-        throw new InvalidOperationException("Minio:Endpoint configuration is required.");
-    }
+        var endpoint = builder.Configuration["Minio:Endpoint"] ?? string.Empty;
+        var accessKey = builder.Configuration["Minio:AccessKey"] ?? string.Empty;
+        var secretKey = builder.Configuration["Minio:SecretKey"] ?? string.Empty;
+        var secure = bool.TryParse(builder.Configuration["Minio:Secure"], out bool sec) && sec;
 
-    if (string.IsNullOrWhiteSpace(accessKey) || string.IsNullOrWhiteSpace(secretKey))
-    {
-        throw new InvalidOperationException("Minio credentials are required.");
-    }
+        if (string.IsNullOrWhiteSpace(accessKey) || string.IsNullOrWhiteSpace(secretKey))
+        {
+            throw new InvalidOperationException("Minio credentials are required.");
+        }
 
-    if (Uri.TryCreate(endpoint, UriKind.Absolute, out var endpointUri))
-    {
-        secure = endpointUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
-        endpoint = endpointUri.IsDefaultPort
-            ? endpointUri.Host
-            : $"{endpointUri.Host}:{endpointUri.Port}";
-    }
+        if (Uri.TryCreate(endpoint, UriKind.Absolute, out var endpointUri))
+        {
+            secure = endpointUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+            endpoint = endpointUri.IsDefaultPort
+                ? endpointUri.Host
+                : $"{endpointUri.Host}:{endpointUri.Port}";
+        }
 
-    var client = new MinioClient()
-        .WithEndpoint(endpoint)
-        .WithCredentials(accessKey, secretKey);
+        var client = new MinioClient()
+            .WithEndpoint(endpoint)
+            .WithCredentials(accessKey, secretKey);
 
-    if (secure)
-    {
-        client.WithSSL();
-    }
+        if (secure)
+        {
+            client.WithSSL();
+        }
 
-    return client.Build();
-});
+        return client.Build();
+    });
 
-builder.Services.AddScoped<IStorageService, MinioStorageService>();
+    builder.Services.AddScoped<IStorageService, MinioStorageService>();
+}
 
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

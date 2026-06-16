@@ -94,6 +94,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 foreach (var attribute in attributes)
                 {
                     if (string.IsNullOrWhiteSpace(attribute.Name)) continue;
+                    NormalizeAttribute(attribute);
                     await _catalogService.AddAttributeAsync(createdCategory.Id, attribute);
                 }
             }
@@ -181,6 +182,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 foreach (var attr in attributes)
                 {
                     if (string.IsNullOrWhiteSpace(attr.Name)) continue;
+                    NormalizeAttribute(attr);
                     await _catalogService.AddAttributeAsync(id, attr);
                 }
             }
@@ -208,6 +210,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
         [HttpPost]
         public async Task<IActionResult> UpdateAttribute(string categoryId, string attributeId, CategoryAttributeInput model)
         {
+            NormalizeAttribute(model);
             var result = await _catalogService.UpdateAttributeAsync(categoryId, attributeId, model);
             if (result)
             {
@@ -219,6 +222,26 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             }
 
             return RedirectToAction(nameof(Edit), new { id = categoryId });
+        }
+
+        private static void NormalizeAttribute(CategoryAttributeInput attribute)
+        {
+            attribute.Name = attribute.Name?.Trim() ?? string.Empty;
+            attribute.DisplayName = attribute.DisplayName?.Trim() ?? string.Empty;
+            attribute.Type = string.IsNullOrWhiteSpace(attribute.Type) ? "Text" : attribute.Type.Trim();
+
+            if (!string.Equals(attribute.Type, "Dropdown", StringComparison.OrdinalIgnoreCase))
+            {
+                attribute.Options = null;
+                return;
+            }
+
+            attribute.Options = attribute.Options?
+                .Select(option => option?.Trim())
+                .Where(option => !string.IsNullOrWhiteSpace(option))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Cast<string>()
+                .ToList();
         }
     }
 }

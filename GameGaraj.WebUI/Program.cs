@@ -1,5 +1,4 @@
 using GameGaraj.WebUI.Extensions;
-using GameGaraj.WebUI.Seeds;
 using GameGaraj.WebUI.Services.Abstract;
 using GameGaraj.WebUI.Services.Concrete;
 using GameGaraj.WebUI.Settings;
@@ -74,8 +73,6 @@ builder.Services.AddMassTransit(x =>
 
 var app = builder.Build();
 
-// Admin Seed İşlemi
-await app.SeedAdminUserAsync();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

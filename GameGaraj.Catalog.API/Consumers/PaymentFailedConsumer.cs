@@ -1,4 +1,4 @@
-using GameGaraj.Catalog.API.Repositories.Abstract;
+using GameGaraj.Catalog.API.Data;
 using GameGaraj.Shared.Events;
 using MassTransit;
 
@@ -6,14 +6,14 @@ namespace GameGaraj.Catalog.API.Consumers
 {
     public class PaymentFailedConsumer : IConsumer<PaymentFailed>
     {
-        private readonly IProductRepository _productRepository;
+        private readonly CatalogDbContext _context;
         private readonly ILogger<PaymentFailedConsumer> _logger;
 
         public PaymentFailedConsumer(
-            IProductRepository productRepository,
+            CatalogDbContext context,
             ILogger<PaymentFailedConsumer> logger)
         {
-            _productRepository = productRepository;
+            _context = context;
             _logger = logger;
         }
 
@@ -23,12 +23,12 @@ namespace GameGaraj.Catalog.API.Consumers
 
             foreach (var item in context.Message.OrderItems)
             {
-                var product = await _productRepository.GetByIdAsync(item.ProductId);
+                var product = await _context.Products.FindAsync(item.ProductId);
                 if (product != null)
                 {
                     // Ödeme başarısız: Rezervasyonu iade et (tekrar satılabilir yap)
                     product.ReservedStock -= item.Quantity;
-                    await _productRepository.UpdateAsync(product);
+                    await _context.SaveChangesAsync();
                     _logger.LogInformation($"[PaymentFailedConsumer] Stock released for {product.Name}. Available: {product.AvailableStock}");
                 }
             }

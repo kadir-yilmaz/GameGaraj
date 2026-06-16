@@ -10,5 +10,10 @@ Generated ConfigMaps:
 - `gamegaraj-redis-sentinel` from `redis/sentinel/*.conf`
 
 Secrets are intentionally not stored here. Put secret values in GitHub
-repository secrets and let `.github/workflows/deploy-k3s-config-sync.yml`
+repository secrets and let `.github/workflows/k3s-config-sync.yml`
 sync them into the `gamegaraj-secrets` Kubernetes Secret.
+
+`realm-init.json` uses Keycloak import placeholders such as `${ADMIN_EMAIL}`
+and `${ADMIN_PASSWORD}`. The Keycloak container that imports this file must
+receive matching environment variables from secrets; otherwise the placeholders
+will not be resolved during a fresh realm import.

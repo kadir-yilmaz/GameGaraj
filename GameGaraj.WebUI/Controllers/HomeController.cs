@@ -28,13 +28,14 @@ namespace GameGaraj.WebUI.Controllers
             var basketProductIds = basket?.Items?
                 .Select(x => x.ProductId?.Trim())
                 .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase)
                 ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var product in featuredProducts)
             {
                 product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
-                product.IsFavorite = favoriteIds.Contains(product.Id);
+                product.IsFavorite = favoriteIds.Contains(product.Id ?? string.Empty);
             }
 
             return View(featuredProducts);

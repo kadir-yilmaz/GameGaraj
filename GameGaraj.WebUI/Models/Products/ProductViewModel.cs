@@ -2,6 +2,8 @@ namespace GameGaraj.WebUI.Models.Products
 {
     public class ProductViewModel
     {
+        public const string DefaultImageUrl = "/default.jpg";
+
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Brand { get; set; } = string.Empty;
@@ -19,9 +21,21 @@ namespace GameGaraj.WebUI.Models.Products
         public DateTime CreatedAt { get; set; }
         public string CategoryId { get; set; } = string.Empty;
         public string CategoryName { get; set; } = string.Empty;
-        public string FirstImageUrl => (ImageUrls != null && ImageUrls.Any())
-            ? ImageUrls.First()
-            : "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800&auto=format&fit=crop&q=80";
+        public IReadOnlyList<string> DisplayImageUrls
+        {
+            get
+            {
+                var validImageUrls = ImageUrls?
+                    .Where(url => !string.IsNullOrWhiteSpace(url))
+                    .ToList();
+
+                return validImageUrls is { Count: > 0 }
+                    ? validImageUrls
+                    : new List<string> { DefaultImageUrl };
+            }
+        }
+
+        public string FirstImageUrl => DisplayImageUrls[0];
 
         public Dictionary<string, string> Specs { get; set; } = new();
     }

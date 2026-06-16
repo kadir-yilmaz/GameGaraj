@@ -1,7 +1,8 @@
 @model (GameGaraj.WebUI.Models.Products.CategoryViewModel Category, int Level, string ParentId)
 
 @{
-    var hasChildren = Model.Category.Children != null && Model.Category.Children.Any();
+    var children = Model.Category.Children ?? new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
+    var hasChildren = children.Any();
 }
 
 <tr data-id="@Model.Category.Id" data-parent-id="@Model.ParentId" class="tree-row category-level-@Model.Level">
@@ -37,7 +38,7 @@
                 <span class="@(Model.Level == 0 ? "fw-bold" : "text-dark")">@Model.Category.Name</span>
                 @if (hasChildren)
                 {
-                    <span class="badge bg-light text-muted fw-normal border ms-2" style="font-size: 0.7rem;">@Model.Category.Children.Count alt</span>
+                    <span class="badge bg-light text-muted fw-normal border ms-2" style="font-size: 0.7rem;">@children.Count alt</span>
                 }
             </div>
         </div>
@@ -59,7 +60,7 @@
 
 @if (hasChildren)
 {
-    @foreach (var child in Model.Category.Children)
+    @foreach (var child in children)
     {
         @await Html.PartialAsync("_CategoryRow", (child, Model.Level + 1, Model.Category.Id))
     }

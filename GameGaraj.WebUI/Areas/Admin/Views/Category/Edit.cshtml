@@ -13,6 +13,46 @@
     </nav>
 </div>
 
+<style>
+    .attribute-card {
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .attribute-card:hover {
+        box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.08);
+    }
+
+    .attr-chip,
+    .edit-option-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
+        background: #e8f5ff;
+        color: #075985;
+        border: 1px solid #bae6fd;
+        padding: 0.35rem 0.65rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .edit-option-chip button {
+        border: 0;
+        background: transparent;
+        color: #075985;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .edit-options-editor {
+        border: 1px solid #dbeafe;
+        background: #f8fbff;
+        border-radius: 8px;
+        padding: 0.85rem;
+    }
+</style>
+
 <form asp-action="Edit" method="post">
     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
     <div class="row g-4">
@@ -48,7 +88,7 @@
                         <div class="card-body p-0">
                         @foreach (var attr in (List<GameGaraj.WebUI.Models.Products.CategoryAttributeViewModel>)ViewBag.ExistingAttributes)
                         {
-                                    <div class="border-bottom p-3 existing-attr-row" data-attr-id="@attr.Id">
+                                    <div class="border-bottom p-3 existing-attr-row attribute-card" data-attr-id="@attr.Id">
                                         <!-- Display Mode -->
                                         <div class="attr-display d-flex justify-content-between align-items-center">
                                             <div>
@@ -56,10 +96,10 @@
                                                 <small class="text-muted">Tip: @attr.Type | Kod: @attr.Name</small>
                                         @if (attr.Options != null && attr.Options.Any())
                                         {
-                                                        <div class="mt-1">
+                                                        <div class="mt-2 d-flex flex-wrap gap-2">
                                                 @foreach (var opt in attr.Options)
                                                 {
-                                                                    <span class="badge bg-info text-white me-1">@opt</span>
+                                                                    <span class="attr-chip">@opt</span>
                                                 }
                                                         </div>
                                         }
@@ -107,13 +147,35 @@
                                                     </button>
                                                 </div>
                                             </div>
-                                    @if (attr.Type == "Dropdown" && attr.Options != null)
-                                    {
-                                                    <div class="mt-2">
-                                                        <label class="small text-muted">Seçenekler (virgülle ayırın)</label>
-                                                        <input type="text" class="form-control form-control-sm edit-options" value="@string.Join(", ", attr.Options)" />
-                                                    </div>
-                                    }
+                                            <div class="mt-3 edit-options-editor @(attr.Type == "Dropdown" ? "" : "d-none")">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <label class="small fw-bold text-primary mb-0">
+                                                        <i class="fas fa-tags me-1"></i>Seçenekler
+                                                    </label>
+                                                    <span class="small text-muted">Enter ile ekleyin</span>
+                                                </div>
+                                                <div class="edit-option-list d-flex flex-wrap gap-2 mb-2">
+                                                    @if (attr.Options != null)
+                                                    {
+                                                        @foreach (var opt in attr.Options)
+                                                        {
+                                                            <span class="edit-option-chip" data-option="@opt">
+                                                                @opt
+                                                                <button type="button" class="btn-remove-edit-option" aria-label="@opt seçeneğini sil">
+                                                                    <i class="fas fa-times"></i>
+                                                                </button>
+                                                            </span>
+                                                        }
+                                                    }
+                                                </div>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" class="form-control edit-option-input" placeholder="Örn: 12GB">
+                                                    <button type="button" class="btn btn-outline-primary btn-add-edit-option">
+                                                        <i class="fas fa-plus me-1"></i>Ekle
+                                                    </button>
+                                                </div>
+                                                <input type="hidden" class="edit-options" value="@(attr.Options != null ? string.Join(", ", attr.Options) : "")" />
+                                            </div>
                                         </div>
                                     </div>
                         }
@@ -238,6 +300,44 @@
 
                 $(document).on('click', '.btn-remove-option', function() {
                     $(this).closest('.option-item').remove();
+                    reindexNewOptions($(this).closest('.attribute-row'));
+                });
+
+                function reindexNewOptions(row) {
+                    const attrIdx = row.data('index');
+                    row.find('.option-item input').each(function(index) {
+                        $(this).attr('name', `attributes[${attrIdx}].Options[${index}]`);
+                    });
+                }
+
+                $(document).on('keydown', '.options-list .option-item input', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const row = $(this).closest('.attribute-row');
+                        if ($(this).val().trim()) {
+                            row.find('.btn-add-option').click();
+                            row.find('.option-item input').last().trigger('focus');
+                        }
+                    }
+                });
+
+                $('form[asp-action="Edit"], form').on('submit', function() {
+                    $('.attribute-row').each(function() {
+                        const row = $(this);
+                        const seen = new Set();
+                        row.find('.option-item').each(function() {
+                            const input = $(this).find('input');
+                            const value = (input.val() || '').trim();
+                            const key = value.toLocaleLowerCase('tr-TR');
+                            if (!value || seen.has(key)) {
+                                $(this).remove();
+                            } else {
+                                input.val(value);
+                                seen.add(key);
+                            }
+                        });
+                        reindexNewOptions(row);
+                    });
                 });
 
                 $(document).on('click', '.btn-remove-attr', function() {
@@ -261,6 +361,79 @@
                 row.find('.attr-display').show();
             });
 
+            function normalizeOption(value) {
+                return (value || '').trim();
+            }
+
+            function getEditOptions(row) {
+                return row.find('.edit-option-chip').map(function() {
+                    return normalizeOption($(this).data('option') || $(this).find('.edit-option-text').text() || $(this).contents().first().text());
+                }).get().filter(Boolean);
+            }
+
+            function syncEditOptions(row) {
+                row.find('.edit-options').val(getEditOptions(row).join(', '));
+            }
+
+            function addEditOption(row, value) {
+                const option = normalizeOption(value);
+                if (!option) return;
+
+                const exists = getEditOptions(row).some(function(existing) {
+                    return existing.toLocaleLowerCase('tr-TR') === option.toLocaleLowerCase('tr-TR');
+                });
+                if (exists) {
+                    row.find('.edit-option-input').val('').focus();
+                    return;
+                }
+
+                const chip = $(`
+                    <span class="edit-option-chip" data-option="">
+                        <span class="edit-option-text"></span>
+                        <button type="button" class="btn-remove-edit-option" aria-label="Seçeneği sil">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                `);
+                chip.attr('data-option', option);
+                chip.find('.edit-option-text').text(option);
+                row.find('.edit-option-list').append(chip);
+                row.find('.edit-option-input').val('').focus();
+                syncEditOptions(row);
+            }
+
+            $(document).on('change', '.existing-attr-row .edit-type', function() {
+                const row = $(this).closest('.existing-attr-row');
+                const editor = row.find('.edit-options-editor');
+                if ($(this).val() === 'Dropdown') {
+                    editor.removeClass('d-none').hide().slideDown(150);
+                    row.find('.edit-option-input').trigger('focus');
+                } else {
+                    editor.slideUp(150, function() {
+                        editor.addClass('d-none');
+                    });
+                }
+            });
+
+            $(document).on('click', '.btn-add-edit-option', function() {
+                const row = $(this).closest('.existing-attr-row');
+                addEditOption(row, row.find('.edit-option-input').val());
+            });
+
+            $(document).on('keydown', '.edit-option-input', function(e) {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    const row = $(this).closest('.existing-attr-row');
+                    addEditOption(row, $(this).val());
+                }
+            });
+
+            $(document).on('click', '.btn-remove-edit-option', function() {
+                const row = $(this).closest('.existing-attr-row');
+                $(this).closest('.edit-option-chip').remove();
+                syncEditOptions(row);
+            });
+
             // Save edit — submit via hidden form
             $(document).on('click', '.btn-save-edit', function() {
                 const row = $(this).closest('.existing-attr-row');
@@ -269,7 +442,8 @@
                 const name = row.find('.edit-name').val();
                 const displayName = row.find('.edit-displayname').val();
                 const type = row.find('.edit-type').val();
-                const optionsStr = row.find('.edit-options').val() || '';
+                syncEditOptions(row);
+                const options = getEditOptions(row);
 
                 // Build form and submit
                 const form = $('<form>', {
@@ -284,8 +458,7 @@
                 form.append($('<input>', { type: 'hidden', name: 'Type', value: type }));
 
                 // Add options if dropdown
-                if (type === 'Dropdown' && optionsStr.trim()) {
-                    const options = optionsStr.split(',').map(o => o.trim()).filter(o => o);
+                if (type === 'Dropdown' && options.length > 0) {
                     options.forEach((opt, idx) => {
                         form.append($('<input>', { type: 'hidden', name: `Options[${idx}]`, value: opt }));
                     });
@@ -307,7 +480,7 @@
                 const categoryId = $(this).data('category-id');
                 const attrId = $(this).data('attr-id');
 
-                if (!confirm(`"${attrName}" özelliğini silmek istediğinize emin misiniz?`)) {
+                if (!confirm(`"${attrName}" özelliğini silmek istediğinize emin misiniz?\n\nBu özellik, bu kategori ve alt kategorilerdeki ürünlerin teknik özelliklerinden de kaldırılacak.`)) {
                     return;
                 }
 

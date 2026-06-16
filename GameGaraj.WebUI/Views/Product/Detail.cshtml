@@ -1,6 +1,7 @@
 @model GameGaraj.WebUI.Models.Products.ProductViewModel
 @{
     ViewData["Title"] = Model.Name;
+    var displayImageUrls = Model.DisplayImageUrls;
 }
 
 <style>
@@ -184,8 +185,8 @@
     }
 
     .product-brand {
-        color: var(--primary);
-        font-weight: 700;
+        color: #f07400;
+        font-weight: 800;
         font-size: 0.95rem;
         text-decoration: none;
         text-transform: uppercase;
@@ -195,7 +196,7 @@
     }
 
     .product-brand:hover {
-        color: var(--primary-hover);
+        color: #d86400;
         text-decoration: underline;
     }
 
@@ -791,33 +792,42 @@
         }
     }
 
-    /* Fullscreen Modal Styling */
+    /* Gallery Modal */
+    .modal-backdrop.show {
+        opacity: 0 !important;
+    }
+
+    .gallery-modal.fade .modal-dialog,
+    .gallery-modal.show .modal-dialog {
+        transform: none;
+    }
+
+    .gallery-modal .modal-dialog {
+        max-width: min(1500px, calc(100vw - 4rem));
+        height: min(800px, calc(100vh - 4rem));
+        margin: 2rem auto;
+    }
+
     .gallery-modal .modal-content {
-        background: rgba(15, 23, 42, 0.95);
-        backdrop-filter: blur(8px);
+        height: 100%;
+        background: #ffffff;
         border: none;
+        border-radius: 8px;
+        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
+        overflow: hidden;
     }
 
     .gallery-modal .modal-body {
         padding: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
+        height: 100%;
         position: relative;
     }
 
     .modal-image-container {
         width: 100%;
-        height: 85vh;
-        background: white;
-        border-radius: 16px;
-        padding: 2rem;
-        position: relative;
+        height: 100%;
+        background: #fff;
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
     }
 
     .modal-main-image {
@@ -826,8 +836,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 1rem;
+        padding: 3rem;
         position: relative;
+        min-width: 0;
     }
 
     .modal-main-image img {
@@ -837,14 +848,16 @@
     }
 
     .modal-thumbnails {
-        width: 120px;
+        width: 210px;
         height: 100%;
         overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        padding-left: 1.5rem;
-        border-left: 1px solid var(--border-color);
+        display: grid;
+        grid-template-columns: repeat(2, 82px);
+        align-content: start;
+        gap: 14px;
+        padding: 5rem 24px 24px;
+        border-left: 1px solid #e5e7eb;
+        background: #fff;
     }
 
     .modal-thumbnails::-webkit-scrollbar {
@@ -857,14 +870,14 @@
     }
 
     .modal-thumb-item {
-        width: 100%;
-        padding-top: 100%;
+        width: 82px;
+        height: 82px;
         position: relative;
-        border: 2px solid var(--border-color);
+        border: 1px solid #d9dee7;
         border-radius: 8px;
         cursor: pointer;
         overflow: hidden;
-        transition: var(--transition);
+        transition: border-color 0.12s ease, box-shadow 0.12s ease;
         background: white;
     }
 
@@ -881,32 +894,59 @@
     .modal-thumb-item:hover,
     .modal-thumb-item.active {
         border-color: var(--primary);
-        box-shadow: 0 4px 12px rgba(255, 96, 0, 0.15);
+        box-shadow: 0 0 0 1px var(--primary);
     }
 
     .modal-close-btn {
-        background: none;
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 10;
+        width: 42px;
+        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f5f6f8;
         border: none;
-        color: white;
-        font-size: 2.2rem;
+        border-radius: 50%;
+        color: #4b5563;
+        font-size: 1.25rem;
         cursor: pointer;
-        opacity: 0.8;
-        transition: var(--transition);
+        transition: background-color 0.12s ease, color 0.12s ease;
     }
 
     .modal-close-btn:hover {
-        opacity: 1;
-        color: var(--primary);
-        transform: rotate(90deg);
+        background: #eceff3;
+        color: #111827;
     }
 
-    .modal-title-bar {
-        color: white;
-        font-size: 1.35rem;
-        font-weight: 700;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    @@media (max-width: 768px) {
+        .gallery-modal .modal-dialog {
+            max-width: calc(100vw - 1rem);
+            height: calc(100vh - 1rem);
+            margin: 0.5rem auto;
+        }
+
+        .modal-image-container {
+            flex-direction: column;
+        }
+
+        .modal-main-image {
+            min-height: 0;
+            padding: 4rem 1rem 1rem;
+        }
+
+        .modal-thumbnails {
+            width: 100%;
+            height: 118px;
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            padding: 16px;
+            border-left: 0;
+            border-top: 1px solid #e5e7eb;
+        }
     }
 </style>
 
@@ -932,7 +972,7 @@
                 <div class="col-lg-4">
                     <div class="image-gallery">
                         <div class="main-image-wrapper">
-                            @if (Model.ImageUrls.Count > 1)
+                            @if (displayImageUrls.Count > 1)
                             {
                                 <button class="image-nav-btn prev" onclick="prevImage()">
                                     <i class="fas fa-chevron-left"></i>
@@ -942,17 +982,19 @@
                                 </button>
                             }
                             <img src="@Model.FirstImageUrl" alt="@Model.Name" id="mainImage"
-                                onclick="openGalleryModal()" title="Büyütmek için tıklayın">
+                                onclick="openGalleryModal()" title="Büyütmek için tıklayın"
+                                onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
                         </div>
 
-                        @if (Model.ImageUrls.Count > 1)
+                        @if (displayImageUrls.Count > 1)
                         {
                             <div class="thumbnail-row">
-                                @for (int i = 0; i < Model.ImageUrls.Count; i++)
+                                @for (int i = 0; i < displayImageUrls.Count; i++)
                                 {
                                     <div class="thumbnail-item @(i == 0 ? "active" : "")"
-                                        onclick="selectImage(@i, '@Model.ImageUrls[i]')">
-                                        <img src="@Model.ImageUrls[i]" alt="@Model.Name - @(i + 1)">
+                                        onclick="selectImage(@i, '@displayImageUrls[i]')">
+                                        <img src="@displayImageUrls[i]" alt="@Model.Name - @(i + 1)"
+                                             onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
                                     </div>
                                 }
                             </div>
@@ -964,9 +1006,9 @@
                 <div class="col-lg-5">
                     <div class="product-info-section">
                         <!-- Brand -->
-                        @if (!string.IsNullOrEmpty(Model.CategoryName))
+                        @if (!string.IsNullOrWhiteSpace(Model.Brand))
                         {
-                            <a href="#" class="product-brand">@Model.CategoryName</a>
+                            <a asp-controller="Product" asp-action="Index" asp-route-brand="@Model.Brand" class="product-brand">@Model.Brand</a>
                         }
 
                         <!-- Title -->
@@ -1242,7 +1284,7 @@
                     <div class="modal-image-container" onclick="event.stopPropagation();">
                         <!-- Main Modal Image -->
                         <div class="modal-main-image">
-                            @if (Model.ImageUrls.Count > 1)
+                            @if (displayImageUrls.Count > 1)
                             {
                                 <button class="image-nav-btn prev" onclick="prevModalImage()">
                                     <i class="fas fa-chevron-left"></i>
@@ -1251,18 +1293,20 @@
                                     <i class="fas fa-chevron-right"></i>
                                 </button>
                             }
-                            <img src="@Model.FirstImageUrl" id="modalMainImage" alt="@Model.Name">
+                            <img src="@Model.FirstImageUrl" id="modalMainImage" alt="@Model.Name"
+                                 onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
                         </div>
 
                         <!-- Modal Thumbnails -->
-                        @if (Model.ImageUrls.Count > 1)
+                        @if (displayImageUrls.Count > 1)
                         {
                             <div class="modal-thumbnails">
-                                @for (int i = 0; i < Model.ImageUrls.Count; i++)
+                                @for (int i = 0; i < displayImageUrls.Count; i++)
                                 {
                                     <div class="modal-thumb-item @(i == 0 ? "active" : "")"
-                                        onclick="selectModalImage(@i, '@Model.ImageUrls[i]')">
-                                        <img src="@Model.ImageUrls[i]" alt="Thumbnail @(i + 1)">
+                                        onclick="selectModalImage(@i, '@displayImageUrls[i]')">
+                                        <img src="@displayImageUrls[i]" alt="Thumbnail @(i + 1)"
+                                             onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
                                     </div>
                                 }
                             </div>
@@ -1277,7 +1321,7 @@
 @section Scripts {
     <script>
         let currentImageIndex = 0;
-        const images = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ImageUrls));
+        const images = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(displayImageUrls));
 
         function selectImage(index, src) {
             currentImageIndex = index;

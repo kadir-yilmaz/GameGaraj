@@ -48,16 +48,84 @@
             color: #333;
         }
         .search-suggestion-item {
-            padding: 0.75rem 1rem;
+            display: grid !important;
+            grid-template-columns: 52px minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 0.75rem;
+            min-height: 72px;
+            padding: 0.65rem 1rem;
             cursor: pointer;
             border-bottom: 1px solid #eee;
-            transition: all 0.2s;
+            transition: background 0.2s ease;
         }
         .search-suggestion-item:hover {
             background: #f8f9fa;
         }
         .search-suggestion-item:last-child {
             border-bottom: none;
+        }
+        .search-suggestion-media {
+            width: 52px;
+            height: 52px;
+            border-radius: 6px;
+            background: #f6f7f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            overflow: hidden;
+            flex: 0 0 auto;
+        }
+        .search-suggestion-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .search-suggestion-main {
+            min-width: 0;
+        }
+        .search-suggestion-title {
+            color: #222;
+            font-weight: 600;
+            line-height: 1.25;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .search-suggestion-meta {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 0.2rem;
+            line-height: 1.1;
+        }
+        .search-suggestion-type {
+            color: #6c757d;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            padding-left: 1rem;
+        }
+        .search-suggestion-item.suggestion-brand .search-suggestion-media {
+            background: #fff4e5;
+            color: #f97316;
+        }
+        .search-suggestion-item.suggestion-brand .search-suggestion-type {
+            color: #c2410c;
+            background: #ffedd5;
+            border-radius: 999px;
+            padding: 0.3rem 0.65rem;
+            font-weight: 700;
+        }
+        .search-suggestion-item.suggestion-category .search-suggestion-media {
+            background: #eef2ff;
+            color: #4f46e5;
+        }
+        .search-suggestion-item.suggestion-category .search-suggestion-type {
+            color: #3730a3;
+            background: #e0e7ff;
+            border-radius: 999px;
+            padding: 0.3rem 0.65rem;
+            font-weight: 700;
         }
     </style>
     
@@ -86,17 +154,18 @@
                             
                             let html = '';
                             
-                            // Categories
-                            if (data.categories && data.categories.length > 0) {
-                                html += data.categories.map(c => `
-                                    <a href="${c.url}" class="search-suggestion-item d-flex align-items-center text-decoration-none">
-                                        <div class="d-flex align-items-center justify-content-center bg-light text-secondary me-3" style="width: 40px; height: 40px; border-radius: 4px;">
-                                            <i class="fas fa-tags"></i>
+                            // Products
+                            if (data.products && data.products.length > 0) {
+                                html += data.products.map(p => `
+                                    <a href="${p.url}" class="search-suggestion-item text-decoration-none">
+                                        <div class="search-suggestion-media">
+                                            <img src="${p.imageUrl || '@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl'}" alt="${p.name}" onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
                                         </div>
-                                        <div class="flex-grow-1 d-flex justify-content-between align-items-center">
-                                            <div class="fw-semibold text-dark">${c.name}</div>
-                                            <small class="text-muted">Kategori</small>
+                                        <div class="search-suggestion-main">
+                                            <div class="search-suggestion-title">${p.name}</div>
+                                            <div class="search-suggestion-meta">${p.price || ''}</div>
                                         </div>
+                                        <div class="search-suggestion-type">Ürün</div>
                                     </a>
                                 `).join('');
                             }
@@ -104,27 +173,29 @@
                             // Brands
                             if (data.brands && data.brands.length > 0) {
                                 html += data.brands.map(b => `
-                                    <a href="${b.url}" class="search-suggestion-item d-flex align-items-center text-decoration-none">
-                                        <div class="d-flex align-items-center justify-content-center bg-light text-secondary me-3" style="width: 40px; height: 40px; border-radius: 4px;">
+                                    <a href="${b.url}" class="search-suggestion-item suggestion-brand text-decoration-none">
+                                        <div class="search-suggestion-media">
                                             <i class="fas fa-tag"></i>
                                         </div>
-                                        <div class="flex-grow-1 d-flex justify-content-between align-items-center">
-                                            <div class="fw-semibold text-dark">${b.name}</div>
-                                            <small class="text-muted">Marka</small>
+                                        <div class="search-suggestion-main">
+                                            <div class="search-suggestion-title">${b.name}</div>
                                         </div>
+                                        <div class="search-suggestion-type">Marka</div>
                                     </a>
                                 `).join('');
                             }
                             
-                            // Products
-                            if (data.products && data.products.length > 0) {
-                                html += data.products.map(p => `
-                                    <a href="${p.url}" class="search-suggestion-item d-flex align-items-center text-decoration-none">
-                                        <img src="${p.imageUrl}" alt="${p.name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" class="me-3">
-                                        <div class="flex-grow-1">
-                                            <div class="fw-semibold text-dark">${p.name}</div>
-                                            <small class="text-muted">${p.price}</small>
+                            // Categories
+                            if (data.categories && data.categories.length > 0) {
+                                html += data.categories.map(c => `
+                                    <a href="${c.url}" class="search-suggestion-item suggestion-category text-decoration-none">
+                                        <div class="search-suggestion-media">
+                                            <i class="fas fa-tags"></i>
                                         </div>
+                                        <div class="search-suggestion-main">
+                                            <div class="search-suggestion-title">${c.name}</div>
+                                        </div>
+                                        <div class="search-suggestion-type">Kategori</div>
                                     </a>
                                 `).join('');
                             }

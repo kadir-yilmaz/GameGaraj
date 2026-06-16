@@ -44,22 +44,24 @@ namespace GameGaraj.WebUI.Controllers
             }
 
             // ... (rest of the logic remains the same)
-            // Fix: Check and remove categoryId from specs
+            // Fix: remove non-spec query parameters from specs
             if (specs != null)
             {
-                if (specs.ContainsKey("categoryId")) specs.Remove("categoryId");
-                if (specs.ContainsKey("CategoryId")) specs.Remove("CategoryId");
+                var reservedSpecKeys = new[]
+                {
+                    "category", "categoryId", "CategoryId", "sortBy", "minPrice", "maxPrice", "search", "brand"
+                };
+
+                foreach (var key in reservedSpecKeys)
+                {
+                    specs.Remove(key);
+                }
             }
 
             List<ProductViewModel> products;
 
-            // Brand search
-            if (!string.IsNullOrWhiteSpace(brand))
-            {
-                products = await _catalogService.SearchProductsAsync(brand);
-            }
             // Keyword search
-            else if (!string.IsNullOrWhiteSpace(search))
+            if (!string.IsNullOrWhiteSpace(search))
             {
                 search = search.Trim();
                 products = await _catalogService.SearchProductsAsync(search);
@@ -67,13 +69,23 @@ namespace GameGaraj.WebUI.Controllers
                 if (!string.IsNullOrEmpty(categoryId)) products = products.Where(p => p.CategoryId == categoryId).ToList();
                 if (minPrice.HasValue) products = products.Where(p => p.Price >= minPrice.Value).ToList();
                 if (maxPrice.HasValue) products = products.Where(p => p.Price <= maxPrice.Value).ToList();
+                if (!string.IsNullOrWhiteSpace(brand))
+                {
+                    var normalizedBrand = brand.Trim();
+                    products = products.Where(p =>
+                        string.Equals(p.Brand?.Trim(), normalizedBrand, StringComparison.OrdinalIgnoreCase) ||
+                        (!string.IsNullOrWhiteSpace(p.Name) &&
+                            p.Name.Trim().StartsWith($"{normalizedBrand} ", StringComparison.OrdinalIgnoreCase)))
+                        .ToList();
+                }
             }
             else
             {
-                products = await _catalogService.GetAllProductsAsync(categoryId, sortBy, minPrice, maxPrice, specs);
+                products = await _catalogService.GetAllProductsAsync(categoryId, sortBy, minPrice, maxPrice, specs, brand);
             }
 
             var categories = await _catalogService.GetAllCategoriesAsync();
+            var brandSourceProducts = await _catalogService.GetAllProductsAsync(categoryId);
 
             // Setup ViewBags
             ViewBag.CurrentCategoryName = categoryModel?.Name ?? "Tüm Ürünler";
@@ -86,19 +98,27 @@ namespace GameGaraj.WebUI.Controllers
             ViewBag.MaxPrice = maxPrice;
             ViewBag.SelectedSpecs = specs ?? new Dictionary<string, string[]>();
             ViewBag.Search = search;
+            ViewBag.Brand = brand;
+            ViewBag.Brands = brandSourceProducts
+                .Select(p => p.Brand)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x)
+                .ToList();
 
             var basket = await _basketService.GetBasketAsync();
             var favoriteIds = await _favoritesService.GetFavoriteProductIdsAsync();
             var basketProductIds = basket?.Items?
                 .Select(x => x.ProductId?.Trim())
                 .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase)
                 ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             
             foreach (var product in products)
             {
                 product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
-                product.IsFavorite = favoriteIds.Contains(product.Id);
+                product.IsFavorite = favoriteIds.Contains(product.Id ?? string.Empty);
             }
 
             return View(products);
@@ -123,11 +143,12 @@ namespace GameGaraj.WebUI.Controllers
             var basketProductIds = basket?.Items?
                 .Select(x => x.ProductId?.Trim())
                 .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase)
                 ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
 
-            product.IsFavorite = await _favoritesService.IsFavoriteAsync(product.Id);
+            product.IsFavorite = await _favoritesService.IsFavoriteAsync(product.Id ?? string.Empty);
 
             return View(product);
         }
@@ -135,42 +156,89 @@ namespace GameGaraj.WebUI.Controllers
         [HttpGet("api/products/search")]
         public async Task<IActionResult> SearchProducts(string q)
         {
-            if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            q = q?.Trim() ?? string.Empty;
+
+            if (q.Length < 2)
             {
-                return Json(new { categories = new List<object>(), products = new List<object>() });
+                return Json(new { categories = new List<object>(), brands = new List<object>(), products = new List<object>() });
             }
 
-            var categories = await _catalogService.SearchCategoriesAsync(q);
-            var matchingCategories = categories
+            var suggestions = await _catalogService.SearchSuggestionsAsync(q);
+
+            if (!suggestions.Any())
+            {
+                var fallbackCategories = await _catalogService.SearchCategoriesAsync(q);
+                var fallbackBrands = await _catalogService.SearchBrandsAsync(q);
+                var fallbackProducts = await _catalogService.SearchProductsAsync(q);
+
+                return Json(new
+                {
+                    categories = fallbackCategories
+                        .Take(3)
+                        .Select(c => new
+                        {
+                            id = c.Id,
+                            name = c.Name,
+                            url = $"/product/c/{c.Slug}"
+                        }),
+                    brands = fallbackBrands
+                        .Take(3)
+                        .Select(b => new
+                        {
+                            id = b,
+                            name = b,
+                            url = $"/Product?brand={Uri.EscapeDataString(b)}"
+                        }),
+                    products = fallbackProducts
+                        .Take(10)
+                        .Select(p => new
+                        {
+                            id = p.Id,
+                            name = p.Name,
+                            price = p.Price.ToString("C2"),
+                            imageUrl = p.FirstImageUrl,
+                            url = $"/product/p/{p.Slug}"
+                        })
+                });
+            }
+
+            var matchingCategories = suggestions
+                .Where(s => string.Equals(s.Type, "category", StringComparison.OrdinalIgnoreCase))
+                .GroupBy(s => s.Id)
+                .Select(g => g.First())
                 .Take(3)
                 .Select(c => new
                 {
                     id = c.Id,
                     name = c.Name,
-                    url = $"/product/c/{c.Slug}"
+                    url = !string.IsNullOrWhiteSpace(c.Slug)
+                        ? $"/product/c/{c.Slug}"
+                        : $"/Product?categoryId={Uri.EscapeDataString(c.Id)}"
                 })
                 .ToList();
 
-            var brands = await _catalogService.SearchBrandsAsync(q);
-            var matchingBrands = brands
+            var matchingBrands = suggestions
+                .Where(s => string.Equals(s.Type, "brand", StringComparison.OrdinalIgnoreCase))
+                .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
                 .Take(3)
                 .Select(b => new
                 {
-                    id = b,
-                    name = b,
-                    url = $"/Product?brand={Uri.EscapeDataString(b)}"
+                    id = b.Id,
+                    name = b.Name,
+                    url = $"/Product?brand={Uri.EscapeDataString(b.Name)}"
                 })
                 .ToList();
 
-            var products = await _catalogService.SearchProductsAsync(q);
-            var productResults = products
-                .Take(5)
+            var productResults = suggestions
+                .Where(s => string.Equals(s.Type, "product", StringComparison.OrdinalIgnoreCase))
+                .Take(10)
                 .Select(p => new
                 {
                     id = p.Id,
                     name = p.Name,
-                    price = p.Price.ToString("C2"),
-                    imageUrl = p.FirstImageUrl,
+                    price = p.Price.HasValue ? p.Price.Value.ToString("C2") : string.Empty,
+                    imageUrl = string.IsNullOrWhiteSpace(p.ImageUrl) ? ProductViewModel.DefaultImageUrl : p.ImageUrl,
                     url = $"/product/p/{p.Slug}"
                 })
                 .ToList();

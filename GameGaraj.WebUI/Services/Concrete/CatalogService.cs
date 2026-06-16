@@ -3,7 +3,7 @@ using GameGaraj.WebUI.Models.Products;
 using GameGaraj.WebUI.Services.Abstract;
 using GameGaraj.WebUI.Settings;
 using Microsoft.Extensions.Options;
-using System.Text;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
@@ -20,6 +20,72 @@ namespace GameGaraj.WebUI.Services.Concrete
             _httpClient = httpClient;
             _logger = logger;
             _settings = settings.Value; // Initialized settings
+        }
+
+        private static string NormalizeSearchText(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+
+            var normalized = value.Trim().ToLower(new CultureInfo("tr-TR")).Normalize(NormalizationForm.FormD);
+            var builder = new StringBuilder(normalized.Length);
+
+            foreach (var c in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                {
+                    builder.Append(c);
+                }
+            }
+
+            return builder.ToString()
+                .Replace('ı', 'i')
+                .Replace('ğ', 'g')
+                .Replace('ü', 'u')
+                .Replace('ş', 's')
+                .Replace('ö', 'o')
+                .Replace('ç', 'c');
+        }
+
+        private static int GetEditDistance(string left, string right)
+        {
+            if (left == right) return 0;
+            if (left.Length == 0) return right.Length;
+            if (right.Length == 0) return left.Length;
+
+            var costs = new int[right.Length + 1];
+            for (var j = 0; j <= right.Length; j++) costs[j] = j;
+
+            for (var i = 1; i <= left.Length; i++)
+            {
+                var previous = costs[0];
+                costs[0] = i;
+
+                for (var j = 1; j <= right.Length; j++)
+                {
+                    var current = costs[j];
+                    costs[j] = left[i - 1] == right[j - 1]
+                        ? previous
+                        : Math.Min(Math.Min(costs[j] + 1, costs[j - 1] + 1), previous + 1);
+                    previous = current;
+                }
+            }
+
+            return costs[right.Length];
+        }
+
+        private static int GetSearchScore(string text, string keyword)
+        {
+            var normalizedText = NormalizeSearchText(text);
+            var normalizedKeyword = NormalizeSearchText(keyword);
+            if (string.IsNullOrWhiteSpace(normalizedText) || string.IsNullOrWhiteSpace(normalizedKeyword)) return int.MaxValue;
+
+            if (normalizedText == normalizedKeyword) return 0;
+            if (normalizedText.StartsWith(normalizedKeyword)) return 1;
+            if (normalizedText.Contains(normalizedKeyword)) return 2;
+
+            var distance = GetEditDistance(normalizedText, normalizedKeyword);
+            var allowedDistance = normalizedKeyword.Length <= 5 ? 1 : 2;
+            return distance <= allowedDistance ? 10 + distance : int.MaxValue;
         }
 
         private void SetProductImageUrls(List<ProductViewModel>? products)
@@ -48,7 +114,7 @@ namespace GameGaraj.WebUI.Services.Concrete
             }
         }
 
-        public async Task<List<ProductViewModel>> GetAllProductsAsync(string? categoryId = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, Dictionary<string, string[]>? specs = null) // Kept original specs type
+        public async Task<List<ProductViewModel>> GetAllProductsAsync(string? categoryId = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, Dictionary<string, string[]>? specs = null, string? brand = null)
         {
             try
             {
@@ -68,10 +134,20 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (maxPrice.HasValue)
                     queryParams.Add($"maxPrice={maxPrice}");
 
+                if (!string.IsNullOrWhiteSpace(brand))
+                    queryParams.Add($"brand={Uri.EscapeDataString(brand)}");
+
                 if (specs != null && specs.Any())
                 {
+                    var reservedSpecKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        "category", "categoryId", "sortBy", "minPrice", "maxPrice", "search", "brand"
+                    };
+
                     foreach (var spec in specs)
                     {
+                        if (reservedSpecKeys.Contains(spec.Key)) continue;
+
                         if (spec.Value != null && spec.Value.Length > 0)
                         {
                             var values = string.Join(",", spec.Value.Where(v => !string.IsNullOrEmpty(v)));
@@ -280,7 +356,11 @@ namespace GameGaraj.WebUI.Services.Concrete
             FlattenCategories(rootCategories);
 
             return allCategories
-                .Where(c => c.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                .Select(c => new { Category = c, Score = GetSearchScore(c.Name, keyword) })
+                .Where(x => x.Score < int.MaxValue)
+                .OrderBy(x => x.Score)
+                .ThenBy(x => x.Category.Name)
+                .Select(x => x.Category)
                 .ToList();
         }
 
@@ -301,6 +381,106 @@ namespace GameGaraj.WebUI.Services.Concrete
             {
                 _logger.LogError(ex, "[CatalogService] Error fetching brands");
                 return new List<string>();
+            }
+        }
+
+        public async Task<List<SearchSuggestionViewModel>> SearchSuggestionsAsync(string keyword)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(keyword)) return new List<SearchSuggestionViewModel>();
+
+                var response = await _httpClient.GetAsync($"products/search/suggestions?q={Uri.EscapeDataString(keyword)}");
+                if (!response.IsSuccessStatusCode) return new List<SearchSuggestionViewModel>();
+
+                var content = await response.Content.ReadAsStringAsync();
+                var suggestions = JsonSerializer.Deserialize<List<SearchSuggestionViewModel>>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? new List<SearchSuggestionViewModel>();
+
+                foreach (var suggestion in suggestions.Where(x => string.Equals(x.Type, "product", StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (string.IsNullOrWhiteSpace(suggestion.ImageUrl))
+                    {
+                        suggestion.ImageUrl = ProductViewModel.DefaultImageUrl;
+                    }
+                    else if (!suggestion.ImageUrl.StartsWith("http") && !suggestion.ImageUrl.StartsWith("/"))
+                    {
+                        var imageBaseUrl = !string.IsNullOrWhiteSpace(_settings.PhotoBaseUrl)
+                            ? _settings.PhotoBaseUrl
+                            : _settings.PhotoStockUri;
+
+                        suggestion.ImageUrl = $"{imageBaseUrl.TrimEnd('/')}/{suggestion.ImageUrl.TrimStart('/')}";
+                    }
+                }
+
+                return suggestions;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CatalogService] Error fetching search suggestions");
+                return new List<SearchSuggestionViewModel>();
+            }
+        }
+
+        public async Task<SearchIndexStatusViewModel?> GetSearchIndexStatusAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("products/search/status");
+                if (!response.IsSuccessStatusCode) return null;
+
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<SearchIndexStatusViewModel>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CatalogService] Error fetching search index status");
+                return null;
+            }
+        }
+
+        public async Task<ReindexResultViewModel?> ReindexSearchIndexAsync()
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync("products/search/reindex", null);
+                if (!response.IsSuccessStatusCode) return null;
+
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<ReindexResultViewModel>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CatalogService] Error rebuilding search index");
+                return null;
+            }
+        }
+
+        public async Task<SearchIndexDocumentPageViewModel> GetSearchIndexDocumentPreviewsAsync(int page = 1, int pageSize = 100)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"products/search/documents?page={page}&pageSize={pageSize}");
+                if (!response.IsSuccessStatusCode) return new SearchIndexDocumentPageViewModel();
+
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<SearchIndexDocumentPageViewModel>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? new SearchIndexDocumentPageViewModel();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CatalogService] Error fetching search index document previews");
+                return new SearchIndexDocumentPageViewModel();
             }
         }
 

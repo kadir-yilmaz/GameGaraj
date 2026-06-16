@@ -6,6 +6,26 @@
     var currentCategoryAttributes = ViewBag.CurrentCategoryAttributes as
     List<GameGaraj.WebUI.Models.Products.CategoryAttributeViewModel>;
     var selectedSpecs = ViewBag.SelectedSpecs as Dictionary<string, string[]> ?? new Dictionary<string, string[]>();
+    var brands = ViewBag.Brands as List<string> ?? new List<string>();
+    var selectedBrand = ViewBag.Brand as string;
+    var rootCategories = categories?.Where(x => string.IsNullOrWhiteSpace(x.ParentId)).ToList() ?? new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
+    if (!rootCategories.Any() && categories != null)
+    {
+        rootCategories = categories;
+    }
+    var totalProductCount = rootCategories.Sum(x => x.ProductCount);
+
+    string CategoryUrl(GameGaraj.WebUI.Models.Products.CategoryViewModel category)
+    {
+        return !string.IsNullOrWhiteSpace(category.Slug)
+            ? Url.Action("Index", "Product", new { category = category.Slug })!
+            : Url.Action("Index", "Product", new { categoryId = category.Id })!;
+    }
+
+    bool HasActiveDescendant(GameGaraj.WebUI.Models.Products.CategoryViewModel category)
+    {
+        return category.Children.Any(child => child.Id == currentCategoryId || HasActiveDescendant(child));
+    }
 }
 
 @await Html.PartialAsync("_ProductCardStyles")
@@ -14,9 +34,10 @@
     /* Sidebar */
     .sidebar {
         background: #fff;
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e0e7ef;
+        border-radius: 0;
+        padding: 1.25rem;
+        box-shadow: none;
         position: sticky;
         top: 20px;
         max-height: calc(100vh - 40px);
@@ -30,37 +51,6 @@
     .sidebar::-webkit-scrollbar-thumb {
         background: #ddd;
         border-radius: 3px;
-    }
-
-    .category-item {
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.5rem;
-        border-radius: 8px;
-        transition: all 0.2s;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        text-decoration: none;
-        color: #333;
-        font-weight: 500;
-    }
-
-    .category-item:hover {
-        background: #f8f9fa;
-        color: #007bff;
-        transform: translateX(4px);
-    }
-
-    .category-item.active {
-        background: #007bff;
-        color: white;
-        font-weight: 600;
-    }
-
-    .category-item.child {
-        padding-left: 2rem;
-        font-size: 0.9rem;
     }
 
     .filter-section {
@@ -82,92 +72,92 @@
         color: #333;
     }
 
-    /* Category Accordion */
-    .category-accordion-btn {
-        background: #f8f9fa;
-        border: none;
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: #333;
-        transition: all 0.2s;
+    .price-filter-apply {
+        background: #f07400;
+        border-color: #f07400;
+        color: #fff;
+        font-weight: 700;
     }
 
-    .category-accordion-btn:not(.collapsed) {
-        background: #007bff;
-        color: white;
-        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    .price-filter-apply:hover,
+    .price-filter-apply:focus {
+        background: #d96500;
+        border-color: #d96500;
+        color: #fff;
     }
 
-    .category-accordion-btn:hover {
-        background: #e9ecef;
-    }
-
-    .category-accordion-btn:not(.collapsed):hover {
-        background: #0056b3;
-    }
-
-    .category-accordion-btn::after {
-        margin-left: auto;
-    }
-
-    .category-link {
+    .category-panel-title {
         display: flex;
         align-items: center;
-        padding: 0.75rem 1rem;
-        background: #f8f9fa;
-        border-radius: 8px;
-        text-decoration: none;
-        color: #333;
-        font-weight: 600;
-        font-size: 0.9rem;
-        transition: all 0.2s;
+        gap: 0.6rem;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #111827;
+        padding-bottom: 0.9rem;
+        margin-bottom: 1.1rem;
+        border-bottom: 1px solid #e5eaf0;
     }
 
-    .category-link:hover {
-        background: #e9ecef;
-        color: #007bff;
-        transform: translateX(4px);
+    .category-panel-title i {
+        color: #ffb000;
     }
 
-    .category-link.active {
-        background: #007bff;
-        color: white;
-        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    .category-tree {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
     }
 
-    .category-child-link {
+    .category-tree-link {
         display: flex;
         align-items: center;
-        padding: 0.6rem 1rem 0.6rem 2rem;
+        justify-content: space-between;
+        gap: 0.75rem;
+        min-height: 42px;
+        padding: 0.65rem 0.85rem;
+        border-radius: 8px;
         text-decoration: none;
-        color: #666;
-        font-size: 0.85rem;
-        transition: all 0.2s;
-        border-left: 3px solid transparent;
+        color: #526176;
+        font-weight: 700;
+        transition: background 0.2s ease, color 0.2s ease;
     }
 
-    .category-child-link:hover {
-        background: #f8f9fa;
-        color: #007bff;
-        border-left-color: #007bff;
-        padding-left: 2.25rem;
+    .category-tree-link:hover {
+        background: #f1f5f9;
+        color: #f07400;
     }
 
-    .category-child-link.active {
-        background: #e7f3ff;
-        color: #007bff;
-        border-left-color: #007bff;
-        font-weight: 600;
+    .category-tree-link.active {
+        background: #eef2f7;
+        color: #f07400;
     }
 
-    .accordion-item {
-        background: transparent;
+    .category-tree-link.child {
+        min-height: 36px;
+        padding: 0.48rem 0.85rem 0.48rem 1.7rem;
+        font-size: 0.92rem;
     }
 
-    .accordion-body {
-        padding-top: 0.5rem;
+    .category-children {
+        margin-left: 0.95rem;
+        padding-left: 0.95rem;
+        border-left: 1px solid #e3e9f2;
+    }
+
+    .category-count-badge {
+        min-width: 30px;
+        height: 24px;
+        padding: 0 0.45rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #dce5ef;
+        border-radius: 999px;
+        color: #526176;
+        background: #fff;
+        font-size: 0.78rem;
+        font-weight: 800;
+        line-height: 1;
     }
 
     /* Mobile Sidebar */
@@ -268,75 +258,84 @@
                 <div class="sidebar-content">
                     <!-- Categories Section -->
                     <div class="filter-section">
-                        <h6 class="filter-title">
-                            <i class="fas fa-th-large me-2"></i>Kategoriler
-                        </h6>
-                        <div class="accordion accordion-flush" id="categoryAccordion">
-                            @if (categories != null && categories.Any())
+                        <div class="category-panel-title">
+                            <i class="fas fa-grip"></i>
+                            <span>Tüm Kategoriler</span>
+                        </div>
+
+                        <div class="category-tree">
+                            <a href="/product"
+                               class="category-tree-link @(string.IsNullOrWhiteSpace(currentCategoryId) ? "active" : "")">
+                                <span><i class="fas fa-list me-2"></i>Tüm Ürünler</span>
+                                <span class="category-count-badge">@totalProductCount</span>
+                            </a>
+
+                            @if (rootCategories.Any())
                             {
-                                @foreach (var category in categories)
+                                @foreach (var category in rootCategories)
                                 {
-                                    <div class="accordion-item border-0 mb-2">
-                                        @if (category.Children != null && category.Children.Any())
-                                        {
-                                            <h2 class="accordion-header">
-                                                <button class="accordion-button collapsed category-accordion-btn" type="button" 
-                                                        data-bs-toggle="collapse" data-bs-target="#category_@category.Id">
-                                                    <i class="fas fa-folder me-2 text-primary"></i>
-                                                    @category.Name
-                                                </button>
-                                            </h2>
-                                            <div id="category_@category.Id" class="accordion-collapse collapse" 
-                                                 data-bs-parent="#categoryAccordion">
-                                                <div class="accordion-body p-0">
-                                                    @foreach (var child in category.Children)
-                                                    {
-                                                        <a href="@Url.Action("Index", "Product", new { category = child.Slug })" 
-                                                           class="category-child-link @(currentCategoryId == child.Id ? "active" : "")">
-                                                            @child.Name
-                                                        </a>
-                                                    }
-                                                </div>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <a href="@Url.Action("Index", "Product", new { category = category.Slug } )" 
-                                               class="category-link @(currentCategoryId == category.Id ? "active" : "")">
-                                                <i class="fas fa-folder me-2 text-primary"></i>
-                                                @category.Name
-                                            </a>
-                                        }
-                                    </div>
+                                    var isCategoryActive = currentCategoryId == category.Id;
+                                    var hasActiveChild = HasActiveDescendant(category);
+                                    var isOpen = isCategoryActive || hasActiveChild;
+
+                                    <a href="@CategoryUrl(category)"
+                                       class="category-tree-link @(isCategoryActive || hasActiveChild ? "active" : "")">
+                                        <span>@category.Name</span>
+                                        <span class="category-count-badge">@category.ProductCount</span>
+                                    </a>
+
+                                    @if (category.Children != null && category.Children.Any() && isOpen)
+                                    {
+                                        <div class="category-children">
+                                            @foreach (var child in category.Children)
+                                            {
+                                                var isChildActive = currentCategoryId == child.Id;
+                                                var childHasActiveDescendant = HasActiveDescendant(child);
+
+                                                <a href="@CategoryUrl(child)"
+                                                   class="category-tree-link child @(isChildActive || childHasActiveDescendant ? "active" : "")">
+                                                    <span>@child.Name</span>
+                                                    <span class="category-count-badge">@child.ProductCount</span>
+                                                </a>
+
+                                                @if (child.Children != null && child.Children.Any() && (isChildActive || childHasActiveDescendant))
+                                                {
+                                                    <div class="category-children">
+                                                        @foreach (var grandChild in child.Children)
+                                                        {
+                                                            <a href="@CategoryUrl(grandChild)"
+                                                               class="category-tree-link child @(currentCategoryId == grandChild.Id ? "active" : "")">
+                                                                <span>@grandChild.Name</span>
+                                                                <span class="category-count-badge">@grandChild.ProductCount</span>
+                                                            </a>
+                                                        }
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    }
                                 }
                             }
                         </div>
                     </div>
-                    
+
                     <!-- Filters Form -->
-                    @if (currentCategoryAttributes != null && currentCategoryAttributes.Any())
+                    @if (Model != null)
                     {
                         <form method="get" asp-controller="Product" asp-action="Index" id="filterForm">
                             <input type="hidden" name="categoryId" value="@currentCategoryId" />
 
-                            <!-- Dynamic Filters -->
-                            @foreach (var attr in currentCategoryAttributes)
+                            @if (brands.Any())
                             {
                                 <div class="filter-section">
-                                    <h6 class="filter-title">@attr.DisplayName</h6>
-                                    @if (attr.Options != null && attr.Options.Any())
+                                    <h6 class="filter-title">Marka</h6>
+                                    @foreach (var brandName in brands)
                                     {
-                                        @foreach (var option in attr.Options)
-                                        {
-                                            <div class="form-check mb-2">
-                                                <input class="form-check-input" type="checkbox" name="specs[@attr.Name]" value="@option"
-                                                    id="@(attr.Name)_@option" @(selectedSpecs.ContainsKey(attr.Name) &&
-                                selectedSpecs[attr.Name].Contains(option) ? "checked" : "")>
-                                                <label class="form-check-label" for="@(attr.Name)_@option">
-                                                    @option
-                                                </label>
-                                            </div>
-                                        }
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" name="brand" value="@brandName"
+                                                id="brand_@brandName" @(string.Equals(selectedBrand, brandName, StringComparison.OrdinalIgnoreCase) ? "checked" : "")>
+                                            <label class="form-check-label" for="brand_@brandName">@brandName</label>
+                                        </div>
                                     }
                                 </div>
                             }
@@ -354,19 +353,53 @@
                                             placeholder="Max ₺" value="@ViewBag.MaxPrice">
                                     </div>
                                 </div>
+                                <button type="submit" class="btn btn-sm price-filter-apply w-100">
+                                    <i class="fas fa-check me-2"></i>Fiyat&#305; Uygula
+                                </button>
                             </div>
 
-                            <!-- Apply Button -->
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-check me-2"></i>Uygula
-                                </button>
-                                @if (selectedSpecs.Any() || ViewBag.MinPrice != null || ViewBag.MaxPrice != null)
+
+                            <!-- Dynamic Filters -->
+                            @if (currentCategoryAttributes != null && currentCategoryAttributes.Any())
+                            {
+                                @foreach (var attr in currentCategoryAttributes)
                                 {
-                                    <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@currentCategoryId"
-                                        class="btn btn-outline-secondary">
-                                        <i class="fas fa-times me-2"></i>Temizle
-                                    </a>
+                                    <div class="filter-section">
+                                        <h6 class="filter-title">@attr.DisplayName</h6>
+                                        @if (attr.Options != null && attr.Options.Any())
+                                        {
+                                            @foreach (var option in attr.Options)
+                                            {
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" name="specs[@attr.Name]" value="@option"
+                                                        id="@(attr.Name)_@option" @(selectedSpecs.ContainsKey(attr.Name) &&
+                                selectedSpecs[attr.Name].Contains(option) ? "checked" : "")>
+                                                    <label class="form-check-label" for="@(attr.Name)_@option">
+                                                        @option
+                                                    </label>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            }
+
+                            <div class="d-grid gap-2">
+                                @if (selectedSpecs.Any() || ViewBag.MinPrice != null || ViewBag.MaxPrice != null || !string.IsNullOrWhiteSpace(selectedBrand))
+                                {
+                                    @if (!string.IsNullOrWhiteSpace(currentCategoryId))
+                                    {
+                                        <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@currentCategoryId"
+                                            class="btn btn-outline-secondary">
+                                            <i class="fas fa-times me-2"></i>Temizle
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a href="/product" class="btn btn-outline-secondary">
+                                            <i class="fas fa-times me-2"></i>Temizle
+                                        </a>
+                                    }
                                 }
                             </div>
                         </form>
@@ -381,7 +414,7 @@
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                 <div>
                     <h1 class="h3 fw-bold mb-1">@ViewBag.CurrentCategoryName</h1>
-                    <p class="text-muted mb-0">@Model.Count ürün bulundu</p>
+                    <p class="text-muted mb-0">@(Model?.Count ?? 0) ürün bulundu</p>
                 </div>
 
                 <div class="d-flex gap-2 align-items-center">
@@ -433,12 +466,12 @@
             </div>
 
             <!-- Product Grid -->
-            <div class="row g-3">
+            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3">
                 @if (Model != null && Model.Any())
                 {
                     @foreach (var product in Model)
                     {
-                        <div class="col-6 col-md-4 col-xl-3">
+                        <div class="col">
                             @{
                                 ViewBag.ShowFeaturedBadge = false;
                             }
@@ -453,7 +486,7 @@
                             <i class="fas fa-search fa-3x text-muted mb-3"></i>
                             <h5 class="fw-bold mb-2">Ürün Bulunamadı</h5>
                             <p class="text-muted">Aradığınız kriterlere uygun ürün bulunmamaktadır.</p>
-                            <a asp-controller="Product" asp-action="Index" class="btn btn-primary mt-3">
+                            <a href="/product" class="btn btn-primary mt-3">
                                 Tüm Ürünleri Gör
                             </a>
                         </div>
@@ -480,29 +513,22 @@
     </div>
     <div class="mobile-sidebar-content">
         <!-- Filters Form -->
-        @if (currentCategoryAttributes != null && currentCategoryAttributes.Any())
+        @if (Model != null)
         {
             <form method="get" asp-controller="Product" asp-action="Index" id="mobileFilterForm">
                 <input type="hidden" name="categoryId" value="@currentCategoryId" />
 
-                <!-- Dynamic Filters -->
-                @foreach (var attr in currentCategoryAttributes)
+                @if (brands.Any())
                 {
                     <div class="filter-section">
-                        <h6 class="filter-title">@attr.DisplayName</h6>
-                        @if (attr.Options != null && attr.Options.Any())
+                        <h6 class="filter-title">Marka</h6>
+                        @foreach (var brandName in brands)
                         {
-                            @foreach (var option in attr.Options)
-                            {
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="specs[@attr.Name]" value="@option"
-                                        id="mobile_@(attr.Name)_@option" @(selectedSpecs.ContainsKey(attr.Name) &&
-                                selectedSpecs[attr.Name].Contains(option) ? "checked" : "")>
-                                    <label class="form-check-label" for="mobile_@(attr.Name)_@option">
-                                        @option
-                                    </label>
-                                </div>
-                            }
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="brand" value="@brandName"
+                                    id="mobile_brand_@brandName" @(string.Equals(selectedBrand, brandName, StringComparison.OrdinalIgnoreCase) ? "checked" : "")>
+                                <label class="form-check-label" for="mobile_brand_@brandName">@brandName</label>
+                            </div>
                         }
                     </div>
                 }
@@ -520,19 +546,53 @@
                                 placeholder="Max ₺" value="@ViewBag.MaxPrice">
                         </div>
                     </div>
+                    <button type="submit" class="btn price-filter-apply w-100">
+                        <i class="fas fa-check me-2"></i>Fiyat&#305; Uygula
+                    </button>
                 </div>
 
-                <!-- Apply Button -->
-                <div class="d-grid gap-2 sticky-bottom bg-white pt-3 pb-2" style="margin: 0 -1.5rem; padding-left: 1.5rem !important; padding-right: 1.5rem !important; border-top: 1px solid #eee;">
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fas fa-check me-2"></i>Uygula
-                    </button>
-                    @if (selectedSpecs.Any() || ViewBag.MinPrice != null || ViewBag.MaxPrice != null)
+
+                <!-- Dynamic Filters -->
+                @if (currentCategoryAttributes != null && currentCategoryAttributes.Any())
+                {
+                    @foreach (var attr in currentCategoryAttributes)
                     {
-                        <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@currentCategoryId"
-                            class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-2"></i>Temizle
-                        </a>
+                        <div class="filter-section">
+                            <h6 class="filter-title">@attr.DisplayName</h6>
+                            @if (attr.Options != null && attr.Options.Any())
+                            {
+                                @foreach (var option in attr.Options)
+                                {
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="specs[@attr.Name]" value="@option"
+                                            id="mobile_@(attr.Name)_@option" @(selectedSpecs.ContainsKey(attr.Name) &&
+                                selectedSpecs[attr.Name].Contains(option) ? "checked" : "")>
+                                        <label class="form-check-label" for="mobile_@(attr.Name)_@option">
+                                            @option
+                                        </label>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                }
+
+                <div class="d-grid gap-2 sticky-bottom bg-white pt-3 pb-2" style="margin: 0 -1.5rem; padding-left: 1.5rem !important; padding-right: 1.5rem !important; border-top: 1px solid #eee;">
+                    @if (selectedSpecs.Any() || ViewBag.MinPrice != null || ViewBag.MaxPrice != null || !string.IsNullOrWhiteSpace(selectedBrand))
+                    {
+                        @if (!string.IsNullOrWhiteSpace(currentCategoryId))
+                        {
+                            <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@currentCategoryId"
+                                class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Temizle
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="/product" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Temizle
+                            </a>
+                        }
                     }
                 </div>
             </form>
@@ -551,6 +611,40 @@
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebars()"></div>
 
 <script>
+    function bindAutoFilterForm(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        let filterTimer;
+        const submitFilters = (delay = 0) => {
+            clearTimeout(filterTimer);
+            filterTimer = setTimeout(() => {
+                form.querySelectorAll('input[type="hidden"]').forEach(input => {
+                    input.disabled = input.value.trim() === '';
+                });
+                form.requestSubmit();
+            }, delay);
+        };
+
+        form.querySelectorAll('input[type="radio"], input[type="checkbox"], select').forEach(input => {
+            input.addEventListener('change', () => submitFilters());
+        });
+
+        form.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('keydown', event => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    submitFilters();
+                }
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        bindAutoFilterForm('filterForm');
+        bindAutoFilterForm('mobileFilterForm');
+    });
+
     function toggleFilterSidebar() {
         const sidebar = document.getElementById('mobileFilterSidebar');
         const overlay = document.getElementById('sidebarOverlay');

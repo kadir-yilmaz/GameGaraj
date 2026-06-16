@@ -49,19 +49,20 @@
                     </a>
                 </li>
                 
-                @if (User.Identity.IsAuthenticated)
+                @if (User.Identity?.IsAuthenticated == true)
                 {
+                    var userName = User.Identity?.Name ?? "User";
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle px-0 d-flex align-items-center text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white me-2" style="width: 32px; height: 32px; font-size: 0.9rem;">
-                                @(User.Identity.Name?.Substring(0, 1).ToUpper() ?? "U")
+                                @(userName.Substring(0, 1).ToUpper())
                             </div>
-                            <span class="small fw-bold">@User.Identity.Name</span>
+                            <span class="small fw-bold">@userName</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2" style="min-width: 200px;">
                             <li class="px-3 py-2 border-bottom bg-light">
                                 <small class="text-muted d-block">Hesabım</small>
-                                <span class="fw-bold text-dark">@User.Identity.Name</span>
+                                <span class="fw-bold text-dark">@userName</span>
                             </li>
                             @if (User.IsInRole("admin") || User.IsInRole("editor"))
                             {
@@ -114,17 +115,18 @@
                         </a>
                     </li>
                     <!-- User -->
-                    @if (User.Identity.IsAuthenticated)
+                    @if (User.Identity?.IsAuthenticated == true)
                     {
+                        var mobileUserName = User.Identity?.Name ?? "User";
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle px-0 text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 30px; height: 30px; font-size: 0.85rem;">
-                                    @(User.Identity.Name?.Substring(0, 1).ToUpper() ?? "U")
+                                    @(mobileUserName.Substring(0, 1).ToUpper())
                                 </div>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2" style="min-width: 180px;">
                                 <li class="px-3 py-2 border-bottom bg-light">
-                                    <small class="text-muted">@User.Identity.Name</small>
+                                    <small class="text-muted">@mobileUserName</small>
                                 </li>
                                 <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="History"><i class="fas fa-box me-2 text-muted"></i>Siparişlerim</a></li>
                                 <li><a class="dropdown-item py-2" asp-controller="Address" asp-action="Index"><i class="fas fa-map-marker-alt me-2 text-muted"></i>Adreslerim</a></li>

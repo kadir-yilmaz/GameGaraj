@@ -4,7 +4,7 @@ namespace GameGaraj.WebUI.Services.Abstract
 {
     public interface ICatalogService
     {
-        Task<List<ProductViewModel>> GetAllProductsAsync(string? categoryId = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, Dictionary<string, string[]>? specs = null);
+        Task<List<ProductViewModel>> GetAllProductsAsync(string? categoryId = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, Dictionary<string, string[]>? specs = null, string? brand = null);
         Task<List<ProductViewModel>> GetFeaturedProductsAsync();
         Task<ProductViewModel?> GetProductByIdAsync(string id);
         Task<ProductViewModel?> GetProductBySlugAsync(string slug);
@@ -13,6 +13,10 @@ namespace GameGaraj.WebUI.Services.Abstract
         Task<List<ProductViewModel>> SearchProductsAsync(string keyword);
         Task<List<CategoryViewModel>> SearchCategoriesAsync(string keyword);
         Task<List<string>> SearchBrandsAsync(string keyword);
+        Task<List<SearchSuggestionViewModel>> SearchSuggestionsAsync(string keyword);
+        Task<SearchIndexStatusViewModel?> GetSearchIndexStatusAsync();
+        Task<SearchIndexDocumentPageViewModel> GetSearchIndexDocumentPreviewsAsync(int page = 1, int pageSize = 100);
+        Task<ReindexResultViewModel?> ReindexSearchIndexAsync();
 
         // Admin Methods
         Task<CategoryViewModel?> CreateCategoryAsync(CategoryCreateInput model);

@@ -34,7 +34,9 @@
       }
     ]
   },
-  "defaultRoles": ["user"],
+  "defaultRoles": [
+    "user"
+  ],
   "clients": [
     {
       "clientId": "web-ui",
@@ -46,8 +48,12 @@
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
-      "redirectUris": ["*"],
-      "webOrigins": ["*"],
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
       "attributes": {
         "access.token.lifespan": "3600"
       },
@@ -130,52 +136,23 @@
   ],
   "users": [
     {
-      "username": "testuser@gamegaraj.com",
-      "email": "testuser@gamegaraj.com",
-      "firstName": "Test",
-      "lastName": "Kullanıcı",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "Password12*",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["user"]
-    },
-    {
-      "username": "instructor@gamegaraj.com",
-      "email": "instructor@gamegaraj.com",
-      "firstName": "Eğitmen",
-      "lastName": "Kullanıcı",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "Password12*",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["user", "instructor"]
-    },
-    {
-      "username": "admin@gamegaraj.com",
-      "email": "admin@gamegaraj.com",
+      "username": "${ADMIN_EMAIL}",
+      "email": "${ADMIN_EMAIL}",
       "firstName": "Admin",
-      "lastName": "Kullanıcı",
+      "lastName": "User",
       "enabled": true,
       "emailVerified": true,
       "credentials": [
         {
           "type": "password",
-          "value": "Password12*",
+          "value": "${ADMIN_PASSWORD}",
           "temporary": false
         }
       ],
-      "realmRoles": ["user", "instructor", "admin"]
+      "realmRoles": [
+        "user",
+        "admin"
+      ]
     }
   ]
 }

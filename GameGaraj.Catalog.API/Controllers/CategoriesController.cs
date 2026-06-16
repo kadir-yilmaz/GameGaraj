@@ -1,6 +1,6 @@
 using GameGaraj.Catalog.API.Dtos;
+using GameGaraj.Catalog.API.Exceptions;
 using GameGaraj.Catalog.API.Services.Abstract;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GameGaraj.Catalog.API.Controllers
@@ -9,96 +9,115 @@ namespace GameGaraj.Catalog.API.Controllers
     [ApiController]
     public class CategoriesController : ControllerBase
     {
-        private readonly ICategoryService _categoryService;
+        private readonly ICategoryQueryService _queries;
+        private readonly ICategoryCommandService _commands;
 
-        public CategoriesController(ICategoryService categoryService)
+        public CategoriesController(ICategoryQueryService queries, ICategoryCommandService commands)
         {
-            _categoryService = categoryService;
+            _queries = queries;
+            _commands = commands;
         }
 
-        // GET: api/categories
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _categoryService.GetAllAsync();
+            var result = await _queries.GetAllAsync();
             return Ok(result);
         }
 
-        // GET: api/categories/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var result = await _categoryService.GetByIdAsync(id);
+            var result = await _queries.GetByIdAsync(id);
             if (result == null)
-                return NotFound(new { Message = "Kategori bulunamadı." });
+                return NotFound(new { Message = "Kategori bulunamadi." });
 
             return Ok(result);
         }
 
-        // GET: api/categories/slug/{slug}
         [HttpGet("slug/{slug}")]
         public async Task<IActionResult> GetBySlug(string slug)
         {
-            var result = await _categoryService.GetBySlugAsync(slug);
+            var result = await _queries.GetBySlugAsync(slug);
             if (result == null)
-                return NotFound(new { Message = "Kategori bulunamadı." });
+                return NotFound(new { Message = "Kategori bulunamadi." });
 
             return Ok(result);
         }
 
-        // POST: api/categories
         [HttpPost]
-        // [Authorize]
         public async Task<IActionResult> Create(CategoryCreateDto dto)
         {
-            var result = await _categoryService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            try
+            {
+                var result = await _commands.CreateAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            }
+            catch (CatalogValidationException ex)
+            {
+                return BadRequest(new { Message = "Kategori kaydedilemedi.", Errors = ex.Errors });
+            }
         }
 
-        // PUT: api/categories/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, CategoryCreateDto dto)
         {
-            var result = await _categoryService.UpdateAsync(id, dto);
-            if (result == null)
-                return NotFound();
+            try
+            {
+                var result = await _commands.UpdateAsync(id, dto);
+                if (result == null)
+                    return NotFound();
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (CatalogValidationException ex)
+            {
+                return BadRequest(new { Message = "Kategori guncellenemedi.", Errors = ex.Errors });
+            }
         }
 
-        // GET: api/categories/{id}/attributes
         [HttpGet("{id}/attributes")]
         public async Task<IActionResult> GetAttributes(string id)
         {
-            var result = await _categoryService.GetAttributesAsync(id);
+            var result = await _queries.GetAttributesAsync(id);
             return Ok(result);
         }
 
-        // POST: api/categories/{id}/attributes
         [HttpPost("{id}/attributes")]
-        // [Authorize]
         public async Task<IActionResult> AddAttribute(string id, CategoryAttributeCreateDto dto)
         {
-            var result = await _categoryService.AddAttributeAsync(id, dto);
-            return Created("", result);
+            try
+            {
+                var result = await _commands.AddAttributeAsync(id, dto);
+                return Created("", result);
+            }
+            catch (CatalogValidationException ex)
+            {
+                return BadRequest(new { Message = "Ozellik kaydedilemedi.", Errors = ex.Errors });
+            }
         }
 
-        // PUT: api/categories/{id}/attributes/{attributeId}
         [HttpPut("{id}/attributes/{attributeId}")]
         public async Task<IActionResult> UpdateAttribute(string id, string attributeId, CategoryAttributeCreateDto dto)
         {
-            var result = await _categoryService.UpdateAttributeAsync(id, attributeId, dto);
-            if (result == null)
-                return NotFound();
+            try
+            {
+                var result = await _commands.UpdateAttributeAsync(id, attributeId, dto);
+                if (result == null)
+                    return NotFound();
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (CatalogValidationException ex)
+            {
+                return BadRequest(new { Message = "Ozellik guncellenemedi.", Errors = ex.Errors });
+            }
         }
 
-        // DELETE: api/categories/{id}/attributes/{attributeId}
         [HttpDelete("{id}/attributes/{attributeId}")]
         public async Task<IActionResult> DeleteAttribute(string id, string attributeId)
         {
-            var result = await _categoryService.DeleteAttributeAsync(id, attributeId);
+            var result = await _commands.DeleteAttributeAsync(id, attributeId);
             if (!result)
                 return NotFound();
 
