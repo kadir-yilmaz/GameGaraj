@@ -25,6 +25,7 @@ jobs:
       KUBECONFIG: /home/kadirserver/.kube/config
       DASHBOARD_NODE_PORT: ${{ github.event.inputs.node_port || '30443' }}
       DASHBOARD_SERVER_IP: ${{ github.event.inputs.server_ip || '192.168.1.56' }}
+      DASHBOARD_CHART_VERSION: "7.14.0"
 
     steps:
       - name: Checkout Code
@@ -38,8 +39,10 @@ jobs:
           kubectl get nodes -o wide
 
           if ! command -v helm >/dev/null 2>&1; then
-            echo "::error::helm is required on the self-hosted runner."
-            exit 1
+            echo "helm is missing. Installing Helm on the self-hosted runner..."
+            curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 -o /tmp/get_helm.sh
+            chmod 700 /tmp/get_helm.sh
+            /tmp/get_helm.sh
           fi
 
           helm version
@@ -48,10 +51,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
-          helm repo update
+          chart_url="https://github.com/kubernetes/dashboard/releases/download/kubernetes-dashboard-${DASHBOARD_CHART_VERSION}/kubernetes-dashboard-${DASHBOARD_CHART_VERSION}.tgz"
 
-          helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+          helm upgrade --install kubernetes-dashboard "$chart_url" \
             --namespace kubernetes-dashboard \
             --create-namespace
 

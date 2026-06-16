@@ -9,11 +9,14 @@ official Helm chart so it stays compatible with current Kubernetes versions.
 Run these commands on the K3s server or from a machine that has access to the
 cluster kubeconfig:
 
-```bash
-helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
-helm repo update
+The GitHub Actions workflow installs the chart directly from the Dashboard
+GitHub release package because the legacy Helm repository index can return 404.
 
-helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+Manual install command:
+
+```bash
+helm upgrade --install kubernetes-dashboard \
+  https://github.com/kubernetes/dashboard/releases/download/kubernetes-dashboard-7.14.0/kubernetes-dashboard-7.14.0.tgz \
   --namespace kubernetes-dashboard \
   --create-namespace
 
