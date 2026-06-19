@@ -14,71 +14,75 @@ namespace GameGaraj.WebUI.Extensions
             // Register DelegatingHandler
             services.AddTransient<UserIdDelegatingHandler>();
 
-            // Catalog Service - Direkt Catalog API'ye bağlan (Gateway olmadan)
+            // All services route through the gateway with service-specific path prefixes
+            var gatewayUri = new Uri($"{serviceApiSettings!.GatewayBaseUri}/");
+
+            // Catalog Service
             services.AddHttpClient<ICatalogService, CatalogService>(client =>
             {
-                client.BaseAddress = new Uri($"{serviceApiSettings!.CatalogUri}/");
+                client.BaseAddress = new Uri(gatewayUri, "api/catalog/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
-            // Basket Service - Direkt Basket API'ye bağlan (Gateway olmadan)
+            // Basket Service
             services.AddHttpClient<IBasketService, BasketService>(client =>
             {
-                client.BaseAddress = new Uri($"{serviceApiSettings!.BasketUri}/");
+                client.BaseAddress = new Uri(gatewayUri, "api/basket/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
-            // Order Service - Direkt Order API'ye bağlan (Gateway olmadan)
+            // Order Service
             services.AddHttpClient<IOrderService, OrderService>(client =>
             {
-                // OrderUri zaten /api ile bitiyor, tekrar eklemeyelim
-                client.BaseAddress = new Uri($"{serviceApiSettings!.OrderUri}/");
+                client.BaseAddress = new Uri(gatewayUri, "api/order/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
-            // Favorites Service - BasketUri kullanır (favorites Basket.API içinde)
+            // Favorites Service (lives in basket-api, routed through gateway)
             services.AddHttpClient<IFavoritesService, FavoritesService>(client =>
             {
-                client.BaseAddress = new Uri($"{serviceApiSettings!.BasketUri}/");
+                client.BaseAddress = new Uri(gatewayUri, "api/favorites/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
-            // Payment Service - Direkt Payment API'ye bağlan (Gateway olmadan)
+            // Payment Service
             services.AddHttpClient<IPaymentService, PaymentService>(client =>
             {
-                client.BaseAddress = new Uri($"{serviceApiSettings!.PaymentUri}/");
+                client.BaseAddress = new Uri(gatewayUri, "api/payment/");
                 client.Timeout = TimeSpan.FromSeconds(10);
-            });
-            
-            // Identity Service
+            })
+            .AddHttpMessageHandler<UserIdDelegatingHandler>();
+
+            // Identity Service (talks directly to Keycloak, not through gateway)
             services.AddHttpClient<IIdentityService, IdentityService>(client =>
             {
                 client.Timeout = TimeSpan.FromSeconds(10);
             });
-            
-            // PhotoStock Service - Gateway üzerinden değil, direkt PhotoStock API'ye
+
+            // PhotoStock Service
             services.AddHttpClient<IPhotoStockService, PhotoStockService>(client =>
             {
-                client.BaseAddress = new Uri($"{serviceApiSettings!.PhotoStockUri}/");
+                client.BaseAddress = new Uri(gatewayUri, "api/photostock/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
-            // Campaign Service - Direkt Campaign API'ye bağlan
+            // Campaign Service
             services.AddHttpClient<ICampaignService, CampaignService>(client =>
             {
-                client.BaseAddress = new Uri($"{serviceApiSettings!.CampaignUri}/");
+                client.BaseAddress = new Uri(gatewayUri, "api/campaign/");
                 client.Timeout = TimeSpan.FromSeconds(10);
-            });
+            })
+            .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
-            // Discount Service - Direkt Discount API'ye bağlan
+            // Discount Service
             services.AddHttpClient<IDiscountService, DiscountService>(client =>
             {
-                client.BaseAddress = new Uri($"{serviceApiSettings!.DiscountUri}/");
+                client.BaseAddress = new Uri(gatewayUri, "api/discount/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();

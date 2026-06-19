@@ -1,0 +1,15 @@
+{{- if .Values.configMaps.redisSentinel.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gamegaraj-redis-sentinel
+  labels:
+    {{- include "gamegaraj.labels" . | nindent 4 }}
+data:
+  sentinel1.conf: |
+    {{- .Values.configMaps.redisSentinel.sentinel1 | nindent 4 }}
+  sentinel2.conf: |
+    {{- .Values.configMaps.redisSentinel.sentinel2 | nindent 4 }}
+  sentinel3.conf: |
+    {{- .Values.configMaps.redisSentinel.sentinel3 | nindent 4 }}
+{{- end }}

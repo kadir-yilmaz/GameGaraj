@@ -1,0 +1,11 @@
+{{- if .Values.configMaps.initdbs.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gamegaraj-initdbs
+  labels:
+    {{- include "gamegaraj.labels" . | nindent 4 }}
+data:
+  init-dbs.sql: |
+    {{- .Values.configMaps.initdbs.data | nindent 4 }}
+{{- end }}

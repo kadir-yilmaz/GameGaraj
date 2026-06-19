@@ -1,0 +1,13 @@
+{{- if .Values.configMaps.realm.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gamegaraj-keycloak-realm
+  labels:
+    {{- include "gamegaraj.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.configMaps.realm.data }}
+  {{ $key }}: |
+    {{- $value | nindent 4 }}
+  {{- end }}
+{{- end }}

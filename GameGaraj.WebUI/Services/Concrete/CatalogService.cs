@@ -107,7 +107,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (!product.ImageUrls[i].StartsWith("http"))
                 {
                     // Ensure setting has trailing slash or relative path doesn't start with slash
-                    var imgBase = !string.IsNullOrEmpty(_settings.PhotoBaseUrl) ? _settings.PhotoBaseUrl : _settings.PhotoStockUri;
+                    var imgBase = _settings.PhotoBaseUrl;
                     var baseUrl = imgBase.EndsWith("/") ? imgBase : imgBase + "/";
                     var path = product.ImageUrls[i].StartsWith("/") ? product.ImageUrls[i].Substring(1) : product.ImageUrls[i];
                     product.ImageUrls[i] = baseUrl + path;
@@ -453,9 +453,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                     }
                     else if (!suggestion.ImageUrl.StartsWith("http") && !suggestion.ImageUrl.StartsWith("/"))
                     {
-                        var imageBaseUrl = !string.IsNullOrWhiteSpace(_settings.PhotoBaseUrl)
-                            ? _settings.PhotoBaseUrl
-                            : _settings.PhotoStockUri;
+                        var imageBaseUrl = _settings.PhotoBaseUrl;
 
                         suggestion.ImageUrl = $"{imageBaseUrl.TrimEnd('/')}/{suggestion.ImageUrl.TrimStart('/')}";
                     }

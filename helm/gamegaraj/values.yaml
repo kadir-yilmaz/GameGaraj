@@ -1,0 +1,162 @@
+# -- Global settings shared by all services
+global:
+  imagePullPolicy: IfNotPresent
+  aspnetEnvironment: Development
+  aspnetUrls: "http://+:8080"
+  containerPort: 8080
+
+  # Common env vars (can be overridden per-service via env or secretEnv)
+  rabbitmqUrl: "host.docker.internal"
+  identityAuthority: "http://host.docker.internal:8080/realms/GameGaraj"
+  elasticUri: "http://host.docker.internal:9201"
+
+# -- Override chart name
+nameOverride: ""
+# -- Override fully qualified chart name
+fullnameOverride: ""
+
+# -- Microservice definitions
+# Each service generates a Deployment + NodePort Service
+# Supported fields:
+#   image      - container image (required)
+#   nodePort   - NodePort number (required)
+#   replicas   - replica count (default: 1)
+#   env        - plain environment variables (map)
+#   secretEnv  - env vars sourced from gamegaraj-secrets (map: envName -> secretKey)
+#   skipCommon - if true, do NOT inject global common env vars (default: false)
+services:
+
+  gateway:
+    image: gateway:latest
+    nodePort: 30000
+    env:
+      ReverseProxy__Clusters__catalog.cluster__Destinations__destination1__Address: "http://catalog-api:8080"
+      ReverseProxy__Clusters__basket.cluster__Destinations__destination1__Address: "http://basket-api:8080"
+      ReverseProxy__Clusters__order.cluster__Destinations__destination1__Address: "http://order-api:8080"
+      ReverseProxy__Clusters__payment.cluster__Destinations__destination1__Address: "http://payment-api:8080"
+      ReverseProxy__Clusters__photostock.cluster__Destinations__destination1__Address: "http://photostock-api:8080"
+      ReverseProxy__Clusters__campaign.cluster__Destinations__destination1__Address: "http://campaign-api:8080"
+      ReverseProxy__Clusters__discount.cluster__Destinations__destination1__Address: "http://discount-api:8080"
+      IdentityOption__Address: "http://host.docker.internal:8080/realms/GameGaraj"
+      IdentityOption__Issuer: "http://host.docker.internal:8080/realms/GameGaraj"
+
+  catalog-api:
+    image: catalog-api:latest
+    nodePort: 30010
+    # RabbitMQUrl and PostgresConnection come from secrets
+    skipCommonRabbit: true
+    secretEnv:
+      RabbitMQUrl: rabbitmq-url
+      ConnectionStrings__PostgresConnection: catalog-postgres-connection
+
+  photostock-api:
+    image: photostock-api:latest
+    nodePort: 30015
+    skipCommon: true
+    env:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      RabbitMQUrl: "rabbitmq:5672"
+      IdentityOption__Authority: "http://identity:8080/realms/GameGaraj"
+      ElasticSearchSettings__Uri: "http://elasticsearch:9200"
+    secretEnv:
+      Minio__Endpoint: minio-endpoint
+      Minio__AccessKey: minio-access-key
+      Minio__SecretKey: minio-secret-key
+      Minio__BucketName: minio-bucket-name
+      Minio__Secure: minio-secure
+
+  basket-api:
+    image: basket-api:latest
+    nodePort: 30011
+    secretEnv:
+      ConnectionStrings__Redis: redis-connection
+
+  discount-api:
+    image: discount-api:latest
+    nodePort: 30012
+    env:
+      ConnectionStrings__PostgreSql: "User ID=admin;Password=Password12*;Server=host.docker.internal;Port=5435;Database=discountdb;Pooling=true"
+
+  order-api:
+    image: order-api:latest
+    nodePort: 30013
+    secretEnv:
+      ConnectionStrings__DefaultConnection: order-sqlserver-connection
+
+  payment-api:
+    image: payment-api:latest
+    nodePort: 30014
+    secretEnv:
+      Iyzipay__ApiKey: iyzico-api-key
+      Iyzipay__SecretKey: iyzico-secret-key
+
+  invoice-api:
+    image: invoice-api:latest
+    nodePort: 30017
+    secretEnv:
+      EmailSettings__SmtpUsername: smtp-username
+      EmailSettings__SmtpPassword: smtp-password
+
+  campaign-api:
+    image: campaign-api:latest
+    nodePort: 30016
+    secretEnv:
+      ConnectionStrings__SqlServer: campaign-sqlserver-connection
+
+  webui:
+    image: webui:latest
+    nodePort: 30075
+    env:
+      ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
+      ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
+      ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
+      APP_VERSION: "latest"
+    secretEnv:
+      KEYCLOAK_ADMIN_USERNAME: keycloak-admin-username
+      KEYCLOAK_ADMIN_PASSWORD: keycloak-admin-password
+
+# -- Kubernetes Secret (gamegaraj-secrets)
+# Values are injected via --set in CI/CD or via a values override file.
+# Leave empty strings as defaults; CI pipeline must supply real values.
+secrets:
+  keycloak-admin-username: ""
+  keycloak-admin-password: ""
+  admin-email: ""
+  admin-password: ""
+  google-client-id: ""
+  google-client-secret: ""
+  smtp-username: ""
+  smtp-password: ""
+  iyzico-api-key: ""
+  iyzico-secret-key: ""
+  rabbitmq-url: ""
+  redis-connection: ""
+  catalog-postgres-connection: ""
+  discount-postgres-connection: ""
+  order-sqlserver-connection: ""
+  campaign-sqlserver-connection: ""
+  minio-endpoint: ""
+  minio-access-key: ""
+  minio-secret-key: ""
+  minio-bucket-name: ""
+  minio-secure: ""
+
+# -- ConfigMap data
+configMaps:
+  # Keycloak realm import JSON (loaded via --set-file in CI)
+  realm:
+    enabled: true
+    data: {}
+
+  # Redis Sentinel configs (loaded via --set-file in CI)
+  redisSentinel:
+    enabled: true
+    sentinel1: ""
+    sentinel2: ""
+    sentinel3: ""
+
+  # Optional init-dbs SQL ConfigMap
+  initdbs:
+    enabled: false
+    data: ""

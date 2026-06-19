@@ -1,0 +1,5 @@
+# Namespace where the Kubernetes Dashboard is installed
+dashboardNamespace: kubernetes-dashboard
+
+# Service account name for dashboard admin
+serviceAccountName: gamegaraj-dashboard-admin

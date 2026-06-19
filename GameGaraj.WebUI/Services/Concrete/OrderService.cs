@@ -87,7 +87,7 @@ namespace GameGaraj.WebUI.Services.Concrete
 
                 _logger.LogInformation($"[OrderService] Creating order for user: {basket.UserId}");
                 
-                var response = await _httpClient.PostAsync("api/orders", content);
+                var response = await _httpClient.PostAsync("orders", content);
                 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -166,7 +166,7 @@ namespace GameGaraj.WebUI.Services.Concrete
 
                 _logger.LogInformation($"[OrderService] Fetching orders for userId: {userId}");
 
-                var response = await _httpClient.GetAsync($"api/orders/{userId}");
+                var response = await _httpClient.GetAsync($"orders/{userId}");
                 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -203,7 +203,7 @@ namespace GameGaraj.WebUI.Services.Concrete
         {
             try
             {
-                var url = type.HasValue ? $"api/useraddresses?type={type}" : "api/useraddresses";
+                var url = type.HasValue ? $"useraddresses?type={type}" : "useraddresses";
                 var response = await _httpClient.GetAsync(url);
                 
                 if (!response.IsSuccessStatusCode)
@@ -228,7 +228,7 @@ namespace GameGaraj.WebUI.Services.Concrete
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/useraddresses/{id}");
+                var response = await _httpClient.GetAsync($"useraddresses/{id}");
                 
                 if (!response.IsSuccessStatusCode)
                     return null;
@@ -252,7 +252,7 @@ namespace GameGaraj.WebUI.Services.Concrete
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/useraddresses/default/{type}");
+                var response = await _httpClient.GetAsync($"useraddresses/default/{type}");
                 
                 if (!response.IsSuccessStatusCode)
                     return null;
@@ -279,7 +279,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 var json = JsonSerializer.Serialize(input);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PostAsync("api/useraddresses", content);
+                var response = await _httpClient.PostAsync("useraddresses", content);
                 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -310,7 +310,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 var json = JsonSerializer.Serialize(input);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PutAsync($"api/useraddresses/{input.Id}", content);
+                var response = await _httpClient.PutAsync($"useraddresses/{input.Id}", content);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -324,7 +324,7 @@ namespace GameGaraj.WebUI.Services.Concrete
         {
             try
             {
-                var response = await _httpClient.DeleteAsync($"api/useraddresses/{id}");
+                var response = await _httpClient.DeleteAsync($"useraddresses/{id}");
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -338,7 +338,7 @@ namespace GameGaraj.WebUI.Services.Concrete
         {
             try
             {
-                var response = await _httpClient.PostAsync($"api/useraddresses/{id}/set-default?type={type}", null);
+                var response = await _httpClient.PostAsync($"useraddresses/{id}/set-default?type={type}", null);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -358,7 +358,7 @@ namespace GameGaraj.WebUI.Services.Concrete
             {
                 _logger.LogInformation("[OrderService] Fetching all orders for admin");
 
-                var response = await _httpClient.GetAsync("api/orders/all");
+                var response = await _httpClient.GetAsync("orders/all");
                 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -405,7 +405,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (dateTo.HasValue)
                     queryParams.Add($"dateTo={dateTo.Value:yyyy-MM-dd}");
 
-                var response = await _httpClient.GetAsync($"api/orders/admin?{string.Join("&", queryParams)}");
+                var response = await _httpClient.GetAsync($"orders/admin?{string.Join("&", queryParams)}");
                 if (!response.IsSuccessStatusCode)
                     return new PagedResultViewModel<OrderViewModel> { Page = page, PageSize = pageSize };
 
@@ -428,7 +428,7 @@ namespace GameGaraj.WebUI.Services.Concrete
             {
                 _logger.LogInformation($"[OrderService] Updating order {orderId} status to {status}");
 
-                var response = await _httpClient.PutAsync($"api/orders/{orderId}/status/{status}", null);
+                var response = await _httpClient.PutAsync($"orders/{orderId}/status/{status}", null);
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -453,7 +453,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 _logger.LogInformation($"[OrderService] Shipping order {orderId}");
 
                 // Status 4 = Shipped
-                var response = await _httpClient.PutAsync($"api/orders/{orderId}/status/4", null);
+                var response = await _httpClient.PutAsync($"orders/{orderId}/status/4", null);
                 
                 if (response.IsSuccessStatusCode)
                 {

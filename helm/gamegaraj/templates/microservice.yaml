@@ -1,0 +1,73 @@
+{{- range $name, $svc := .Values.services }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+    {{- include "gamegaraj.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $svc.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+        {{- include "gamegaraj.labels" $ | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ $name }}
+          image: {{ $svc.image }}
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ $.Values.global.containerPort }}
+          env:
+            {{- if not $svc.skipCommon }}
+            - name: ASPNETCORE_ENVIRONMENT
+              value: {{ $.Values.global.aspnetEnvironment | quote }}
+            - name: ASPNETCORE_URLS
+              value: {{ $.Values.global.aspnetUrls | quote }}
+            {{- if not $svc.skipCommonRabbit }}
+            - name: RabbitMQUrl
+              value: {{ $.Values.global.rabbitmqUrl | quote }}
+            {{- end }}
+            - name: IdentityOption__Authority
+              value: {{ $.Values.global.identityAuthority | quote }}
+            - name: ElasticSearchSettings__Uri
+              value: {{ $.Values.global.elasticUri | quote }}
+            {{- end }}
+            {{- if $svc.env }}
+            {{- range $envKey, $envVal := $svc.env }}
+            - name: {{ $envKey }}
+              value: {{ $envVal | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if $svc.secretEnv }}
+            {{- range $envKey, $secretKey := $svc.secretEnv }}
+            - name: {{ $envKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: gamegaraj-secrets
+                  key: {{ $secretKey }}
+            {{- end }}
+            {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "gamegaraj.labels" $ | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    app: {{ $name }}
+  ports:
+    - protocol: TCP
+      port: {{ $.Values.global.containerPort }}
+      targetPort: {{ $.Values.global.containerPort }}
+      nodePort: {{ $svc.nodePort }}
+{{- end }}
