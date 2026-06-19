@@ -6,10 +6,8 @@ using GameGaraj.Shared.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// File Logger ekle
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddFileLogger("Campaign.API");
+// Serilog Ekle
+builder.AddSerilogLogging("Campaign.API");
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -48,6 +46,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
+
+app.UseRouting();
+app.UseCustomRequestLogging();
 
 app.MapControllers();
 

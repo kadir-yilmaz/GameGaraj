@@ -12,10 +12,8 @@ using GameGaraj.Catalog.API.Services.Hosted;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// File Logger ekle
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddFileLogger("Catalog.API");
+// Serilog Ekle
+builder.AddSerilogLogging("Catalog.API");
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
@@ -121,6 +119,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
+app.UseCustomRequestLogging();
 
 app.UseAuthentication();
 app.UseAuthorization();

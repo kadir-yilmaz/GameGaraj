@@ -19,10 +19,8 @@ System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// File Logger ekle
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddFileLogger("WebUI");
+// Serilog Ekle
+builder.AddSerilogLogging("WebUI");
 
 // Options Pattern - appsettings.json'dan ayarları okuma
 builder.Services.Configure<ServiceApiSettings>(builder.Configuration.GetSection("ServiceApiSettings"));
@@ -171,6 +169,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+// Custom Request Logging Ekle
+app.UseCustomRequestLogging();
 
 app.UseSession();
 

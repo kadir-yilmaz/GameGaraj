@@ -17,10 +17,8 @@ using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// File Logger ekle
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddFileLogger("Basket.API");
+// Serilog Ekle
+builder.AddSerilogLogging("Basket.API");
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
@@ -77,6 +75,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
+app.UseCustomRequestLogging();
+
 app.UseAuthentication();
 app.UseAuthorization();
 

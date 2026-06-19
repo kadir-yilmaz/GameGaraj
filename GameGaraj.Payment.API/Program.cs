@@ -39,10 +39,8 @@ void LoadDotEnv()
     }
 }
 
-// File Logger ekle
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddFileLogger("Payment.API");
+// Serilog Ekle
+builder.AddSerilogLogging("Payment.API");
 
 // Iyzipay Settings
 builder.Services.Configure<IyzipaySettings>(
@@ -107,6 +105,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
+app.UseCustomRequestLogging();
 
 app.UseAuthentication();
 app.UseAuthorization();

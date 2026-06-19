@@ -3,10 +3,8 @@ using GameGaraj.Shared.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// File Logger ekle
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddFileLogger("Gateway");
+// Serilog Ekle
+builder.AddSerilogLogging("Gateway");
 
 builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
@@ -15,6 +13,9 @@ builder.Services.AddAuthenticationAndAuthorizationExt(builder.Configuration);
 var app = builder.Build();
 
 app.UseRouting();
+
+// Custom Request Logging Ekle
+app.UseCustomRequestLogging();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -5,10 +5,8 @@ using GameGaraj.PhotoStock.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// File Logger ekle
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddFileLogger("PhotoStock.API");
+// Serilog Ekle
+builder.AddSerilogLogging("PhotoStock.API");
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -94,6 +92,9 @@ if (app.Environment.IsDevelopment())
 app.UseStaticFiles();
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
+app.UseCustomRequestLogging();
 
 app.UseAuthentication();
 app.UseAuthorization();

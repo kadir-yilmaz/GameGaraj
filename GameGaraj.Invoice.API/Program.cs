@@ -37,10 +37,8 @@ void LoadDotEnv()
     }
 }
 
-// File Logger ekle
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddFileLogger("Invoice.API");
+// Serilog Ekle
+builder.AddSerilogLogging("Invoice.API");
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -95,6 +93,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
+app.UseCustomRequestLogging();
 
 app.UseAuthentication();
 app.UseAuthorization();

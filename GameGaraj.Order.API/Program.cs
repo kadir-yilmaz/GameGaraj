@@ -17,10 +17,8 @@ using GameGaraj.Shared.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// File Logger ekle
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddFileLogger("Order.API");
+// Serilog Ekle
+builder.AddSerilogLogging("Order.API");
 
 // Add services to the container.
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Remove("sub");
@@ -130,6 +128,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
+app.UseCustomRequestLogging();
 
 app.UseAuthentication();
 app.UseAuthorization();

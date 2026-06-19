@@ -8,10 +8,8 @@ using GameGaraj.Shared.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// File Logger ekle
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddFileLogger("Discount.API");
+// Serilog Ekle
+builder.AddSerilogLogging("Discount.API");
 
 // Add services to the container.
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
@@ -51,6 +49,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
+app.UseCustomRequestLogging();
 
 app.UseAuthentication();
 app.UseAuthorization();
