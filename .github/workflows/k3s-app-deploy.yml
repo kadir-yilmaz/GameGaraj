@@ -243,6 +243,11 @@ jobs:
           set -euo pipefail
           # Delete old kubectl-created resources that lack Helm ownership labels.
           # Helm will recreate them with proper annotations on upgrade.
+          echo "Deleting old Deployments..."
+          kubectl -n "$NAMESPACE" delete deploy basket-api campaign-api catalog-api discount-api gateway invoice-api order-api payment-api photostock-api webui --ignore-not-found
+          echo "Deleting old Services..."
+          kubectl -n "$NAMESPACE" delete svc basket-api campaign-api catalog-api discount-api gateway invoice-api order-api payment-api photostock-api webui --ignore-not-found
+          echo "Deleting old Secrets and ConfigMaps..."
           kubectl -n "$NAMESPACE" delete secret gamegaraj-secrets --ignore-not-found
           kubectl -n "$NAMESPACE" delete configmap gamegaraj-keycloak-realm --ignore-not-found
           kubectl -n "$NAMESPACE" delete configmap gamegaraj-redis-sentinel --ignore-not-found
