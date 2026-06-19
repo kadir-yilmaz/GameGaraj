@@ -36,6 +36,8 @@ spec:
             {{- end }}
             - name: IdentityOption__Authority
               value: {{ $.Values.global.identityAuthority | quote }}
+            - name: IdentityServerURL
+              value: {{ $.Values.global.identityAuthority | quote }}
             - name: ElasticSearchSettings__Uri
               value: {{ $.Values.global.elasticUri | quote }}
             {{- end }}

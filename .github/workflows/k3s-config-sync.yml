@@ -212,50 +212,53 @@ jobs:
           set -euo pipefail
           kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Adopt Existing Resources for Helm
-        run: |
-          set -euo pipefail
-          # Delete old kubectl-created resources that lack Helm ownership labels.
-          # Helm will recreate them with proper annotations on upgrade.
-          echo "Deleting old Deployments..."
-          kubectl -n "$NAMESPACE" delete deploy basket-api campaign-api catalog-api discount-api gateway invoice-api order-api payment-api photostock-api webui --ignore-not-found
-          echo "Deleting old Services..."
-          kubectl -n "$NAMESPACE" delete svc basket-api campaign-api catalog-api discount-api gateway invoice-api order-api payment-api photostock-api webui --ignore-not-found
-          echo "Deleting old Secrets and ConfigMaps..."
-          kubectl -n "$NAMESPACE" delete secret gamegaraj-secrets --ignore-not-found
-          kubectl -n "$NAMESPACE" delete configmap gamegaraj-keycloak-realm --ignore-not-found
-          kubectl -n "$NAMESPACE" delete configmap gamegaraj-redis-sentinel --ignore-not-found
-          kubectl -n "$NAMESPACE" delete configmap gamegaraj-initdbs --ignore-not-found
+
 
       - name: Helm Upgrade
         run: |
           set -euo pipefail
 
+          # Generate values override file with secrets.
+          # This avoids Helm --set/--set-string comma-parsing issues
+          # that corrupt connection strings like "Server=192.168.1.56,1433".
+          python3 - <<'PYEOF'
+import yaml, os
+
+secrets = {
+    "keycloak-admin-username": os.environ["KEYCLOAK_ADMIN_USERNAME"],
+    "keycloak-admin-password": os.environ["KEYCLOAK_ADMIN_PASSWORD"],
+    "admin-email":             os.environ["ADMIN_EMAIL"],
+    "admin-password":          os.environ["ADMIN_PASSWORD"],
+    "google-client-id":        os.environ["GOOGLE_CLIENT_ID"],
+    "google-client-secret":    os.environ["GOOGLE_CLIENT_SECRET"],
+    "smtp-username":           os.environ["SMTP_USERNAME"],
+    "smtp-password":           os.environ["SMTP_PASSWORD"],
+    "iyzico-api-key":          os.environ["IYZICO_API_KEY"],
+    "iyzico-secret-key":       os.environ["IYZICO_SECRET_KEY"],
+    "rabbitmq-url":            os.environ["RABBITMQ_URL"],
+    "redis-connection":        os.environ["REDIS_CONNECTION"],
+    "catalog-postgres-connection":  os.environ["CATALOG_POSTGRES_CONNECTION"],
+    "discount-postgres-connection": os.environ["DISCOUNT_POSTGRES_CONNECTION"],
+    "order-sqlserver-connection":   os.environ["ORDER_SQLSERVER_CONNECTION"],
+    "campaign-sqlserver-connection": os.environ["CAMPAIGN_SQLSERVER_CONNECTION"],
+    "minio-endpoint":          os.environ["MINIO_ENDPOINT"],
+    "minio-access-key":        os.environ["MINIO_ACCESS_KEY"],
+    "minio-secret-key":        os.environ["MINIO_SECRET_KEY"],
+    "minio-bucket-name":       os.environ["MINIO_BUCKET_NAME"],
+    "minio-secure":            os.environ["MINIO_SECURE"],
+}
+
+with open("/tmp/values-secrets.yaml", "w") as f:
+    yaml.dump({"secrets": secrets}, f, default_flow_style=False)
+PYEOF
+
           helm upgrade --install gamegaraj ./helm/gamegaraj \
             --namespace "$NAMESPACE" \
             --create-namespace \
-            --set secrets.keycloak-admin-username="$KEYCLOAK_ADMIN_USERNAME" \
-            --set secrets.keycloak-admin-password="$KEYCLOAK_ADMIN_PASSWORD" \
-            --set secrets.admin-email="$ADMIN_EMAIL" \
-            --set secrets.admin-password="$ADMIN_PASSWORD" \
-            --set secrets.google-client-id="$GOOGLE_CLIENT_ID" \
-            --set secrets.google-client-secret="$GOOGLE_CLIENT_SECRET" \
-            --set secrets.smtp-username="$SMTP_USERNAME" \
-            --set secrets.smtp-password="$SMTP_PASSWORD" \
-            --set secrets.iyzico-api-key="$IYZICO_API_KEY" \
-            --set secrets.iyzico-secret-key="$IYZICO_SECRET_KEY" \
-            --set secrets.rabbitmq-url="$RABBITMQ_URL" \
-            --set secrets.redis-connection="$REDIS_CONNECTION" \
-            --set secrets.catalog-postgres-connection="$CATALOG_POSTGRES_CONNECTION" \
-            --set secrets.discount-postgres-connection="$DISCOUNT_POSTGRES_CONNECTION" \
-            --set secrets.order-sqlserver-connection="$ORDER_SQLSERVER_CONNECTION" \
-            --set secrets.campaign-sqlserver-connection="$CAMPAIGN_SQLSERVER_CONNECTION" \
-            --set secrets.minio-endpoint="$MINIO_ENDPOINT" \
-            --set secrets.minio-access-key="$MINIO_ACCESS_KEY" \
-            --set secrets.minio-secret-key="$MINIO_SECRET_KEY" \
-            --set secrets.minio-bucket-name="$MINIO_BUCKET_NAME" \
-            --set secrets.minio-secure="$MINIO_SECURE" \
+            --values /tmp/values-secrets.yaml \
             --timeout 300s
+
+          rm -f /tmp/values-secrets.yaml
 
       - name: Restart Deployments
         if: ${{ env.RESTART_DEPLOYMENTS == 'true' }}
