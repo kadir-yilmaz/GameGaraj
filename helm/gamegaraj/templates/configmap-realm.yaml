@@ -6,8 +6,6 @@ metadata:
   labels:
     {{- include "gamegaraj.labels" . | nindent 4 }}
 data:
-  {{- range $key, $value := .Values.configMaps.realm.data }}
-  {{ $key }}: |
-    {{- $value | nindent 4 }}
-  {{- end }}
+  realm-init.json: |
+    {{- .Files.Get "config/realm-init.json" | nindent 4 }}
 {{- end }}

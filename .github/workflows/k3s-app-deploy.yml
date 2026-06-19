@@ -291,10 +291,6 @@ jobs:
             --set secrets.minio-secret-key="$MINIO_SECRET_KEY" \
             --set secrets.minio-bucket-name="$MINIO_BUCKET_NAME" \
             --set secrets.minio-secure="$MINIO_SECURE" \
-            --set-file configMaps.realm.data.realm-init\.json=helm/gamegaraj/config/realm-init.json \
-            --set-file configMaps.redisSentinel.sentinel1=helm/gamegaraj/config/sentinel1.conf \
-            --set-file configMaps.redisSentinel.sentinel2=helm/gamegaraj/config/sentinel2.conf \
-            --set-file configMaps.redisSentinel.sentinel3=helm/gamegaraj/config/sentinel3.conf \
             --wait --timeout 180s
 
       - name: Wait For Rollouts
