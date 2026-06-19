@@ -257,36 +257,36 @@ jobs:
           # Generate values override file with secrets.
           # This avoids Helm --set/--set-string comma-parsing issues
           # that corrupt connection strings like "Server=192.168.1.56,1433".
-          python3 - <<'PYEOF'
-import yaml, os
+          python3 -c 'import textwrap, sys; exec(textwrap.dedent(sys.argv[1]))' '
+          import yaml, os
 
-secrets = {
-    "keycloak-admin-username": os.environ["KEYCLOAK_ADMIN_USERNAME"],
-    "keycloak-admin-password": os.environ["KEYCLOAK_ADMIN_PASSWORD"],
-    "admin-email":             os.environ["ADMIN_EMAIL"],
-    "admin-password":          os.environ["ADMIN_PASSWORD"],
-    "google-client-id":        os.environ["GOOGLE_CLIENT_ID"],
-    "google-client-secret":    os.environ["GOOGLE_CLIENT_SECRET"],
-    "smtp-username":           os.environ["SMTP_USERNAME"],
-    "smtp-password":           os.environ["SMTP_PASSWORD"],
-    "iyzico-api-key":          os.environ["IYZICO_API_KEY"],
-    "iyzico-secret-key":       os.environ["IYZICO_SECRET_KEY"],
-    "rabbitmq-url":            os.environ["RABBITMQ_URL"],
-    "redis-connection":        os.environ["REDIS_CONNECTION"],
-    "catalog-postgres-connection":  os.environ["CATALOG_POSTGRES_CONNECTION"],
-    "discount-postgres-connection": os.environ["DISCOUNT_POSTGRES_CONNECTION"],
-    "order-sqlserver-connection":   os.environ["ORDER_SQLSERVER_CONNECTION"],
-    "campaign-sqlserver-connection": os.environ["CAMPAIGN_SQLSERVER_CONNECTION"],
-    "minio-endpoint":          os.environ["MINIO_ENDPOINT"],
-    "minio-access-key":        os.environ["MINIO_ACCESS_KEY"],
-    "minio-secret-key":        os.environ["MINIO_SECRET_KEY"],
-    "minio-bucket-name":       os.environ["MINIO_BUCKET_NAME"],
-    "minio-secure":            os.environ["MINIO_SECURE"],
-}
+          secrets = {
+              "keycloak-admin-username": os.environ["KEYCLOAK_ADMIN_USERNAME"],
+              "keycloak-admin-password": os.environ["KEYCLOAK_ADMIN_PASSWORD"],
+              "admin-email":             os.environ["ADMIN_EMAIL"],
+              "admin-password":          os.environ["ADMIN_PASSWORD"],
+              "google-client-id":        os.environ["GOOGLE_CLIENT_ID"],
+              "google-client-secret":    os.environ["GOOGLE_CLIENT_SECRET"],
+              "smtp-username":           os.environ["SMTP_USERNAME"],
+              "smtp-password":           os.environ["SMTP_PASSWORD"],
+              "iyzico-api-key":          os.environ["IYZICO_API_KEY"],
+              "iyzico-secret-key":       os.environ["IYZICO_SECRET_KEY"],
+              "rabbitmq-url":            os.environ["RABBITMQ_URL"],
+              "redis-connection":        os.environ["REDIS_CONNECTION"],
+              "catalog-postgres-connection":  os.environ["CATALOG_POSTGRES_CONNECTION"],
+              "discount-postgres-connection": os.environ["DISCOUNT_POSTGRES_CONNECTION"],
+              "order-sqlserver-connection":   os.environ["ORDER_SQLSERVER_CONNECTION"],
+              "campaign-sqlserver-connection": os.environ["CAMPAIGN_SQLSERVER_CONNECTION"],
+              "minio-endpoint":          os.environ["MINIO_ENDPOINT"],
+              "minio-access-key":        os.environ["MINIO_ACCESS_KEY"],
+              "minio-secret-key":        os.environ["MINIO_SECRET_KEY"],
+              "minio-bucket-name":       os.environ["MINIO_BUCKET_NAME"],
+              "minio-secure":            os.environ["MINIO_SECURE"],
+          }
 
-with open("/tmp/values-secrets.yaml", "w") as f:
-    yaml.dump({"secrets": secrets}, f, default_flow_style=False)
-PYEOF
+          with open("/tmp/values-secrets.yaml", "w") as f:
+              yaml.dump({"secrets": secrets}, f, default_flow_style=False)
+          '
 
           helm upgrade --install gamegaraj ./helm/gamegaraj \
             --namespace "$NAMESPACE" \
