@@ -33,6 +33,28 @@ on:
           - campaign-api
           - webui
 
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "GameGaraj.Gateway/**"
+      - "GameGaraj.Catalog.API/**"
+      - "GameGaraj.PhotoStock.API/**"
+      - "GameGaraj.Basket.API/**"
+      - "GameGaraj.Discount.API/**"
+      - "GameGaraj.Order.API/**"
+      - "GameGaraj.Order.Application/**"
+      - "GameGaraj.Order.Domain/**"
+      - "GameGaraj.Order.Infrastructure/**"
+      - "GameGaraj.Payment.API/**"
+      - "GameGaraj.Invoice.API/**"
+      - "GameGaraj.Campaign.API/**"
+      - "GameGaraj.WebUI/**"
+      - "GameGaraj.Shared/**"
+      - ".github/workflows/k3s-app-deploy.yml"
+      - "docker-compose.build.yml"
+
 concurrency:
   group: gamegaraj-k3s-app-deploy
   cancel-in-progress: false
@@ -77,6 +99,107 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect Changed Services
+        id: filter
+        run: |
+          set -euo pipefail
+
+          TRIGGER_TYPE="${{ github.event_name }}"
+          MANUAL_SERVICE="${{ github.event.inputs.service }}"
+          
+          build_gateway=false
+          build_catalog_api=false
+          build_photostock_api=false
+          build_basket_api=false
+          build_discount_api=false
+          build_order_api=false
+          build_payment_api=false
+          build_invoice_api=false
+          build_campaign_api=false
+          build_webui=false
+
+          if [ "$TRIGGER_TYPE" = "workflow_dispatch" ]; then
+            echo "Workflow manually triggered for service: $MANUAL_SERVICE"
+            if [ "$MANUAL_SERVICE" = "all" ] || [ -z "$MANUAL_SERVICE" ]; then
+              build_gateway=true
+              build_catalog_api=true
+              build_photostock_api=true
+              build_basket_api=true
+              build_discount_api=true
+              build_order_api=true
+              build_payment_api=true
+              build_invoice_api=true
+              build_campaign_api=true
+              build_webui=true
+            else
+              # Enable only the manually selected service
+              eval "build_${MANUAL_SERVICE//-/_}=true"
+            fi
+          else
+            # Push trigger. Detect changes via git.
+            BASE_COMMIT="${{ github.event.before }}"
+            if [ -z "$BASE_COMMIT" ] || [ "$BASE_COMMIT" = "0000000000000000000000000000000000000000" ]; then
+              BASE_COMMIT="HEAD~1"
+            fi
+
+            echo "Comparing HEAD against $BASE_COMMIT..."
+            CHANGED_FILES=$(git diff --name-only "$BASE_COMMIT" HEAD || git diff --name-only HEAD~1 HEAD || true)
+            
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+            echo "----------------------------------------"
+
+            if echo "$CHANGED_FILES" | grep -E "^(GameGaraj\.Shared/|\.github/workflows/k3s-app-deploy\.yml|docker-compose\.build\.yml)" >/dev/null; then
+              echo "Shared code or workflow file changed. Rebuilding ALL services."
+              build_gateway=true
+              build_catalog_api=true
+              build_photostock_api=true
+              build_basket_api=true
+              build_discount_api=true
+              build_order_api=true
+              build_payment_api=true
+              build_invoice_api=true
+              build_campaign_api=true
+              build_webui=true
+            else
+              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Gateway/" >/dev/null; then build_gateway=true; fi
+              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Catalog\.API/" >/dev/null; then build_catalog_api=true; fi
+              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.PhotoStock\.API/" >/dev/null; then build_photostock_api=true; fi
+              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Basket\.API/" >/dev/null; then build_basket_api=true; fi
+              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Discount\.API/" >/dev/null; then build_discount_api=true; fi
+              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Order\." >/dev/null; then build_order_api=true; fi
+              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Payment\.API/" >/dev/null; then build_payment_api=true; fi
+              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Invoice\.API/" >/dev/null; then build_invoice_api=true; fi
+              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Campaign\.API/" >/dev/null; then build_campaign_api=true; fi
+              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.WebUI/" >/dev/null; then build_webui=true; fi
+            fi
+          fi
+
+          echo "build_gateway=$build_gateway" >> "$GITHUB_OUTPUT"
+          echo "build_catalog_api=$build_catalog_api" >> "$GITHUB_OUTPUT"
+          echo "build_photostock_api=$build_photostock_api" >> "$GITHUB_OUTPUT"
+          echo "build_basket_api=$build_basket_api" >> "$GITHUB_OUTPUT"
+          echo "build_discount_api=$build_discount_api" >> "$GITHUB_OUTPUT"
+          echo "build_order_api=$build_order_api" >> "$GITHUB_OUTPUT"
+          echo "build_payment_api=$build_payment_api" >> "$GITHUB_OUTPUT"
+          echo "build_invoice_api=$build_invoice_api" >> "$GITHUB_OUTPUT"
+          echo "build_campaign_api=$build_campaign_api" >> "$GITHUB_OUTPUT"
+          echo "build_webui=$build_webui" >> "$GITHUB_OUTPUT"
+
+          echo "Decisions:"
+          echo " - Gateway: $build_gateway"
+          echo " - Catalog API: $build_catalog_api"
+          echo " - PhotoStock API: $build_photostock_api"
+          echo " - Basket API: $build_basket_api"
+          echo " - Discount API: $build_discount_api"
+          echo " - Order API: $build_order_api"
+          echo " - Payment API: $build_payment_api"
+          echo " - Invoice API: $build_invoice_api"
+          echo " - Campaign API: $build_campaign_api"
+          echo " - WebUI: $build_webui"
 
       - name: Ensure K3s Exists
         if: ${{ github.event.inputs.install_k3s_if_missing == 'true' }}
@@ -244,10 +367,23 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ "$BUILD_SERVICE" = "all" ]; then
-            docker compose -f docker-compose.build.yml build
+          SERVICES_TO_BUILD=""
+          if [ "${{ steps.filter.outputs.build_gateway }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD gateway"; fi
+          if [ "${{ steps.filter.outputs.build_catalog_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD catalog-api"; fi
+          if [ "${{ steps.filter.outputs.build_photostock_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD photostock-api"; fi
+          if [ "${{ steps.filter.outputs.build_basket_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD basket-api"; fi
+          if [ "${{ steps.filter.outputs.build_discount_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD discount-api"; fi
+          if [ "${{ steps.filter.outputs.build_order_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD order-api"; fi
+          if [ "${{ steps.filter.outputs.build_payment_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD payment-api"; fi
+          if [ "${{ steps.filter.outputs.build_invoice_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD invoice-api"; fi
+          if [ "${{ steps.filter.outputs.build_campaign_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD campaign-api"; fi
+          if [ "${{ steps.filter.outputs.build_webui }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD webui"; fi
+
+          if [ -z "$SERVICES_TO_BUILD" ]; then
+            echo "No services changed or selected. Skipping docker build."
           else
-            docker compose -f docker-compose.build.yml build "$BUILD_SERVICE"
+            echo "Building services: $SERVICES_TO_BUILD"
+            docker compose -f docker-compose.build.yml build $SERVICES_TO_BUILD
           fi
 
       - name: Helm Upgrade
@@ -295,6 +431,22 @@ jobs:
             --timeout 300s
 
           rm -f /tmp/values-secrets.yaml
+
+      - name: Restart Updated Deployments
+        run: |
+          set -euo pipefail
+
+          # Restart only rebuilt services to pick up local Docker image changes
+          if [ "${{ steps.filter.outputs.build_gateway }}" = "true" ]; then kubectl -n "$NAMESPACE" rollout restart deployment/gateway || true; fi
+          if [ "${{ steps.filter.outputs.build_catalog_api }}" = "true" ]; then kubectl -n "$NAMESPACE" rollout restart deployment/catalog-api || true; fi
+          if [ "${{ steps.filter.outputs.build_photostock_api }}" = "true" ]; then kubectl -n "$NAMESPACE" rollout restart deployment/photostock-api || true; fi
+          if [ "${{ steps.filter.outputs.build_basket_api }}" = "true" ]; then kubectl -n "$NAMESPACE" rollout restart deployment/basket-api || true; fi
+          if [ "${{ steps.filter.outputs.build_discount_api }}" = "true" ]; then kubectl -n "$NAMESPACE" rollout restart deployment/discount-api || true; fi
+          if [ "${{ steps.filter.outputs.build_order_api }}" = "true" ]; then kubectl -n "$NAMESPACE" rollout restart deployment/order-api || true; fi
+          if [ "${{ steps.filter.outputs.build_payment_api }}" = "true" ]; then kubectl -n "$NAMESPACE" rollout restart deployment/payment-api || true; fi
+          if [ "${{ steps.filter.outputs.build_invoice_api }}" = "true" ]; then kubectl -n "$NAMESPACE" rollout restart deployment/invoice-api || true; fi
+          if [ "${{ steps.filter.outputs.build_campaign_api }}" = "true" ]; then kubectl -n "$NAMESPACE" rollout restart deployment/campaign-api || true; fi
+          if [ "${{ steps.filter.outputs.build_webui }}" = "true" ]; then kubectl -n "$NAMESPACE" rollout restart deployment/webui || true; fi
 
       - name: Wait For Rollouts
         run: |
