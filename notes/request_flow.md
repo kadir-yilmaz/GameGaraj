@@ -107,3 +107,31 @@ Senkron HTTP isteklerinin haricinde, servisler arasında **gevşek bağlı (loos
      - `basket-api` kullanıcının sepetini temizler (Redis'ten siler).
      - `invoice-api` müşteriye SMTP üzerinden e-posta faturası gönderir.
   5. Bu işlemler arka planda asenkron olarak gerçekleştiği için kullanıcı siparişin tamamlanması için faturanın oluşturulmasını ve gönderilmesini beklemek zorunda kalmaz.
+
+---
+
+## 5. Token Çeşitleri ve Güvenlik Seviyeleri (Token Types & Access Control)
+
+GameGaraj sisteminde endpoint'ler ve servisler, güvenlik gereksinimlerine göre iki temel kategoriye ayrılır:
+
+### A. Giriş Gerektiren İstekler (User Authentication - Login Required)
+Kullanıcının kimliğiyle doğrudan ilişkili olan ve veri güvenliği gerektiren işlemlerdir.
+- **Kapsanan Servisler:** `order-api`, `basket-api`, `discount-api`, `payment-api`.
+- **Güvenlik Mekanizması:** Bu servislerin `Program.cs` dosyalarında global bir filtre olarak `options.Filters.Add(new AuthorizeFilter())` tanımlıdır.
+- **Token Kullanımı:**
+  - Kullanıcı giriş yaptığında Keycloak'tan alınan kişisel **User JWT Access Token**'ı kullanılır.
+  - Bu token kullanıcının e-posta, roller (`realm_access.roles`) ve benzersiz kullanıcı ID'sini (`sub`) taşır.
+  - `UserIdDelegatingHandler` bu token'ı her HTTP çağrısında `Authorization: Bearer <token>` olarak ekler.
+  - **Eğer Token Yoksa/Geçersizse:** API doğrudan **HTTP 401 Unauthorized** hatası döndürür.
+
+### B. Giriş Gerektirmeyen İstekler (Public / Guest Access)
+Kullanıcının sisteme üye veya giriş yapmış olmasını gerektirmeyen, katalog ve genel görsel okuma gibi işlemlerdir.
+- **Kapsanan Servisler:** `catalog-api`, `photostock-api` (resimleri okuma endpoint'leri).
+- **Güvenlik Mekanizması:** Bu servisler üzerinde global `AuthorizeFilter` **bulunmaz**. Endpoint'ler anonim erişime (`AllowAnonymous`) açıktır.
+- **Token Kullanımı:**
+  - Kullanıcı giriş yapmamışsa (misafir ziyaretçi ise), `UserIdDelegatingHandler` herhangi bir `Authorization` header'ı eklemez.
+  - Rota eşleştiğinde YARP Gateway ve hedef API (örn. `catalog-api`) istekte token aramaz ve veriyi (kategori listesi, ürünler vb.) doğrudan döner.
+  - Eğer kullanıcı giriş yapmışsa, delegating handler token'ı isteğe ekler ancak backend servis bunu doğrulamaya ihtiyaç duymadan isteği kabul eder.
+
+> [!NOTE]
+> **Client Credentials Token (M2M):** Sistemde ayrıca Keycloak üzerinde tanımlanmış `"ClientCredentialSchema"` altyapısı bulunmaktadır. Gelecekte, tamamen halka açık olan servislerin (Catalog vb.) sadece belirli onaylı istemciler (örn. kendi WebUI veya Mobil uygulamamız) tarafından çağrılabilmesini sağlamak amacıyla bu akış kullanılabilir. Bu durumda WebUI, kullanıcı bağımsız olarak Keycloak'tan uygulama adına bir token alarak istekleri imzalayabilir. Mevcut yapıda ise Catalog servisleri doğrudan anonim erişime izin verecek şekilde tasarlanmıştır.
