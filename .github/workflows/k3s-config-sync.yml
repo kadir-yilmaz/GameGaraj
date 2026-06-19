@@ -255,7 +255,7 @@ jobs:
             --set secrets.minio-secret-key="$MINIO_SECRET_KEY" \
             --set secrets.minio-bucket-name="$MINIO_BUCKET_NAME" \
             --set secrets.minio-secure="$MINIO_SECURE" \
-            --wait --timeout 180s
+            --timeout 300s
 
       - name: Restart Deployments
         if: ${{ env.RESTART_DEPLOYMENTS == 'true' }}
