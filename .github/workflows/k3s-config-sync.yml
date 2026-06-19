@@ -212,6 +212,16 @@ jobs:
           set -euo pipefail
           kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Adopt Existing Resources for Helm
+        run: |
+          set -euo pipefail
+          # Delete old kubectl-created resources that lack Helm ownership labels.
+          # Helm will recreate them with proper annotations on upgrade.
+          kubectl -n "$NAMESPACE" delete secret gamegaraj-secrets --ignore-not-found
+          kubectl -n "$NAMESPACE" delete configmap gamegaraj-keycloak-realm --ignore-not-found
+          kubectl -n "$NAMESPACE" delete configmap gamegaraj-redis-sentinel --ignore-not-found
+          kubectl -n "$NAMESPACE" delete configmap gamegaraj-initdbs --ignore-not-found
+
       - name: Helm Upgrade
         run: |
           set -euo pipefail
