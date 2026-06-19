@@ -56,9 +56,9 @@ services:
     env:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
-      RabbitMQUrl: "rabbitmq:5672"
-      IdentityOption__Authority: "http://identity:8080/realms/GameGaraj"
-      ElasticSearchSettings__Uri: "http://elasticsearch:9200"
+      RabbitMQUrl: "host.docker.internal"
+      IdentityOption__Authority: "http://host.docker.internal:8080/realms/GameGaraj"
+      ElasticSearchSettings__Uri: "http://host.docker.internal:9201"
     secretEnv:
       Minio__Endpoint: minio-endpoint
       Minio__AccessKey: minio-access-key
@@ -76,7 +76,7 @@ services:
     image: discount-api:latest
     nodePort: 30012
     env:
-      ConnectionStrings__PostgreSql: "User ID=admin;Password=Password12*;Server=host.docker.internal;Port=5435;Database=discountdb;Pooling=true"
+      ConnectionStrings__PostgreSql: "User ID=admin;Password=Password12*;Server=host.docker.internal;Port=5432;Database=discountdb;Pooling=true"
 
   order-api:
     image: order-api:latest
