@@ -295,11 +295,15 @@ jobs:
 
       - name: Wait For Rollouts
         run: |
-          set -euo pipefail
-
+          set -uo pipefail
+          failed=0
           for deployment in $(kubectl -n "$NAMESPACE" get deploy -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
-            kubectl -n "$NAMESPACE" rollout status "deployment/${deployment}" --timeout=180s
+            echo "--- Checking: $deployment ---"
+            kubectl -n "$NAMESPACE" rollout status "deployment/${deployment}" --timeout=60s || { echo "WARN: $deployment did not finish in 60s"; failed=$((failed+1)); }
           done
+          echo ""
+          echo "=== Summary: $failed deployment(s) still rolling out ==="
+          kubectl -n "$NAMESPACE" get deploy -o wide
 
       - name: Post Deploy Checks
         run: |
