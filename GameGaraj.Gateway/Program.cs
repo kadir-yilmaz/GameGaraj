@@ -14,9 +14,11 @@ builder.Services.AddAuthenticationAndAuthorizationExt(builder.Configuration);
 
 var app = builder.Build();
 
-app.MapReverseProxy();
+app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapReverseProxy();
 
 app.Run();
