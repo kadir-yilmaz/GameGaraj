@@ -49,7 +49,28 @@ HTTP isteklerini loglarken, istek yapan kullanıcının kim olduğu otomatik ola
 
 ---
 
-## 3. Yapılacak İşler Listesi (Tasks)
+## 3. Mimari Kararlar ve Sıkça Sorulan Sorular (FAQ)
+
+### Soru 1: Loglar için ilişkisel bir DB (PostgreSQL, MSSQL) kullanılacak mı?
+**Karar:** **Hayır.** Logları PostgreSQL veya SQL Server gibi ilişkisel veritabanlarına kaydetmek büyük bir antipattern'dir. 
+- Log yoğunluğu saniyede yüzlerce satıra ulaşabilir. SQL veritabanları bu yazma yükü altında kilitlenir (locking) ve ana uygulamanın veritabanı performansını yavaşlatır.
+- Bu mimaride **Elasticsearch doğrudan bizim log veri tabanımız (NoSQL Document Store)** görevini görecektir. Loglar JSON olarak indekslenip ES üzerinde kalıcı depolanacaktır.
+
+### Soru 2: Hatalar (Errors) ayrı bir yerde mi tutulacak?
+**Karar:** **Tek havuzda tutulup filtreleme yapılacak.**
+- Hataları, bilgi loglarını (Info) ve uyarıları (Warning) farklı yerlere kaydetmek yerine tek bir indeks içerisinde toplayacağız.
+- Serilog, log nesnesine otomatik olarak `LogLevel` (Information, Warning, Error) alanı ekler. Arama yaparken veya dashboard (Kibana vb.) hazırlarken tek yapmamız gereken `LogLevel == Error` filtresi uygulamaktır.
+
+### Soru 3: Dosya yedeği (txt) tutulacak mı?
+**Karar:** **Evet, günlük dönen (rolling) .txt dosyaları fallback olarak tutulacak.**
+- Elasticsearch sunucusuna erişim kesilirse veya ES çökerse logların kaybolmaması için lokal diskte `ConsoleLogs/serilog-servisname-yyyyMMdd.txt` formatında günlük dosyalar tutulacaktır. Bu dosyalar 7 gün sonra otomatik olarak temizlenecektir.
+
+### Soru 4: Kullanıcı bazlı arama ve filtreleme nasıl yapılacak?
+**Karar:** Loglarımıza ekleyeceğimiz `UserIdentity` (kullanıcı e-postası veya guest ID'si) parametresi sayesinde, sistem genelinde örneğin *"kadir@example.com"* kullanıcısının yaptığı tüm istekleri Gateway girişinden backend mikroservislerindeki veritabanı sorgularına kadar uçtan uca aratıp listeleyebileceğiz.
+
+---
+
+## 4. Yapılacak İşler Listesi (Tasks)
 
 ### Adım 1: Shared Projesinin Güncellenmesi
 - [ ] [GameGaraj.Shared.csproj](file:///d:/Kadir/Projeler/GameGaraj/GameGaraj.Shared/GameGaraj.Shared.csproj) dosyasına gerekli Serilog paketlerini ekle.
