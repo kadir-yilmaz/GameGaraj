@@ -169,9 +169,9 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 status.IsConnected = true;
                 status.Status = "Online";
                 status.IndexedProductCount = await GetIndexedProductCountAsync(searchResponse.Documents.Count);
-                status.LastIndexedAt = searchResponse.Documents
-                    .Select(product => product.IndexedAt ?? product.UpdatedAt ?? product.CreatedAt)
-                    .Max();
+                status.LastIndexedAt = searchResponse.Documents.Any()
+                    ? searchResponse.Documents.Select(product => product.IndexedAt ?? product.UpdatedAt ?? product.CreatedAt).Max()
+                    : null;
 
                 return status;
             }
