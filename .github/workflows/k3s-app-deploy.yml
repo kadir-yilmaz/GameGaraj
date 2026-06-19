@@ -267,8 +267,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          short_sha="$(git rev-parse --short HEAD)"
-
           helm upgrade --install gamegaraj ./helm/gamegaraj \
             --namespace "$NAMESPACE" \
             --create-namespace \
@@ -293,7 +291,6 @@ jobs:
             --set secrets.minio-secret-key="$MINIO_SECRET_KEY" \
             --set secrets.minio-bucket-name="$MINIO_BUCKET_NAME" \
             --set secrets.minio-secure="$MINIO_SECURE" \
-            --set services.webui.env.APP_VERSION="$short_sha" \
             --set-file configMaps.realm.data.realm-init\.json=helm/gamegaraj/config/realm-init.json \
             --set-file configMaps.redisSentinel.sentinel1=helm/gamegaraj/config/sentinel1.conf \
             --set-file configMaps.redisSentinel.sentinel2=helm/gamegaraj/config/sentinel2.conf \
