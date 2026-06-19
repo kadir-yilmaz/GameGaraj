@@ -4,43 +4,22 @@ Bu doküman, GameGaraj mikroservis mimarisindeki bir kullanıcının WebUI üzer
 
 ---
 
-## 1. Genel Mimari ve İstek Akış Diyagramı (Mermaid)
+## 1. Genel Mimari ve Adım Adım İstek Akış Tablosu
 
-Aşağıdaki diyagramda bir kullanıcının sepet sayfasına gitmesi veya sepeti listelemesi senaryosundaki istek akışı ve kimlik doğrulama adımları gösterilmiştir:
+Bir kullanıcının sepet sayfasına gitmesi veya sepeti listelemesi senaryosundaki istek akışı ve kimlik doğrulama adımları sırasıyla şu şekildedir:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Kullanıcı (Tarayıcı)
-    participant WebUI as WebUI (MVC Pod)
-    participant Keycloak as Keycloak (Auth Host)
-    participant Gateway as YARP Gateway (Gateway Pod)
-    participant Basket as Basket API (Basket Pod)
-    participant Redis as Redis Sentinel
-
-    %% Kimlik Doğrulama Döngüsü
-    Note over User, Keycloak: 1. GİRİŞ VE TOKEN DÖNGÜSÜ (Auth Flow)
-    User->>WebUI: Auth/SignIn (Email & Şifre)
-    WebUI->>Keycloak: POST /protocol/openid-connect/token (Grant Type: password)
-    Keycloak-->>WebUI: 200 OK (Access Token & Refresh Token)
-    Note over WebUI: JWT Token parse edilir, claim'ler (sub, roles) okunur<br/>WebUI üzerinde GameGarajWebCookie oluşturulur
-    WebUI-->>User: Giriş Başarılı (Cookie ile)
-
-    %% API Çağrısı Döngüsü
-    Note over User, Redis: 2. API İSTEK DÖNGÜSÜ (API Request Flow)
-    User->>WebUI: GET /basket (Sepetim Sayfası)
-    Note over WebUI: UserIdDelegatingHandler devreye girer:<br/>1. Cookie'den Access Token'ı alır<br/>2. Header'a ekler (Authorization: Bearer <token>)<br/>3. X-User-Id başlığını set eder
-    WebUI->>Gateway: GET http://gateway:8080/api/basket/baskets (Internal K8s DNS)
-    
-    Note over Gateway: YARP Gateway Yönlendirme & Doğrulama:<br/>1. Path Eşleme: /api/basket/{**catch-all}<br/>2. UseAuthentication & UseAuthorization:<br/>Token Keycloak JWKS endpoint'inden doğrulanır<br/>3. Transform: /api/basket/baskets -> /api/v1/baskets
-    
-    Gateway->>Basket: GET http://basket-api:8080/api/v1/baskets
-    Basket->>Redis: Sepet Verisini Oku
-    Redis-->>Basket: Sepet İçeriği
-    Basket-->>Gateway: 200 OK (JSON)
-    Gateway-->>WebUI: 200 OK (JSON)
-    WebUI-->>User: Sepet Sayfası (Rendered HTML)
-```
+| Adım | Kaynak (Kimden) | Hedef (Kime) | İşlem / İstek | Açıklama |
+| :---: | :--- | :--- | :--- | :--- |
+| **1** | Kullanıcı (Tarayıcı) | **WebUI (MVC)** | `POST /Auth/SignIn` | Kullanıcı e-posta ve şifresini girerek giriş formunu gönderir. |
+| **2** | **WebUI (MVC)** | **Keycloak** | `POST /protocol/openid-connect/token` | WebUI, arka planda Keycloak master/realm servislerine "password" grant_type isteği atarak JWT (Access & Refresh) token'larını alır. |
+| **3** | **WebUI (MVC)** | Kullanıcı (Tarayıcı) | `Set-Cookie` | WebUI JWT token'ı parse eder. Kullanıcının benzersiz ID'sini (`sub`) ve rollerini (`roles`) local cookie olan `GameGarajWebCookie` içerisine şifreli yazar. Giriş tamamlanır. |
+| **4** | Kullanıcı (Tarayıcı) | **WebUI (MVC)** | `GET /basket` | Tarayıcı, sepet sayfasına gitmek için istek atar. |
+| **5** | **WebUI (MVC)** | **YARP Gateway** | `GET /api/basket/baskets` | WebUI'ın HTTP Client katmanında `UserIdDelegatingHandler` devreye girer. Çerezden aldığı JWT'yi `Authorization: Bearer <token>` ve Keycloak ID'sini `X-User-Id` olarak ekleyip Gateway poduna gönderir. |
+| **6** | **YARP Gateway** | **Keycloak** | JWKS İmza Kontrolü | Gateway, token'ın güvenli olduğunu doğrulamak için Keycloak'un public imza anahtarlarını (`/certs`) sorgular (performans için bu anahtarlar önbelleğe alınır). |
+| **7** | **YARP Gateway** | **Basket API** | `GET /api/v1/baskets` | Gateway, path transformasyonu (/api/basket -> /api/v1) uygulayarak doğrulanmış isteği K8s DNS üzerinden `http://basket-api:8080/api/v1/baskets` adresine yönlendirir. |
+| **8** | **Basket API** | **Redis Sentinel** | Sepet Sorgusu | Basket API, header'dan gelen `X-User-Id` bilgisine göre kullanıcının sepet verilerini Redis'ten çeker. |
+| **9** | **Basket API / Gateway**| **WebUI (MVC)** | `200 OK (JSON)` | Çekilen sepet verileri Gateway üzerinden geçerek WebUI'a JSON formatında geri döner. |
+| **10**| **WebUI (MVC)** | Kullanıcı (Tarayıcı) | `200 OK (HTML)` | WebUI sunucu tarafında JSON verilerini Razor View kullanarak HTML'e dönüştürür (render eder) ve tarayıcıya nihai sayfayı servis eder. |
 
 ---
 
