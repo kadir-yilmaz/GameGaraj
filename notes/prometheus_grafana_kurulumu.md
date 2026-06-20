@@ -65,7 +65,21 @@ graph TD
 
 ---
 
-## 3. Doğrulama ve Kullanım Adımları
+## 3. Eklenen ve Değişen Dosyalar Listesi
+
+### Eklenen Dosyalar:
+1. **`helm/gamegaraj/templates/monitoring.yaml`** (K3s için Prometheus, Grafana, ConfigMap'ler ve RBAC izinleri)
+2. **`notes/prometheus_grafana_kurulumu.md`** (Bu kılavuz dökümanı)
+
+### Değişen Dosyalar:
+1. **`GameGaraj.Shared/GameGaraj.Shared.csproj`** (Prometheus NuGet paket bağımlılığı eklendi)
+2. **`GameGaraj.Shared/Logging/SerilogRequestLoggingExtensions.cs`** (Metrics middleware ve endpoint yönlendirmeleri eklendi)
+3. **`helm/gamegaraj/templates/microservice.yaml`** (Mikroservis pod tanımlarına otomatik metrik toplama etiketleri eklendi)
+4. **`helm/gamegaraj/values.yaml`** (Prometheus & Grafana için enable/disable ve port parametreleri eklendi)
+
+---
+
+## 4. Doğrulama ve Kullanım Adımları
 
 1. Kodlar commitleyip pushlandıktan sonra GitHub Actions pipeline'ı çalışacak ve k3s uygulamayı güncelleyecek.
 2. Tarayıcıdan `http://192.168.1.56:30300` adresine girilerek Grafana arayüzü açılacak (Varsayılan giriş: admin/admin).
