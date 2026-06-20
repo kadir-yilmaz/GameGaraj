@@ -212,6 +212,13 @@ jobs:
           set -euo pipefail
           kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Sync Infrastructure Configs to Host
+        run: |
+          set -euo pipefail
+          echo "Syncing config files to host directory /home/kadirserver/gamegaraj/config/..."
+          mkdir -p /home/kadirserver/gamegaraj
+          cp -rf config /home/kadirserver/gamegaraj/
+
 
 
       - name: Helm Upgrade

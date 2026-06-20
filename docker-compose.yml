@@ -73,7 +73,7 @@ services:
     ports:
       - "26379:26379"
     volumes:
-      - ./redis/sentinel/sentinel1.conf:/etc/redis/sentinel.conf
+      - ./config/redis/sentinel/sentinel1.conf:/etc/redis/sentinel.conf
     command: sh -c "cp /etc/redis/sentinel.conf /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
     depends_on:
       redis-master:
@@ -90,7 +90,7 @@ services:
     ports:
       - "26380:26379"
     volumes:
-      - ./redis/sentinel/sentinel2.conf:/etc/redis/sentinel.conf
+      - ./config/redis/sentinel/sentinel2.conf:/etc/redis/sentinel.conf
     command: sh -c "cp /etc/redis/sentinel.conf /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
     depends_on:
       redis-master:
@@ -107,7 +107,7 @@ services:
     ports:
       - "26381:26379"
     volumes:
-      - ./redis/sentinel/sentinel3.conf:/etc/redis/sentinel.conf
+      - ./config/redis/sentinel/sentinel3.conf:/etc/redis/sentinel.conf
     command: sh -c "cp /etc/redis/sentinel.conf /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
     depends_on:
       redis-master:
@@ -192,7 +192,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./realm-init.json:/opt/keycloak/data/import/realm-init.json
+      - ./config/keycloak/realm-init.json:/opt/keycloak/data/import/realm-init.json
     depends_on:
       - keycloak-db
 

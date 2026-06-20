@@ -183,14 +183,6 @@ secrets:
 # ConfigMaps
 # =============================================================================
 configMaps:
-  # Keycloak realm import JSON (loaded via .Files.Get)
-  realm:
-    enabled: true
-
-  # Redis Sentinel configs (loaded via .Files.Get)
-  redisSentinel:
-    enabled: true
-
   # Optional init-dbs SQL ConfigMap
   initdbs:
     enabled: false
