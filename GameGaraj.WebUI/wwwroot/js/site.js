@@ -57,17 +57,20 @@ window.showAppToast = function (type, message) {
     var $message = $toast.find('.app-toast-message');
     var $icon = $toast.find('.app-toast-icon');
 
-    $toast.removeClass('bg-success bg-danger bg-warning bg-info');
-    $icon.removeClass('fa-check-circle fa-times-circle fa-heart fa-info-circle');
+    $toast.removeClass('bg-success bg-danger bg-warning bg-info text-dark text-white');
+    $icon.removeClass('fa-check-circle fa-times-circle fa-heart fa-info-circle fa-exclamation-triangle');
 
     if (type === 'danger') {
-        $toast.addClass('bg-danger');
+        $toast.addClass('bg-danger text-white');
         $icon.addClass('fa-times-circle');
+    } else if (type === 'warning') {
+        $toast.addClass('bg-warning text-dark');
+        $icon.addClass('fa-exclamation-triangle');
     } else if (type === 'favorite') {
-        $toast.addClass('bg-success');
+        $toast.addClass('bg-success text-white');
         $icon.addClass('fa-heart');
     } else {
-        $toast.addClass('bg-success');
+        $toast.addClass('bg-success text-white');
         $icon.addClass('fa-check-circle');
     }
 
@@ -145,10 +148,23 @@ $(document).ready(function () {
         });
     });
 
+    // Favorites Link Click Handler (Global)
+    $(document).on('click', '.js-favorites-link', function (e) {
+        if (!window.isAuthenticated) {
+            e.preventDefault();
+            window.showAppToast('warning', 'Favorilerinizi g&ouml;rmek i&ccedil;in l&uuml;tfen giri&#351; yap&#305;n.');
+        }
+    });
+
     // Favorite Button Toggle Handler (Global)
     $(document).on('click', '.btn-favorite', function (e) {
         e.preventDefault();
         e.stopPropagation(); // Prevent card link from triggering
+
+        if (!window.isAuthenticated) {
+            window.showAppToast('warning', 'Favorilere eklemek i&ccedil;in l&uuml;tfen giri&#351; yap&#305;n.');
+            return;
+        }
 
         var $button = $(this);
         var productId = $button.data('product-id');

@@ -1,4 +1,5 @@
 using GameGaraj.WebUI.Services.Abstract;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GameGaraj.WebUI.Controllers
@@ -16,6 +17,7 @@ namespace GameGaraj.WebUI.Controllers
             _logger = logger;
         }
 
+        [Authorize]
         public async Task<IActionResult> Index()
         {
             var favoriteIds = await _favoritesService.GetFavoriteProductIdsAsync();
@@ -43,6 +45,15 @@ namespace GameGaraj.WebUI.Controllers
         [HttpPost]
         public async Task<IActionResult> Toggle(string id)
         {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = "Lütfen önce giriş yapın." });
+                }
+                return RedirectToAction("SignIn", "Auth");
+            }
+
             _logger.LogInformation("[FavoritesController] Toggle favorite for product: {ProductId}", id);
 
             var isFavorite = await _favoritesService.IsFavoriteAsync(id);
@@ -70,6 +81,15 @@ namespace GameGaraj.WebUI.Controllers
         [HttpPost]
         public async Task<IActionResult> Add(string id)
         {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = "Lütfen önce giriş yapın." });
+                }
+                return RedirectToAction("SignIn", "Auth");
+            }
+
             var success = await _favoritesService.AddFavoriteAsync(id);
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
@@ -83,6 +103,15 @@ namespace GameGaraj.WebUI.Controllers
         [HttpPost]
         public async Task<IActionResult> Remove(string id)
         {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = "Lütfen önce giriş yapın." });
+                }
+                return RedirectToAction("SignIn", "Auth");
+            }
+
             var success = await _favoritesService.RemoveFavoriteAsync(id);
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
@@ -96,6 +125,11 @@ namespace GameGaraj.WebUI.Controllers
         [HttpGet]
         public async Task<IActionResult> GetFavorites()
         {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                return Json(new { favorites = new List<string>() });
+            }
+
             var favorites = await _favoritesService.GetFavoriteProductIdsAsync();
             return Json(new { favorites });
         }

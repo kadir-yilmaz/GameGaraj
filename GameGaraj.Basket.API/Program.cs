@@ -8,6 +8,7 @@ using GameGaraj.Basket.API.Features.Baskets.GetBasket;
 using GameGaraj.Basket.API.Features.Baskets.AddBasketItem;
 using GameGaraj.Basket.API.Services;
 using GameGaraj.Basket.API.Features.Baskets.DeleteBasketItem;
+using GameGaraj.Basket.API.Features.Baskets.UpdateBasket;
 using GameGaraj.Basket.API.Features.Favorites.GetFavorites;
 using GameGaraj.Basket.API.Features.Favorites.AddFavorite;
 using GameGaraj.Basket.API.Features.Favorites.RemoveFavorite;
@@ -97,7 +98,8 @@ var basketGroup = app.MapGroup("api/v{version:apiVersion}/baskets")
 basketGroup.MapGetBasketEndpoint()
            .MapAddBasketItemEndpoint()
            .MapDeleteBasketEndpoint()
-           .MapDeleteBasketItemEndpoint();
+           .MapDeleteBasketItemEndpoint()
+           .MapUpdateBasketEndpoint();
 
 // Map Favorites Endpoints
 var favoritesGroup = app.MapGroup("api/v{version:apiVersion}/favorites")

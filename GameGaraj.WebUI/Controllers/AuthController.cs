@@ -39,22 +39,18 @@ namespace GameGaraj.WebUI.Controllers
                 guestId = gid;
             }
 
-            var error = await _identityService.SignInAsync(model);
-            if (!string.IsNullOrEmpty(error))
+            var signInResult = await _identityService.SignInAsync(model);
+            if (!string.IsNullOrEmpty(signInResult.Error))
             {
-                ModelState.AddModelError(string.Empty, error);
+                ModelState.AddModelError(string.Empty, signInResult.Error);
                 return View(model);
             }
 
             // Giriş başarılı, sepet senkronizasyonunu başlat
-            if (!string.IsNullOrEmpty(guestId))
+            if (!string.IsNullOrEmpty(guestId) && !string.IsNullOrEmpty(signInResult.UserId))
             {
-                var loggedInUserId = _identityService.GetUserId();
-                if (!string.IsNullOrEmpty(loggedInUserId) && loggedInUserId != "anonymous-user")
-                {
-                    await _basketService.SyncBasketAsync(guestId, loggedInUserId);
-                    HttpContext.Response.Cookies.Delete(guestCookieName);
-                }
+                await _basketService.SyncBasketAsync(guestId, signInResult.UserId);
+                HttpContext.Response.Cookies.Delete(guestCookieName);
             }
 
             // Kullanıcı admin veya editor ise admin paneline yönlendir

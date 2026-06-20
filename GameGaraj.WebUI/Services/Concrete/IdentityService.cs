@@ -29,7 +29,7 @@ namespace GameGaraj.WebUI.Services.Concrete
             _serviceApiSettings = serviceApiSettings.Value;
         }
 
-        public async Task<string?> SignInAsync(SignInViewModel model)
+        public async Task<(string? Error, string? UserId)> SignInAsync(SignInViewModel model)
         {
             // 1. Keycloak'a İstek Hazırla
             var tokenEndpoint = $"{_serviceApiSettings.IdentityBaseUri}/protocol/openid-connect/token";
@@ -46,9 +46,7 @@ namespace GameGaraj.WebUI.Services.Concrete
 
             if (!response.IsSuccessStatusCode)
             {
-                // Hata mesajını loglayabiliriz
-                // var errorContent = await response.Content.ReadAsStringAsync();
-                return "Kullanıcı adı veya şifre hatalı.";
+                return ("Kullanıcı adı veya şifre hatalı.", null);
             }
 
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -56,12 +54,15 @@ namespace GameGaraj.WebUI.Services.Concrete
 
             if (tokenResponse == null)
             {
-                return "Token alınamadı.";
+                return ("Token alınamadı.", null);
             }
 
             // 2. Token'ı Parse Et ve Cookie Oluştur
             ClaimsPrincipal claimsPrincipal = GetClaimsPrincipal(tokenResponse.AccessToken);
             
+            var userId = claimsPrincipal.FindFirst("sub")?.Value 
+                         ?? claimsPrincipal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
             var authenticationProperties = new AuthenticationProperties();
             authenticationProperties.StoreTokens(new List<AuthenticationToken>
             {
@@ -74,7 +75,7 @@ namespace GameGaraj.WebUI.Services.Concrete
 
             await _httpContextAccessor.HttpContext!.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal, authenticationProperties);
 
-            return null; // Başarılı
+            return (null, userId); // Başarılı
         }
 
         public async Task<string?> SignUpAsync(SignUpViewModel model)
