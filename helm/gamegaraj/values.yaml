@@ -131,7 +131,7 @@ services:
   # Campaign API (SQL Server)
   # ---------------------------------------------------------------------------
   campaign-api:
-    image: "campaign-api:ccd3916"
+    image: "campaign-api:a374810"
     nodePort: 30016
     secretEnv:
       ConnectionStrings__SqlServer: campaign-sqlserver-connection
@@ -140,14 +140,14 @@ services:
   # WebUI (MVC — routes through Gateway internally)
   # ---------------------------------------------------------------------------
   webui:
-    image: "webui:c342e66"
+    image: "webui:a374810"
     nodePort: 30075
     replicas: 2
     env:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
-      APP_VERSION: "c342e66"
+      APP_VERSION: "a374810"
     secretEnv:
       KEYCLOAK_ADMIN_USERNAME: keycloak-admin-username
       KEYCLOAK_ADMIN_PASSWORD: keycloak-admin-password
