@@ -231,8 +231,8 @@ jobs:
             fi
 
             # Replace the image tag for this service in values.yaml
-            # Pattern: image: <service-name>:<any-tag>  →  image: <service-name>:<SHORT_SHA>
-            sed -i "s|image: ${svc}:.*|image: \"${svc}:${SHORT_SHA}\"|" "$VALUES_FILE"
+            # Pattern: image: [optional quote]<service-name>:<any-tag>[optional quote]  →  image: "<service-name>:<SHORT_SHA>"
+            sed -i -E "s|image: \"?${svc}:[^\"]*\"?|image: \"${svc}:${SHORT_SHA}\"|g" "$VALUES_FILE"
             echo "  Updated: ${svc} → ${svc}:${SHORT_SHA}"
           done
 
