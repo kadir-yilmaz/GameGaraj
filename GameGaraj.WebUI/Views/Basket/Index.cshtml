@@ -559,7 +559,7 @@
                             }
                         }
 
-                        @if (discountResult != null && discountResult.AppliedRules.Any())
+                        @if (discountResult != null && discountResult.AppliedRules != null && discountResult.AppliedRules.Any())
                         {
                             foreach (var appliedRule in discountResult.AppliedRules)
                             {

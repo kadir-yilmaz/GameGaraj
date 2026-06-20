@@ -558,7 +558,7 @@
                     var finalItemsTotal = discountResult != null ? discountResult.FinalTotal : basket.TotalPrice;
                     var finalGrossTotal = finalItemsTotal + finalShippingFee;
 
-                    @if (discountResult != null && discountResult.AppliedRules.Any())
+                    @if (discountResult != null && discountResult.AppliedRules != null && discountResult.AppliedRules.Any())
                     {
                         <div class="d-flex justify-content-between mb-2">
                             <span>Ara Toplam</span>

@@ -165,7 +165,8 @@ namespace GameGaraj.Campaign.API.Services.Concrete
                 FinalTotal = originalTotal,
                 AppliedRuleId = null,
                 AppliedRuleName = null,
-                Details = new()
+                Details = new(),
+                AppliedRules = new()
             };
         }
     }
