@@ -142,6 +142,7 @@ services:
   webui:
     image: webui:latest
     nodePort: 30075
+    replicas: 2
     env:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
