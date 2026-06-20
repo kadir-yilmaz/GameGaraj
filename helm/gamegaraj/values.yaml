@@ -8,7 +8,7 @@
 # -- Global settings shared by all services
 global:
   imagePullPolicy: IfNotPresent
-  aspnetEnvironment: Development
+  aspnetEnvironment: Production
   aspnetUrls: "http://+:8080"
   containerPort: 8080
 
