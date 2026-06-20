@@ -85,3 +85,48 @@ graph TD
 2. Tarayıcıdan `http://192.168.1.56:30300` adresine girilerek Grafana arayüzü açılacak (Varsayılan giriş: admin/admin).
 3. Sol menüden **Connections > Data Sources** sekmesine girilerek **Prometheus** veri kaynağının otomatik olarak yeşil (başarılı) şekilde bağlı olduğu doğrulanacak.
 4. Grafana'da **Dashboards > New > Import** kısmına tıklanıp `.NET` metriklerini izlemek için popüler olan **10427** dashboard ID'si girilerek hazır dashboard sisteme yüklenecek.
+
+---
+
+## 5. Grafikleri Okuma ve Anlama Kılavuzu (Giriş Seviyesi)
+
+Grafana arayüzündeki paneller, .NET mikroservislerinizin durumunu izlemek için şu anlamlara gelir:
+
+### A. The duration of HTTP requests (HTTP İstek Süreleri) ⏱️
+- **Anlamı:** Kullanıcıların veya servislerin attığı isteklerin ne kadar sürede yanıtlandığını milisaniye cinsinden gösterir.
+- **Yorumlama:** 
+  - `0 - 200ms` arası: Mükemmel, sistem çok hızlı.
+  - `> 2.0s` (2 saniye üstü): Sistemde yavaşlayan veritabanı sorguları veya kilitlenen harici API istekleri var demektir.
+
+### B. Requests currently in progress (Aktif İşlenen İstekler) 🚦
+- **Anlamı:** Tam şu saniyede, sunucu üzerinde işlem gören (yanıtı henüz tamamlanmamış) anlık istek sayısıdır.
+- **Yorumlama:**
+  - Normal durumlarda `0` veya çok düşük olmalıdır.
+  - Eğer bu sayı sürekli yüksek kalıyorsa, isteklerin kilitlendiği veya sunucunun aşırı yük altında ezildiği anlamına gelir.
+
+### C. Start time of the process (Uygulama Başlama Süresi) 🚀
+- **Anlamı:** Uygulamanın en son ne zaman sıfırdan başlatıldığını gösterir.
+- **Yorumlama:**
+  - Eğer bu süre çok yakın bir tarihi gösteriyorsa, uygulamanız arka planda çökmüş (Crash olmuş) ve Kubernetes (K3s) onu otomatik olarak yeniden ayağa kaldırmış demektir.
+
+### D. Total known allocated memory (Tahsis Edilen RAM) 💾
+- **Anlamı:** .NET Runtime'ın o an kontrol ettiği toplam bellek miktarıdır (Megabayt cinsinden).
+- **Yorumlama:**
+  - Zaman içinde grafik dalgalanmalıdır (RAM artar, Garbage Collector temizleyince düşer).
+  - Grafik sürekli yükseliyor ve hiç düşmüyorsa uygulamada **Memory Leak (Bellek Sızıntısı)** vardır.
+
+### E. GC collection count (Çöp Toplayıcı Çalışması) 🧹
+- **Anlamı:** .NET'in bellek temizleme mekanizmasının (Garbage Collector) çalışma sıklığıdır.
+- **Yorumlama:**
+  - `Gen 0` ve `Gen 1` sık çalışabilir.
+  - `Gen 2` (en ağır temizlik) çizgisi çok sık tetikleniyorsa, kod içinde gereksiz yere çok fazla büyük nesne üretilip atılıyor demektir, bu da performansı düşürür.
+
+### F. Total number of threads (İşçi Sayısı) 👥
+- **Anlamı:** Uygulamanın işlemci üzerinde paralel iş yapabilmek için açtığı işçi (Thread) sayısıdır.
+- **Yorumlama:**
+  - Kontrolsüz şekilde sürekli yukarı doğru tırmanıyorsa, kodda asenkron işlemlerde kilitlenmeler yaşanıyor (Thread Leak) olabilir.
+
+### G. Process working set (Fiziksel RAM Tüketimi) 🖥️
+- **Anlamı:** Konteynerin sunucu üzerinde fiziksel olarak tükettiği toplam gerçek RAM miktarıdır.
+- **Yorumlama:**
+  - Helm üzerinde belirlediğiniz RAM sınırlarına (Limits) yaklaştığında pod'un **OOMKilled** (Out Of Memory) hatası alarak çökeceğini haber verir.
