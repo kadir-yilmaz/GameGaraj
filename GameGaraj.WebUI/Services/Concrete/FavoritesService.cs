@@ -20,7 +20,7 @@ namespace GameGaraj.WebUI.Services.Concrete
             {
                 _logger.LogInformation("[FavoritesService] Fetching favorites from: {BaseAddress}favorites", _httpClient.BaseAddress);
                 
-                var response = await _httpClient.GetAsync("favorites");
+                var response = await _httpClient.GetAsync("");
                 
                 if (!response.IsSuccessStatusCode)
                     return new List<string>();
@@ -45,7 +45,7 @@ namespace GameGaraj.WebUI.Services.Concrete
             try
             {
                 _logger.LogInformation("[FavoritesService] Adding favorite: {ProductId}", productId);
-                var response = await _httpClient.PostAsync($"favorites/{productId}", null);
+                var response = await _httpClient.PostAsync(productId, null);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -60,7 +60,7 @@ namespace GameGaraj.WebUI.Services.Concrete
             try
             {
                 _logger.LogInformation("[FavoritesService] Removing favorite: {ProductId}", productId);
-                var response = await _httpClient.DeleteAsync($"favorites/{productId}");
+                var response = await _httpClient.DeleteAsync(productId);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)

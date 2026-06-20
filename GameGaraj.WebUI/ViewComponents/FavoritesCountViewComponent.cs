@@ -14,6 +14,10 @@ namespace GameGaraj.WebUI.ViewComponents
 
         public async Task<IViewComponentResult> InvokeAsync()
         {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                return View(0);
+            }
             var favorites = await _favoritesService.GetFavoriteProductIdsAsync();
             var count = favorites?.Count ?? 0;
             return View(count);

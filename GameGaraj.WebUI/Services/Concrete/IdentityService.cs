@@ -232,14 +232,17 @@ namespace GameGaraj.WebUI.Services.Concrete
 
             // Yoksa yeni oluştur ve cookie'ye kaydet
             var newGuestId = $"guest-{Guid.NewGuid():N}";
-            var cookieOptions = new CookieOptions
+            if (!httpContext.Response.HasStarted)
             {
-                Expires = DateTimeOffset.UtcNow.AddDays(30),
-                HttpOnly = true,
-                IsEssential = true,
-                Secure = httpContext.Request.IsHttps
-            };
-            httpContext.Response.Cookies.Append(guestCookieName, newGuestId, cookieOptions);
+                var cookieOptions = new CookieOptions
+                {
+                    Expires = DateTimeOffset.UtcNow.AddDays(30),
+                    HttpOnly = true,
+                    IsEssential = true,
+                    Secure = httpContext.Request.IsHttps
+                };
+                httpContext.Response.Cookies.Append(guestCookieName, newGuestId, cookieOptions);
+            }
             return newGuestId;
         }
 
