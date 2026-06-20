@@ -14,6 +14,10 @@ spec:
       app: {{ $name }}
   template:
     metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ $.Values.global.containerPort }}"
+        prometheus.io/path: "/metrics"
       labels:
         app: {{ $name }}
         {{- include "gamegaraj.labels" $ | nindent 8 }}

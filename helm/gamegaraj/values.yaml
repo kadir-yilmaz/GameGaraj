@@ -187,3 +187,15 @@ configMaps:
   initdbs:
     enabled: false
     data: ""
+
+# =============================================================================
+# Monitoring (Prometheus & Grafana)
+# =============================================================================
+monitoring:
+  enabled: true
+  prometheus:
+    image: "prom/prometheus:v2.51.0"
+  grafana:
+    image: "grafana/grafana:10.4.1"
+    nodePort: 30300
+

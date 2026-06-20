@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Serilog;
 using System.Security.Claims;
+using Prometheus;
 
 namespace GameGaraj.Shared.Logging
 {
@@ -8,6 +9,9 @@ namespace GameGaraj.Shared.Logging
     {
         public static void UseCustomRequestLogging(this WebApplication app)
         {
+            // Register Prometheus HTTP metrics middleware
+            app.UseHttpMetrics();
+
             app.UseSerilogRequestLogging(options =>
             {
                 options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
@@ -37,6 +41,9 @@ namespace GameGaraj.Shared.Logging
                     diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].ToString());
                 };
             });
+
+            // Expose the /metrics endpoint
+            app.MapMetrics();
         }
     }
 }
