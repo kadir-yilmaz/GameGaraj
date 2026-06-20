@@ -154,30 +154,11 @@ services:
 # =============================================================================
 # Kubernetes Secret (gamegaraj-secrets)
 # =============================================================================
-# Default values are empty.  Real values are injected via --set-string in CI/CD.
+# Secrets are managed EXTERNALLY via the k3s-secret-sync.yml GitHub Actions
+# workflow (kubectl create secret). ArgoCD does NOT manage secrets.
+# The microservice deployments reference gamegaraj-secrets by name.
 # =============================================================================
-secrets:
-  keycloak-admin-username: ""
-  keycloak-admin-password: ""
-  admin-email: ""
-  admin-password: ""
-  google-client-id: ""
-  google-client-secret: ""
-  smtp-username: ""
-  smtp-password: ""
-  iyzico-api-key: ""
-  iyzico-secret-key: ""
-  rabbitmq-url: ""
-  redis-connection: ""
-  catalog-postgres-connection: ""
-  discount-postgres-connection: ""
-  order-sqlserver-connection: ""
-  campaign-sqlserver-connection: ""
-  minio-endpoint: ""
-  minio-access-key: ""
-  minio-secret-key: ""
-  minio-bucket-name: ""
-  minio-secure: ""
+
 
 # =============================================================================
 # ConfigMaps

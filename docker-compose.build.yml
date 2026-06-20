@@ -1,60 +1,60 @@
 services:
   gateway:
-    image: gateway:latest
+    image: gateway:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: GameGaraj.Gateway/Dockerfile
 
   catalog-api:
-    image: catalog-api:latest
+    image: catalog-api:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: GameGaraj.Catalog.API/Dockerfile
 
   photostock-api:
-    image: photostock-api:latest
+    image: photostock-api:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: GameGaraj.PhotoStock.API/Dockerfile
 
   basket-api:
-    image: basket-api:latest
+    image: basket-api:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: GameGaraj.Basket.API/Dockerfile
 
   discount-api:
-    image: discount-api:latest
+    image: discount-api:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: GameGaraj.Discount.API/Dockerfile
 
   order-api:
-    image: order-api:latest
+    image: order-api:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: GameGaraj.Order.API/Dockerfile
 
   payment-api:
-    image: payment-api:latest
+    image: payment-api:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: GameGaraj.Payment.API/Dockerfile
 
   invoice-api:
-    image: invoice-api:latest
+    image: invoice-api:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: GameGaraj.Invoice.API/Dockerfile
 
   campaign-api:
-    image: campaign-api:latest
+    image: campaign-api:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: GameGaraj.Campaign.API/Dockerfile
 
   webui:
-    image: webui:latest
+    image: webui:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: GameGaraj.WebUI/Dockerfile

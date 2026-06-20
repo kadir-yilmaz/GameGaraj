@@ -1,0 +1,162 @@
+name: K3s ArgoCD Install
+
+on:
+  workflow_dispatch:
+    inputs:
+      node_port:
+        description: NodePort for ArgoCD HTTPS access
+        required: true
+        default: "30580"
+      server_ip:
+        description: Home server IP shown in the workflow summary
+        required: true
+        default: "192.168.1.56"
+      argocd_version:
+        description: ArgoCD manifest version (e.g. stable, v2.13.3)
+        required: true
+        default: "stable"
+      setup_application:
+        description: Create the GameGaraj ArgoCD Application after install
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+concurrency:
+  group: gamegaraj-k3s-argocd
+  cancel-in-progress: false
+
+jobs:
+  install:
+    name: Install ArgoCD
+    runs-on: [self-hosted, Linux, X64]
+
+    env:
+      KUBECONFIG: /home/kadirserver/.kube/config
+      ARGOCD_NODE_PORT: ${{ github.event.inputs.node_port || '30580' }}
+      ARGOCD_SERVER_IP: ${{ github.event.inputs.server_ip || '192.168.1.56' }}
+      ARGOCD_VERSION: ${{ github.event.inputs.argocd_version || 'stable' }}
+      SETUP_APPLICATION: ${{ github.event.inputs.setup_application || 'true' }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify Tooling
+        run: |
+          set -euo pipefail
+
+          kubectl version --client
+          kubectl get nodes -o wide
+
+      - name: Install ArgoCD
+        run: |
+          set -euo pipefail
+
+          # Create namespace (idempotent)
+          kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+
+          echo "Installing ArgoCD version: $ARGOCD_VERSION..."
+          kubectl apply -n argocd \
+            -f "https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml"
+
+          echo ""
+          echo "Waiting for ArgoCD core pods to become ready..."
+          kubectl -n argocd wait --for=condition=available deployment/argocd-server       --timeout=180s
+          kubectl -n argocd wait --for=condition=available deployment/argocd-repo-server   --timeout=180s
+          kubectl -n argocd wait --for=condition=available deployment/argocd-redis          --timeout=180s
+
+      - name: Expose ArgoCD With NodePort
+        run: |
+          set -euo pipefail
+
+          # argocd-server service ports:
+          #   index 0 → HTTP  (port 80,  target 8080)
+          #   index 1 → HTTPS (port 443, target 8083)
+          # We expose the HTTPS port via NodePort.
+
+          current_node_port="$(kubectl -n argocd get svc argocd-server \
+            -o jsonpath='{.spec.ports[1].nodePort}' 2>/dev/null || true)"
+
+          if [ -n "$current_node_port" ]; then
+            node_port_operation="replace"
+          else
+            node_port_operation="add"
+          fi
+
+          kubectl -n argocd patch svc argocd-server \
+            --type='json' \
+            -p="[
+              {\"op\":\"replace\",\"path\":\"/spec/type\",\"value\":\"NodePort\"},
+              {\"op\":\"${node_port_operation}\",\"path\":\"/spec/ports/1/nodePort\",\"value\":${ARGOCD_NODE_PORT}}
+            ]"
+
+          echo "ArgoCD HTTPS exposed on NodePort ${ARGOCD_NODE_PORT}"
+
+      - name: Setup ArgoCD Application
+        if: ${{ env.SETUP_APPLICATION == 'true' }}
+        run: |
+          set -euo pipefail
+
+          REPO_URL="https://github.com/${{ github.repository }}.git"
+
+          echo "Creating ArgoCD Application for GameGaraj..."
+          echo "  Repository: ${REPO_URL}"
+          echo "  Path:       helm/gamegaraj"
+          echo "  Branch:     main"
+
+          cat <<'EOF' | sed "s|__REPO_URL__|${REPO_URL}|g" | kubectl apply -f -
+          apiVersion: argoproj.io/v1alpha1
+          kind: Application
+          metadata:
+            name: gamegaraj
+            namespace: argocd
+          spec:
+            project: default
+            source:
+              repoURL: __REPO_URL__
+              targetRevision: main
+              path: helm/gamegaraj
+              helm:
+                valueFiles:
+                  - values.yaml
+            destination:
+              server: https://kubernetes.default.svc
+              namespace: default
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+              syncOptions:
+                - CreateNamespace=true
+          EOF
+
+          echo "ArgoCD Application 'gamegaraj' created."
+
+      - name: Print Access Info
+        run: |
+          set -euo pipefail
+
+          INITIAL_PASSWORD="$(kubectl -n argocd get secret argocd-initial-admin-secret \
+            -o jsonpath='{.data.password}' | base64 -d)"
+
+          echo ""
+          echo "======================================================"
+          echo "  ArgoCD Installation Complete"
+          echo "======================================================"
+          echo ""
+          echo "  Dashboard URL : https://${ARGOCD_SERVER_IP}:${ARGOCD_NODE_PORT}"
+          echo "  Username      : admin"
+          echo "  Password      : ${INITIAL_PASSWORD}"
+          echo ""
+          echo "  ⚠ Change your password after first login!"
+          echo "  ⚠ Then delete the initial secret:"
+          echo "    kubectl -n argocd delete secret argocd-initial-admin-secret"
+          echo ""
+          echo "======================================================"
+          echo ""
+          kubectl -n argocd get pods -o wide
+          echo ""
+          kubectl -n argocd get svc -o wide

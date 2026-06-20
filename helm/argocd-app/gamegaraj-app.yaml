@@ -1,0 +1,26 @@
+# GameGaraj ArgoCD Application
+# This manifest is also created by k3s-argocd-install.yml workflow.
+# Kept here as a reference / source of truth.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gamegaraj
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kadir-yilmaz/GameGaraj.git
+    targetRevision: main
+    path: helm/gamegaraj
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true        # Git'te silinen kaynak kümeden de silinir
+      selfHeal: true      # Manuel müdahaleler otomatik geri alınır
+    syncOptions:
+      - CreateNamespace=true
