@@ -327,16 +327,27 @@ namespace GameGaraj.WebUI.Services.Concrete
             var response = await _httpClient.GetAsync($"products/{id}");
 
             if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning($"[CatalogService] GetProductByIdAsync failed with status {response.StatusCode} for ID {id}");
                 return null;
+            }
 
             var content = await response.Content.ReadAsStringAsync();
-            var product = JsonSerializer.Deserialize<ProductViewModel>(content, new JsonSerializerOptions
+            try
             {
-                PropertyNameCaseInsensitive = true
-            });
+                var product = JsonSerializer.Deserialize<ProductViewModel>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
 
-            SetProductImageUrls(product);
-            return product;
+                SetProductImageUrls(product);
+                return product;
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, $"[CatalogService] GetProductByIdAsync failed to deserialize response for ID '{id}'. Content: '{content}'");
+                throw;
+            }
         }
 
         public async Task<ProductViewModel?> GetProductBySlugAsync(string slug)
@@ -344,16 +355,27 @@ namespace GameGaraj.WebUI.Services.Concrete
             var response = await _httpClient.GetAsync($"products/slug/{slug}");
 
             if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning($"[CatalogService] GetProductBySlugAsync failed with status {response.StatusCode} for slug {slug}");
                 return null;
+            }
 
             var content = await response.Content.ReadAsStringAsync();
-            var product = JsonSerializer.Deserialize<ProductViewModel>(content, new JsonSerializerOptions
+            try
             {
-                PropertyNameCaseInsensitive = true
-            });
+                var product = JsonSerializer.Deserialize<ProductViewModel>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
 
-            SetProductImageUrls(product);
-            return product;
+                SetProductImageUrls(product);
+                return product;
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, $"[CatalogService] GetProductBySlugAsync failed to deserialize response for slug '{slug}'. Content: '{content}'");
+                throw;
+            }
         }
 
         public async Task<List<CategoryViewModel>> GetAllCategoriesAsync()

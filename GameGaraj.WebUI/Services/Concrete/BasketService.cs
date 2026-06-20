@@ -94,7 +94,22 @@ namespace GameGaraj.WebUI.Services.Concrete
             {
                 _logger.LogInformation($"[BasketService] Saving basket with {basket.Items.Count} items");
                 
-                var json = JsonSerializer.Serialize(basket);
+                var payload = new
+                {
+                    UserId = basket.UserId,
+                    Items = basket.Items.Select(x => new
+                    {
+                        Id = x.ProductId,
+                        Name = x.ProductName,
+                        CategoryId = x.CategoryId,
+                        Price = x.Price,
+                        PictureUrl = x.ImageUrl,
+                        Quantity = x.Quantity,
+                        ProductSlug = x.ProductSlug
+                    }).ToList()
+                };
+
+                var json = JsonSerializer.Serialize(payload);
                 var stringContent = new StringContent(json, Encoding.UTF8, "application/json");
                 
                 var response = await _httpClient.PostAsync("baskets", stringContent);

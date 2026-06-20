@@ -31,6 +31,10 @@ namespace GameGaraj.WebUI.Controllers
                 {
                     if (string.IsNullOrEmpty(item.CategoryId))
                     {
+                        if (string.IsNullOrEmpty(item.ProductId))
+                        {
+                            continue;
+                        }
                         var product = await _catalogService.GetProductByIdAsync(item.ProductId);
                         if (product != null)
                         {
