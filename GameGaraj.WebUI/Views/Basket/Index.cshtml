@@ -470,7 +470,7 @@
                             <div class="basket-item">
                                 <!-- Image -->
                                 <div class="item-image">
-                                    <a asp-controller="Product" asp-action="Detail" asp-route-slug="@item.ProductSlug">
+                                    <a href="/product/p/@(string.IsNullOrEmpty(item.ProductSlug) ? item.ProductId : item.ProductSlug)">
                                         <img src="@(string.IsNullOrWhiteSpace(item.ImageUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.ImageUrl)"
                                              alt="@item.ProductName"
                                              onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
@@ -479,7 +479,7 @@
 
                                 <!-- Details -->
                                 <div class="item-details">
-                                    <a asp-controller="Product" asp-action="Detail" asp-route-slug="@item.ProductSlug" class="item-name">
+                                    <a href="/product/p/@(string.IsNullOrEmpty(item.ProductSlug) ? item.ProductId : item.ProductSlug)" class="item-name">
                                         @item.ProductName
                                     </a>
                                     <div class="item-meta">
