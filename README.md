@@ -83,18 +83,24 @@ Projede iki farklı indirim mekanizması bir arada sunulmuştur:
 - **Campaign Engine:** İş mantığının esnekliğini korumak adına **Strategy Pattern** ile kurgulanmıştır. "3 Al 2 Öde", "X TL Üzeri Sabit İndirim" gibi karmaşık kampanya türleri, mevcut koda dokunmadan (Open/Closed Principle) sisteme dahil edilebilir.
 - **Coupon Service:** Kullanıcı bazlı indirim kuponlarını yönetir. Yüksek trafik altında hızlı cevap verebilmesi adına **Dapper (Micro ORM)** ile optimize edilmiştir.
 
-### 7. CI/CD Pipeline & Home Server Deployment (K3s)
-Deployment süreci artık home server üzerinde çalışan **self-hosted GitHub Actions runner** ile yönetilir. Ana hedef ortam hafif Kubernetes dağıtımı olan **K3s**'tir.
+### 7. CI/CD & GitOps Mimarisi (ArgoCD & K3s)
 
-- **Self-hosted runner:** Workflow, home server üzerindeki Linux/X64 runner'da çalışır ve `/home/kadirserver/.kube/config` üzerinden K3s cluster'a bağlanır.
-- **Config sync:** `k8s/config/**` altındaki dosyalar Kubernetes ConfigMap olarak senkronize edilir.
-- **Secret yönetimi:** Hassas bilgiler GitHub Secrets üzerinden alınır. Tek tek secret değerleri veya `K3S_SECRETS_JSON` ile toplu secret aktarımı desteklenir.
-- **K8s rollout:** Manifestler `k8s/**` altından uygulanır, deployment'lar restart edilir ve rollout status kontrolü yapılır.
-- **Manuel kurulum opsiyonu:** Workflow dispatch ile istenirse home server üzerinde K3s eksikse otomatik kurulabilir.
+Deployment ve uygulama yönetim süreçleri, GitOps prensiplerine uygun olarak **ArgoCD** ve **K3s** üzerinde yapılandırılmıştır. Altyapı, home server üzerinde çalışan bir **self-hosted GitHub Actions runner** ile yönetilmektedir.
 
-Aktif workflow'lar: `.github/workflows/k3s-config-sync.yml`, `.github/workflows/k3s-app-deploy.yml`, `.github/workflows/k3s-dashboard-install.yml`
+### Mimari Akış:
+1. **CI (GitHub Actions):** Kod ana dallara (`main`) push edildiğinde sadece imaj derlenir (**Docker Build**), commit SHA'sı ile etiketlenir ve `helm/gamegaraj/values.yaml` dosyasındaki ilgili servis tag'i güncellerilerek Git'e geri yazılır.
+2. **CD (ArgoCD):** Git reposundaki değişiklikleri anlık izler (`values.yaml` değişikliği vb.). Git'teki durum ile K3s kümesindeki durum arasında fark (drift) olduğunda, otomatik olarak **Helm Upgrade** işlemini başlatır ve kümedeki podları günceller (`selfHeal` ve `prune` aktiftir).
 
-`K3s App Deploy` workflow'u `service` input'u ile tum image'lari (`all`) veya tek bir servisi (`webui`, `catalog-api`, vb.) build edebilir.
+### Altyapı Bileşenleri:
+- **Self-hosted Runner:** GitHub Actions workflow'ları ev sunucusu üzerindeki yerel Linux/X64 runner'da koşar ve K3s kümesine doğrudan erişir.
+- **Secret Yönetimi:** Şifreler GitHub Secrets üzerinde saklanır ve `k3s-secret-sync.yml` workflow'u ile doğrudan Kubernetes `gamegaraj-secrets` secret'ına eşitlenir. Helm şablonları secret yönetimine dahil edilmemiştir.
+- **ArgoCD Application:** `helm/argocd-app/gamegaraj-app.yaml` tanımı ile `helm/gamegaraj` altındaki manifestoları izler.
+
+### Aktif Workflow'lar:
+* **`k3s-app-deploy.yml` (CI):** Docker image'larını build eder, `values.yaml`'daki tag'leri günceller ve Git'e pushlar.
+* **`k3s-secret-sync.yml`:** GitHub Secrets → Kubernetes Secret senkronizasyonunu yönetir.
+* **`k3s-argocd-install.yml`:** ArgoCD sunucusunu K3s üzerine kurar, NodePort (`30580`) ile dışa açar ve projeyi ArgoCD'ye bağlar.
+* **`k3s-dashboard-install.yml`:** Kubernetes Dashboard kurulumunu yapar.
 
 ---
 
@@ -197,7 +203,7 @@ Aktif workflow'lar: `.github/workflows/k3s-config-sync.yml`, `.github/workflows/
 
 ---
 
-## Yardımcı Servisler
+## Yardımcı ve Altyapı Servisleri
 
 | Servis | Port | Görevi |
 | :--- | :--- | :--- |
@@ -205,6 +211,9 @@ Aktif workflow'lar: `.github/workflows/k3s-config-sync.yml`, `.github/workflows/
 | **Redis** | `6380` | Dağıtık önbellekleme ve sepet yönetimi. |
 | **Elasticsearch** | `9201` | Hızlı ürün arama ve katalog indeksleme. |
 | **Kibana** | `5601` | Elastic verilerini görselleştirme ve log izleme. |
+| **ArgoCD** | `30580` | GitOps mimarisine dayalı sürekli dağıtım (CD) yönetim arayüzü. |
+| **Prometheus** | `9090` (İç Port) | Mikroservislerden `/metrics` üzerinden zaman serisi verisi ve metrik toplar. |
+| **Grafana** | `30300` | Prometheus verilerini grafik arayüzlerle görselleştirir. |
 
 ---
 
