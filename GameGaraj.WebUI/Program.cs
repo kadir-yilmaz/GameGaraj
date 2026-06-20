@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
 
 var cultureInfo = new System.Globalization.CultureInfo("tr-TR");
 cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
@@ -49,6 +50,58 @@ builder.Services.AddAuthentication(options =>
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
         options.Cookie.Name = "GameGarajWebCookie";
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnValidatePrincipal = async context =>
+            {
+                if (context.Principal?.Identity?.IsAuthenticated != true)
+                {
+                    return;
+                }
+
+                // Get the token expiration time from the ticket
+                var expiresAtToken = context.Properties.GetTokens().FirstOrDefault(t => t.Name == "expires_at")?.Value;
+                if (string.IsNullOrEmpty(expiresAtToken))
+                {
+                    return;
+                }
+
+                if (DateTime.TryParse(expiresAtToken, null, System.Globalization.DateTimeStyles.RoundtripKind, out var expiresAt))
+                {
+                    // Check if token has expired or is about to expire in less than 60 seconds
+                    if (expiresAt.ToUniversalTime() - DateTime.UtcNow < TimeSpan.FromSeconds(60))
+                    {
+                        var identityService = context.HttpContext.RequestServices.GetRequiredService<IIdentityService>();
+                        var tokenResponse = await identityService.GetAccessTokenByRefreshTokenAsync();
+
+                        if (tokenResponse != null)
+                        {
+                            // Update tokens inside ticket properties
+                            var tokens = context.Properties.GetTokens().ToList();
+                            
+                            var accessTokenToken = tokens.FirstOrDefault(t => t.Name == "access_token");
+                            if (accessTokenToken != null) accessTokenToken.Value = tokenResponse.AccessToken;
+                            
+                            var refreshTokenToken = tokens.FirstOrDefault(t => t.Name == "refresh_token");
+                            if (refreshTokenToken != null) refreshTokenToken.Value = tokenResponse.RefreshToken;
+                            
+                            var newExpiresAt = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToString("o", System.Globalization.CultureInfo.InvariantCulture);
+                            var expiresAtItem = tokens.FirstOrDefault(t => t.Name == "expires_at");
+                            if (expiresAtItem != null) expiresAtItem.Value = newExpiresAt;
+
+                            context.Properties.StoreTokens(tokens);
+                            context.ShouldRenew = true;
+                        }
+                        else
+                        {
+                            // Refresh failed, reject the principal (forces logout)
+                            context.RejectPrincipal();
+                            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                        }
+                    }
+                }
+            }
+        };
     })
     .AddOpenIdConnect("Keycloak", options =>
     {

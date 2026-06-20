@@ -68,7 +68,7 @@ namespace GameGaraj.WebUI.Services.Concrete
             {
                 new AuthenticationToken { Name = OpenIdConnectParameterNames.AccessToken, Value = tokenResponse.AccessToken },
                 new AuthenticationToken { Name = OpenIdConnectParameterNames.RefreshToken, Value = tokenResponse.RefreshToken },
-                new AuthenticationToken { Name = OpenIdConnectParameterNames.ExpiresIn, Value = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToString("o", CultureInfo.InvariantCulture) }
+                new AuthenticationToken { Name = "expires_at", Value = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToString("o", System.Globalization.CultureInfo.InvariantCulture) }
             });
 
             authenticationProperties.IsPersistent = model.IsRemember;
@@ -161,11 +161,44 @@ namespace GameGaraj.WebUI.Services.Concrete
             }
         }
 
-        public Task<TokenResponse?> GetAccessTokenByRefreshTokenAsync()
+        public async Task<TokenResponse?> GetAccessTokenByRefreshTokenAsync()
         {
-             // Eksik implementasyon: Refresh Token ile yeni Access Token alma
-             // Şimdilik null dönelim
-             return Task.FromResult<TokenResponse?>(null);
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null) return null;
+
+            var refreshToken = await httpContext.GetTokenAsync(OpenIdConnectParameterNames.RefreshToken);
+            if (string.IsNullOrEmpty(refreshToken)) return null;
+
+            var tokenEndpoint = $"{_serviceApiSettings.IdentityBaseUri}/protocol/openid-connect/token";
+
+            var requestContent = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "client_id", "web-ui" },
+                { "grant_type", "refresh_token" },
+                { "refresh_token", refreshToken }
+            });
+
+            try
+            {
+                var response = await _httpClient.PostAsync(tokenEndpoint, requestContent);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var tokenResponse = JsonSerializer.Deserialize<TokenResponse>(responseContent, new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true 
+                });
+
+                return tokenResponse;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[IdentityService] Refresh token error: {ex.Message}");
+                return null;
+            }
         }
 
         public async Task RevokeRefreshToken()

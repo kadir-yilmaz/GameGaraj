@@ -119,7 +119,9 @@ namespace GameGaraj.WebUI.Controllers
             var redirectUrl = Url.Action(nameof(GoogleSignInCallback), new { returnUrl, popup }) ?? Url.Action("Index", "Home")!;
             var properties = new AuthenticationProperties
             {
-                RedirectUri = redirectUrl
+                RedirectUri = redirectUrl,
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
             };
 
             properties.Items["kc_idp_hint"] = "google";
