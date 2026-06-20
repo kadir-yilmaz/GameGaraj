@@ -155,5 +155,108 @@ namespace GameGaraj.WebUI.Services.Concrete
             var response = await _httpClient.DeleteAsync($"baskets/items/{productId}");
             return response.IsSuccessStatusCode;
         }
+
+        public async Task SyncBasketAsync(string guestId, string userId)
+        {
+            try
+            {
+                _logger.LogInformation($"[BasketService] Syncing guest basket ({guestId}) to user basket ({userId})");
+
+                // 1. Misafir sepetini guestId header'ı ile çek
+                var guestRequest = new HttpRequestMessage(HttpMethod.Get, "baskets");
+                guestRequest.Headers.Add("X-User-Id", guestId);
+                var guestResponse = await _httpClient.SendAsync(guestRequest);
+                if (!guestResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation($"[BasketService] No guest basket or failed to fetch: {guestResponse.StatusCode}");
+                    return;
+                }
+
+                var guestContent = await guestResponse.Content.ReadAsStringAsync();
+                var guestApiResponse = JsonSerializer.Deserialize<BasketApiResponse>(guestContent, new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true 
+                });
+                
+                if (guestApiResponse == null || guestApiResponse.Items == null || !guestApiResponse.Items.Any())
+                {
+                    _logger.LogInformation("[BasketService] Guest basket is empty. Nothing to sync.");
+                    return; // Birleştirilecek ürün yok
+                }
+
+                // 2. Üye sepetini userId header'ı ile çek (varsa)
+                var userRequest = new HttpRequestMessage(HttpMethod.Get, "baskets");
+                userRequest.Headers.Add("X-User-Id", userId);
+                var userResponse = await _httpClient.SendAsync(userRequest);
+                
+                List<BasketApiItem> mergedItems = new();
+                if (userResponse.IsSuccessStatusCode)
+                {
+                    var userContent = await userResponse.Content.ReadAsStringAsync();
+                    var userApiResponse = JsonSerializer.Deserialize<BasketApiResponse>(userContent, new JsonSerializerOptions 
+                    { 
+                        PropertyNameCaseInsensitive = true 
+                    });
+                    if (userApiResponse != null && userApiResponse.Items != null)
+                    {
+                        mergedItems.AddRange(userApiResponse.Items);
+                    }
+                }
+
+                // 3. Misafir sepetindeki ürünleri üye sepetindekilerle birleştir
+                foreach (var guestItem in guestApiResponse.Items)
+                {
+                    var existingItem = mergedItems.FirstOrDefault(x => x.Id == guestItem.Id);
+                    if (existingItem != null)
+                    {
+                        existingItem.Quantity += guestItem.Quantity;
+                    }
+                    else
+                    {
+                        mergedItems.Add(guestItem);
+                    }
+                }
+
+                // 4. Birleştirilmiş sepeti üye ID'si ile kaydet
+                var saveBody = new
+                {
+                    UserId = userId,
+                    Items = mergedItems.Select(x => new
+                    {
+                        Id = x.Id,
+                        Name = x.Name,
+                        CategoryId = x.CategoryId,
+                        Price = x.Price,
+                        PictureUrl = x.PictureUrl,
+                        ProductSlug = x.ProductSlug,
+                        Quantity = x.Quantity
+                    }).ToList()
+                };
+
+                var saveRequest = new HttpRequestMessage(HttpMethod.Post, "baskets");
+                saveRequest.Headers.Add("X-User-Id", userId);
+                saveRequest.Content = new StringContent(JsonSerializer.Serialize(saveBody), Encoding.UTF8, "application/json");
+                
+                var saveResponse = await _httpClient.SendAsync(saveRequest);
+                if (!saveResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogError($"[BasketService] Failed to save merged basket: {saveResponse.StatusCode}");
+                    return;
+                }
+
+                // 5. Misafir sepetini temizle
+                var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, "baskets");
+                deleteRequest.Headers.Add("X-User-Id", guestId);
+                var deleteResponse = await _httpClient.SendAsync(deleteRequest);
+                if (deleteResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation($"[BasketService] Successfully synced and cleared guest basket ({guestId}) for user ({userId}).");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[BasketService] Error syncing basket");
+            }
+        }
     }
 }

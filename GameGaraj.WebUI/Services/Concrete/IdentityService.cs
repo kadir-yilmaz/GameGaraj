@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using GameGaraj.WebUI.Models.Auth;
 using GameGaraj.WebUI.Services.Abstract;
 using GameGaraj.WebUI.Settings;
@@ -168,33 +169,77 @@ namespace GameGaraj.WebUI.Services.Concrete
 
         public async Task RevokeRefreshToken()
         {
-            // Eksik implementasyon: Keycloak'tan refresh token'ı iptal etme
-            // Şimdilik boş
-             await Task.CompletedTask;
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null) return;
+
+            var refreshToken = await httpContext.GetTokenAsync(OpenIdConnectParameterNames.RefreshToken);
+            if (string.IsNullOrEmpty(refreshToken)) return;
+
+            try
+            {
+                var logoutEndpoint = $"{_serviceApiSettings.IdentityBaseUri}/protocol/openid-connect/logout";
+
+                var requestContent = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    { "client_id", "web-ui" },
+                    { "refresh_token", refreshToken }
+                });
+
+                var response = await _httpClient.PostAsync(logoutEndpoint, requestContent);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[IdentityService] Failed to revoke refresh token: {errorContent}");
+                }
+                else
+                {
+                    Console.WriteLine("[IdentityService] Keycloak backchannel logout successful.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[IdentityService] Error revoking refresh token: {ex.Message}");
+            }
         }
 
         public string GetUserId()
         {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null) return "anonymous-user";
+
             // 1. Önce "sub" claim'ini dene (JWT standart)
-            var userId = _httpContextAccessor.HttpContext?.User.FindFirst("sub")?.Value;
+            var userId = httpContext.User.FindFirst("sub")?.Value;
             if (!string.IsNullOrEmpty(userId))
                 return userId;
 
             // 2. ClaimTypes.NameIdentifier'ı dene
-            userId = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            userId = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!string.IsNullOrEmpty(userId))
                 return userId;
 
             // 3. Alternatif claim türlerini dene
-            userId = _httpContextAccessor.HttpContext?.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+            userId = httpContext.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
             if (!string.IsNullOrEmpty(userId))
                 return userId;
 
-            // 4. Fallback - Bu durumda log yazalım
-            Console.WriteLine("[IdentityService] WARNING: UserId not found in claims, returning anonymous-user");
-            Console.WriteLine($"[IdentityService] Available claims: {string.Join(", ", _httpContextAccessor.HttpContext?.User.Claims.Select(c => $"{c.Type}={c.Value}") ?? Array.Empty<string>())}");
-            
-            return "anonymous-user";
+            // 4. Misafir (Guest) Kullanıcı için benzersiz Cookie ID oluştur/oku
+            var guestCookieName = "GameGarajGuestId";
+            if (httpContext.Request.Cookies.TryGetValue(guestCookieName, out var guestId) && !string.IsNullOrEmpty(guestId))
+            {
+                return guestId;
+            }
+
+            // Yoksa yeni oluştur ve cookie'ye kaydet
+            var newGuestId = $"guest-{Guid.NewGuid():N}";
+            var cookieOptions = new CookieOptions
+            {
+                Expires = DateTimeOffset.UtcNow.AddDays(30),
+                HttpOnly = true,
+                IsEssential = true,
+                Secure = httpContext.Request.IsHttps
+            };
+            httpContext.Response.Cookies.Append(guestCookieName, newGuestId, cookieOptions);
+            return newGuestId;
         }
 
         private ClaimsPrincipal GetClaimsPrincipal(string accessToken)

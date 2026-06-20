@@ -9,10 +9,12 @@ namespace GameGaraj.WebUI.Controllers
     public class AuthController : Controller
     {
         private readonly IIdentityService _identityService;
+        private readonly IBasketService _basketService;
 
-        public AuthController(IIdentityService identityService)
+        public AuthController(IIdentityService identityService, IBasketService basketService)
         {
             _identityService = identityService;
+            _basketService = basketService;
         }
 
         [HttpGet]
@@ -29,11 +31,30 @@ namespace GameGaraj.WebUI.Controllers
                 return View(model);
             }
 
+            // Giriş öncesi misafir cookie ID'sini oku
+            var guestCookieName = "GameGarajGuestId";
+            string? guestId = null;
+            if (HttpContext.Request.Cookies.TryGetValue(guestCookieName, out var gid))
+            {
+                guestId = gid;
+            }
+
             var error = await _identityService.SignInAsync(model);
             if (!string.IsNullOrEmpty(error))
             {
                 ModelState.AddModelError(string.Empty, error);
                 return View(model);
+            }
+
+            // Giriş başarılı, sepet senkronizasyonunu başlat
+            if (!string.IsNullOrEmpty(guestId))
+            {
+                var loggedInUserId = _identityService.GetUserId();
+                if (!string.IsNullOrEmpty(loggedInUserId) && loggedInUserId != "anonymous-user")
+                {
+                    await _basketService.SyncBasketAsync(guestId, loggedInUserId);
+                    HttpContext.Response.Cookies.Delete(guestCookieName);
+                }
             }
 
             // Kullanıcı admin veya editor ise admin paneline yönlendir
@@ -72,17 +93,28 @@ namespace GameGaraj.WebUI.Controllers
 
         public new async Task<IActionResult> SignOut()
         {
-            await _identityService.RevokeRefreshToken(); // Opsiyonel: Keycloak'tan da oturumu kapatmak için
+            await _identityService.RevokeRefreshToken(); // Keycloak backchannel logout
 
             var properties = new AuthenticationProperties
             {
                 RedirectUri = Url.Action("Index", "Home")
             };
 
-            return SignOut(
-                properties,
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                "Keycloak");
+            // Eğer kullanıcı Keycloak OIDC şeması üzerinden giriş yapmışsa OIDC logout tetikle.
+            // Aksi halde (e-posta/şifre ise), sadece local cookie'yi temizle.
+            if (User.Identity?.AuthenticationType == "Keycloak")
+            {
+                return SignOut(
+                    properties,
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    "Keycloak");
+            }
+            else
+            {
+                return SignOut(
+                    properties,
+                    CookieAuthenticationDefaults.AuthenticationScheme);
+            }
         }
 
         [HttpGet]
@@ -101,8 +133,20 @@ namespace GameGaraj.WebUI.Controllers
         }
 
         [HttpGet]
-        public IActionResult GoogleSignInCallback(string? returnUrl = null, bool popup = false)
+        public async Task<IActionResult> GoogleSignInCallback(string? returnUrl = null, bool popup = false)
         {
+            // Giriş sonrası sepet senkronizasyonunu başlat
+            var guestCookieName = "GameGarajGuestId";
+            if (HttpContext.Request.Cookies.TryGetValue(guestCookieName, out var guestId) && !string.IsNullOrEmpty(guestId))
+            {
+                var loggedInUserId = _identityService.GetUserId();
+                if (!string.IsNullOrEmpty(loggedInUserId) && loggedInUserId != "anonymous-user")
+                {
+                    await _basketService.SyncBasketAsync(guestId, loggedInUserId);
+                    HttpContext.Response.Cookies.Delete(guestCookieName);
+                }
+            }
+
             if (popup)
             {
                 var targetUrl = GetPostLoginRedirectUrl(returnUrl);

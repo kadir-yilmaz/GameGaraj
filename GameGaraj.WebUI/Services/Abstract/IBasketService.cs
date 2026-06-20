@@ -9,5 +9,6 @@ namespace GameGaraj.WebUI.Services.Abstract
         Task<bool> DeleteAsync();
         Task<bool> AddItemAsync(BasketItemViewModel item);
         Task<bool> RemoveItemAsync(string productId);
+        Task SyncBasketAsync(string guestId, string userId);
     }
 }

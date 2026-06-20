@@ -18,11 +18,14 @@ namespace GameGaraj.WebUI.Handlers
             HttpRequestMessage request, 
             CancellationToken cancellationToken)
         {
-            var userId = _identityService.GetUserId();
-            request.Headers.Add("X-User-Id", userId);
+            if (!request.Headers.Contains("X-User-Id"))
+            {
+                var userId = _identityService.GetUserId();
+                request.Headers.Add("X-User-Id", userId);
+            }
 
             var user = _httpContextAccessor.HttpContext?.User;
-            if (user?.Identity?.IsAuthenticated == true)
+            if (user?.Identity?.IsAuthenticated == true && !request.Headers.Contains("X-User-Email"))
             {
                 var email = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
                             ?? user.FindFirst("email")?.Value;
@@ -33,10 +36,13 @@ namespace GameGaraj.WebUI.Handlers
             }
 
             // Access token'ı cookie'den al ve Authorization header'ına ekle
-            var accessToken = await _httpContextAccessor.HttpContext?.GetTokenAsync("access_token")!;
-            if (!string.IsNullOrEmpty(accessToken))
+            if (!request.Headers.Contains("Authorization"))
             {
-                request.Headers.Add("Authorization", $"Bearer {accessToken}");
+                var accessToken = await _httpContextAccessor.HttpContext?.GetTokenAsync("access_token")!;
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    request.Headers.Add("Authorization", $"Bearer {accessToken}");
+                }
             }
 
             return await base.SendAsync(request, cancellationToken);
