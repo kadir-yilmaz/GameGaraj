@@ -55,6 +55,7 @@ services:
       IdentityOption__Address: "http://192.168.1.56:8080/realms/GameGaraj"
       # Issuer must match the issuer claim in JWT tokens (public URL)
       IdentityOption__Issuer: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
+      IdentityOption__Audience: "gateway.api"
 
   # ---------------------------------------------------------------------------
   # Catalog API (PostgreSQL)
@@ -63,6 +64,8 @@ services:
     image: "catalog-api:ccd3916"
     nodePort: 30010
     skipCommonRabbit: true
+    env:
+      IdentityOption__Audience: "catalog.api"
     secretEnv:
       RabbitMQUrl: rabbitmq-url
       ConnectionStrings__PostgresConnection: catalog-postgres-connection
@@ -73,6 +76,8 @@ services:
   photostock-api:
     image: "photostock-api:ccd3916"
     nodePort: 30015
+    env:
+      IdentityOption__Audience: "photostock.api"
     secretEnv:
       Minio__Endpoint: minio-endpoint
       Minio__AccessKey: minio-access-key
@@ -86,6 +91,8 @@ services:
   basket-api:
     image: "basket-api:ccd3916"
     nodePort: 30011
+    env:
+      IdentityOption__Audience: "basket.api"
     secretEnv:
       ConnectionStrings__Redis: redis-connection
 
@@ -123,6 +130,8 @@ services:
   invoice-api:
     image: "invoice-api:ccd3916"
     nodePort: 30017
+    env:
+      IdentityOption__Audience: "invoice.api"
     secretEnv:
       EmailSettings__SmtpUsername: smtp-username
       EmailSettings__SmtpPassword: smtp-password
