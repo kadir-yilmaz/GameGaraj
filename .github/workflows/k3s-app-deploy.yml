@@ -419,15 +419,18 @@ jobs:
               "minio-bucket-name":       os.environ["MINIO_BUCKET_NAME"],
               "minio-secure":            os.environ["MINIO_SECURE"],
           }
-
           with open("/tmp/values-secrets.yaml", "w") as f:
               yaml.dump({"secrets": secrets}, f, default_flow_style=False)
           '
+
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "Deploying version: $SHORT_SHA"
 
           helm upgrade --install gamegaraj ./helm/gamegaraj \
             --namespace "$NAMESPACE" \
             --create-namespace \
             --values /tmp/values-secrets.yaml \
+            --set services.webui.env.APP_VERSION="$SHORT_SHA" \
             --timeout 300s
 
           rm -f /tmp/values-secrets.yaml
