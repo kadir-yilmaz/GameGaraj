@@ -18,7 +18,6 @@ namespace GameGaraj.Shared.Logging
                 .MinimumLevel.Information()
                 .Enrich.FromLogContext()
                 .Enrich.WithExceptionDetails()
-                .Enrich.WithMachineName()
                 .Enrich.WithProperty("Environment", environment)
                 .Enrich.WithProperty("Service", serviceName)
                 .WriteTo.Console();
