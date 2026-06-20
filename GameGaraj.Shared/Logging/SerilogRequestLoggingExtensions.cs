@@ -23,9 +23,13 @@ namespace GameGaraj.Shared.Logging
                                        ?? user.FindFirst("sub")?.Value 
                                        ?? "AuthenticatedUser";
                     }
+                    else if (httpContext.Request.Headers.TryGetValue("X-User-Email", out var userEmailHeader) && !string.IsNullOrEmpty(userEmailHeader))
+                    {
+                        userIdentity = userEmailHeader;
+                    }
                     else if (httpContext.Request.Headers.TryGetValue("X-User-Id", out var userIdHeader) && !string.IsNullOrEmpty(userIdHeader))
                     {
-                        userIdentity = $"Guest-{userIdHeader}";
+                        userIdentity = userIdHeader == "anonymous-user" ? "Anonymous" : $"User-{userIdHeader}";
                     }
 
                     diagnosticContext.Set("UserIdentity", userIdentity);

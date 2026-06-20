@@ -77,10 +77,10 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseRouting();
-app.UseCustomRequestLogging();
-
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseCustomRequestLogging();
 
 // Versioning Set
 var apiVersionSet = app.NewApiVersionSet()

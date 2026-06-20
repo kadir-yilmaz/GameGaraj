@@ -51,10 +51,10 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseRouting();
-app.UseCustomRequestLogging();
-
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseCustomRequestLogging();
 
 app.MapControllers();
 

@@ -170,13 +170,13 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// Custom Request Logging Ekle
-app.UseCustomRequestLogging();
-
 app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Custom Request Logging Ekle
+app.UseCustomRequestLogging();
 
 app.MapControllerRoute(
     name: "areas",

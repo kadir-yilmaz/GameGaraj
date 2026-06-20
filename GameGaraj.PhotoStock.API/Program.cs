@@ -94,10 +94,10 @@ app.UseStaticFiles();
 app.UseHttpsRedirection();
 
 app.UseRouting();
-app.UseCustomRequestLogging();
-
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseCustomRequestLogging();
 
 app.MapControllers();
 

@@ -21,6 +21,17 @@ namespace GameGaraj.WebUI.Handlers
             var userId = _identityService.GetUserId();
             request.Headers.Add("X-User-Id", userId);
 
+            var user = _httpContextAccessor.HttpContext?.User;
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                var email = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+                            ?? user.FindFirst("email")?.Value;
+                if (!string.IsNullOrEmpty(email))
+                {
+                    request.Headers.Add("X-User-Email", email);
+                }
+            }
+
             // Access token'ı cookie'den al ve Authorization header'ına ekle
             var accessToken = await _httpContextAccessor.HttpContext?.GetTokenAsync("access_token")!;
             if (!string.IsNullOrEmpty(accessToken))

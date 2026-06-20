@@ -14,11 +14,11 @@ var app = builder.Build();
 
 app.UseRouting();
 
-// Custom Request Logging Ekle
-app.UseCustomRequestLogging();
-
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Custom Request Logging Ekle
+app.UseCustomRequestLogging();
 
 app.MapReverseProxy();
 
