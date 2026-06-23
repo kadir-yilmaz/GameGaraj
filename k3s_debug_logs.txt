@@ -1,0 +1,302 @@
+=== WebUI Pod Details ===
+Name:             webui-66d887db97-rtmrx
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             kadirserver/192.168.1.56
+Start Time:       Tue, 23 Jun 2026 18:40:50 +0000
+Labels:           app=webui
+                  app.kubernetes.io/instance=gamegaraj
+                  app.kubernetes.io/managed-by=Helm
+                  app.kubernetes.io/version=latest
+                  helm.sh/chart=gamegaraj-0.1.0
+                  pod-template-hash=66d887db97
+Annotations:      kubectl.kubernetes.io/restartedAt: 2026-06-20T11:01:52Z
+                  prometheus.io/path: /metrics
+                  prometheus.io/port: 8080
+                  prometheus.io/scrape: true
+Status:           Running
+IP:               10.42.0.218
+IPs:
+  IP:           10.42.0.218
+Controlled By:  ReplicaSet/webui-66d887db97
+Containers:
+  webui:
+    Container ID:   docker://039c68a33f92b439eb3239207870f5ed0aadee1402c8bce5ec3eba83bd5ecc4d
+    Image:          webui:feb725c
+    Image ID:       docker-pullable://webui@sha256:fd8ec39cda4dd4e76c2a3dad3daaa7e9468912994253162149e6586f89109a11
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Tue, 23 Jun 2026 18:40:51 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      ASPNETCORE_ENVIRONMENT:               Production
+      ASPNETCORE_URLS:                      http://+:8080
+      RabbitMQUrl:                          192.168.1.56
+      IdentityOption__Authority:            http://192.168.1.56:8080/realms/GameGaraj
+      IdentityServerURL:                    http://192.168.1.56:8080/realms/GameGaraj
+      ElasticSearchSettings__Uri:           http://192.168.1.56:9201
+      APP_VERSION:                          feb725c
+      ServiceApiSettings__GatewayBaseUri:   http://gateway:8080
+      ServiceApiSettings__IdentityBaseUri:  https://keycloak.kadiryilmaz.online/realms/GameGaraj
+      ServiceApiSettings__PhotoBaseUrl:     https://minio.kadiryilmaz.online/gamegaraj
+      ConnectionStrings__Redis:             <set to the key 'redis-connection' in secret 'gamegaraj-secrets'>         Optional: false
+      KEYCLOAK_ADMIN_PASSWORD:              <set to the key 'keycloak-admin-password' in secret 'gamegaraj-secrets'>  Optional: false
+      KEYCLOAK_ADMIN_USERNAME:              <set to the key 'keycloak-admin-username' in secret 'gamegaraj-secrets'>  Optional: false
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-p9sn2 (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-p9sn2:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age    From               Message
+  ----    ------     ----   ----               -------
+  Normal  Scheduled  2m56s  default-scheduler  Successfully assigned default/webui-66d887db97-rtmrx to kadirserver
+  Normal  Pulled     2m56s  kubelet            spec.containers{webui}: Container image "webui:feb725c" already present on machine and can be accessed by the pod
+  Normal  Created    2m56s  kubelet            spec.containers{webui}: Container created
+  Normal  Started    2m56s  kubelet            spec.containers{webui}: Container started
+=== WebUI Deployments ===
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS       IMAGES                    SELECTOR
+basket-api       1/1     1            1           3d23h   basket-api       basket-api:53c2d22        app=basket-api
+campaign-api     1/1     1            1           3d23h   campaign-api     campaign-api:53c2d22      app=campaign-api
+catalog-api      1/1     1            1           3d23h   catalog-api      catalog-api:53c2d22       app=catalog-api
+gateway          1/1     1            1           3d23h   gateway          gateway:53c2d22           app=gateway
+grafana          1/1     1            1           3d7h    grafana          grafana/grafana:10.4.1    app=grafana
+invoice-api      1/1     1            1           3d23h   invoice-api      invoice-api:53c2d22       app=invoice-api
+order-api        1/1     1            1           3d23h   order-api        order-api:53c2d22         app=order-api
+payment-api      1/1     1            1           3d23h   payment-api      payment-api:53c2d22       app=payment-api
+photostock-api   1/1     1            1           3d23h   photostock-api   photostock-api:53c2d22    app=photostock-api
+prometheus       1/1     1            1           3d7h    prometheus       prom/prometheus:v2.51.0   app=prometheus
+webui            1/1     1            1           3d23h   webui            webui:feb725c             app=webui
+=== All Pods ===
+NAME                              READY   STATUS    RESTARTS        AGE     IP            NODE          NOMINATED NODE   READINESS GATES
+basket-api-f974cb99b-mlrlq        1/1     Running   1 (13m ago)     13m     10.42.0.211   kadirserver   <none>           <none>
+campaign-api-74496ccbb6-ctbnb     1/1     Running   2 (13m ago)     13m     10.42.0.214   kadirserver   <none>           <none>
+catalog-api-7bb446f8c8-ft8cl      1/1     Running   1 (13m ago)     13m     10.42.0.216   kadirserver   <none>           <none>
+gateway-5f4f4cf86-ctm2r           1/1     Running   1 (13m ago)     13m     10.42.0.215   kadirserver   <none>           <none>
+grafana-d74bd449c-8c7r9           1/1     Running   1 (2d19h ago)   3d7h    10.42.0.158   kadirserver   <none>           <none>
+invoice-api-c5578967b-p7fbn       1/1     Running   2 (13m ago)     13m     10.42.0.217   kadirserver   <none>           <none>
+order-api-689977857c-z6th7        1/1     Running   1 (13m ago)     13m     10.42.0.210   kadirserver   <none>           <none>
+payment-api-df5985c4c-wzsdl       1/1     Running   1 (13m ago)     13m     10.42.0.209   kadirserver   <none>           <none>
+photostock-api-7b97944469-5jmzr   1/1     Running   1 (13m ago)     13m     10.42.0.212   kadirserver   <none>           <none>
+prometheus-76d4747c4d-c6z4p       1/1     Running   1 (2d19h ago)   3d7h    10.42.0.147   kadirserver   <none>           <none>
+webui-66d887db97-rtmrx            1/1     Running   0               2m57s   10.42.0.218   kadirserver   <none>           <none>
+=== Logs from WebUI (Current) ===
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/catalog/products/0507c500-bbf6-4ee7-8b4c-42e983d629d5
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/catalog/products/0507c500-bbf6-4ee7-8b4c-42e983d629d5
+[18:42:00 INF] Received HTTP response headers after 6.1866ms - 200
+[18:42:00 INF] End processing HTTP request after 6.6452ms - 200
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/catalog/products/a8667ab4-a867-4d04-8d5b-d4473b78b32d
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/catalog/products/a8667ab4-a867-4d04-8d5b-d4473b78b32d
+[18:42:00 INF] Received HTTP response headers after 5.3315ms - 200
+[18:42:00 INF] End processing HTTP request after 5.7883ms - 200
+[18:42:00 INF] Accessing expired session, Key:b87092d3-6faf-c826-0e9a-56bbbc019d8f
+[18:42:00 INF] Start processing HTTP request POST http://gateway:8080/api/campaign/campaigncalculate
+[18:42:00 INF] Sending HTTP request POST http://gateway:8080/api/campaign/campaigncalculate
+[18:42:00 INF] Received HTTP response headers after 67.4991ms - 200
+[18:42:00 INF] End processing HTTP request after 67.9498ms - 200
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/shippingsettings
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/campaign/shippingsettings
+[18:42:00 INF] Received HTTP response headers after 13.0844ms - 200
+[18:42:00 INF] End processing HTTP request after 13.4504ms - 200
+[18:42:00 INF] Executing ViewResult, running view Index.
+[18:42:00 INF] [FavoritesService] Fetching favorites from: http://gateway:8080/api/favorites/favorites
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/favorites/
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/favorites/
+[18:42:00 INF] Received HTTP response headers after 3.8226ms - 200
+[18:42:00 INF] End processing HTTP request after 4.4017ms - 200
+[18:42:00 INF] [BasketService] Fetching basket from: http://gateway:8080/api/basket/baskets
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/basket/baskets
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/basket/baskets
+[18:42:00 INF] Received HTTP response headers after 3.2825ms - 200
+[18:42:00 INF] End processing HTTP request after 3.7084ms - 200
+[18:42:00 INF] [BasketService] Response Status: OK
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:00 INF] Received HTTP response headers after 1.8545ms - 404
+[18:42:00 INF] End processing HTTP request after 2.397ms - 404
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:00 INF] Received HTTP response headers after 1.5706ms - 404
+[18:42:00 INF] End processing HTTP request after 2.0767ms - 404
+[18:42:00 INF] [FavoritesService] Fetching favorites from: http://gateway:8080/api/favorites/favorites
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/favorites/
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/favorites/
+[18:42:00 INF] Received HTTP response headers after 3.0009ms - 200
+[18:42:00 INF] End processing HTTP request after 3.2872ms - 200
+[18:42:00 INF] [BasketService] Fetching basket from: http://gateway:8080/api/basket/baskets
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/basket/baskets
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/basket/baskets
+[18:42:00 INF] Received HTTP response headers after 2.3472ms - 200
+[18:42:00 INF] End processing HTTP request after 2.6215ms - 200
+[18:42:00 INF] [BasketService] Response Status: OK
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:00 INF] Received HTTP response headers after 1.3234ms - 404
+[18:42:00 INF] End processing HTTP request after 1.5828ms - 404
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:00 INF] Received HTTP response headers after 1.1151ms - 404
+[18:42:00 INF] End processing HTTP request after 1.3491ms - 404
+[18:42:00 INF] Start processing HTTP request GET http://gateway:8080/api/catalog/categories
+[18:42:00 INF] Sending HTTP request GET http://gateway:8080/api/catalog/categories
+[18:42:00 INF] Received HTTP response headers after 25.9889ms - 200
+[18:42:00 INF] End processing HTTP request after 26.3286ms - 200
+[18:42:00 INF] Executed ViewResult - view Index executed in 74.4201ms.
+[18:42:00 INF] Executed action GameGaraj.WebUI.Controllers.BasketController.Index (GameGaraj.WebUI) in 196.302ms
+[18:42:00 INF] Executed endpoint 'GameGaraj.WebUI.Controllers.BasketController.Index (GameGaraj.WebUI)'
+[18:42:00 INF] HTTP GET /Basket/Index responded 200 in 199.5858 ms
+[18:42:00 INF] Request finished HTTP/1.1 GET http://gamegaraj.kadiryilmaz.online/Basket/Index - 200 null text/html; charset=utf-8 202.3565ms
+[18:42:10 INF] Request starting HTTP/1.1 GET http://10.42.0.218:8080/metrics - null null
+[18:42:10 INF] Executing endpoint 'Prometheus metrics'
+[18:42:10 INF] Executed endpoint 'Prometheus metrics'
+[18:42:10 INF] HTTP GET /metrics responded 200 in 14.3918 ms
+[18:42:10 INF] Request finished HTTP/1.1 GET http://10.42.0.218:8080/metrics - 200 null application/openmetrics-text; version=1.0.0; charset=utf-8 15.0988ms
+[18:42:15 INF] Request starting HTTP/1.1 GET http://gamegaraj.kadiryilmaz.online/lib/bootstrap/dist/js/bootstrap.bundle.min.js.map - null null
+[18:42:15 INF] Request starting HTTP/1.1 GET http://gamegaraj.kadiryilmaz.online/lib/bootstrap/dist/css/bootstrap.min.css.map - null null
+[18:42:15 INF] Sending file. Request path: '/lib/bootstrap/dist/js/bootstrap.bundle.min.js.map'. Physical path: '/app/wwwroot/lib/bootstrap/dist/js/bootstrap.bundle.min.js.map'
+[18:42:15 INF] Request finished HTTP/1.1 GET http://gamegaraj.kadiryilmaz.online/lib/bootstrap/dist/js/bootstrap.bundle.min.js.map - 200 327261 text/plain 14.7929ms
+[18:42:15 INF] Sending file. Request path: '/lib/bootstrap/dist/css/bootstrap.min.css.map'. Physical path: '/app/wwwroot/lib/bootstrap/dist/css/bootstrap.min.css.map'
+[18:42:15 INF] Request finished HTTP/1.1 GET http://gamegaraj.kadiryilmaz.online/lib/bootstrap/dist/css/bootstrap.min.css.map - 200 449111 text/plain 2.9547ms
+[18:42:25 INF] Request starting HTTP/1.1 GET http://10.42.0.218:8080/metrics - null null
+[18:42:25 INF] Executing endpoint 'Prometheus metrics'
+[18:42:25 INF] Executed endpoint 'Prometheus metrics'
+[18:42:25 INF] HTTP GET /metrics responded 200 in 15.7196 ms
+[18:42:25 INF] Request finished HTTP/1.1 GET http://10.42.0.218:8080/metrics - 200 null application/openmetrics-text; version=1.0.0; charset=utf-8 16.6778ms
+[18:42:40 INF] Request starting HTTP/1.1 GET http://10.42.0.218:8080/metrics - null null
+[18:42:40 INF] Executing endpoint 'Prometheus metrics'
+[18:42:40 INF] Executed endpoint 'Prometheus metrics'
+[18:42:40 INF] HTTP GET /metrics responded 200 in 14.8308 ms
+[18:42:40 INF] Request finished HTTP/1.1 GET http://10.42.0.218:8080/metrics - 200 null application/openmetrics-text; version=1.0.0; charset=utf-8 15.9886ms
+[18:42:55 INF] Request starting HTTP/1.1 GET http://10.42.0.218:8080/metrics - null null
+[18:42:55 INF] Executing endpoint 'Prometheus metrics'
+[18:42:55 INF] Executed endpoint 'Prometheus metrics'
+[18:42:55 INF] HTTP GET /metrics responded 200 in 13.7048 ms
+[18:42:55 INF] Request finished HTTP/1.1 GET http://10.42.0.218:8080/metrics - 200 null application/openmetrics-text; version=1.0.0; charset=utf-8 14.8054ms
+[18:42:57 INF] Request starting HTTP/1.1 GET http://gamegaraj.kadiryilmaz.online/ - null null
+[18:42:57 INF] Executing endpoint 'GameGaraj.WebUI.Controllers.HomeController.Index (GameGaraj.WebUI)'
+[18:42:57 INF] Route matched with {action = "Index", controller = "Home", area = ""}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Index() on controller GameGaraj.WebUI.Controllers.HomeController (GameGaraj.WebUI).
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/catalog/products/featured
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/catalog/products/featured
+[18:42:57 INF] Received HTTP response headers after 14.1214ms - 200
+[18:42:57 INF] End processing HTTP request after 14.6461ms - 200
+[18:42:57 INF] [BasketService] Fetching basket from: http://gateway:8080/api/basket/baskets
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/basket/baskets
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/basket/baskets
+[18:42:57 INF] Received HTTP response headers after 4.499ms - 200
+[18:42:57 INF] End processing HTTP request after 4.9275ms - 200
+[18:42:57 INF] [BasketService] Response Status: OK
+[18:42:57 INF] [FavoritesService] Fetching favorites from: http://gateway:8080/api/favorites/favorites
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/favorites/
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/favorites/
+[18:42:57 INF] Received HTTP response headers after 3.8607ms - 200
+[18:42:57 INF] End processing HTTP request after 4.1867ms - 200
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/catalog/categories
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/catalog/categories
+[18:42:57 INF] Received HTTP response headers after 49.8915ms - 200
+[18:42:57 INF] End processing HTTP request after 50.42ms - 200
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/campaignrules
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/campaign/campaignrules
+[18:42:57 INF] Received HTTP response headers after 5.2795ms - 200
+[18:42:57 INF] End processing HTTP request after 5.733ms - 200
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/coupons/public
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/campaign/coupons/public
+[18:42:57 INF] Received HTTP response headers after 2.2363ms - 200
+[18:42:57 INF] End processing HTTP request after 2.5433ms - 200
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/couponrewardrules
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/campaign/couponrewardrules
+[18:42:57 INF] Received HTTP response headers after 2.3182ms - 200
+[18:42:57 INF] End processing HTTP request after 2.9968ms - 200
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/catalog/products/0507c500-bbf6-4ee7-8b4c-42e983d629d5
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/catalog/products/0507c500-bbf6-4ee7-8b4c-42e983d629d5
+[18:42:57 INF] Received HTTP response headers after 3.8809ms - 200
+[18:42:57 INF] End processing HTTP request after 4.4511ms - 200
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/catalog/products/0515733a-c50f-4cd6-87ba-175240d37d21
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/catalog/products/0515733a-c50f-4cd6-87ba-175240d37d21
+[18:42:57 INF] Received HTTP response headers after 3.7868ms - 200
+[18:42:57 INF] End processing HTTP request after 4.2051ms - 200
+[18:42:57 INF] Executing ViewResult, running view Index.
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/campaignrules
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/campaign/campaignrules
+[18:42:57 INF] Received HTTP response headers after 3.773ms - 200
+[18:42:57 INF] End processing HTTP request after 4.4097ms - 200
+[18:42:57 INF] [FavoritesService] Fetching favorites from: http://gateway:8080/api/favorites/favorites
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/favorites/
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/favorites/
+[18:42:57 INF] Received HTTP response headers after 4.4581ms - 200
+[18:42:57 INF] End processing HTTP request after 5.0052ms - 200
+[18:42:57 INF] [BasketService] Fetching basket from: http://gateway:8080/api/basket/baskets
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/basket/baskets
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/basket/baskets
+[18:42:57 INF] Received HTTP response headers after 4.0406ms - 200
+[18:42:57 INF] End processing HTTP request after 4.4835ms - 200
+[18:42:57 INF] [BasketService] Response Status: OK
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:57 INF] Received HTTP response headers after 1.6234ms - 404
+[18:42:57 INF] End processing HTTP request after 1.8878ms - 404
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:57 INF] Received HTTP response headers after 1.4879ms - 404
+[18:42:57 INF] End processing HTTP request after 1.9148ms - 404
+[18:42:57 INF] [FavoritesService] Fetching favorites from: http://gateway:8080/api/favorites/favorites
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/favorites/
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/favorites/
+[18:42:57 INF] Received HTTP response headers after 3.1965ms - 200
+[18:42:57 INF] End processing HTTP request after 3.7726ms - 200
+[18:42:57 INF] [BasketService] Fetching basket from: http://gateway:8080/api/basket/baskets
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/basket/baskets
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/basket/baskets
+[18:42:57 INF] Received HTTP response headers after 2.5176ms - 200
+[18:42:57 INF] End processing HTTP request after 2.8532ms - 200
+[18:42:57 INF] [BasketService] Response Status: OK
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:57 INF] Received HTTP response headers after 1.5379ms - 404
+[18:42:57 INF] End processing HTTP request after 1.9768ms - 404
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/campaign/notifications/unread-count/96d2cfe3-00a5-4a23-80e5-4e7413e465d6
+[18:42:57 INF] Received HTTP response headers after 1.7898ms - 404
+[18:42:57 INF] End processing HTTP request after 2.2581ms - 404
+[18:42:57 INF] Start processing HTTP request GET http://gateway:8080/api/catalog/categories
+[18:42:57 INF] Sending HTTP request GET http://gateway:8080/api/catalog/categories
+[18:42:57 INF] Received HTTP response headers after 28.8591ms - 200
+[18:42:57 INF] End processing HTTP request after 29.3661ms - 200
+[18:42:57 INF] Executed ViewResult - view Index executed in 66.1695ms.
+[18:42:57 INF] Executed action GameGaraj.WebUI.Controllers.HomeController.Index (GameGaraj.WebUI) in 164.7097ms
+[18:42:57 INF] Executed endpoint 'GameGaraj.WebUI.Controllers.HomeController.Index (GameGaraj.WebUI)'
+[18:42:57 INF] HTTP GET / responded 200 in 165.1420 ms
+[18:42:57 INF] Request finished HTTP/1.1 GET http://gamegaraj.kadiryilmaz.online/ - 200 null text/html; charset=utf-8 166.8317ms
+[18:43:10 INF] Request starting HTTP/1.1 GET http://10.42.0.218:8080/metrics - null null
+[18:43:10 INF] Executing endpoint 'Prometheus metrics'
+[18:43:10 INF] Executed endpoint 'Prometheus metrics'
+[18:43:10 INF] HTTP GET /metrics responded 200 in 16.2064 ms
+[18:43:10 INF] Request finished HTTP/1.1 GET http://10.42.0.218:8080/metrics - 200 null application/openmetrics-text; version=1.0.0; charset=utf-8 17.4102ms
+[18:43:25 INF] Request starting HTTP/1.1 GET http://10.42.0.218:8080/metrics - null null
+[18:43:25 INF] Executing endpoint 'Prometheus metrics'
+[18:43:25 INF] Executed endpoint 'Prometheus metrics'
+[18:43:25 INF] HTTP GET /metrics responded 200 in 13.7336 ms
+[18:43:25 INF] Request finished HTTP/1.1 GET http://10.42.0.218:8080/metrics - 200 null application/openmetrics-text; version=1.0.0; charset=utf-8 14.8127ms
+[18:43:40 INF] Request starting HTTP/1.1 GET http://10.42.0.218:8080/metrics - null null
+[18:43:40 INF] Executing endpoint 'Prometheus metrics'
+[18:43:40 INF] Executed endpoint 'Prometheus metrics'
+[18:43:40 INF] HTTP GET /metrics responded 200 in 13.8058 ms
+[18:43:40 INF] Request finished HTTP/1.1 GET http://10.42.0.218:8080/metrics - 200 null application/openmetrics-text; version=1.0.0; charset=utf-8 14.7335ms
+=== Logs from WebUI (Previous) ===
