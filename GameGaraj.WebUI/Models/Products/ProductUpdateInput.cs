@@ -14,6 +14,7 @@ namespace GameGaraj.WebUI.Models.Products
         public string CategoryId { get; set; } = string.Empty;
         public List<string> ImageUrls { get; set; } = new();
         public string CoverImageKey { get; set; } = string.Empty;
+        public List<string> ImageOrder { get; set; } = new();
         public IFormFileCollection? Photos { get; set; }
         public Dictionary<string, string> Specs { get; set; } = new();
     }

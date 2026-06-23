@@ -80,6 +80,7 @@
                     <p class="text-muted small">Kategori seçildiğinde özellikler burada görünecektir.</p>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -90,6 +91,80 @@
 </form>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        .photo-preview-card {
+            width: 110px;
+            height: 110px;
+            position: relative;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: grab;
+            transition: all 0.2s ease;
+        }
+        .photo-preview-card:hover {
+            border-color: #0d6efd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .photo-preview-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .photo-preview-card .delete-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+        .photo-preview-card .delete-btn:hover {
+            background: rgba(186, 35, 50, 1);
+        }
+        .photo-preview-card .vitrin-badge {
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #198754;
+            color: white;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .photo-preview-card .drag-handle {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: grab;
+            z-index: 10;
+        }
+    </style>
     <script>
         $(document).ready(function () {
             $.getJSON('/data/brands.json', function (brands) {
@@ -156,18 +231,47 @@
                 });
             });
 
+            // Reordering logic
             var selectedPhotoFiles = [];
+            var previewContainer = document.getElementById('newPhotosPreviewContainer');
 
-            function setCreateCoverPhoto(index) {
-                if (index < 0 || index >= selectedPhotoFiles.length) return;
-                $('#coverImageKey').val('new:' + index);
-                renderCreatePhotoPreviews();
+            // Initialize Sortable
+            var sortable = new Sortable(previewContainer, {
+                animation: 150,
+                handle: '.photo-preview-card',
+                onEnd: function () {
+                    reorderFilesList();
+                    updateCoverBadges();
+                }
+            });
+
+            function updateCoverBadges() {
+                $('.photo-preview-card').each(function (index) {
+                    var badge = $(this).find('.vitrin-badge');
+                    if (index === 0) {
+                        badge.removeClass('d-none');
+                    } else {
+                        badge.addClass('d-none');
+                    }
+                });
+            }
+
+            function reorderFilesList() {
+                var newOrderedList = [];
+                $('.photo-preview-card').each(function () {
+                    var fileId = $(this).data('file-id');
+                    var item = selectedPhotoFiles.find(x => x.id === fileId);
+                    if (item) {
+                        newOrderedList.push(item);
+                    }
+                });
+                selectedPhotoFiles = newOrderedList;
             }
 
             function renderCreatePhotoPreviews() {
-                var previewContainer = $('#newPhotosPreviewContainer');
+                var previewContainerJq = $('#newPhotosPreviewContainer');
                 var previewLabel = $('#newPhotosPreviewLabel');
-                previewContainer.empty();
+                previewContainerJq.empty();
 
                 if (selectedPhotoFiles.length === 0) {
                     previewLabel.addClass('d-none');
@@ -176,51 +280,76 @@
 
                 previewLabel.removeClass('d-none');
 
-                selectedPhotoFiles.forEach((file, index) => {
+                selectedPhotoFiles.forEach((item, index) => {
+                    var file = item.file;
                     if (!file.type.startsWith('image/')) return;
 
                     var reader = new FileReader();
                     reader.onload = function(e) {
                         var html = `
-                            <div class="col-auto position-relative new-photo-preview" data-index="${index}">
-                                <img src="${e.target.result}" class="img-thumbnail" style="height: 100px; width: 100px; object-fit: cover;" alt="Preview">
-                        <span class="badge bg-primary position-absolute top-0 start-0 m-1 cover-badge ${($('#coverImageKey').val() || 'new:0') === 'new:' + index ? '' : 'd-none'}">Vitrin</span>
-                                <button type="button" class="btn btn-light btn-sm position-absolute bottom-0 start-50 translate-middle-x mb-1 btn-create-set-cover" data-index="${index}" title="Vitrin görseli yap">
-                                    <i class="fas fa-star me-1"></i>Vitrin
+                            <div class="col-auto photo-preview-card" data-file-id="${item.id}">
+                                <div class="grab-handle"><i class="fas fa-arrows-alt"></i></div>
+                                <img src="${e.target.result}" alt="Preview">
+                                <span class="vitrin-badge ${index === 0 ? '' : 'd-none'}">Vitrin</span>
+                                <button type="button" class="delete-btn btn-remove-preview" data-file-id="${item.id}" title="Sil">
+                                    <i class="fas fa-times"></i>
                                 </button>
                             </div>
                         `;
-                        previewContainer.append(html);
+                        previewContainerJq.append(html);
                     }
                     reader.readAsDataURL(file);
                 });
             }
 
-            $(document).on('click', '.btn-create-set-cover', function() {
-                setCreateCoverPhoto(parseInt($(this).data('index'), 10));
+            // Remove preview handler
+            $(document).on('click', '.btn-remove-preview', function (e) {
+                e.stopPropagation();
+                var fileId = $(this).data('file-id');
+                selectedPhotoFiles = selectedPhotoFiles.filter(x => x.id !== fileId);
+                $(`.photo-preview-card[data-file-id="${fileId}"]`).remove();
+                updateCoverBadges();
+                reorderFilesList();
+                if (selectedPhotoFiles.length === 0) {
+                    $('#newPhotosPreviewLabel').addClass('d-none');
+                    $('#newPhotosInput').val('');
+                }
             });
 
             // New Photo Preview Logic
             $('#newPhotosInput').on('change', function() {
-                var previewContainer = $('#newPhotosPreviewContainer');
-                var previewLabel = $('#newPhotosPreviewLabel');
-                previewContainer.empty();
-                
                 if (this.files && this.files.length > 0) {
                     if (this.files.length > 5) {
                         alert('Bir ürüne en fazla 5 fotoğraf yükleyebilirsiniz.');
                         $(this).val('');
-                        previewLabel.addClass('d-none');
+                        selectedPhotoFiles = [];
+                        $('#newPhotosPreviewContainer').empty();
+                        $('#newPhotosPreviewLabel').addClass('d-none');
                         return;
                     }
 
-                    selectedPhotoFiles = Array.from(this.files);
-                    $('#coverImageKey').val('new:0');
+                    selectedPhotoFiles = Array.from(this.files).map((file, i) => {
+                        return {
+                            id: 'file_' + Date.now() + '_' + i,
+                            file: file
+                        };
+                    });
                     renderCreatePhotoPreviews();
                 } else {
                     selectedPhotoFiles = [];
-                    $('#coverImageKey').val('');
-                    previewLabel.addClass('d-none');
+                    $('#newPhotosPreviewContainer').empty();
+                    $('#newPhotosPreviewLabel').addClass('d-none');
+                }
+            });
+
+            // On Form Submit, bind sorted files to the input element
+            $('#createProductForm').on('submit', function (e) {
+                if (selectedPhotoFiles.length > 0) {
+                    var dataTransfer = new DataTransfer();
+                    selectedPhotoFiles.forEach(function (item) {
+                        dataTransfer.items.add(item.file);
+                    });
+                    document.getElementById('newPhotosInput').files = dataTransfer.files;
                 }
             });
         });

@@ -97,18 +97,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 }
                 if (uploadedUrls.Any())
                 {
-                    if (model.CoverImageKey.StartsWith("new:", StringComparison.OrdinalIgnoreCase)
-                        && int.TryParse(model.CoverImageKey.Substring("new:".Length), out var coverIndex)
-                        && coverIndex >= 0
-                        && coverIndex < uploadedUrls.Count)
-                    {
-                        var coverUrl = uploadedUrls[coverIndex];
-                        uploadedUrls.RemoveAt(coverIndex);
-                        uploadedUrls.Insert(0, coverUrl);
-                    }
-                    // PhotoStock API "/photos/filename.jpg" dönüyor ama BaseAddress ServiceExtension'da ayarlı.
-                    // ImageUrls db'ye kaydederken tam endpoint yazmıyoruz, Catalog API'si/UI tarafında PhotoStockUrl ile merge edilecek
-                    model.ImageUrls = uploadedUrls;
+                    model.ImageUrls = CleanImageUrls(uploadedUrls);
                 }
             }
 
@@ -138,6 +127,33 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                     FlattenCategories(category.Children, result, prefix + category.Name + " > ");
                 }
             }
+        }
+
+        private List<string> CleanImageUrls(List<string>? urls)
+        {
+            if (urls == null) return new List<string>();
+            return urls.Select(url =>
+            {
+                if (string.IsNullOrWhiteSpace(url)) return string.Empty;
+                if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        var uri = new Uri(url);
+                        var path = uri.AbsolutePath.TrimStart('/');
+                        if (path.Contains("photos/"))
+                        {
+                            return path.Substring(path.IndexOf("photos/"));
+                        }
+                        return path;
+                    }
+                    catch
+                    {
+                        return url;
+                    }
+                }
+                return url;
+            }).Where(url => !string.IsNullOrWhiteSpace(url)).ToList();
         }
 
         [HttpGet]
@@ -193,44 +209,19 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 return View(model);
             }
 
-            var uploadedUrlsForCover = new List<string>();
+            List<string> uploadedUrls = null;
 
             // Image Upload for Edit
             if (model.Photos != null && model.Photos.Count > 0)
             {
-                // Mevcut fotoğraflara yenilerini ekle (Max 5 kontrolü)
-                var currentCount = model.ImageUrls?.Count ?? 0;
-                var spaceLeft = 5 - currentCount;
-
-                if (spaceLeft > 0)
+                try
                 {
-                    // Eğer yer kalmışsa, en fazla kalan yer kadar fotoğraf al (ya da IPhotoStockService içinden hata döner)
-                    List<string> uploadedUrls;
-                    try
-                    {
-                        uploadedUrls = await _photoStockService.UploadPhotosAsync(model.Photos, model.Brand, model.Name);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "[ProductEdit] Photo upload failed for product {ProductId}", model.Id);
-                        ModelState.AddModelError("", "Fotoğraf yüklenirken bir hata oluştu.");
-                        var roots = await _catalogService.GetAllCategoriesAsync();
-                        var flattenedList = new List<CategoryDropdownViewModel>();
-                        FlattenCategories(roots, flattenedList, "");
-                        ViewBag.Categories = new SelectList(flattenedList, "Id", "DisplayName", model.CategoryId);
-                        return View(model);
-                    }
-
-                    if (uploadedUrls.Any())
-                    {
-                        if (model.ImageUrls == null) model.ImageUrls = new List<string>();
-                        uploadedUrlsForCover = uploadedUrls.Take(spaceLeft).ToList();
-                        model.ImageUrls.AddRange(uploadedUrlsForCover);
-                    }
+                    uploadedUrls = await _photoStockService.UploadPhotosAsync(model.Photos, model.Brand, model.Name);
                 }
-                else
+                catch (Exception ex)
                 {
-                    ModelState.AddModelError("", "Bir ürüne en fazla 5 adet fotoğraf yüklenebilir. Lütfen önce mevcut fotoğraflardan bazılarını silin.");
+                    _logger.LogError(ex, "[ProductEdit] Photo upload failed for product {ProductId}", model.Id);
+                    ModelState.AddModelError("", "Fotoğraf yüklenirken bir hata oluştu.");
                     var roots = await _catalogService.GetAllCategoriesAsync();
                     var flattenedList = new List<CategoryDropdownViewModel>();
                     FlattenCategories(roots, flattenedList, "");
@@ -239,28 +230,43 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(model.CoverImageKey) && model.ImageUrls != null && model.ImageUrls.Any())
+            // Reconstruct and clean the final ImageUrls list based on ImageOrder
+            var finalUrls = new List<string>();
+            var newPhotoIndex = 0;
+
+            if (model.ImageOrder != null && model.ImageOrder.Any())
             {
-                string? coverImageUrl = null;
-
-                if (model.CoverImageKey.StartsWith("existing:", StringComparison.OrdinalIgnoreCase))
+                foreach (var item in model.ImageOrder)
                 {
-                    coverImageUrl = model.CoverImageKey.Substring("existing:".Length);
-                }
-                else if (model.CoverImageKey.StartsWith("new:", StringComparison.OrdinalIgnoreCase)
-                    && int.TryParse(model.CoverImageKey.Substring("new:".Length), out var newImageIndex)
-                    && newImageIndex >= 0
-                    && newImageIndex < uploadedUrlsForCover.Count)
-                {
-                    coverImageUrl = uploadedUrlsForCover[newImageIndex];
-                }
-
-                if (!string.IsNullOrWhiteSpace(coverImageUrl) && model.ImageUrls.Contains(coverImageUrl))
-                {
-                    model.ImageUrls.Remove(coverImageUrl);
-                    model.ImageUrls.Insert(0, coverImageUrl);
+                    if (item.StartsWith("existing:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var url = item.Substring("existing:".Length);
+                        finalUrls.Add(url);
+                    }
+                    else if (item.StartsWith("new:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (uploadedUrls != null && newPhotoIndex < uploadedUrls.Count)
+                        {
+                            finalUrls.Add(uploadedUrls[newPhotoIndex]);
+                            newPhotoIndex++;
+                        }
+                    }
                 }
             }
+            else
+            {
+                // Fallback: merge existing and new URLs
+                if (model.ImageUrls != null)
+                {
+                    finalUrls.AddRange(model.ImageUrls);
+                }
+                if (uploadedUrls != null)
+                {
+                    finalUrls.AddRange(uploadedUrls);
+                }
+            }
+
+            model.ImageUrls = CleanImageUrls(finalUrls);
 
             var result = await _catalogService.UpdateProductAsync(model);
             if (!result)
@@ -276,6 +282,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             TempData["Success"] = "Ürün başarıyla güncellendi.";
             return RedirectToAction(nameof(Index), "Product", new { area = "Admin" });
         }
+
         public async Task<IActionResult> GetCategoryAttributes(string id)
         {
             var category = await _catalogService.GetCategoryByIdAsync(id);
@@ -287,6 +294,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(string id, string? returnUrl = null)
         {
             var result = await _catalogService.DeleteProductAsync(id);
