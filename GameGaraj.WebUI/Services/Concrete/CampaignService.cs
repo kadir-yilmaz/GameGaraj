@@ -428,5 +428,54 @@ namespace GameGaraj.WebUI.Services.Concrete
                 return false;
             }
         }
+
+        // ───── CAROUSEL IMAGES ─────
+
+        public async Task<List<CarouselImageViewModel>> GetCarouselImagesAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("carouselimages");
+                if (!response.IsSuccessStatusCode) return new();
+
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<List<CarouselImageViewModel>>(content, _jsonOptions) ?? new();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CampaignService] GetCarouselImagesAsync hatası");
+                return new();
+            }
+        }
+
+        public async Task<bool> CreateCarouselImageAsync(CarouselImageViewModel input)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(input);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("carouselimages", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CampaignService] CreateCarouselImageAsync hatası");
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteCarouselImageAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"carouselimages/{id}");
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CampaignService] DeleteCarouselImageAsync hatası — ID: {Id}", id);
+                return false;
+            }
+        }
     }
 }

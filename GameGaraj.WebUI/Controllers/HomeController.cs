@@ -29,20 +29,7 @@ namespace GameGaraj.WebUI.Controllers
         public async Task<IActionResult> Index()
         {
             var featuredProducts = await _catalogService.GetFeaturedProductsAsync();
-            var basket = await _basketService.GetBasketAsync();
-            var favoriteIds = await _favoritesService.GetFavoriteProductIdsAsync();
-            var basketProductIds = basket?.Items?
-                .Select(x => x.ProductId?.Trim())
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Select(x => x!)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase)
-                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var product in featuredProducts)
-            {
-                product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
-                product.IsFavorite = favoriteIds.Contains(product.Id ?? string.Empty);
-            }
+            await ApplyUserProductStateAsync(featuredProducts);
 
             var allCategories = await _catalogService.GetAllCategoriesAsync();
             var flattenedCategories = new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
@@ -59,19 +46,14 @@ namespace GameGaraj.WebUI.Controllers
             var homeCategories = flattenedCategories.Where(c => c.IsShowOnHome).ToList();
             ViewBag.HomeCategories = homeCategories;
 
-            var homeCategoryProducts = new Dictionary<string, List<GameGaraj.WebUI.Models.Products.ProductViewModel>>();
-            foreach (var category in homeCategories)
-            {
-                var products = await _catalogService.GetProductsByCategoryAsync(category.Id);
-                homeCategoryProducts[category.Id] = products.Take(5).ToList();
-            }
-            ViewBag.HomeCategoryProducts = homeCategoryProducts;
-
             try
             {
                 var rules = await _campaignService.GetAllRulesAsync();
                 var coupons = await _campaignService.GetPublicCouponsAsync();
                 var rewardRules = await _campaignService.GetAllRewardRulesAsync();
+                var carouselList = await _campaignService.GetCarouselImagesAsync();
+
+                ViewBag.CarouselImages = carouselList.Select(img => img.ImageUrl).ToList();
 
                 var activeRules = rules.Where(r => r.IsActive).ToList();
                 var ruleProducts = new Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel>();
@@ -98,9 +80,51 @@ namespace GameGaraj.WebUI.Controllers
                 ViewBag.ActiveRules = new List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>();
                 ViewBag.PublicCoupons = new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>();
                 ViewBag.RewardRules = new List<GameGaraj.WebUI.Models.Campaigns.CouponRewardRuleViewModel>();
+                ViewBag.CarouselImages = new List<string>();
             }
 
             return View(featuredProducts);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CategoryShowcase(string categoryId)
+        {
+            if (string.IsNullOrWhiteSpace(categoryId))
+            {
+                return BadRequest();
+            }
+
+            var products = (await _catalogService.GetProductsByCategoryAsync(categoryId))
+                .Take(5)
+                .ToList();
+
+            await ApplyUserProductStateAsync(products);
+
+            ViewBag.ShowFeaturedBadge = false;
+            return PartialView("_HomeCategoryProducts", products);
+        }
+
+        private async Task ApplyUserProductStateAsync(List<GameGaraj.WebUI.Models.Products.ProductViewModel> products)
+        {
+            if (products == null || products.Count == 0)
+            {
+                return;
+            }
+
+            var basket = await _basketService.GetBasketAsync();
+            var favoriteIds = await _favoritesService.GetFavoriteProductIdsAsync();
+            var basketProductIds = basket?.Items?
+                .Select(x => x.ProductId?.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var product in products)
+            {
+                product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
+                product.IsFavorite = favoriteIds.Contains(product.Id ?? string.Empty);
+            }
         }
 
         public IActionResult Privacy()

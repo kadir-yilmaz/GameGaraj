@@ -7,7 +7,6 @@
     var publicCoupons = ViewBag.PublicCoupons as List<CouponViewModel> ?? new List<CouponViewModel>();
     var ruleProducts = ViewBag.RuleProducts as Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel> ?? new Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel>();
     var homeCategories = ViewBag.HomeCategories as List<GameGaraj.WebUI.Models.Products.CategoryViewModel> ?? new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
-    var homeCategoryProducts = ViewBag.HomeCategoryProducts as Dictionary<string, List<GameGaraj.WebUI.Models.Products.ProductViewModel>> ?? new Dictionary<string, List<GameGaraj.WebUI.Models.Products.ProductViewModel>>();
 }
 
 @await Html.PartialAsync("_ProductCardStyles")
@@ -17,42 +16,118 @@
     .hero-carousel {
         position: relative;
         overflow: hidden;
-        background: linear-gradient(135deg, #1e1e2f 0%, #111119 100%);
+        background: linear-gradient(135deg, #12131C 0%, #08090D 100%);
     }
     .carousel-item {
-        height: 500px;
+        height: 560px;
         background-size: cover;
         background-position: center;
         position: relative;
     }
-    .carousel-item::before {
-        content: "";
+    .carousel-overlay-bg {
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 100%);
+        background: radial-gradient(circle at 70% 50%, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.85) 100%);
+        z-index: 1;
     }
-    .carousel-caption {
-        left: 10%;
-        right: auto;
-        bottom: 50%;
-        transform: translateY(50%);
-        text-align: left;
-        max-width: 600px;
-    }
-    .carousel-caption h1 {
-        font-size: 3.5rem;
+    .fw-black {
         font-weight: 900;
-        text-shadow: 2px 2px 20px rgba(0,0,0,0.5);
     }
-    .carousel-caption p {
-        font-size: 1.25rem;
-        text-shadow: 1px 1px 10px rgba(0,0,0,0.5);
+    .tracking-widest {
+        letter-spacing: 3px;
     }
     
-    @@media (max-width: 768px) {
-        .carousel-item { height: 350px; }
-        .carousel-caption h1 { font-size: 2rem; }
-        .carousel-caption p { font-size: 1rem; }
+    /* Glassmorphic Cards inside Carousel */
+    .glass-product-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+    }
+    .glass-product-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 30px 60px rgba(220, 53, 69, 0.15);
+    }
+    .glass-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #dc3545 0%, #a71d2a 100%);
+        color: white;
+        padding: 5px 12px;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .discount-badge {
+        font-size: 0.85rem;
+        box-shadow: 0 4px 10px rgba(220,53,69,0.3);
+    }
+    
+    .glass-coupon-card {
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1.5px dashed rgba(255, 255, 255, 0.25);
+        border-radius: 20px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+    }
+    .glass-coupon-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 30px 60px rgba(255, 193, 7, 0.15);
+    }
+    .coupon-circle-left, .coupon-circle-right {
+        position: absolute;
+        top: 50%;
+        width: 24px;
+        height: 24px;
+        background-color: #08090d;
+        border-radius: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
+    }
+    .coupon-circle-left {
+        left: -13px;
+        border-right: 1px solid rgba(255,255,255,0.25);
+    }
+    .coupon-circle-right {
+        right: -13px;
+        border-left: 1px solid rgba(255,255,255,0.25);
+    }
+
+    .glass-reward-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+    }
+    .glass-reward-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 30px 60px rgba(40, 167, 69, 0.15);
+    }
+
+    .glass-brand-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        transition: transform 0.4s ease;
+    }
+    .glass-brand-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    @@media (max-width: 991px) {
+        .carousel-item { height: 480px; }
     }
 
     /* Campaign Slider Card */
@@ -193,16 +268,23 @@
         color: #3b82f6;
         font-size: 1rem;
     }
+
+    .home-category-loader {
+        min-height: 260px;
+    }
 </style>
 
 <!-- Hero Carousel -->
 @{
-    var carouselImages = new[]
-    {
-        "https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=1920&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1920&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1591488320449-011701bb6704?w=1920&auto=format&fit=crop&q=80"
-    };
+    var dbCarouselImages = ViewBag.CarouselImages as List<string>;
+    var carouselImages = (dbCarouselImages != null && dbCarouselImages.Any())
+        ? dbCarouselImages.ToArray()
+        : new[]
+        {
+            "https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=1920&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1920&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1591488320449-011701bb6704?w=1920&auto=format&fit=crop&q=80"
+        };
     var carouselBtnClasses = new[] { "btn-primary", "btn-warning text-dark", "btn-success" };
     var carouselTextClasses = new[] { "text-primary", "text-warning", "text-success" };
     var carouselItemsCount = (activeRules.Any() || publicCoupons.Any() || rewardRules.Any()) 
@@ -236,10 +318,76 @@
                     else discountText = rule.Description;
 
                     <div class="carousel-item @(globalIndex == 0 ? "active" : "")" style="background-image: url('@bgImage');">
-                        <div class="carousel-caption">
-                            <h1 class="mb-3">@rule.Name <span class="@textClass">Fırsatı</span></h1>
-                            <p class="mb-4">@discountText</p>
-                            <a asp-controller="Campaign" asp-action="Detail" asp-route-id="@rule.Id" class="btn @btnClass btn-lg px-5 py-3 rounded-pill fw-bold">Kampanyayı İncele</a>
+                        <div class="carousel-overlay-bg"></div>
+                        <div class="container h-100 position-relative" style="z-index: 2;">
+                            <div class="row h-100 align-items-center">
+                                <div class="col-lg-7 text-start text-white">
+                                    <div class="p-4 rounded-4" style="background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);">
+                                        <span class="badge bg-danger mb-2 px-3 py-2 text-uppercase fw-bold shadow-sm">Kampanya Fırsatı</span>
+                                        <h1 class="display-5 fw-black mb-3">@rule.Name</h1>
+                                        <p class="fs-5 mb-4 opacity-90">@discountText</p>
+                                        <a asp-controller="Campaign" asp-action="Detail" asp-route-id="@rule.Id" class="btn @btnClass btn-lg px-5 py-3 rounded-pill fw-bold">Kampanyayı İncele</a>
+                                    </div>
+                                </div>
+                                <div class="col-lg-5 d-none d-lg-block">
+                                    @if (!string.IsNullOrEmpty(rule.ProductId) && ruleProducts.ContainsKey(rule.ProductId))
+                                    {
+                                        var prod = ruleProducts[rule.ProductId];
+                                        decimal discountedPrice = prod.Price;
+                                        if (rule.DiscountRate.HasValue) 
+                                        {
+                                            discountedPrice = prod.Price * (1 - (rule.DiscountRate.Value / 100));
+                                        }
+                                        else if (rule.FixedDiscount.HasValue)
+                                        {
+                                            discountedPrice = Math.Max(0, prod.Price - rule.FixedDiscount.Value);
+                                        }
+
+                                        <div class="glass-product-card p-4 rounded-4 shadow-lg text-white mx-auto" style="max-width: 350px;">
+                                            <div class="glass-badge mb-3">Kampanyalı Ürün</div>
+                                            <div class="product-img-wrapper mb-3 p-3 bg-white rounded-3 shadow-sm" style="height: 180px; display: flex; align-items: center; justify-content: center;">
+                                                <img src="@prod.FirstImageUrl" alt="@prod.Name" style="max-height: 150px; max-width: 100%; object-fit: contain;" />
+                                            </div>
+                                            <h5 class="fw-bold mb-1 text-truncate">@prod.Brand</h5>
+                                            <p class="text-white-50 mb-3 text-truncate" style="font-size: 0.9rem;">@prod.Name</p>
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <div>
+                                                    @if (discountedPrice < prod.Price)
+                                                    {
+                                                        <span class="text-decoration-line-through text-white-50 small d-block">@prod.Price.ToString("N0") ₺</span>
+                                                        <span class="fs-4 fw-black text-warning">@discountedPrice.ToString("N0") ₺</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="fs-4 fw-black text-warning">@prod.Price.ToString("N0") ₺</span>
+                                                    }
+                                                </div>
+                                                @if (rule.DiscountRate.HasValue)
+                                                {
+                                                    <div class="discount-badge bg-danger text-white px-2 py-1 rounded small fw-bold">-%@rule.DiscountRate.Value.ToString("N0")</div>
+                                                }
+                                                else if (rule.FixedDiscount.HasValue)
+                                                {
+                                                    <div class="discount-badge bg-danger text-white px-2 py-1 rounded small fw-bold">-@rule.FixedDiscount.Value.ToString("N0") ₺</div>
+                                                }
+                                            </div>
+                                            <div class="d-grid">
+                                                <a asp-controller="Product" asp-action="Detail" asp-route-id="@prod.Id" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="glass-brand-card p-4 rounded-4 text-white text-center mx-auto" style="max-width: 350px;">
+                                            <i class="fas fa-bullhorn fa-4x text-danger mb-3"></i>
+                                            <h4 class="fw-bold">Büyük Fırsat</h4>
+                                            <p class="small text-white-50">Tüm ürünlerimizde kaçırılmayacak indirimler sizleri bekliyor.</p>
+                                            <hr class="my-3 border-secondary" />
+                                            <a asp-controller="Product" asp-action="Index" class="btn btn-outline-light rounded-pill px-4">Tüm Ürünler</a>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
                         </div>
                     </div>
                     globalIndex++;
@@ -257,10 +405,47 @@
                     else if (coupon.DiscountType == "FreeShipping") discountText = "Kargo Ücretsiz Kuponu!";
 
                     <div class="carousel-item @(globalIndex == 0 ? "active" : "")" style="background-image: url('@bgImage');">
-                        <div class="carousel-caption">
-                            <h1 class="mb-3">@coupon.Code <span class="@textClass">Kuponu</span></h1>
-                            <p class="mb-4">@discountText <br/> <small>Alt Limit: @(coupon.MinPurchaseAmount > 0 ? coupon.MinPurchaseAmount?.ToString("N0") + " TL" : "Yok")</small></p>
-                            <button onclick="copyCouponCode('@coupon.Code', this)" class="btn @btnClass btn-lg px-5 py-3 rounded-pill fw-bold"><i class="fa-regular fa-copy me-2"></i>Kodu Kopyala</button>
+                        <div class="carousel-overlay-bg"></div>
+                        <div class="container h-100 position-relative" style="z-index: 2;">
+                            <div class="row h-100 align-items-center">
+                                <div class="col-lg-7 text-start text-white">
+                                    <div class="p-4 rounded-4" style="background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);">
+                                        <span class="badge bg-warning text-dark mb-2 px-3 py-2 text-uppercase fw-bold shadow-sm">Kupon Fırsatı</span>
+                                        <h1 class="display-5 fw-black mb-3">@coupon.Code</h1>
+                                        <p class="fs-5 mb-4 opacity-90">@discountText <br/> <small class="text-white-50">Alt Limit: @(coupon.MinPurchaseAmount > 0 ? coupon.MinPurchaseAmount?.ToString("N0") + " TL" : "Yok")</small></p>
+                                        <button onclick="copyCouponCode('@coupon.Code', this)" class="btn @btnClass btn-lg px-5 py-3 rounded-pill fw-bold"><i class="fa-regular fa-copy me-2"></i>Kodu Kopyala</button>
+                                    </div>
+                                </div>
+                                <div class="col-lg-5 d-none d-lg-block">
+                                    <div class="glass-coupon-card p-4 rounded-4 shadow-lg text-white mx-auto position-relative" style="max-width: 350px;">
+                                        <div class="coupon-circle-left"></div>
+                                        <div class="coupon-circle-right"></div>
+                                        
+                                        <div class="text-center py-2">
+                                            <i class="fa-solid fa-ticket-simple fa-3x text-warning mb-3"></i>
+                                            <h4 class="fw-bold mb-2">İNDİRİM KUPONU</h4>
+                                            <div class="display-6 fw-black text-warning my-3">
+                                                @if (coupon.DiscountType == "Percentage")
+                                                {
+                                                    <span>%@coupon.DiscountRate?.ToString("N0")</span>
+                                                }
+                                                else if (coupon.DiscountType == "FixedAmount")
+                                                {
+                                                    <span>@coupon.Amount?.ToString("N0") ₺</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Kargo</span>
+                                                }
+                                            </div>
+                                            <p class="small text-white-50 mb-3">Limit: @(coupon.MinPurchaseAmount > 0 ? coupon.MinPurchaseAmount?.ToString("N0") + " ₺" : "Yok")</p>
+                                            <button onclick="copyCouponCode('@coupon.Code', this)" class="btn btn-warning rounded-pill fw-bold text-dark px-4">
+                                                <i class="fa-regular fa-copy me-2"></i>Kopyala
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     globalIndex++;
@@ -275,10 +460,47 @@
                     string rewardValue = reward.RewardCouponAmount > 0 ? $"{reward.RewardCouponAmount?.ToString("N0")} TL" : $"%{reward.RewardCouponRate?.ToString("N0")}";
 
                     <div class="carousel-item @(globalIndex == 0 ? "active" : "")" style="background-image: url('@bgImage');">
-                        <div class="carousel-caption">
-                            <h1 class="mb-3">@reward.RuleName <span class="@textClass">Görevi</span></h1>
-                            <p class="mb-4">@reward.PeriodInDays günde @(reward.RequiredSpendAmount.ToString("N0")) TL harca, @rewardValue Kupon Kazan!</p>
-                            <a asp-controller="Campaign" asp-action="RewardDetail" asp-route-id="@reward.Id" class="btn @btnClass btn-lg px-5 py-3 rounded-pill fw-bold">Detay Gör</a>
+                        <div class="carousel-overlay-bg"></div>
+                        <div class="container h-100 position-relative" style="z-index: 2;">
+                            <div class="row h-100 align-items-center">
+                                <div class="col-lg-7 text-start text-white">
+                                    <div class="p-4 rounded-4" style="background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);">
+                                        <span class="badge bg-success mb-2 px-3 py-2 text-uppercase fw-bold shadow-sm">Alışveriş Görevi</span>
+                                        <h1 class="display-5 fw-black mb-3">@reward.RuleName</h1>
+                                        <p class="fs-5 mb-4 opacity-90">@reward.PeriodInDays günde @(reward.RequiredSpendAmount.ToString("N0")) TL harca, @rewardValue Kupon Kazan!</p>
+                                        <a asp-controller="Campaign" asp-action="RewardDetail" asp-route-id="@reward.Id" class="btn @btnClass btn-lg px-5 py-3 rounded-pill fw-bold">Detay Gör</a>
+                                    </div>
+                                </div>
+                                <div class="col-lg-5 d-none d-lg-block">
+                                    <div class="glass-reward-card p-4 rounded-4 shadow-lg text-white mx-auto" style="max-width: 350px;">
+                                        <div class="text-center py-2">
+                                            <div class="reward-icon-badge bg-warning bg-opacity-25 text-warning d-inline-flex p-3 rounded-circle mb-3 border border-warning border-opacity-50">
+                                                <i class="fas fa-gift fa-2x"></i>
+                                            </div>
+                                            <h4 class="fw-bold mb-2">Hediye Görevi</h4>
+                                            
+                                            <div class="bg-black bg-opacity-30 p-3 rounded-3 text-start mb-3 mt-2">
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span class="small text-white-50">Hedef Harcama:</span>
+                                                    <span class="fw-bold text-warning">@reward.RequiredSpendAmount.ToString("N0") ₺</span>
+                                                </div>
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span class="small text-white-50">Süre Limiti:</span>
+                                                    <span class="fw-bold text-white">@reward.PeriodInDays Gün</span>
+                                                </div>
+                                                <div class="d-flex justify-content-between">
+                                                    <span class="small text-white-50">Kupon Ödülü:</span>
+                                                    <span class="fw-bold text-success">@rewardValue</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <a asp-controller="Campaign" asp-action="RewardDetail" asp-route-id="@reward.Id" class="btn btn-warning rounded-pill fw-bold text-dark px-4">
+                                                Görevi Başlat
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     globalIndex++;
@@ -286,37 +508,126 @@
             }
             else
             {
+                var featuredProducts = Model;
+                
                 <div class="carousel-item active" style="background-image: url('https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=1920&auto=format&fit=crop&q=80');">
-                    <div class="carousel-caption">
-                        <h1 class="mb-3">Geleceğin Teknolojisi <span class="text-primary">Burada</span></h1>
-                        <p class="mb-4">En güçlü oyun bilgisayarları ve ekipmanları</p>
-                        <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold">Keşfet</a>
+                    <div class="carousel-overlay-bg"></div>
+                    <div class="container h-100 position-relative" style="z-index: 2;">
+                        <div class="row h-100 align-items-center">
+                            <div class="col-lg-7 text-start text-white">
+                                <div class="p-4 rounded-4" style="background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);">
+                                    <span class="badge bg-danger mb-2 px-3 py-2 text-uppercase fw-bold shadow-sm">Geleceğin Teknolojisi</span>
+                                    <h1 class="display-5 fw-black mb-3">En Güçlü Oyuncu Ekipmanları</h1>
+                                    <p class="fs-5 mb-4 opacity-90">En güçlü oyun bilgisayarları ve profesyonel donanımlar burada.</p>
+                                    <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold">Keşfet</a>
+                                </div>
+                            </div>
+                            <div class="col-lg-5 d-none d-lg-block">
+                                @if (featuredProducts != null && featuredProducts.Count > 0)
+                                {
+                                    var prod = featuredProducts[0];
+                                    <div class="glass-product-card p-4 rounded-4 shadow-lg text-white mx-auto" style="max-width: 350px;">
+                                        <div class="glass-badge mb-3">Öne Çıkan</div>
+                                        <div class="product-img-wrapper mb-3 p-3 bg-white rounded-3 shadow-sm" style="height: 180px; display: flex; align-items: center; justify-content: center;">
+                                            <img src="@prod.FirstImageUrl" alt="@prod.Name" style="max-height: 150px; max-width: 100%; object-fit: contain;" />
+                                        </div>
+                                        <h5 class="fw-bold mb-1 text-truncate">@prod.Brand</h5>
+                                        <p class="text-white-50 mb-3 text-truncate" style="font-size: 0.9rem;">@prod.Name</p>
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <span class="fs-4 fw-black text-warning">@prod.Price.ToString("N0") ₺</span>
+                                            <span class="text-success small fw-bold"><i class="fas fa-check-circle me-1"></i>Stokta</span>
+                                        </div>
+                                        <div class="d-grid">
+                                            <a asp-controller="Product" asp-action="Detail" asp-route-id="@prod.Id" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1920&auto=format&fit=crop&q=80');">
-                    <div class="carousel-caption">
-                        <h1 class="mb-3">Profesyonel <span class="text-warning">Ekipmanlar</span></h1>
-                        <p class="mb-4">E-spor oyuncuları için özel seçilmiş ürünler</p>
-                        <a asp-controller="Product" asp-action="Index" class="btn btn-warning btn-lg px-5 py-3 rounded-pill fw-bold text-dark">İncele</a>
+                    <div class="carousel-overlay-bg"></div>
+                    <div class="container h-100 position-relative" style="z-index: 2;">
+                        <div class="row h-100 align-items-center">
+                            <div class="col-lg-7 text-start text-white">
+                                <div class="p-4 rounded-4" style="background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);">
+                                    <span class="badge bg-warning text-dark mb-2 px-3 py-2 text-uppercase fw-bold shadow-sm">Profesyonel Ekipmanlar</span>
+                                    <h1 class="display-5 fw-black mb-3">E-Spor Ekipmanları</h1>
+                                    <p class="fs-5 mb-4 opacity-90">E-spor oyuncuları için özel tasarlanmış profesyonel klavye, mouse ve kulaklıklar.</p>
+                                    <a asp-controller="Product" asp-action="Index" class="btn btn-warning btn-lg px-5 py-3 rounded-pill fw-bold text-dark">İncele</a>
+                                </div>
+                            </div>
+                            <div class="col-lg-5 d-none d-lg-block">
+                                @if (featuredProducts != null && featuredProducts.Count > 1)
+                                {
+                                    var prod = featuredProducts[1];
+                                    <div class="glass-product-card p-4 rounded-4 shadow-lg text-white mx-auto" style="max-width: 350px;">
+                                        <div class="glass-badge mb-3">Öne Çıkan</div>
+                                        <div class="product-img-wrapper mb-3 p-3 bg-white rounded-3 shadow-sm" style="height: 180px; display: flex; align-items: center; justify-content: center;">
+                                            <img src="@prod.FirstImageUrl" alt="@prod.Name" style="max-height: 150px; max-width: 100%; object-fit: contain;" />
+                                        </div>
+                                        <h5 class="fw-bold mb-1 text-truncate">@prod.Brand</h5>
+                                        <p class="text-white-50 mb-3 text-truncate" style="font-size: 0.9rem;">@prod.Name</p>
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <span class="fs-4 fw-black text-warning">@prod.Price.ToString("N0") ₺</span>
+                                            <span class="text-success small fw-bold"><i class="fas fa-check-circle me-1"></i>Stokta</span>
+                                        </div>
+                                        <div class="d-grid">
+                                            <a asp-controller="Product" asp-action="Detail" asp-route-id="@prod.Id" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1591488320449-011701bb6704?w=1920&auto=format&fit=crop&q=80');">
-                    <div class="carousel-caption">
-                        <h1 class="mb-3">Kampanyalı <span class="text-success">Fırsatlar</span></h1>
-                        <p class="mb-4">Sınırlı sayıda özel indirimler</p>
-                        <a asp-controller="Product" asp-action="Index" class="btn btn-success btn-lg px-5 py-3 rounded-pill fw-bold">Fırsatları Gör</a>
+                    <div class="carousel-overlay-bg"></div>
+                    <div class="container h-100 position-relative" style="z-index: 2;">
+                        <div class="row h-100 align-items-center">
+                            <div class="col-lg-7 text-start text-white">
+                                <div class="p-4 rounded-4" style="background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);">
+                                    <span class="badge bg-success mb-2 px-3 py-2 text-uppercase fw-bold shadow-sm">Kampanyalı Fırsatlar</span>
+                                    <h1 class="display-5 fw-black mb-3">Kaçırılmayacak İndirimler</h1>
+                                    <p class="fs-5 mb-4 opacity-90">Sınırlı sayıda üretilen özel seriler ve haftalık indirimli ürünler.</p>
+                                    <a asp-controller="Product" asp-action="Index" class="btn btn-success btn-lg px-5 py-3 rounded-pill fw-bold">Fırsatları Gör</a>
+                                </div>
+                            </div>
+                            <div class="col-lg-5 d-none d-lg-block">
+                                @if (featuredProducts != null && featuredProducts.Count > 2)
+                                {
+                                    var prod = featuredProducts[2];
+                                    <div class="glass-product-card p-4 rounded-4 shadow-lg text-white mx-auto" style="max-width: 350px;">
+                                        <div class="glass-badge mb-3">Öne Çıkan</div>
+                                        <div class="product-img-wrapper mb-3 p-3 bg-white rounded-3 shadow-sm" style="height: 180px; display: flex; align-items: center; justify-content: center;">
+                                            <img src="@prod.FirstImageUrl" alt="@prod.Name" style="max-height: 150px; max-width: 100%; object-fit: contain;" />
+                                        </div>
+                                        <h5 class="fw-bold mb-1 text-truncate">@prod.Brand</h5>
+                                        <p class="text-white-50 mb-3 text-truncate" style="font-size: 0.9rem;">@prod.Name</p>
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <span class="fs-4 fw-black text-warning">@prod.Price.ToString("N0") ₺</span>
+                                            <span class="text-success small fw-bold"><i class="fas fa-check-circle me-1"></i>Stokta</span>
+                                        </div>
+                                        <div class="d-grid">
+                                            <a asp-controller="Product" asp-action="Detail" asp-route-id="@prod.Id" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
                     </div>
                 </div>
             }
         }
     </div>
     
-    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev" style="z-index: 5;">
         <span class="carousel-control-prev-icon"></span>
     </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next" style="z-index: 5;">
         <span class="carousel-control-next-icon"></span>
     </button>
 </div>
@@ -325,8 +636,7 @@
 <div class="container my-5 py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h6 class="text-primary fw-bold text-uppercase mb-1" style="letter-spacing: 2px;">Seçilmişler</h6>
-            <h2 class="display-6 fw-bold mb-0">Öne Çıkan Ürünler</h2>
+            <h2 class="fs-3 fw-bold mb-0">Öne Çıkan Ürünler</h2>
         </div>
         <a asp-controller="Product" asp-action="Index" class="btn btn-outline-dark rounded-pill px-4">
             Tümünü Gör <i class="fas fa-arrow-right ms-2"></i>
@@ -357,38 +667,32 @@
         }
     </div>
 </div>
-
 <!-- Home Categories Section -->
 @if (homeCategories.Any())
 {
     foreach (var category in homeCategories)
     {
-        var categoryProducts = homeCategoryProducts.ContainsKey(category.Id) ? homeCategoryProducts[category.Id] : new List<GameGaraj.WebUI.Models.Products.ProductViewModel>();
-        if (categoryProducts.Any())
-        {
-            <div class="container my-5 py-4 border-top">
+        <div class="container my-5 py-4 border-top home-category-section"
+             data-home-category-section
+             data-load-url="@Url.Action("CategoryShowcase", "Home", new { categoryId = category.Id })">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h2 class="display-6 fw-bold mb-0">@category.Name</h2>
+                        <h2 class="fs-3 fw-bold mb-0">@category.Name</h2>
                     </div>
                     <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@category.Id" class="btn btn-outline-dark rounded-pill px-4">
                         Tümünü Gör <i class="fas fa-arrow-right ms-2"></i>
                     </a>
                 </div>
 
-                <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3">
-                    @foreach (var product in categoryProducts)
-                    {
-                        <div class="col">
-                            @{
-                                ViewBag.ShowFeaturedBadge = false;
-                            }
-                            @await Html.PartialAsync("_ProductCard", product)
+                <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 home-category-loader" data-home-category-content>
+                    <div class="col-12">
+                        <div class="p-5 bg-light rounded-3 text-center text-muted">
+                            <div class="spinner-border text-primary mb-3" role="status"></div>
+                            <div>Urunler yukleniyor...</div>
                         </div>
-                    }
+                    </div>
                 </div>
             </div>
-        }
     }
 }
 
@@ -413,5 +717,76 @@
                 console.error('Kopyalama başarısız: ', err);
             });
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const sections = Array.from(document.querySelectorAll('[data-home-category-section]'));
+            const pendingSections = [];
+            let activeLoaders = 0;
+            const maxConcurrentLoaders = 5;
+
+            function loadNextSection() {
+                if (pendingSections.length === 0) {
+                    return;
+                }
+
+                while (activeLoaders < maxConcurrentLoaders && pendingSections.length > 0) {
+                    const section = pendingSections.shift();
+                    if (!section || section.dataset.loaded === 'true') {
+                        continue;
+                    }
+
+                    const content = section.querySelector('[data-home-category-content]');
+                    const url = section.dataset.loadUrl;
+
+                    if (!content || !url) {
+                        continue;
+                    }
+
+                    activeLoaders++;
+                    section.dataset.loaded = 'true';
+
+                    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Category products could not be loaded.');
+                            }
+                            return response.text();
+                        })
+                        .then(html => {
+                            if (!html.includes('product-card')) {
+                                section.style.display = 'none';
+                            } else {
+                                content.innerHTML = html;
+                            }
+                        })
+                        .catch(() => {
+                            content.innerHTML = '<div class="col-12"><div class="p-4 bg-light rounded-3 text-center text-muted">Urunler yuklenemedi.</div></div>';
+                        })
+                        .finally(() => {
+                            activeLoaders--;
+                            loadNextSection();
+                        });
+                }
+            }
+
+            if ('IntersectionObserver' in window) {
+                const observer = new IntersectionObserver(function (entries) {
+                    entries.forEach(entry => {
+                        if (!entry.isIntersecting) {
+                            return;
+                        }
+
+                        observer.unobserve(entry.target);
+                        pendingSections.push(entry.target);
+                        loadNextSection();
+                    });
+                }, { rootMargin: '250px 0px' });
+
+                sections.forEach(section => observer.observe(section));
+            } else {
+                pendingSections.push(...sections);
+                loadNextSection();
+            }
+        });
     </script>
 }

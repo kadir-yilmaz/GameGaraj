@@ -59,7 +59,7 @@
             <i class="@(Model.IsFavorite ? "fas" : "far") fa-heart"></i>
         </button>
 
-        <img src="@Model.FirstImageUrl" class="product-img w-100 h-100" alt="@Model.Name"
+        <img src="@Model.FirstImageUrl" class="product-img w-100 h-100" alt="@Model.Name" loading="lazy" decoding="async"
             onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
 
         @if (Model.DisplayImageUrls.Count > 1)

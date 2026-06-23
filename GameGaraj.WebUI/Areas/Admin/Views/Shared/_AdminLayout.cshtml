@@ -349,6 +349,10 @@
                    asp-area="Admin" asp-controller="Campaign" asp-action="Index">
                     <i class="fas fa-bullhorn"></i> İndirim Kuralları
                 </a>
+                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Carousel" ? "active" : "")" 
+                   asp-area="Admin" asp-controller="Carousel" asp-action="Index">
+                    <i class="fas fa-images"></i> Carousel Yönetimi
+                </a>
                 <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Coupon" ? "active" : "")" 
                    asp-area="Admin" asp-controller="Coupon" asp-action="Index">
                     <i class="fas fa-ticket-alt"></i> İndirim Kuponları

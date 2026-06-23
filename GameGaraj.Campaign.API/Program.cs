@@ -30,6 +30,7 @@ builder.Services.AddScoped<ICampaignCalculationService, CampaignCalculationServi
 builder.Services.AddScoped<ICouponService, CouponService>();
 builder.Services.AddScoped<ICouponRewardService, CouponRewardService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<ICarouselImageService, CarouselImageService>();
 
 // Strategy Pattern: Kural stratejilerini DI'a kaydet
 builder.Services.AddSingleton<ICampaignRule, TotalAmountRule>();

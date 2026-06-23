@@ -203,6 +203,20 @@ namespace GameGaraj.Campaign.API.Services
                 END
             ";
             connection.Execute(createPurchaseLogsSql, commandTimeout: 60);
+
+            // ───── CarouselImages Tablosu ─────
+            var createCarouselImagesSql = @"
+                IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='CarouselImages' AND xtype='U')
+                BEGIN
+                    CREATE TABLE CarouselImages (
+                        Id INT IDENTITY(1,1) PRIMARY KEY,
+                        ImageUrl NVARCHAR(500) NOT NULL,
+                        DisplayOrder INT NOT NULL DEFAULT 0,
+                        CreatedTime DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+                    )
+                END
+            ";
+            connection.Execute(createCarouselImagesSql, commandTimeout: 60);
         }
     }
 }
