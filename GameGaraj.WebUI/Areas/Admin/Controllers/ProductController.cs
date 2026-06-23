@@ -95,9 +95,19 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                     ViewBag.Categories = new SelectList(flattenedList, "Id", "DisplayName");
                     return View(model);
                 }
-                if (uploadedUrls.Any())
+                if (uploadedUrls != null && uploadedUrls.Any())
                 {
                     model.ImageUrls = CleanImageUrls(uploadedUrls);
+                }
+                else
+                {
+                    ModelState.AddModelError("", "Seçilen fotoğraflar yüklenemedi. Depolama servisi (MinIO) veya PhotoStock API bağlantı hatası oluşmuş olabilir.");
+                    var roots = await _catalogService.GetAllCategoriesAsync();
+                    var flattenedList = new List<CategoryDropdownViewModel>();
+                    FlattenCategories(roots, flattenedList, "");
+
+                    ViewBag.Categories = new SelectList(flattenedList, "Id", "DisplayName");
+                    return View(model);
                 }
             }
 
@@ -222,6 +232,16 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 {
                     _logger.LogError(ex, "[ProductEdit] Photo upload failed for product {ProductId}", model.Id);
                     ModelState.AddModelError("", "Fotoğraf yüklenirken bir hata oluştu.");
+                    var roots = await _catalogService.GetAllCategoriesAsync();
+                    var flattenedList = new List<CategoryDropdownViewModel>();
+                    FlattenCategories(roots, flattenedList, "");
+                    ViewBag.Categories = new SelectList(flattenedList, "Id", "DisplayName", model.CategoryId);
+                    return View(model);
+                }
+
+                if (uploadedUrls == null || !uploadedUrls.Any())
+                {
+                    ModelState.AddModelError("", "Seçilen fotoğraflar yüklenemedi. Depolama servisi (MinIO) veya PhotoStock API bağlantı hatası oluşmuş olabilir.");
                     var roots = await _catalogService.GetAllCategoriesAsync();
                     var flattenedList = new List<CategoryDropdownViewModel>();
                     FlattenCategories(roots, flattenedList, "");
