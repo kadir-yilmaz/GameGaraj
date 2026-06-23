@@ -17,26 +17,23 @@ jobs:
       - name: Run Diagnostics
         run: |
           {
-            echo "=== CLI versions ==="
-            kubectl version --client
+            echo "=== WebUI Pod Details ==="
+            kubectl describe pod -l app=webui
             
-            echo "=== Cluster Nodes ==="
-            kubectl get nodes -o wide
+            echo "=== WebUI Deployments ==="
+            kubectl get deployments -o wide
             
-            echo "=== All Pods ==="
-            kubectl get pods -A
-            
-            echo "=== GameGaraj Services ==="
-            kubectl get svc -n gamegaraj -o wide
-            
-            echo "=== GameGaraj Deployments ==="
-            kubectl get deployments -n gamegaraj
+            echo "=== WebUI Services ==="
+            kubectl get svc -o wide
             
             echo "=== Describe Failed Pods ==="
-            kubectl describe pods -n gamegaraj
+            kubectl describe pods
             
-            echo "=== Logs from WebUI ==="
-            kubectl logs -n gamegaraj deployment/webui --tail=100 || true
+            echo "=== Logs from WebUI (Current) ==="
+            kubectl logs deployment/webui --tail=200 || true
+            
+            echo "=== Logs from WebUI (Previous) ==="
+            kubectl logs deployment/webui --previous --tail=200 || true
           } > k3s_debug_logs.txt
 
       - name: Send Logs to Local Machine
