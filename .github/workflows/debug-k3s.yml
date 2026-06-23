@@ -1,0 +1,35 @@
+name: Debug K3s Cluster
+
+on:
+  push:
+    paths:
+      - '.github/workflows/debug-k3s.yml'
+
+jobs:
+  debug:
+    runs-on: [self-hosted, Linux, X64]
+    env:
+      KUBECONFIG: /home/kadirserver/.kube/config
+    steps:
+      - name: Run Diagnostics
+        run: |
+          echo "=== CLI versions ==="
+          kubectl version --client
+          
+          echo "=== Cluster Nodes ==="
+          kubectl get nodes -o wide
+          
+          echo "=== All Pods ==="
+          kubectl get pods -A
+          
+          echo "=== GameGaraj Services ==="
+          kubectl get svc -n gamegaraj -o wide
+          
+          echo "=== GameGaraj Deployments ==="
+          kubectl get deployments -n gamegaraj
+          
+          echo "=== Describe Failed Pods ==="
+          kubectl describe pods -n gamegaraj
+          
+          echo "=== Logs from WebUI ==="
+          kubectl logs -n gamegaraj deployment/webui --tail=100 || true
