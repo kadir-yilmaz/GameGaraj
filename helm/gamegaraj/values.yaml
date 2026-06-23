@@ -150,6 +150,7 @@ services:
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
       APP_VERSION: "fe92f4f"
     secretEnv:
+      ConnectionStrings__Redis: redis-connection
       KEYCLOAK_ADMIN_USERNAME: keycloak-admin-username
       KEYCLOAK_ADMIN_PASSWORD: keycloak-admin-password
 

@@ -42,7 +42,12 @@ builder.Services.AddHttpClientServices(builder.Configuration);
 var serviceApiSettings = builder.Configuration.GetSection("ServiceApiSettings").Get<ServiceApiSettings>() ?? new ServiceApiSettings();
 
 // Data Protection via Redis
-var redisUrl = builder.Configuration["RedisUrl"] ?? "localhost:6379";
+var redisUrl = builder.Configuration.GetConnectionString("Redis") ?? builder.Configuration["RedisUrl"] ?? "localhost:6379";
+if (!redisUrl.Contains("abortConnect=false", StringComparison.OrdinalIgnoreCase))
+{
+    redisUrl = redisUrl.Contains('?') ? $"{redisUrl}&abortConnect=false" : $"{redisUrl},abortConnect=false";
+}
+
 var redis = ConnectionMultiplexer.Connect(redisUrl);
 builder.Services.AddDataProtection()
     .SetApplicationName("GameGarajWebUI")
