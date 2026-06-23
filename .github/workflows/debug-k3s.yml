@@ -39,8 +39,6 @@ jobs:
             kubectl logs -n gamegaraj deployment/webui --tail=100 || true
           } > k3s_debug_logs.txt
 
-      - name: Upload Logs Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: k3s-diagnostic-logs
-          path: k3s_debug_logs.txt
+      - name: Send Logs to Local Machine
+        run: |
+          curl -X POST --data-binary @k3s_debug_logs.txt http://192.168.1.62:9999/ || true
