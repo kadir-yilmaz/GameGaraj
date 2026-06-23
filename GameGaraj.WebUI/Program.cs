@@ -13,6 +13,7 @@ using AspNetCoreHero.ToastNotification;
 using AspNetCoreHero.ToastNotification.Extensions;
 using Microsoft.AspNetCore.DataProtection;
 using StackExchange.Redis;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var cultureInfo = new System.Globalization.CultureInfo("tr-TR");
 cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
@@ -239,6 +240,14 @@ builder.Services.AddControllersWithViews();
 // Routing - SEO için tüm URL'lerin küçük harf olmasını sağlar
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 
+// Proxy'lerden gelen X-Forwarded-Proto ve X-Forwarded-For başlıklarını kabul etmesi için
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 // MassTransit
 builder.Services.AddMassTransit(x =>
 {
@@ -261,6 +270,8 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
+app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
