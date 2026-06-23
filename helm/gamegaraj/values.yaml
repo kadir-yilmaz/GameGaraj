@@ -101,7 +101,7 @@ services:
   # Order API (SQL Server)
   # ---------------------------------------------------------------------------
   order-api:
-    image: "order-api:9e28a23"
+    image: "order-api:07720c3"
     nodePort: 30013
     secretEnv:
       ConnectionStrings__DefaultConnection: order-sqlserver-connection
@@ -141,14 +141,14 @@ services:
   # WebUI (MVC — routes through Gateway internally)
   # ---------------------------------------------------------------------------
   webui:
-    image: "webui:9e28a23"
+    image: "webui:07720c3"
     nodePort: 30075
     replicas: 2
     env:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
-      APP_VERSION: "9e28a23"
+      APP_VERSION: "07720c3"
     secretEnv:
       KEYCLOAK_ADMIN_USERNAME: keycloak-admin-username
       KEYCLOAK_ADMIN_PASSWORD: keycloak-admin-password
