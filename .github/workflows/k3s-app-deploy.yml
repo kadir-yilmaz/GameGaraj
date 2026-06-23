@@ -232,7 +232,17 @@ jobs:
           fi
 
           git commit -m "ci: update image tags to ${SHORT_SHA} [skip ci]"
-          git push
+          
+          # Try to push, pull with rebase if remote has new commits
+          for i in {1..3}; do
+            echo "Push attempt $i..."
+            if git push; then
+              echo "Push successful!"
+              break
+            fi
+            echo "Push failed (possibly due to concurrent remote changes). Pulling latest changes and retrying..."
+            git pull --rebase origin main || git pull --rebase origin master || true
+          done
 
           echo ""
           echo "=============================================="
