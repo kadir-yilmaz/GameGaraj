@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Diagnostics
         run: |
@@ -41,10 +39,8 @@ jobs:
             kubectl logs -n gamegaraj deployment/webui --tail=100 || true
           } > k3s_debug_logs.txt
 
-      - name: Commit and Push Logs
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add k3s_debug_logs.txt
-          git commit -m "debug: add latest k3s diagnostic logs [skip ci]" || exit 0
-          git push
+      - name: Upload Logs Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: k3s-diagnostic-logs
+          path: k3s_debug_logs.txt
