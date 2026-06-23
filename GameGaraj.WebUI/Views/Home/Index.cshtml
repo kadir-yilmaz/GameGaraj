@@ -205,7 +205,9 @@
     };
     var carouselBtnClasses = new[] { "btn-primary", "btn-warning text-dark", "btn-success" };
     var carouselTextClasses = new[] { "text-primary", "text-warning", "text-success" };
-    var carouselItemsCount = activeRules.Any() ? activeRules.Count : 3;
+    var carouselItemsCount = (activeRules.Any() || publicCoupons.Any() || rewardRules.Any()) 
+        ? activeRules.Count + publicCoupons.Count + rewardRules.Count 
+        : 3;
 }
 <div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel">
     <div class="carousel-indicators">
@@ -216,71 +218,98 @@
     </div>
     
     <div class="carousel-inner">
-        @if (activeRules.Any())
-        {
-            @for (int i = 0; i < activeRules.Count; i++)
+        @{
+            int globalIndex = 0;
+            if (activeRules.Any() || publicCoupons.Any() || rewardRules.Any())
             {
-                var rule = activeRules[i];
-                var bgImage = carouselImages[i % carouselImages.Length];
-                var btnClass = carouselBtnClasses[i % carouselBtnClasses.Length];
-                var textClass = carouselTextClasses[i % carouselTextClasses.Length];
-                
-                string discountText = "";
-                if (rule.RuleType == "TotalAmount")
+                foreach (var rule in activeRules)
                 {
-                    discountText = $"Sepette {rule.MinAmount?.ToString("N0")} TL ve üzerine {(rule.FixedDiscount > 0 ? $"{rule.FixedDiscount?.ToString("N0")} TL" : $"%{rule.DiscountRate?.ToString("N0")}")} indirim!";
-                }
-                else if (rule.RuleType == "BuyXGetYFree")
-                {
-                    discountText = $"{rule.MinQuantity} Al {rule.FreeQuantity} Öde fırsatı!";
-                }
-                else if (rule.RuleType == "CheapestItemDiscount")
-                {
-                    discountText = $"En ucuz ürüne %{rule.DiscountRate?.ToString("N0")} indirim!";
-                }
-                else if (rule.RuleType == "BrandDiscount")
-                {
-                    discountText = $"{(string.IsNullOrEmpty(rule.BrandName) ? "Seçili" : rule.BrandName)} markalı ürünlerde %{rule.DiscountRate?.ToString("N0")} indirim!";
-                }
-                else
-                {
-                    discountText = rule.Description;
+                    var bgImage = carouselImages[globalIndex % carouselImages.Length];
+                    var btnClass = carouselBtnClasses[globalIndex % carouselBtnClasses.Length];
+                    var textClass = carouselTextClasses[globalIndex % carouselTextClasses.Length];
+                    
+                    string discountText = "";
+                    if (rule.RuleType == "TotalAmount") discountText = $"Sepette {rule.MinAmount?.ToString("N0")} TL ve üzerine {(rule.FixedDiscount > 0 ? $"{rule.FixedDiscount?.ToString("N0")} TL" : $"%{rule.DiscountRate?.ToString("N0")}")} indirim!";
+                    else if (rule.RuleType == "BuyXGetYFree") discountText = $"{rule.MinQuantity} Al {rule.FreeQuantity} Öde fırsatı!";
+                    else if (rule.RuleType == "CheapestItemDiscount") discountText = $"En ucuz ürüne %{rule.DiscountRate?.ToString("N0")} indirim!";
+                    else if (rule.RuleType == "BrandDiscount") discountText = $"{(string.IsNullOrEmpty(rule.BrandName) ? "Seçili" : rule.BrandName)} markalı ürünlerde %{rule.DiscountRate?.ToString("N0")} indirim!";
+                    else discountText = rule.Description;
+
+                    <div class="carousel-item @(globalIndex == 0 ? "active" : "")" style="background-image: url('@bgImage');">
+                        <div class="carousel-caption">
+                            <h1 class="mb-3">@rule.Name <span class="@textClass">Fırsatı</span></h1>
+                            <p class="mb-4">@discountText</p>
+                            <a asp-controller="Campaign" asp-action="Detail" asp-route-id="@rule.Id" class="btn @btnClass btn-lg px-5 py-3 rounded-pill fw-bold">Kampanyayı İncele</a>
+                        </div>
+                    </div>
+                    globalIndex++;
                 }
 
-                <div class="carousel-item @(i == 0 ? "active" : "")" style="background-image: url('@bgImage');">
+                foreach (var coupon in publicCoupons)
+                {
+                    var bgImage = carouselImages[globalIndex % carouselImages.Length];
+                    var btnClass = carouselBtnClasses[globalIndex % carouselBtnClasses.Length];
+                    var textClass = carouselTextClasses[globalIndex % carouselTextClasses.Length];
+                    
+                    string discountText = "";
+                    if (coupon.DiscountType == "FixedAmount") discountText = $"{coupon.Amount?.ToString("N0")} TL İndirim Kuponu!";
+                    else if (coupon.DiscountType == "Percentage") discountText = $"%{coupon.DiscountRate?.ToString("N0")} İndirim Kuponu!";
+                    else if (coupon.DiscountType == "FreeShipping") discountText = "Kargo Ücretsiz Kuponu!";
+
+                    <div class="carousel-item @(globalIndex == 0 ? "active" : "")" style="background-image: url('@bgImage');">
+                        <div class="carousel-caption">
+                            <h1 class="mb-3">@coupon.Code <span class="@textClass">Kuponu</span></h1>
+                            <p class="mb-4">@discountText <br/> <small>Alt Limit: @(coupon.MinPurchaseAmount > 0 ? coupon.MinPurchaseAmount?.ToString("N0") + " TL" : "Yok")</small></p>
+                            <button onclick="copyCouponCode('@coupon.Code', this)" class="btn @btnClass btn-lg px-5 py-3 rounded-pill fw-bold"><i class="fa-regular fa-copy me-2"></i>Kodu Kopyala</button>
+                        </div>
+                    </div>
+                    globalIndex++;
+                }
+
+                foreach (var reward in rewardRules)
+                {
+                    var bgImage = carouselImages[globalIndex % carouselImages.Length];
+                    var btnClass = carouselBtnClasses[globalIndex % carouselBtnClasses.Length];
+                    var textClass = carouselTextClasses[globalIndex % carouselTextClasses.Length];
+                    
+                    string rewardValue = reward.RewardCouponAmount > 0 ? $"{reward.RewardCouponAmount?.ToString("N0")} TL" : $"%{reward.RewardCouponRate?.ToString("N0")}";
+
+                    <div class="carousel-item @(globalIndex == 0 ? "active" : "")" style="background-image: url('@bgImage');">
+                        <div class="carousel-caption">
+                            <h1 class="mb-3">@reward.RuleName <span class="@textClass">Görevi</span></h1>
+                            <p class="mb-4">@reward.PeriodInDays günde @(reward.RequiredSpendAmount.ToString("N0")) TL harca, @rewardValue Kupon Kazan!</p>
+                            <a asp-controller="Campaign" asp-action="RewardDetail" asp-route-id="@reward.Id" class="btn @btnClass btn-lg px-5 py-3 rounded-pill fw-bold">Detay Gör</a>
+                        </div>
+                    </div>
+                    globalIndex++;
+                }
+            }
+            else
+            {
+                <div class="carousel-item active" style="background-image: url('https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=1920&auto=format&fit=crop&q=80');">
                     <div class="carousel-caption">
-                        <h1 class="mb-3">@rule.Name <span class="@textClass">Fırsatı</span></h1>
-                        <p class="mb-4">@discountText</p>
-                        <a asp-controller="Campaign" asp-action="Detail" asp-route-id="@rule.Id" class="btn @btnClass btn-lg px-5 py-3 rounded-pill fw-bold">Kampanyayı İncele</a>
+                        <h1 class="mb-3">Geleceğin Teknolojisi <span class="text-primary">Burada</span></h1>
+                        <p class="mb-4">En güçlü oyun bilgisayarları ve ekipmanları</p>
+                        <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold">Keşfet</a>
+                    </div>
+                </div>
+                
+                <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1920&auto=format&fit=crop&q=80');">
+                    <div class="carousel-caption">
+                        <h1 class="mb-3">Profesyonel <span class="text-warning">Ekipmanlar</span></h1>
+                        <p class="mb-4">E-spor oyuncuları için özel seçilmiş ürünler</p>
+                        <a asp-controller="Product" asp-action="Index" class="btn btn-warning btn-lg px-5 py-3 rounded-pill fw-bold text-dark">İncele</a>
+                    </div>
+                </div>
+                
+                <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1591488320449-011701bb6704?w=1920&auto=format&fit=crop&q=80');">
+                    <div class="carousel-caption">
+                        <h1 class="mb-3">Kampanyalı <span class="text-success">Fırsatlar</span></h1>
+                        <p class="mb-4">Sınırlı sayıda özel indirimler</p>
+                        <a asp-controller="Product" asp-action="Index" class="btn btn-success btn-lg px-5 py-3 rounded-pill fw-bold">Fırsatları Gör</a>
                     </div>
                 </div>
             }
-        }
-        else
-        {
-            <div class="carousel-item active" style="background-image: url('https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=1920&auto=format&fit=crop&q=80');">
-                <div class="carousel-caption">
-                    <h1 class="mb-3">Geleceğin Teknolojisi <span class="text-primary">Burada</span></h1>
-                    <p class="mb-4">En güçlü oyun bilgisayarları ve ekipmanları</p>
-                    <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold">Keşfet</a>
-                </div>
-            </div>
-            
-            <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1920&auto=format&fit=crop&q=80');">
-                <div class="carousel-caption">
-                    <h1 class="mb-3">Profesyonel <span class="text-warning">Ekipmanlar</span></h1>
-                    <p class="mb-4">E-spor oyuncuları için özel seçilmiş ürünler</p>
-                    <a asp-controller="Product" asp-action="Index" class="btn btn-warning btn-lg px-5 py-3 rounded-pill fw-bold text-dark">İncele</a>
-                </div>
-            </div>
-            
-            <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1591488320449-011701bb6704?w=1920&auto=format&fit=crop&q=80');">
-                <div class="carousel-caption">
-                    <h1 class="mb-3">Kampanyalı <span class="text-success">Fırsatlar</span></h1>
-                    <p class="mb-4">Sınırlı sayıda özel indirimler</p>
-                    <a asp-controller="Product" asp-action="Index" class="btn btn-success btn-lg px-5 py-3 rounded-pill fw-bold">Fırsatları Gör</a>
-                </div>
-            </div>
         }
     </div>
     
@@ -291,134 +320,6 @@
         <span class="carousel-control-next-icon"></span>
     </button>
 </div>
-
-
-<!-- Kuponlar & Fırsatlar Section -->
-@if (publicCoupons.Any() || rewardRules.Any())
-{
-    <div class="container my-5 py-2">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="display-6 fw-bold mb-0 text-dark" style="font-size: 2rem;"><i class="fa-solid fa-ticket text-primary me-2"></i>Kuponlar & Fırsatlar</h2>
-        </div>
-
-        <ul class="nav nav-pills mb-4 gap-2" id="couponsTab" role="tablist">
-            @if (publicCoupons.Any())
-            {
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active fw-semibold px-4 rounded-pill" id="public-coupons-tab" data-bs-toggle="tab" data-bs-target="#public-coupons" type="button" role="tab" aria-controls="public-coupons" aria-selected="true">
-                        <i class="fa-solid fa-ticket-simple me-2"></i>Kullanılabilir Kuponlar
-                    </button>
-                </li>
-            }
-            @if (rewardRules.Any())
-            {
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-semibold px-4 rounded-pill @(!publicCoupons.Any() ? "active" : "")" id="reward-coupons-tab" data-bs-toggle="tab" data-bs-target="#reward-coupons" type="button" role="tab" aria-controls="reward-coupons" aria-selected="@(!publicCoupons.Any() ? "true" : "false")">
-                        <i class="fa-solid fa-gift me-2"></i>Kupon Kazan Görevleri
-                    </button>
-                </li>
-            }
-        </ul>
-
-        <div class="tab-content" id="couponsTabContent">
-            @if (publicCoupons.Any())
-            {
-                <div class="tab-pane fade show active" id="public-coupons" role="tabpanel" aria-labelledby="public-coupons-tab">
-                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 row-cols-lg-5 g-3 justify-content-start">
-                        @foreach (var coupon in publicCoupons)
-                        {
-                            <div class="col">
-                                <div class="ticket-coupon-card">
-                                    <div>
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="coupon-card-code">@coupon.Code</span>
-                                            <button class="btn btn-link p-0 text-white-50" onclick="copyCouponCode('@coupon.Code', this)" title="Kopyala">
-                                                <i class="fa-regular fa-copy"></i>
-                                            </button>
-                                        </div>
-                                        <div class="coupon-card-value">
-                                            @if (coupon.DiscountType == "FixedAmount")
-                                            {
-                                                <span>@((coupon.Amount ?? 0).ToString("N0")) TL İndirim</span>
-                                            }
-                                            else if (coupon.DiscountType == "Percentage")
-                                            {
-                                                <span>%@((coupon.DiscountRate ?? 0).ToString("N0")) İndirim</span>
-                                            }
-                                            else if (coupon.DiscountType == "FreeShipping")
-                                            {
-                                                <span>Kargo Ücretsiz</span>
-                                            }
-                                        </div>
-                                    </div>
-                                    <div class="coupon-card-meta border-top border-secondary pt-2 mt-2">
-                                        <div class="d-flex justify-content-between">
-                                            @if (coupon.MinPurchaseAmount > 0)
-                                            {
-                                                <span>Limit: @((coupon.MinPurchaseAmount ?? 0).ToString("N0")) TL</span>
-                                            }
-                                            else
-                                            {
-                                                <span>Limit: Yok</span>
-                                            }
-                                        </div>
-                                        <div>SKT: @(coupon.ExpiryDate.HasValue ? coupon.ExpiryDate.Value.ToString("dd.MM.yy") : "Süresiz")</div>
-                                        <div class="text-end mt-1">
-                                            <a asp-controller="Campaign" asp-action="CouponDetail" asp-route-id="@coupon.Id" class="text-white text-decoration-none" style="font-size: 0.7rem; opacity: 0.8;">
-                                                Detay <i class="fas fa-chevron-right" style="font-size: 0.6rem;"></i>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-            @if (rewardRules.Any())
-            {
-                <div class="tab-pane fade @(!publicCoupons.Any() ? "show active" : "")" id="reward-coupons" role="tabpanel" aria-labelledby="reward-coupons-tab">
-                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 row-cols-lg-5 g-3 justify-content-start">
-                        @foreach (var reward in rewardRules)
-                        {
-                            var couponRewardCode = $"KAZAN{reward.RewardCouponAmount?.ToString("F0") ?? reward.RewardCouponRate?.ToString("F0") ?? "HEDIYE"}";
-                            <div class="col">
-                                <div class="reward-step-card text-center">
-                                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">
-                                        <i class="fa-solid fa-gift fs-5"></i>
-                                    </div>
-                                    
-                                    <h4 class="fw-bold text-dark fs-6 mb-2">
-                                        @(reward.RequiredSpendAmount.ToString("N0")) TL Harcamaya @(reward.RewardCouponAmount > 0 ? $"{reward.RewardCouponAmount?.ToString("N0")} TL" : $"%{reward.RewardCouponRate?.ToString("N0")}")
-                                    </h4>
-                                    
-                                    <div class="reward-dashed-box mb-2">
-                                        <i class="fa-regular fa-clock me-1"></i> @(reward.PeriodInDays) günde
-                                    </div>
-                                    
-                                    <div class="text-muted my-1">
-                                        <i class="fa-solid fa-arrow-down" style="font-size: 0.8rem;"></i>
-                                    </div>
-                                    
-                                    <div class="reward-ticket-box">
-                                        <div class="reward-ticket-code text-uppercase">@couponRewardCode</div>
-                                        <div class="text-muted" style="font-size: 0.7rem; margin-top: 2px;">Alt Limit: @((reward.RequiredSpendAmount).ToString("N0")) TL</div>
-                                    </div>
-
-                                    <div class="mt-2">
-                                        <a asp-controller="Campaign" asp-action="RewardDetail" asp-route-id="@reward.Id" class="btn btn-outline-primary btn-sm w-100 rounded-pill py-1" style="font-size: 0.75rem;">
-                                            Detay Gör
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
-}
 
 <!-- Featured Products Section -->
 <div class="container my-5 py-4">

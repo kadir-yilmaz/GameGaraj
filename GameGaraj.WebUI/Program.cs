@@ -48,10 +48,23 @@ if (!redisUrl.Contains("abortConnect=false", StringComparison.OrdinalIgnoreCase)
     redisUrl = redisUrl.Contains('?') ? $"{redisUrl}&abortConnect=false" : $"{redisUrl},abortConnect=false";
 }
 
-var redis = ConnectionMultiplexer.Connect(redisUrl);
-builder.Services.AddDataProtection()
-    .SetApplicationName("GameGarajWebUI")
-    .PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys");
+  try
+  {
+      var redisOptions = ConfigurationOptions.Parse(redisUrl);
+      redisOptions.AbortOnConnectFail = true; // Hızlı hata fırlatması için
+      redisOptions.ConnectTimeout = 3000; // 3 saniye içinde bağlanamazsa pes et
+      var redis = ConnectionMultiplexer.Connect(redisOptions);
+      
+      builder.Services.AddDataProtection()
+          .SetApplicationName("GameGarajWebUI")
+          .PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys");
+  }
+  catch (Exception ex)
+  {
+      Console.WriteLine($"[CRITICAL] Redis for DataProtection failed: {ex.Message}. Falling back to default DataProtection.");
+      builder.Services.AddDataProtection()
+          .SetApplicationName("GameGarajWebUI");
+  }
 
 // Authentication
 builder.Services.AddAuthentication(options =>

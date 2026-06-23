@@ -129,7 +129,7 @@
                         discountedPrice = Model.Price - matchingCampaign.FixedDiscount.Value;
                         if (discountedPrice < 0) discountedPrice = 0;
                     }
-                    <span class="price-tag fw-bold" style="color: #ff4757; font-size: 1.25rem;">@discountedPrice.ToString("N0") TL</span>
+                    <span class="price-tag fw-bold text-success" style="font-size: 1.25rem;">@discountedPrice.ToString("N0") TL</span>
                     <span class="text-muted text-decoration-line-through small" style="font-size: 0.85rem;">@Model.Price.ToString("N2") TL</span>
                 }
                 else
