@@ -166,15 +166,18 @@
                             <div class="text-truncate" style="max-width: 170px;">@item.CategoryName</div>
                         </td>
                         <td class="text-end">
-                            <div class="btn-group">
-                                <a asp-area="Admin" asp-controller="Product" asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-pen me-1"></i>Duzenle
+                            <div class="d-flex gap-1 justify-content-end">
+                                <a asp-area="Admin" asp-controller="Campaign" asp-action="Create" asp-route-productId="@item.Id" class="btn btn-sm btn-outline-success" title="Kampanya Tanımla">
+                                    <i class="fas fa-tags"></i>
                                 </a>
-                                <form asp-area="Admin" asp-controller="Product" asp-action="Delete" method="post" class="d-inline"
-                                      onsubmit="return confirm('Bu urunu silmek istediginize emin misiniz?');">
+                                <a asp-area="Admin" asp-controller="Product" asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                <form asp-area="Admin" asp-controller="Product" asp-action="Delete" method="post" class="m-0 p-0"
+                                      onsubmit="return confirm('Bu ürünü silmek istediğinize emin misiniz?');">
                                     <input type="hidden" name="id" value="@item.Id" />
                                     <input type="hidden" name="returnUrl" value="@currentUrl" />
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Sil">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>

@@ -14,7 +14,6 @@ on:
           - catalog-api
           - photostock-api
           - basket-api
-          - discount-api
           - order-api
           - payment-api
           - invoice-api
@@ -30,7 +29,6 @@ on:
       - "GameGaraj.Catalog.API/**"
       - "GameGaraj.PhotoStock.API/**"
       - "GameGaraj.Basket.API/**"
-      - "GameGaraj.Discount.API/**"
       - "GameGaraj.Order.API/**"
       - "GameGaraj.Order.Application/**"
       - "GameGaraj.Order.Domain/**"
@@ -78,7 +76,6 @@ jobs:
           build_catalog_api=false
           build_photostock_api=false
           build_basket_api=false
-          build_discount_api=false
           build_order_api=false
           build_payment_api=false
           build_invoice_api=false
@@ -92,7 +89,6 @@ jobs:
               build_catalog_api=true
               build_photostock_api=true
               build_basket_api=true
-              build_discount_api=true
               build_order_api=true
               build_payment_api=true
               build_invoice_api=true
@@ -122,7 +118,6 @@ jobs:
               build_catalog_api=true
               build_photostock_api=true
               build_basket_api=true
-              build_discount_api=true
               build_order_api=true
               build_payment_api=true
               build_invoice_api=true
@@ -133,7 +128,6 @@ jobs:
               if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Catalog\.API/" >/dev/null; then build_catalog_api=true; fi
               if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.PhotoStock\.API/" >/dev/null; then build_photostock_api=true; fi
               if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Basket\.API/" >/dev/null; then build_basket_api=true; fi
-              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Discount\.API/" >/dev/null; then build_discount_api=true; fi
               if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Order\." >/dev/null; then build_order_api=true; fi
               if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Payment\.API/" >/dev/null; then build_payment_api=true; fi
               if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Invoice\.API/" >/dev/null; then build_invoice_api=true; fi
@@ -146,7 +140,6 @@ jobs:
           echo "build_catalog_api=$build_catalog_api" >> "$GITHUB_OUTPUT"
           echo "build_photostock_api=$build_photostock_api" >> "$GITHUB_OUTPUT"
           echo "build_basket_api=$build_basket_api" >> "$GITHUB_OUTPUT"
-          echo "build_discount_api=$build_discount_api" >> "$GITHUB_OUTPUT"
           echo "build_order_api=$build_order_api" >> "$GITHUB_OUTPUT"
           echo "build_payment_api=$build_payment_api" >> "$GITHUB_OUTPUT"
           echo "build_invoice_api=$build_invoice_api" >> "$GITHUB_OUTPUT"
@@ -158,7 +151,6 @@ jobs:
           echo " - Catalog API: $build_catalog_api"
           echo " - PhotoStock API: $build_photostock_api"
           echo " - Basket API: $build_basket_api"
-          echo " - Discount API: $build_discount_api"
           echo " - Order API: $build_order_api"
           echo " - Payment API: $build_payment_api"
           echo " - Invoice API: $build_invoice_api"
@@ -183,7 +175,6 @@ jobs:
           if [ "${{ steps.filter.outputs.build_catalog_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD catalog-api"; fi
           if [ "${{ steps.filter.outputs.build_photostock_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD photostock-api"; fi
           if [ "${{ steps.filter.outputs.build_basket_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD basket-api"; fi
-          if [ "${{ steps.filter.outputs.build_discount_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD discount-api"; fi
           if [ "${{ steps.filter.outputs.build_order_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD order-api"; fi
           if [ "${{ steps.filter.outputs.build_payment_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD payment-api"; fi
           if [ "${{ steps.filter.outputs.build_invoice_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD invoice-api"; fi
@@ -215,7 +206,6 @@ jobs:
             ["catalog-api"]="catalog-api"
             ["photostock-api"]="photostock-api"
             ["basket-api"]="basket-api"
-            ["discount-api"]="discount-api"
             ["order-api"]="order-api"
             ["payment-api"]="payment-api"
             ["invoice-api"]="invoice-api"

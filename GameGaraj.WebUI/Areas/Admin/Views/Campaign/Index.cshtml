@@ -33,6 +33,7 @@ else
                     <th>Kural Türü</th>
                     <th>Uygulama Alanı</th>
                     <th>Parametreler</th>
+                    <th>Tarih Aralığı</th>
                     <th>Durum</th>
                     <th>İşlemler</th>
                 </tr>
@@ -60,6 +61,9 @@ else
                                 case "CheapestItemDiscount":
                                     <span class="badge bg-warning text-dark"><i class="fas fa-tag me-1"></i>En Ucuz İndirim</span>
                                     break;
+                                case "BrandDiscount":
+                                    <span class="badge bg-info text-dark"><i class="fas fa-trademark me-1"></i>Marka İndirimi</span>
+                                    break;
                                 default:
                                     <span class="badge bg-secondary">@rule.RuleType</span>
                                     break;
@@ -69,6 +73,14 @@ else
                             @if (!string.IsNullOrEmpty(rule.ProductId))
                             {
                                 <span class="text-success"><i class="fas fa-box me-1"></i>Ürün: @rule.ProductName</span>
+                            }
+                            else if (!string.IsNullOrEmpty(rule.BrandName))
+                            {
+                                <span class="text-secondary"><i class="fas fa-copyright me-1"></i>Marka: @rule.BrandName</span>
+                                @if (!string.IsNullOrEmpty(rule.CategoryId) && categoryMap.ContainsKey(rule.CategoryId))
+                                {
+                                    <small class="text-muted d-block">(Kategori: @categoryMap[rule.CategoryId])</small>
+                                }
                             }
                             else if (!string.IsNullOrEmpty(rule.CategoryId) && categoryMap.ContainsKey(rule.CategoryId))
                             {
@@ -82,19 +94,36 @@ else
                         <td>
                             @if (rule.MinAmount.HasValue)
                             {
-                                <span class="badge bg-light text-dark">Min: @rule.MinAmount.Value.ToString("N0") ₺</span>
+                                <span class="badge bg-light text-dark">Min Sepet: @rule.MinAmount.Value.ToString("N0") ₺</span>
                             }
                             @if (rule.DiscountRate.HasValue)
                             {
-                                <span class="badge bg-light text-dark">%@rule.DiscountRate</span>
+                                <span class="badge bg-light text-success">%@rule.DiscountRate İndirim</span>
+                            }
+                            @if (rule.FixedDiscount.HasValue)
+                            {
+                                <span class="badge bg-light text-success">@rule.FixedDiscount.Value.ToString("N0") ₺ İndirim</span>
                             }
                             @if (rule.MinQuantity.HasValue)
                             {
-                                <span class="badge bg-light text-dark">@rule.MinQuantity adet</span>
+                                <span class="badge bg-light text-dark">@rule.MinQuantity Adet</span>
                             }
                             @if (rule.FreeQuantity.HasValue)
                             {
-                                <span class="badge bg-light text-dark">@rule.FreeQuantity bedava</span>
+                                <span class="badge bg-light text-dark">@rule.FreeQuantity Bedava</span>
+                            }
+                        </td>
+                        <td>
+                            @if (rule.StartDate.HasValue || rule.EndDate.HasValue)
+                            {
+                                <small class="text-muted">
+                                    @(rule.StartDate?.ToString("dd.MM.yyyy") ?? "Başlangıç Yok") - 
+                                    @(rule.EndDate?.ToString("dd.MM.yyyy") ?? "Süresiz")
+                                </small>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Her Zaman</span>
                             }
                         </td>
                         <td>

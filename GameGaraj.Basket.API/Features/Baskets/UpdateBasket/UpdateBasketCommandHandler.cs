@@ -21,7 +21,8 @@ public class UpdateBasketCommandHandler(BasketService basketService, IIdentitySe
                 Price = x.Price,
                 PictureUrl = x.PictureUrl,
                 Quantity = x.Quantity,
-                ProductSlug = x.ProductSlug
+                ProductSlug = x.ProductSlug,
+                Brand = x.Brand
             }).ToList()
         };
 

@@ -8,5 +8,6 @@ public class BasketItem
     public string CategoryId { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public string? PictureUrl { get; set; }
+    public string? Brand { get; set; }
     public int Quantity { get; set; }
 }

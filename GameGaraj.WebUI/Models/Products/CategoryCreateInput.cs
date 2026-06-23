@@ -4,5 +4,6 @@ namespace GameGaraj.WebUI.Models.Products
     {
         public string Name { get; set; } = string.Empty;
         public string? ParentId { get; set; }
+        public bool IsShowOnHome { get; set; }
     }
 }

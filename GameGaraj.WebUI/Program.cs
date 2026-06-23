@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
+using AspNetCoreHero.ToastNotification;
+using AspNetCoreHero.ToastNotification.Extensions;
 
 var cultureInfo = new System.Globalization.CultureInfo("tr-TR");
 cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
@@ -189,6 +191,14 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
+// AspNetCoreHero ToastNotification
+builder.Services.AddNotyf(config =>
+{
+    config.DurationInSeconds = 5;
+    config.IsDismissable = true;
+    config.Position = NotyfPosition.BottomRight;
+});
+
 // MVC
 builder.Services.AddControllersWithViews();
 
@@ -227,6 +237,8 @@ app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseNotyf();
 
 // Custom Request Logging Ekle
 app.UseCustomRequestLogging();

@@ -9,14 +9,12 @@ namespace GameGaraj.WebUI.Controllers
         private readonly IBasketService _basketService;
         private readonly ICatalogService _catalogService;
         private readonly ICampaignService _campaignService;
-        private readonly IDiscountService _discountService;
 
-        public BasketController(IBasketService basketService, ICatalogService catalogService, ICampaignService campaignService, IDiscountService discountService)
+        public BasketController(IBasketService basketService, ICatalogService catalogService, ICampaignService campaignService)
         {
             _basketService = basketService;
             _catalogService = catalogService;
             _campaignService = campaignService;
-            _discountService = discountService;
         }
 
         public async Task<IActionResult> Index()
@@ -25,30 +23,45 @@ namespace GameGaraj.WebUI.Controllers
             
             if (basket.Items.Any())
             {
-                // Legacy Basket Healing: Önceden eklenmiş ürünlerde CategoryId eksikse Catalog'dan tamamla
+                // Basket Healing & Price Sync: Update Price, CategoryId, and Brand from Catalog
                 bool needsHealing = false;
                 foreach (var item in basket.Items)
                 {
-                    if (string.IsNullOrEmpty(item.CategoryId))
+                    if (string.IsNullOrEmpty(item.ProductId))
                     {
-                        if (string.IsNullOrEmpty(item.ProductId))
+                        continue;
+                    }
+
+                    var product = await _catalogService.GetProductByIdAsync(item.ProductId);
+                    if (product != null)
+                    {
+                        if (item.Price != product.Price)
                         {
-                            continue;
+                            item.Price = product.Price;
+                            needsHealing = true;
                         }
-                        var product = await _catalogService.GetProductByIdAsync(item.ProductId);
-                        if (product != null)
+                        if (string.IsNullOrEmpty(item.CategoryId) && !string.IsNullOrEmpty(product.CategoryId))
                         {
                             item.CategoryId = product.CategoryId;
+                            needsHealing = true;
+                        }
+                        if (string.IsNullOrEmpty(item.Brand) && !string.IsNullOrEmpty(product.Brand))
+                        {
+                            item.Brand = product.Brand;
                             needsHealing = true;
                         }
                     }
                 }
                 
-                // Eğer eksik kategori tamamlandıysa Redis'teki sepeti güncelle
+                // Eğer değişiklik olduysa Redis'teki sepeti güncelle
                 if (needsHealing)
                 {
                     await _basketService.SaveOrUpdateAsync(basket);
                 }
+
+                // Kupon Kodu Session'dan Al
+                var couponCode = HttpContext.Session.GetString("AppliedCouponCode");
+                var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
                 try
                 {
@@ -59,13 +72,28 @@ namespace GameGaraj.WebUI.Controllers
                             ProductId = i.ProductId,
                             ProductName = i.ProductName,
                             CategoryId = i.CategoryId,
+                            Brand = i.Brand,
                             UnitPrice = i.Price,
                             Quantity = i.Quantity
-                        }).ToList()
+                        }).ToList(),
+                        CouponCode = couponCode,
+                        UserId = currentUserId
                     };
 
                     var discountResult = await _campaignService.CalculateDiscountAsync(discountRequest);
                     ViewBag.DiscountResult = discountResult;
+
+                    // Eğer API kuponun geçersiz olduğunu söylerse (IsCouponApplied = false ve CouponCode gönderilmişse) 
+                    // Session'ı temizle ve hatayı göster
+                    if (!string.IsNullOrEmpty(couponCode) && discountResult != null && !discountResult.IsCouponApplied)
+                    {
+                        HttpContext.Session.Remove("AppliedCouponCode");
+                        TempData["CouponError"] = discountResult.CouponMessage ?? "Kupon geçersiz.";
+                    }
+                    else if (!string.IsNullOrEmpty(couponCode) && discountResult != null && discountResult.IsCouponApplied)
+                    {
+                        TempData["CouponSuccess"] = discountResult.CouponMessage ?? "Kupon uygulandı.";
+                    }
                 }
                 catch (Exception)
                 {
@@ -85,14 +113,6 @@ namespace GameGaraj.WebUI.Controllers
                 };
             }
             ViewBag.ShippingSetting = shippingSetting;
-
-            // Kupon hesaplama
-            var couponJson = HttpContext.Session.GetString("AppliedCoupon");
-            if (!string.IsNullOrEmpty(couponJson))
-            {
-                var coupon = System.Text.Json.JsonSerializer.Deserialize<GameGaraj.WebUI.Models.Discounts.DiscountViewModel>(couponJson);
-                ViewBag.AppliedCoupon = coupon;
-            }
 
             return View(basket);
         }
@@ -123,6 +143,7 @@ namespace GameGaraj.WebUI.Controllers
                 ProductId = product.Id,
                 ProductName = product.Name,
                 CategoryId = product.CategoryId, // Map Category
+                Brand = product.Brand, // Map Brand
                 Price = product.Price,
                 Quantity = quantity,
                 ImageUrl = product.FirstImageUrl,
@@ -174,6 +195,7 @@ namespace GameGaraj.WebUI.Controllers
                     ProductId = product.Id,
                     ProductName = product.Name,
                     CategoryId = product.CategoryId, // Map Category
+                    Brand = product.Brand, // Map Brand
                     Price = product.Price,
                     Quantity = quantity,
                     ImageUrl = product.FirstImageUrl,
@@ -194,31 +216,24 @@ namespace GameGaraj.WebUI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ApplyCoupon(string couponCode)
+        public IActionResult ApplyCoupon([FromForm] string couponCode)
         {
             if (string.IsNullOrEmpty(couponCode))
             {
-                TempData["CouponError"] = "Lütfen bir kupon kodu girin.";
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = false, message = "Lütfen bir kupon kodu girin." });
             }
 
-            var discount = await _discountService.GetByCodeAsync(couponCode);
-            if (discount == null)
-            {
-                TempData["CouponError"] = "Geçersiz veya süresi dolmuş kupon kodu.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            HttpContext.Session.SetString("AppliedCoupon", System.Text.Json.JsonSerializer.Serialize(discount));
-            TempData["CouponSuccess"] = $"'{couponCode}' kuponu başarıyla uygulandı!";
+            couponCode = couponCode.ToUpperInvariant();
+            HttpContext.Session.SetString("AppliedCouponCode", couponCode);
             
+            // Redirect to Index so the ajax-cart-form interceptor replaces the HTML
             return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
-        public async Task<IActionResult> RemoveCoupon()
+        public IActionResult RemoveCoupon()
         {
-            HttpContext.Session.Remove("AppliedCoupon");
+            HttpContext.Session.Remove("AppliedCouponCode");
             return RedirectToAction(nameof(Index));
         }
     }

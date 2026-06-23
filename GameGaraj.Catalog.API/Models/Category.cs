@@ -10,6 +10,8 @@ namespace GameGaraj.Catalog.API.Models
 
         public string? ParentId { get; set; }
         
+        public bool IsShowOnHome { get; set; }
+        
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

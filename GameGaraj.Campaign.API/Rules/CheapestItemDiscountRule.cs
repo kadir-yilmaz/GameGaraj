@@ -21,11 +21,11 @@ namespace GameGaraj.Campaign.API.Rules
 
             if (!string.IsNullOrEmpty(rule.ProductId))
             {
-                targetedItems = targetedItems.Where(i => i.ProductId == rule.ProductId);
+                targetedItems = targetedItems.Where(i => i.ProductId.Equals(rule.ProductId, StringComparison.OrdinalIgnoreCase));
             }
             else if (!string.IsNullOrEmpty(rule.CategoryId))
             {
-                targetedItems = targetedItems.Where(i => i.CategoryId == rule.CategoryId);
+                targetedItems = targetedItems.Where(i => !string.IsNullOrEmpty(i.CategoryId) && i.CategoryId.Equals(rule.CategoryId, StringComparison.OrdinalIgnoreCase));
             }
             else
             {

@@ -7,4 +7,7 @@ public record BasketItemDto(
     [Required] string Name, 
     [Required] decimal Price, 
     string? PictureUrl, 
-    [Range(1, int.MaxValue)] int Quantity);
+    [Range(1, int.MaxValue)] int Quantity,
+    string? CategoryId = null,
+    string? Brand = null,
+    string? ProductSlug = null);

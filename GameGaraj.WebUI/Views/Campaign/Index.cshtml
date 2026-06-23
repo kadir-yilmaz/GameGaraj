@@ -1,0 +1,178 @@
+@model List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>
+@{
+    ViewData["Title"] = "Aktif Kampanyalar";
+    var ruleProducts = ViewBag.RuleProducts as Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel> ?? new Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel>();
+}
+
+<style>
+    .campaign-list-header {
+        background: linear-gradient(135deg, #1e1e2f 0%, #111119 100%);
+        color: white;
+        padding: 50px 0;
+        border-radius: 16px;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
+    }
+    .campaign-list-header::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle at 80% 20%, rgba(246, 139, 30, 0.15) 0%, transparent 50%);
+    }
+
+    /* Card design matching homepage premium styles */
+    .campaign-item-card {
+        border-radius: 16px;
+        padding: 24px;
+        color: white;
+        height: 260px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+    }
+    .campaign-item-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.18);
+    }
+    .card-color-0 { background: linear-gradient(135deg, #1A1C8B 0%, #0E0F57 100%); }
+    .card-color-1 { background: linear-gradient(135deg, #9C1453 0%, #570A2D 100%); }
+    .card-color-2 { background: linear-gradient(135deg, #0A874F 0%, #054F2E 100%); }
+    .card-color-3 { background: linear-gradient(135deg, #D45B12 0%, #7A3105 100%); }
+
+    .camp-left {
+        flex: 1;
+        padding-right: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+    }
+    .camp-right {
+        width: 120px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+    }
+    .camp-product-box {
+        background: rgba(0,0,0,0.25);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 12px;
+        padding: 10px;
+        width: 120px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        backdrop-filter: blur(10px);
+    }
+    .camp-product-box img {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+        background: white;
+        border-radius: 8px;
+        padding: 4px;
+    }
+</style>
+
+<div class="container my-4">
+    <div class="campaign-list-header text-center text-md-start px-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-5 fw-bold mb-2">Kampanyalar & Fırsatlar</h1>
+                <p class="lead mb-0 text-white-50">GameGaraj'ın en özel teknoloji fırsatlarını kaçırmayın!</p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <i class="fa-solid fa-gift fa-4x text-primary opacity-50"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub Navigation for Promotions -->
+    <div class="d-flex gap-2 mb-4 flex-wrap border-bottom pb-3">
+        <a asp-controller="Campaign" asp-action="Index" class="btn btn-primary rounded-pill px-4">Kampanyalar</a>
+        <a asp-controller="Campaign" asp-action="Coupons" class="btn btn-outline-secondary rounded-pill px-4">Herkese Açık Kuponlar</a>
+        <a asp-controller="Campaign" asp-action="Rewards" class="btn btn-outline-secondary rounded-pill px-4">Kupon Kazan</a>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            @for (int i = 0; i < Model.Count; i++)
+            {
+                var rule = Model[i];
+                GameGaraj.WebUI.Models.Products.ProductViewModel? targetProduct = null;
+                if (!string.IsNullOrEmpty(rule.ProductId))
+                {
+                    ruleProducts.TryGetValue(rule.ProductId, out targetProduct);
+                }
+
+                var colorClass = $"card-color-{i % 4}";
+
+                <div class="col">
+                    <div class="campaign-item-card @colorClass">
+                        <div class="camp-left">
+                            <div>
+                                <i class="fa-solid fa-tags opacity-75 fs-4 mb-2"></i>
+                                <h3 class="fw-bold mb-1 text-white text-truncate-2" style="font-size: 1.15rem; line-height: 1.3;">@rule.Name</h3>
+                                <p class="text-white-50 small mb-0 text-truncate-2" style="font-size: 0.8rem; max-height: 38px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                    @if (rule.RuleType == "TotalAmount")
+                                    {
+                                        <span>Sepette @(rule.MinAmount?.ToString("N0")) TL ve üzerine @(rule.FixedDiscount > 0 ? $"{rule.FixedDiscount?.ToString("N0")} TL" : $"%{rule.DiscountRate?.ToString("N0")}") indirim!</span>
+                                    }
+                                    else if (rule.RuleType == "BuyXGetYFree")
+                                    {
+                                        <span>@rule.MinQuantity Al @rule.FreeQuantity Öde fırsatı!</span>
+                                    }
+                                    else if (rule.RuleType == "CheapestItemDiscount")
+                                    {
+                                        <span>En ucuz ürüne %@(rule.DiscountRate?.ToString("N0")) indirim!</span>
+                                    }
+                                    else if (rule.RuleType == "BrandDiscount")
+                                    {
+                                        <span>@(string.IsNullOrEmpty(rule.BrandName) ? "Seçili" : rule.BrandName) markalı ürünlerde %@(rule.DiscountRate?.ToString("N0")) indirim!</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@rule.Description</span>
+                                    }
+                                </p>
+                            </div>
+                            <div class="mt-2">
+                                <a asp-controller="Campaign" asp-action="Detail" asp-route-id="@rule.Id" class="btn btn-light rounded-pill px-3 py-1 fw-semibold btn-sm">
+                                    Detayları Gör <i class="fas fa-chevron-right ms-1" style="font-size: 0.75rem;"></i>
+                                </a>
+                            </div>
+                        </div>
+                        @if (targetProduct != null)
+                        {
+                            <div class="camp-right">
+                                <div class="camp-product-box">
+                                    <img src="@(targetProduct.FirstImageUrl ?? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl)" alt="@targetProduct.Name" onerror="this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
+                                    <div class="text-white-50 fw-semibold mt-2 text-truncate w-100" style="font-size: 0.7rem;">@targetProduct.Brand</div>
+                                    <div class="text-white fw-bold mt-1" style="font-size: 0.8rem;">@targetProduct.Price.ToString("N0") TL</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <div class="p-5 bg-light rounded-3">
+                <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                <p class="text-muted mb-0">Şu an aktif bir kampanya bulunmamaktadır. Lütfen daha sonra tekrar kontrol edin.</p>
+            </div>
+        </div>
+    }
+</div>

@@ -614,6 +614,18 @@ namespace GameGaraj.WebUI.Services.Concrete
             return category;
         }
 
+        public async Task<bool> ToggleCategoryShowOnHomeAsync(string id)
+        {
+            var response = await _httpClient.PutAsync($"categories/{id}/toggle-show-on-home", null);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> DeleteCategoryAsync(string id)
+        {
+            var response = await _httpClient.DeleteAsync($"categories/{id}");
+            return response.IsSuccessStatusCode;
+        }
+
         public async Task<bool> AddAttributeAsync(string categoryId, CategoryAttributeInput model)
         {
             var response = await _httpClient.PostAsJsonAsync($"categories/{categoryId}/attributes", model);

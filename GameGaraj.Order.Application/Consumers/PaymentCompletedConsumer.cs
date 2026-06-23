@@ -12,10 +12,12 @@ namespace GameGaraj.Order.Application.Consumers
     public class PaymentCompletedConsumer : IConsumer<PaymentCompleted>
     {
         private readonly OrderDbContext _context;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public PaymentCompletedConsumer(OrderDbContext context)
+        public PaymentCompletedConsumer(OrderDbContext context, IPublishEndpoint publishEndpoint)
         {
             _context = context;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task Consume(ConsumeContext<PaymentCompleted> context)
@@ -35,6 +37,23 @@ namespace GameGaraj.Order.Application.Consumers
             await _context.SaveChangesAsync();
 
             Console.WriteLine($"[PaymentCompletedConsumer] ✅ Order {order.Id} status updated to Completed (Payment confirmed)");
+
+            // 📤 CouponRewardTriggered event publish et
+            try
+            {
+                await _publishEndpoint.Publish(new CouponRewardTriggered
+                {
+                    OrderId = order.Id,
+                    UserId = order.BuyerId,
+                    Amount = order.TotalPaidAmount,
+                    PurchaseDate = order.CreatedDate
+                });
+                Console.WriteLine($"[PaymentCompletedConsumer] 📤 CouponRewardTriggered event published for OrderId: {order.Id}, User: {order.BuyerId}, Amount: {order.TotalPaidAmount}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PaymentCompletedConsumer] ❌ Failed to publish CouponRewardTriggered event: {ex.Message}");
+            }
         }
     }
 }

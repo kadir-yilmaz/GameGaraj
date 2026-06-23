@@ -23,6 +23,8 @@ namespace GameGaraj.WebUI.Services.Abstract
         // Admin Methods
         Task<CategoryViewModel?> CreateCategoryAsync(CategoryCreateInput model);
         Task<CategoryViewModel?> UpdateCategoryAsync(string id, CategoryCreateInput model);
+        Task<bool> DeleteCategoryAsync(string id);
+        Task<bool> ToggleCategoryShowOnHomeAsync(string id);
         Task<bool> AddAttributeAsync(string categoryId, CategoryAttributeInput model);
         Task<bool> UpdateAttributeAsync(string categoryId, string attributeId, CategoryAttributeInput model);
         Task<bool> DeleteAttributeAsync(string categoryId, string attributeId);

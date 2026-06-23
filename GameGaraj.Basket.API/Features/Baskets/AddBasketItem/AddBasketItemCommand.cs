@@ -10,4 +10,6 @@ public record AddBasketItemCommand(
     string CategoryId,
     [Required] decimal Price,
     string? PictureUrl,
-    [Range(1, int.MaxValue)] int Quantity) : IRequest<ServiceResult>;
+    [Range(1, int.MaxValue)] int Quantity,
+    string? ProductSlug = null,
+    string? Brand = null) : IRequest<ServiceResult>;

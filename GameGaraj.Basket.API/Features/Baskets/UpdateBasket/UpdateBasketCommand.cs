@@ -12,4 +12,5 @@ public record UpdateBasketItemDto(
     decimal Price, 
     string? PictureUrl, 
     int Quantity, 
-    string? ProductSlug);
+    string? ProductSlug,
+    string? Brand = null);

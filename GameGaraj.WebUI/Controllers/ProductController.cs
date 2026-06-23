@@ -125,6 +125,7 @@ namespace GameGaraj.WebUI.Controllers
         }
 
         [Route("product/p/{slug}")]
+        [Route("product/detail/{slug}")]
         public async Task<IActionResult> Detail(string slug)
         {
             var product = await _catalogService.GetProductBySlugAsync(slug);

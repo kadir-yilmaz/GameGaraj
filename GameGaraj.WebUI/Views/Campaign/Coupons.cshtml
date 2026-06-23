@@ -1,0 +1,159 @@
+@model List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>
+@{
+    ViewData["Title"] = "Herkese Açık Kuponlar";
+}
+
+<style>
+    .campaign-list-header {
+        background: linear-gradient(135deg, #1e1e2f 0%, #111119 100%);
+        color: white;
+        padding: 50px 0;
+        border-radius: 16px;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
+    }
+    .campaign-list-header::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle at 80% 20%, rgba(246, 139, 30, 0.15) 0%, transparent 50%);
+    }
+
+    /* Ticket style matching homepage */
+    .coupon-ticket-card {
+        background: #1e2029;
+        border-left: 5px solid #f68b1e;
+        border-radius: 12px;
+        padding: 24px;
+        color: white;
+        position: relative;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .coupon-ticket-card:hover {
+        transform: translateY(-5px);
+    }
+    .ticket-code {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #f68b1e;
+        letter-spacing: 1px;
+    }
+    .ticket-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: white;
+        margin: 10px 0;
+    }
+    .ticket-meta {
+        font-size: 0.85rem;
+        color: #94a3b8;
+    }
+</style>
+
+<div class="container my-4">
+    <div class="campaign-list-header text-center text-md-start px-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-5 fw-bold mb-2">Herkese Açık İndirim Kuponları</h1>
+                <p class="lead mb-0 text-white-50">Ödeme ekranında kodları girerek anında indirim kazanın!</p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <i class="fa-solid fa-ticket fa-4x text-primary opacity-50"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub Navigation for Promotions -->
+    <div class="d-flex gap-2 mb-4 flex-wrap border-bottom pb-3">
+        <a asp-controller="Campaign" asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Kampanyalar</a>
+        <a asp-controller="Campaign" asp-action="Coupons" class="btn btn-primary rounded-pill px-4">Herkese Açık Kuponlar</a>
+        <a asp-controller="Campaign" asp-action="Rewards" class="btn btn-outline-secondary rounded-pill px-4">Kupon Kazan</a>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+            @foreach (var coupon in Model)
+            {
+                <div class="col">
+                    <div class="coupon-ticket-card">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="ticket-code">@coupon.Code</span>
+                                <button class="btn btn-link p-0 text-white-50" onclick="copyCouponCode('@coupon.Code', this)" title="Kopyala">
+                                    <i class="fa-regular fa-copy"></i>
+                                </button>
+                            </div>
+                            <div class="ticket-value">
+                                @if (coupon.DiscountType == "FixedAmount")
+                                {
+                                    <span>@((coupon.Amount ?? 0).ToString("N0")) TL İndirim</span>
+                                }
+                                else if (coupon.DiscountType == "Percentage")
+                                {
+                                    <span>%@((coupon.DiscountRate ?? 0).ToString("N0")) İndirim</span>
+                                }
+                                else if (coupon.DiscountType == "FreeShipping")
+                                {
+                                    <span>Kargo Ücretsiz</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="ticket-meta border-top border-secondary pt-3 mt-3">
+                            @if (coupon.MinPurchaseAmount > 0)
+                            {
+                                <div class="mb-1">Alt Limit: @((coupon.MinPurchaseAmount ?? 0).ToString("N0")) TL</div>
+                            }
+                            else
+                            {
+                                <div class="mb-1">Alt Limit: Yok</div>
+                            }
+                            <div class="mb-2">Son Kullanma: @(coupon.ExpiryDate.HasValue ? coupon.ExpiryDate.Value.ToString("dd.MM.yyyy") : "Süresiz")</div>
+                            <div class="text-end">
+                                <a asp-controller="Campaign" asp-action="CouponDetail" asp-route-id="@coupon.Id" class="btn btn-sm btn-outline-light rounded-pill px-3 py-1" style="font-size: 0.75rem;">
+                                    Detayları Gör <i class="fas fa-chevron-right ms-1" style="font-size: 0.7rem;"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <div class="p-5 bg-light rounded-3">
+                <i class="fas fa-ticket-alt fa-3x text-muted mb-3"></i>
+                <p class="text-muted mb-0">Şu an aktif bir indirim kuponu bulunmamaktadır. Lütfen daha sonra tekrar kontrol edin.</p>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function copyCouponCode(code, btn) {
+            navigator.clipboard.writeText(code).then(function() {
+                const icon = btn.querySelector('i');
+                icon.className = 'fa-solid fa-check text-success';
+                
+                if (window.showAppToast) {
+                    window.showAppToast('success', 'Kupon kodu (' + code + ') panoya kopyalandı!');
+                }
+                
+                setTimeout(function() {
+                    icon.className = 'fa-regular fa-copy';
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Kopyalama başarısız: ', err);
+            });
+        }
+    </script>
+}

@@ -39,6 +39,9 @@
                         <span class="ms-1 small fw-bold">Favorilerim</span>
                     </a>
                 </li>
+                
+
+
                 <li class="nav-item">
                     <a class="nav-link px-0 text-white d-flex align-items-center js-basket-link" asp-controller="Basket" asp-action="Index">
                         <div class="d-inline-block position-relative">
@@ -53,13 +56,14 @@
                 {
                     var userName = User.Identity?.Name ?? "User";
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle px-0 d-flex align-items-center text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white me-2" style="width: 32px; height: 32px; font-size: 0.9rem;">
+                        <a class="nav-link dropdown-toggle px-0 d-flex align-items-center text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" id="profileDropdownLink">
+                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white me-2" style="width: 32px; height: 32px; font-size: 0.9rem; position: relative;">
                                 @(userName.Substring(0, 1).ToUpper())
+                                @await Component.InvokeAsync("NotificationCount")
                             </div>
                             <span class="small fw-bold">@userName</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2" style="min-width: 200px;">
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-0" style="width: 320px; max-height: 480px; overflow-y: auto; z-index:1100;">
                             <li class="px-3 py-2 border-bottom bg-light">
                                 <small class="text-muted d-block">Hesabım</small>
                                 <span class="fw-bold text-dark">@userName</span>
@@ -67,11 +71,22 @@
                             @if (User.IsInRole("admin") || User.IsInRole("editor"))
                             {
                                 <li><a class="dropdown-item py-2" asp-area="Admin" asp-controller="Dashboard" asp-action="Index" target="_blank"><i class="fas fa-cog me-2 text-primary"></i>Admin Paneli</a></li>
-                                <li><hr class="dropdown-divider my-1"></li>
+                                <li><hr class="dropdown-divider my-0"></li>
                             }
                             <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="History"><i class="fas fa-box me-2 text-muted"></i>Siparişlerim</a></li>
+                            <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="MyCoupons"><i class="fas fa-ticket-alt me-2 text-muted"></i>Kuponlarım</a></li>
                             <li><a class="dropdown-item py-2" asp-controller="Address" asp-action="Index"><i class="fas fa-map-marker-alt me-2 text-muted"></i>Adreslerim</a></li>
-                            <li><hr class="dropdown-divider my-1"></li>
+                            
+                            <li><hr class="dropdown-divider my-0"></li>
+                            
+                            <li class="px-3 py-2 bg-light d-flex justify-content-between align-items-center border-bottom border-top">
+                                <span class="fw-bold text-dark" style="font-size: 0.85rem;"><i class="fas fa-bell text-warning me-1"></i> Bildirimler</span>
+                            </li>
+                            <div id="notificationsContentList">
+                                <li class="px-3 py-3 text-center text-muted small">Yükleniyor...</li>
+                            </div>
+
+                            <li><hr class="dropdown-divider my-0"></li>
                             <li><a class="dropdown-item py-2 text-danger" asp-controller="Auth" asp-action="SignOut"><i class="fas fa-sign-out-alt me-2"></i>Çıkış Yap</a></li>
                         </ul>
                     </li>
@@ -95,7 +110,7 @@
                     <i class="fas fa-gamepad text-primary me-2"></i>
                     <span>GameGaraj</span>
                 </a>
-                <ul class="navbar-nav flex-row align-items-center" style="gap: 1.5rem;">
+                <ul class="navbar-nav flex-row align-items-center" style="gap: 1.25rem;">
                     <!-- Favorites -->
                     <li class="nav-item">
                         <a class="nav-link px-0 text-white js-favorites-link" asp-controller="Favorites" asp-action="Index">
@@ -105,6 +120,9 @@
                             </div>
                         </a>
                     </li>
+
+
+
                     <!-- Basket -->
                     <li class="nav-item">
                         <a class="nav-link px-0 text-white js-basket-link" asp-controller="Basket" asp-action="Index">
@@ -119,18 +137,30 @@
                     {
                         var mobileUserName = User.Identity?.Name ?? "User";
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle px-0 text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 30px; height: 30px; font-size: 0.85rem;">
+                            <a class="nav-link dropdown-toggle px-0 text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" id="mobileProfileDropdownLink">
+                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 30px; height: 30px; font-size: 0.85rem; position: relative;">
                                     @(mobileUserName.Substring(0, 1).ToUpper())
+                                    @await Component.InvokeAsync("NotificationCount")
                                 </div>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2" style="min-width: 180px;">
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-0" style="width: 280px; max-height: 400px; overflow-y: auto; z-index: 1100;">
                                 <li class="px-3 py-2 border-bottom bg-light">
                                     <small class="text-muted">@mobileUserName</small>
                                 </li>
                                 <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="History"><i class="fas fa-box me-2 text-muted"></i>Siparişlerim</a></li>
+                                <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="MyCoupons"><i class="fas fa-ticket-alt me-2 text-muted"></i>Kuponlarım</a></li>
                                 <li><a class="dropdown-item py-2" asp-controller="Address" asp-action="Index"><i class="fas fa-map-marker-alt me-2 text-muted"></i>Adreslerim</a></li>
-                                <li><hr class="dropdown-divider my-1"></li>
+                                
+                                <li><hr class="dropdown-divider my-0"></li>
+                                
+                                <li class="px-3 py-2 bg-light d-flex justify-content-between align-items-center border-bottom border-top">
+                                    <span class="fw-bold text-dark" style="font-size: 0.85rem;"><i class="fas fa-bell text-warning me-1"></i> Bildirimler</span>
+                                </li>
+                                <div id="mobileNotificationsContentList">
+                                    <li class="px-3 py-3 text-center text-muted small">Yükleniyor...</li>
+                                </div>
+
+                                <li><hr class="dropdown-divider my-0"></li>
                                 <li><a class="dropdown-item py-2 text-danger" asp-controller="Auth" asp-action="SignOut"><i class="fas fa-sign-out-alt me-2"></i>Çıkış</a></li>
                             </ul>
                         </li>
@@ -164,3 +194,66 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const desktopLink = document.getElementById("profileDropdownLink");
+    const mobileLink = document.getElementById("mobileProfileDropdownLink");
+    
+    function loadNotifications() {
+        fetch("/Order/GetNotifications")
+            .then(r => r.json())
+            .then(data => {
+                const listDesktop = document.getElementById("notificationsContentList");
+                const listMobile = document.getElementById("mobileNotificationsContentList");
+                
+                let html = "";
+                if (!data || data.length === 0) {
+                    html = '<li class="px-3 py-3 text-center text-muted small">Henüz bildiriminiz yok.</li>';
+                } else {
+                    data.forEach(n => {
+                        const bgClass = n.isRead ? "" : "bg-light";
+                        const unreadDot = n.isRead ? "" : '<span class="position-absolute bg-primary rounded-circle" style="width:8px; height:8px; top:12px; right:12px;"></span>';
+                        html += `
+                            <li class="px-3 py-2 border-bottom position-relative ${bgClass}" style="cursor: pointer; transition: background 0.2s;" onclick="markNotificationRead(${n.id}, this)">
+                                <div class="fw-bold text-dark" style="font-size:0.85rem; padding-right: 15px;">${n.title}</div>
+                                <div class="text-muted" style="font-size:0.75rem;">${n.message}</div>
+                                <small class="text-muted" style="font-size:0.65rem;">${new Date(n.createdDate).toLocaleDateString("tr-TR")}</small>
+                                ${unreadDot}
+                            </li>
+                        `;
+                    });
+                }
+                
+                if (listDesktop) listDesktop.innerHTML = html;
+                if (listMobile) listMobile.innerHTML = html;
+            });
+    }
+
+    if (desktopLink) desktopLink.addEventListener("click", loadNotifications);
+    if (mobileLink) mobileLink.addEventListener("click", loadNotifications);
+
+    window.markNotificationRead = function(id, element) {
+        fetch("/Order/MarkNotificationRead?id=" + id, { method: "POST" })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    element.classList.remove("bg-light");
+                    const dot = element.querySelector(".bg-primary");
+                    if (dot) dot.remove();
+                    
+                    // Update badges
+                    const badges = document.querySelectorAll(".notification-badge");
+                    badges.forEach(b => {
+                        let count = parseInt(b.textContent.trim());
+                        if (count > 1) {
+                            b.textContent = count - 1;
+                        } else {
+                            b.remove();
+                        }
+                    });
+                }
+            });
+    };
+});
+</script>

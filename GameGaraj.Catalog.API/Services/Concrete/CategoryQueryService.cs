@@ -21,9 +21,9 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
         public async Task<List<CategoryDto>> GetAllAsync()
         {
-            var categories = await _context.Categories.ToListAsync();
-            var attributes = await _context.CategoryAttributes.ToListAsync();
-            var products = await _context.Products.ToListAsync();
+            var categories = await _context.Categories.AsNoTracking().ToListAsync();
+            var attributes = await _context.CategoryAttributes.AsNoTracking().ToListAsync();
+            var products = await _context.Products.AsNoTracking().Select(p => new { p.CategoryId, p.IsActive }).ToListAsync();
 
             var categoryDtos = _mapper.Map<List<CategoryDto>>(categories);
             var directProductCounts = products
@@ -78,7 +78,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
         public async Task<CategoryDto?> GetByIdAsync(string id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
             if (category == null)
                 return null;
 
@@ -89,6 +89,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 .Where(a => a.CategoryId == id)
                 .OrderBy(a => a.DisplayOrder)
                 .ThenBy(a => a.Name)
+                .AsNoTracking()
                 .ToListAsync();
             var dtos = _mapper.Map<List<CategoryAttributeDto>>(attributesList);
 
@@ -105,15 +106,17 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             dto.Attributes = dtos;
             dto.ProductCount = (await _context.Products
                     .Where(p => allDescendantIds.Contains(p.CategoryId))
+                    .AsNoTracking()
+                    .Select(p => p.IsActive)
                     .ToListAsync())
-                .Count(p => p.IsActive);
+                .Count(isActive => isActive);
 
             return dto;
         }
 
         public async Task<CategoryDto?> GetBySlugAsync(string slug)
         {
-            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Slug == slug);
+            var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Slug == slug);
             if (category == null)
                 return null;
 
@@ -126,6 +129,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 .Where(a => a.CategoryId == categoryId)
                 .OrderBy(a => a.DisplayOrder)
                 .ThenBy(a => a.Name)
+                .AsNoTracking()
                 .ToListAsync();
 
             return _mapper.Map<List<CategoryAttributeDto>>(attributesList);
@@ -135,6 +139,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
         {
             var children = await _context.Categories
                 .Where(c => c.ParentId == parentId)
+                .AsNoTracking()
                 .ToListAsync();
             var descendants = new List<string>(children.Select(c => c.Id));
 
@@ -177,6 +182,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
         {
             var specsList = await _context.Products
                 .Where(p => categoryIds.Contains(p.CategoryId))
+                .AsNoTracking()
                 .Select(p => p.Specs)
                 .ToListAsync();
 

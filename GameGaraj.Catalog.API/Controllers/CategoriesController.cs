@@ -76,6 +76,16 @@ namespace GameGaraj.Catalog.API.Controllers
             }
         }
 
+        [HttpPut("{id}/toggle-show-on-home")]
+        public async Task<IActionResult> ToggleShowOnHome(string id)
+        {
+            var result = await _commands.ToggleShowOnHomeAsync(id);
+            if (!result)
+                return NotFound(new { Message = "Kategori bulunamadi veya guncellenemedi." });
+
+            return NoContent();
+        }
+
         [HttpGet("{id}/attributes")]
         public async Task<IActionResult> GetAttributes(string id)
         {
@@ -120,6 +130,16 @@ namespace GameGaraj.Catalog.API.Controllers
             var result = await _commands.DeleteAttributeAsync(id, attributeId);
             if (!result)
                 return NotFound();
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var result = await _commands.DeleteAsync(id);
+            if (!result)
+                return BadRequest(new { Message = "Kategori silinemedi veya 'Kategorisiz' kategorisi silinmeye calisildi." });
 
             return NoContent();
         }

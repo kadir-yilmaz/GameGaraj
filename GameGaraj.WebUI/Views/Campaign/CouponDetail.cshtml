@@ -1,0 +1,194 @@
+@model GameGaraj.WebUI.Models.Campaigns.CouponViewModel
+@{
+    ViewData["Title"] = $"Kupon Detayı - {Model.Code}";
+}
+
+<style>
+    .coupon-detail-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+    .coupon-detail-banner {
+        background: linear-gradient(135deg, #1e1e2f 0%, #111119 100%);
+        color: white;
+        padding: 50px 40px;
+        position: relative;
+    }
+    .coupon-detail-banner::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle at 90% 10%, rgba(246, 139, 30, 0.15) 0%, transparent 60%);
+    }
+
+    /* Modern ticket visualization */
+    .ticket-mockup {
+        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+        border-radius: 16px;
+        padding: 40px;
+        position: relative;
+        color: white;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        overflow: hidden;
+        border-left: 8px solid #f68b1e;
+    }
+    .ticket-mockup::before, .ticket-mockup::after {
+        content: "";
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background: #f8fafc; /* Matches container bg */
+        border-radius: 50%;
+        left: -15px;
+    }
+    .ticket-mockup::before { top: calc(50% - 15px); }
+    
+    .dashed-divider {
+        border-top: 2px dashed rgba(255,255,255,0.15);
+        margin: 25px 0;
+    }
+    .coupon-big-code {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: 2px;
+        color: #f68b1e;
+    }
+    .coupon-big-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+    }
+</style>
+
+<div class="container my-5">
+    <div class="mb-4">
+        <a asp-action="Coupons" class="btn btn-link text-decoration-none p-0 text-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Tüm Kuponlara Dön
+        </a>
+    </div>
+
+    <div class="coupon-detail-card">
+        <div class="coupon-detail-banner">
+            <span class="badge bg-primary px-3 py-2 rounded-pill text-uppercase mb-3" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;">
+                @(string.IsNullOrEmpty(Model.UserId) ? "Herkese Açık Kupon" : "Özel Kupon")
+            </span>
+            <h1 class="display-6 fw-bold mb-2 text-white">İndirim Kuponu</h1>
+            <p class="lead text-white-50 mb-0">Kod: @Model.Code</p>
+        </div>
+
+        <div class="card-body p-4 p-md-5 bg-light-subtle">
+            <div class="row g-5 align-items-center">
+                <div class="col-lg-6">
+                    <h4 class="fw-bold text-dark mb-4">
+                        <i class="fa-solid fa-circle-info text-primary me-2"></i> Kupon Şartları & Detayları
+                    </h4>
+
+                    <table class="table table-borderless align-middle mb-4">
+                        <tbody>
+                            <tr>
+                                <td class="fw-semibold text-muted" style="width: 180px;">İndirim Türü:</td>
+                                <td class="text-dark fw-bold">
+                                    @(Model.DiscountType switch
+                                    {
+                                        "FixedAmount" => "Sabit Tutar İndirimi",
+                                        "Percentage" => "Yüzdelik İndirim",
+                                        "FreeShipping" => "Ücretsiz Kargo",
+                                        _ => Model.DiscountType
+                                    })
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Minimum Harcama:</td>
+                                <td class="text-dark fw-bold">
+                                    @(Model.MinPurchaseAmount > 0 ? $"{Model.MinPurchaseAmount?.ToString("C2")}" : "Alt limit yok")
+                                </td>
+                            </tr>
+                            @if (Model.MaxDiscountAmount.HasValue && Model.MaxDiscountAmount > 0)
+                            {
+                                <tr>
+                                    <td class="fw-semibold text-muted">Maksimum İndirim:</td>
+                                    <td class="text-dark">@Model.MaxDiscountAmount.Value.ToString("C2")</td>
+                                </tr>
+                            }
+                            <tr>
+                                <td class="fw-semibold text-muted">Bitiş Tarihi:</td>
+                                <td class="text-danger fw-semibold">
+                                    @(Model.ExpiryDate.HasValue ? Model.ExpiryDate.Value.ToString("dd MMMM yyyy HH:mm") : "Süresiz")
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Erişim Tipi:</td>
+                                <td>
+                                    <span class="badge @(string.IsNullOrEmpty(Model.UserId) ? "bg-success-subtle text-success" : "bg-warning-subtle text-warning") px-3 py-1 rounded-pill">
+                                        @(string.IsNullOrEmpty(Model.UserId) ? "Genel Kullanım" : "Kişiye Özel")
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="alert alert-info border-0 rounded-3">
+                        <i class="fa-solid fa-lightbulb me-2 text-primary"></i>
+                        Bu kuponu siparişinizi tamamlarken <strong>Ödeme ve Adres</strong> adımındaki kupon alanına girerek kullanabilirsiniz. Her kupon tek seferlik kullanıma uygundur.
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="ticket-mockup">
+                        <div class="text-center">
+                            <span class="text-uppercase small text-white-50 tracking-wider">İNDİRİM BİLETİ</span>
+                            <div class="coupon-big-value my-2">
+                                @if (Model.DiscountType == "FixedAmount")
+                                {
+                                    <span>@((Model.Amount ?? 0).ToString("N0")) TL İndirim</span>
+                                }
+                                else if (Model.DiscountType == "Percentage")
+                                {
+                                    <span>%@((Model.DiscountRate ?? 0).ToString("N0")) İNDİRİM</span>
+                                }
+                                else if (Model.DiscountType == "FreeShipping")
+                                {
+                                    <span>KARGO BEDAVA</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="dashed-divider"></div>
+
+                        <div class="text-center">
+                            <div class="coupon-big-code font-monospace mb-3">@Model.Code</div>
+                            <button class="btn btn-primary btn-lg rounded-pill px-5 py-2 fw-semibold w-100" onclick="copyCouponCode('@Model.Code', this)">
+                                <i class="fa-regular fa-copy me-2"></i>Kodu Kopyala
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function copyCouponCode(code, btn) {
+            navigator.clipboard.writeText(code).then(function() {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check me-2"></i>Kopyalandı!';
+                btn.className = 'btn btn-success btn-lg rounded-pill px-5 py-2 fw-semibold w-100';
+                
+                if (window.showAppToast) {
+                    window.showAppToast('success', 'Kupon kodu (' + code + ') başarıyla kopyalandı!');
+                }
+                
+                setTimeout(function() {
+                    btn.innerHTML = originalText;
+                    btn.className = 'btn btn-primary btn-lg rounded-pill px-5 py-2 fw-semibold w-100';
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Kopyalama başarısız: ', err);
+            });
+        }
+    </script>
+}

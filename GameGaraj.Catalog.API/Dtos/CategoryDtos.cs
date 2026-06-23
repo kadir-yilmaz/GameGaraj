@@ -6,6 +6,7 @@ namespace GameGaraj.Catalog.API.Dtos
         public string Name { get; set; } = string.Empty;
         public string Slug { get; set; } = string.Empty;
         public string? ParentId { get; set; }
+        public bool IsShowOnHome { get; set; }
         public int ProductCount { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
@@ -17,6 +18,7 @@ namespace GameGaraj.Catalog.API.Dtos
     {
         public string Name { get; set; } = string.Empty;
         public string? ParentId { get; set; }
+        public bool IsShowOnHome { get; set; }
     }
 
     public class CategoryAttributeDto

@@ -75,6 +75,11 @@
                         </select>
                         <div class="form-text mt-2 small text-muted">Alt kategori eklemek için ana kategoriyi seçin.</div>
                     </div>
+                    <div class="mt-4 form-check form-switch">
+                        <input asp-for="IsShowOnHome" class="form-check-input" type="checkbox" role="switch" id="isShowOnHomeSwitch">
+                        <label asp-for="IsShowOnHome" class="form-check-label fw-bold" for="isShowOnHomeSwitch">Ana Sayfada Göster</label>
+                        <div class="form-text small text-muted">Bu kategori ana sayfada her satırda 5 adet olacak şekilde listelensin mi?</div>
+                    </div>
                 </div>
             </div>
 

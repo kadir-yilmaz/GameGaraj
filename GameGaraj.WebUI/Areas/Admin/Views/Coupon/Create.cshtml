@@ -1,0 +1,222 @@
+@model GameGaraj.WebUI.Models.Campaigns.CouponCreateInput
+@{
+    ViewData["Title"] = "Yeni Kupon Oluştur";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="mb-4">
+        <a asp-action="Index" class="btn btn-link ps-0 text-muted">
+            <i class="fas fa-arrow-left"></i> Listeye Dön
+        </a>
+        <h2 class="h3 mb-0 text-gray-800">Yeni Kupon Oluştur</h2>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow border-0 mb-4">
+                <div class="card-body p-4">
+                    <form asp-action="Create" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Code" class="form-label fw-bold">Kupon Kodu</label>
+                                <input asp-for="Code" class="form-label form-control text-uppercase" placeholder="Örn: YAZ2026" required oninput="this.value = this.value.toUpperCase()" />
+                                <span asp-validation-for="Code" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="DiscountType" class="form-label fw-bold">Kupon Türü</label>
+                                <select asp-for="DiscountType" id="DiscountType" class="form-select" required>
+                                    <option value="FixedAmount">Sabit Tutar İndirimi</option>
+                                    <option value="Percentage">Yüzdelik İndirim</option>
+                                    <option value="FreeShipping">Ücretsiz Kargo</option>
+                                </select>
+                                <span asp-validation-for="DiscountType" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4" id="divAmount">
+                                <label asp-for="Amount" class="form-label fw-bold">İndirim Tutarı (TL)</label>
+                                <input asp-for="Amount" type="number" step="0.01" class="form-control" placeholder="0.00" />
+                                <span asp-validation-for="Amount" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-4" id="divRate" style="display:none;">
+                                <label asp-for="DiscountRate" class="form-label fw-bold">İndirim Oranı (%)</label>
+                                <input asp-for="DiscountRate" type="number" class="form-control" placeholder="0" min="1" max="100" />
+                                <span asp-validation-for="DiscountRate" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-4" id="divMaxAmount" style="display:none;">
+                                <label asp-for="MaxDiscountAmount" class="form-label fw-bold">Maksimum İndirim (TL)</label>
+                                <input asp-for="MaxDiscountAmount" type="number" step="0.01" class="form-control" placeholder="Sınırsız" />
+                                <span asp-validation-for="MaxDiscountAmount" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="MinPurchaseAmount" class="form-label fw-bold">Min. Alışveriş Tutarı (TL)</label>
+                                <input asp-for="MinPurchaseAmount" type="number" step="0.01" class="form-control" placeholder="0.00" />
+                                <span asp-validation-for="MinPurchaseAmount" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Kupon Kimlere Özel?</label>
+                                <div class="d-flex gap-3 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="CouponScope" id="scopePublic" value="public" checked>
+                                        <label class="form-check-label" for="scopePublic">Herkese Açık</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="CouponScope" id="scopePrivate" value="private">
+                                        <label class="form-check-label" for="scopePrivate">Kullanıcıya Özel</label>
+                                    </div>
+                                </div>
+                                <div id="userSearchWrapper" style="display:none;" class="position-relative">
+                                    <input type="text" id="userSearchInput" class="form-control" placeholder="Kullanıcı adı veya e-posta arayın..." autocomplete="off" />
+                                    <div id="userSuggestions" class="list-group position-absolute w-100 shadow-sm" style="display:none; z-index:1000; max-height:200px; overflow-y:auto; top:100%;"></div>
+                                    
+                                    <div id="selectedUserBadge" class="mt-2" style="display:none;">
+                                        <span class="badge bg-success fs-6 fw-normal" id="selectedUserText"></span>
+                                        <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1" id="clearUserBtn">
+                                            <i class="fas fa-times-circle"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <input type="hidden" asp-for="UserId" id="userIdHidden" />
+                                <span asp-validation-for="UserId" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ExpiryDate" class="form-label fw-bold">Son Kullanma Tarihi</label>
+                                <input asp-for="ExpiryDate" type="date" class="form-control" />
+                                <span asp-validation-for="ExpiryDate" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary px-4 py-2">
+                            <i class="fas fa-save me-2"></i>Kuponu Kaydet
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const discountTypeSelect = document.getElementById("DiscountType");
+            const divAmount = document.getElementById("divAmount");
+            const divRate = document.getElementById("divRate");
+            const divMaxAmount = document.getElementById("divMaxAmount");
+
+            function toggleTypeFields() {
+                const selected = discountTypeSelect.value;
+                if (selected === "FixedAmount") {
+                    divAmount.style.display = "block";
+                    divRate.style.display = "none";
+                    divMaxAmount.style.display = "none";
+                } else if (selected === "Percentage") {
+                    divAmount.style.display = "none";
+                    divRate.style.display = "block";
+                    divMaxAmount.style.display = "block";
+                } else if (selected === "FreeShipping") {
+                    divAmount.style.display = "none";
+                    divRate.style.display = "none";
+                    divMaxAmount.style.display = "none";
+                }
+            }
+
+            discountTypeSelect.addEventListener("change", toggleTypeFields);
+            toggleTypeFields();
+
+            // --- USER SCOPE LOGIC ---
+            const scopePublic = document.getElementById("scopePublic");
+            const scopePrivate = document.getElementById("scopePrivate");
+            const userSearchWrapper = document.getElementById("userSearchWrapper");
+            const userIdHidden = document.getElementById("userIdHidden");
+
+            function toggleScope() {
+                if (scopePrivate.checked) {
+                    userSearchWrapper.style.display = "block";
+                } else {
+                    userSearchWrapper.style.display = "none";
+                    userIdHidden.value = "";
+                    clearUser();
+                }
+            }
+
+            scopePublic.addEventListener("change", toggleScope);
+            scopePrivate.addEventListener("change", toggleScope);
+
+            // --- USER AUTOCOMPLETE AJAX ---
+            const userSearchInput = document.getElementById("userSearchInput");
+            const userSuggestions = document.getElementById("userSuggestions");
+            const selectedUserBadge = document.getElementById("selectedUserBadge");
+            const selectedUserText = document.getElementById("selectedUserText");
+            const clearUserBtn = document.getElementById("clearUserBtn");
+
+            let userSearchTimeout;
+
+            userSearchInput.addEventListener("input", function () {
+                clearTimeout(userSearchTimeout);
+                const q = this.value.trim();
+                if (q.length < 2) {
+                    userSuggestions.style.display = "none";
+                    return;
+                }
+
+                userSearchTimeout = setTimeout(() => {
+                    fetch(`/Admin/Coupon/SearchUsers?q=${encodeURIComponent(q)}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            userSuggestions.innerHTML = "";
+                            if (data.length === 0) {
+                                userSuggestions.innerHTML = '<div class="list-group-item text-muted">Kullanıcı bulunamadı</div>';
+                            } else {
+                                data.forEach(u => {
+                                    const btn = document.createElement("button");
+                                    btn.type = "button";
+                                    btn.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
+                                    btn.innerHTML = `<span>${u.displayName}</span>`;
+                                    btn.addEventListener("click", () => {
+                                        selectUser(u.id, u.displayName);
+                                    });
+                                    userSuggestions.appendChild(btn);
+                                });
+                            }
+                            userSuggestions.style.display = "block";
+                        })
+                        .catch(() => {
+                            userSuggestions.style.display = "none";
+                        });
+                }, 300);
+            });
+
+            function selectUser(id, name) {
+                userIdHidden.value = id;
+                selectedUserText.textContent = name;
+                selectedUserBadge.style.display = "block";
+                userSearchInput.value = "";
+                userSuggestions.style.display = "none";
+            }
+
+            function clearUser() {
+                userIdHidden.value = "";
+                selectedUserText.textContent = "";
+                selectedUserBadge.style.display = "none";
+                userSearchInput.value = "";
+                userSuggestions.style.display = "none";
+            }
+
+            clearUserBtn.addEventListener("click", clearUser);
+
+            document.addEventListener("click", function (e) {
+                if (!userSearchInput.contains(e.target) && !userSuggestions.contains(e.target)) {
+                    userSuggestions.style.display = "none";
+                }
+            });
+        });
+    </script>
+}

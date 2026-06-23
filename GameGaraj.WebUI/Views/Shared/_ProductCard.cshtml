@@ -1,4 +1,6 @@
 @model GameGaraj.WebUI.Models.Products.ProductViewModel
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject GameGaraj.WebUI.Services.Abstract.ICampaignService CampaignService
 @{
     var cardImagesJson = System.Text.Json.JsonSerializer.Serialize(Model.DisplayImageUrls);
     var ratingValue = 4.4m + (Math.Abs(Model.Id.GetHashCode()) % 6) / 10m;
@@ -6,6 +8,40 @@
     var stockCount = Model.AvailableStock > 0 ? Model.AvailableStock : Model.Stock;
     var isOutOfStock = stockCount <= 0;
     var isLowStock = !isOutOfStock && stockCount < 20;
+
+    var httpContext = HttpContextAccessor.HttpContext;
+    List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel> activeRules = null;
+    if (httpContext != null)
+    {
+        if (httpContext.Items.TryGetValue("ActiveCampaignRules", out var cachedRules))
+        {
+            activeRules = cachedRules as List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>;
+        }
+        else
+        {
+            try
+            {
+                var allRules = await CampaignService.GetAllRulesAsync();
+                activeRules = allRules.Where(r => r.IsActive).ToList();
+                httpContext.Items["ActiveCampaignRules"] = activeRules;
+            }
+            catch
+            {
+                activeRules = new List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>();
+            }
+        }
+    }
+
+    // Find matching campaign for this product
+    GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel matchingCampaign = null;
+    if (activeRules != null)
+    {
+        matchingCampaign = activeRules.FirstOrDefault(r => 
+            (!string.IsNullOrEmpty(r.ProductId) && r.ProductId.Equals(Model.Id, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(r.CategoryId) && r.CategoryId.Equals(Model.CategoryId, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(r.BrandName) && !string.IsNullOrEmpty(Model.Brand) && r.BrandName.Equals(Model.Brand, StringComparison.OrdinalIgnoreCase))
+        );
+    }
 }
 
 <div class="card product-card h-100 position-relative border-0 shadow-sm"
@@ -37,14 +73,29 @@
         }
     </div>
     <div class="card-body product-card-body d-flex flex-column">
-        <div class="product-card-campaign">
-            Alisveris Kredisi ile 3 taksit
-        </div>
+        @if (matchingCampaign != null)
+        {
+            <div class="product-card-campaign d-inline-flex align-items-center gap-1" style="background: #230808; color: #ff5252; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; border: 1px solid #4d1414; margin-bottom: 8px; letter-spacing: 0.5px; width: fit-content;">
+                <i class="fas fa-bolt" style="color: #ff5252;"></i> @matchingCampaign.Name
+            </div>
+        }
+        else
+        {
+            <div class="product-card-campaign">
+                Alisveris Kredisi ile 3 taksit
+            </div>
+        }
 
         <div class="product-card-name-block">
             @if (!string.IsNullOrWhiteSpace(Model.Brand))
             {
-                <small class="product-card-brand-inline">@Model.Brand</small>
+                <small class="product-card-brand-inline">
+                    @Model.Brand
+                    @if (Model.Brand.Equals("Samsung", StringComparison.OrdinalIgnoreCase) || Model.Brand.Equals("MSI", StringComparison.OrdinalIgnoreCase) || Model.Brand.Equals("Asus", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <i class="fas fa-check-circle text-primary ms-1" style="font-size: 0.8rem; color: #1e90ff !important;" title="Onaylı Marka"></i>
+                    }
+                </small>
             }
             <a asp-controller="Product" asp-action="Detail" asp-route-slug="@Model.Slug"
                class="text-decoration-none text-dark product-card-title-link product-card-title-inline">
@@ -64,8 +115,18 @@
         </div>
 
         <div class="product-card-footer mt-auto">
-            <div class="product-card-price-wrap">
-                <span class="price-tag fw-bold text-dark">@Model.Price.ToString("C2")</span>
+            <div class="product-card-price-wrap d-flex align-items-baseline gap-2 flex-wrap">
+                @if (matchingCampaign != null && matchingCampaign.DiscountRate.HasValue && matchingCampaign.DiscountRate.Value > 0)
+                {
+                    var discountRate = matchingCampaign.DiscountRate.Value;
+                    var originalPrice = Model.Price + (Model.Price * (discountRate / 100m));
+                    <span class="price-tag fw-bold" style="color: #ff4757; font-size: 1.25rem;">@Model.Price.ToString("N0") TL</span>
+                    <span class="text-muted text-decoration-line-through small" style="font-size: 0.85rem;">@originalPrice.ToString("N2") TL</span>
+                }
+                else
+                {
+                    <span class="price-tag fw-bold text-dark">@Model.Price.ToString("C2")</span>
+                }
             </div>
 
             @if (Model.IsInBasket)

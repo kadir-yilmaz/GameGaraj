@@ -19,7 +19,7 @@ public class GetBasketQueryHandler(BasketService basketService, IIdentityService
 
         var basketDto = new BasketDto(
             basket.UserId,
-            basket.Items.Select(x => new BasketItemDto(x.Id, x.Name, x.Price, x.PictureUrl, x.Quantity)).ToList(),
+            basket.Items.Select(x => new BasketItemDto(x.Id, x.Name, x.Price, x.PictureUrl, x.Quantity, x.CategoryId, x.Brand, x.ProductSlug)).ToList(),
             basket.TotalPrice);
 
         return ServiceResult<BasketDto>.SuccessAsOk(basketDto);

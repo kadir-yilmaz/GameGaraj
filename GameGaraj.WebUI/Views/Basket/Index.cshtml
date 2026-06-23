@@ -1,6 +1,7 @@
 @model GameGaraj.WebUI.Models.Baskets.BasketViewModel
 @{
     ViewData["Title"] = "Sepetim";
+    var discountResult = ViewBag.DiscountResult as GameGaraj.WebUI.Models.Campaigns.CalculateDiscountResponse;
 }
 
 <style>
@@ -467,7 +468,7 @@
 
                         @foreach (var item in Model.Items)
                         {
-                            <div class="basket-item">
+                            <div class="basket-item position-relative">
                                 <!-- Image -->
                                 <div class="item-image">
                                     <a href="/product/p/@(string.IsNullOrEmpty(item.ProductSlug) ? item.ProductId : item.ProductSlug)">
@@ -479,14 +480,40 @@
 
                                 <!-- Details -->
                                 <div class="item-details">
-                                    <a href="/product/p/@(string.IsNullOrEmpty(item.ProductSlug) ? item.ProductId : item.ProductSlug)" class="item-name">
+                                    @if (!string.IsNullOrEmpty(item.Brand))
+                                    {
+                                        <div class="item-brand-badge mb-1" style="font-size: 0.8rem; color: #1e90ff; font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                                            <i class="fas fa-check-circle"></i> @item.Brand
+                                        </div>
+                                    }
+                                    <a href="/product/p/@(string.IsNullOrEmpty(item.ProductSlug) ? item.ProductId : item.ProductSlug)" class="item-name fw-bold text-dark mb-1">
                                         @item.ProductName
                                     </a>
-                                    <div class="item-meta">
-                                        <span class="item-stock"><i class="fas fa-check-circle me-1"></i>Stokta</span>
-                                        <span>Satıcı: GameGaraj</span>
+                                    
+                                    <div class="item-unit-price mb-2 text-muted" style="font-size: 0.82rem;">
+                                        Birim fiyatı: <span class="fw-semibold">@item.Price.ToString("N0") TL</span>
                                     </div>
-                                    <div class="quantity-section">
+
+                                    @{
+                                        var itemDetail = discountResult?.Details?.FirstOrDefault(d => d.ProductId.Equals(item.ProductId, StringComparison.OrdinalIgnoreCase));
+                                        var itemDiscount = itemDetail?.DiscountAmount ?? 0m;
+                                        var hasItemDiscount = itemDiscount > 0m;
+                                    }
+
+                                    @if (hasItemDiscount && !string.IsNullOrEmpty(itemDetail?.RuleName))
+                                    {
+                                        <div class="mb-2">
+                                            <span class="d-inline-flex align-items-center gap-1" style="background: #fff0f0; color: #ff5252; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.78rem; border: 1px solid #ffd5d5; letter-spacing: 0.3px;">
+                                                <i class="fa-solid fa-gift"></i> @itemDetail.RuleName
+                                            </span>
+                                        </div>
+                                    }
+
+                                    <div class="item-shipping-badge mb-3 d-flex align-items-center gap-1" style="color: #00a365; font-size: 0.78rem; font-weight: 600;">
+                                        <i class="fas fa-truck"></i> Tahmini kargoya teslim: 3 iş günü içinde
+                                    </div>
+
+                                    <div class="quantity-section mt-1">
                                         <div class="quantity-control">
                                             <form asp-action="UpdateQuantity" method="post" class="d-inline ajax-cart-form">
                                                 <input type="hidden" name="productId" value="@item.ProductId" />
@@ -504,19 +531,31 @@
                                                 </button>
                                             </form>
                                         </div>
-                                        <form asp-action="RemoveItem" method="post" class="ajax-cart-form">
-                                            <input type="hidden" name="productId" value="@item.ProductId" />
-                                            <button type="submit" class="remove-btn" title="Sepetten Sil">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </form>
                                     </div>
                                 </div>
 
-                                <!-- Price -->
-                                <div class="item-price-section">
-                                    <span class="item-unit-price">Birim: @item.Price.ToString("N2") TL</span>
-                                    <span class="item-total-price">@((item.Price * item.Quantity).ToString("N2")) TL</span>
+                                <!-- Trash Button absolute at top right -->
+                                <div style="position: absolute; top: 1.25rem; right: 1.5rem;">
+                                    <form asp-action="RemoveItem" method="post" class="ajax-cart-form">
+                                        <input type="hidden" name="productId" value="@item.ProductId" />
+                                        <button type="submit" class="remove-btn" title="Sepetten Sil" style="color: #bbb; transition: color 0.2s; border: none; background: none; font-size: 1.1rem; padding: 4px;">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Price at bottom right -->
+                                <div class="item-price-section text-end d-flex flex-column justify-content-end" style="min-width: 140px; margin-top: auto;">
+                                    @if (hasItemDiscount && itemDetail != null)
+                                    {
+                                        <span class="text-decoration-line-through text-muted small d-block mb-1" style="font-size: 0.9rem;">@((item.Price * item.Quantity).ToString("N2")) TL</span>
+                                        <span class="item-total-price d-block fw-bold" style="color: #ff6000; font-size: 1.35rem;">@(itemDetail.DiscountedLineTotal.ToString("N2")) TL</span>
+                                        <span class="text-success d-block small fw-semibold" style="font-size: 0.8rem; margin-top: 2px;">-@(itemDiscount.ToString("N2")) TL indirim</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="item-total-price d-block">@((item.Price * item.Quantity).ToString("N2")) TL</span>
+                                    }
                                 </div>
                             </div>
                         }
@@ -529,7 +568,6 @@
                         <h2 class="summary-title">Sipariş Özeti</h2>
                         
                         @{
-                            var discountResult = ViewBag.DiscountResult as GameGaraj.WebUI.Models.Campaigns.CalculateDiscountResponse;
                             var rawTotal = Model.TotalPrice;
                             
                             // Kargo hesaplama
@@ -563,8 +601,8 @@
                         {
                             foreach (var appliedRule in discountResult.AppliedRules)
                             {
-                                <div class="summary-row discount" style="color: #e74c3c; font-weight: 600;">
-                                    <span><i class="fas fa-tags me-1"></i>@appliedRule.RuleName</span>
+                                <div class="d-flex justify-content-between align-items-center mb-2 px-3 py-2 rounded" style="background: #edf5fd; color: #1976d2; border: 1px solid #d0e3f7; font-weight: 600; font-size: 0.9rem;">
+                                    <span>@appliedRule.RuleName</span>
                                     <span>-@appliedRule.DiscountAmount.ToString("N2") TL</span>
                                 </div>
                             }
@@ -574,14 +612,37 @@
                         <div class="mt-4 mb-4 border-top pt-3">
                             <h6 class="fw-bold mb-2 small"><i class="fas fa-ticket-alt me-1 text-primary"></i>Kupon Kodu</h6>
                             
-                            @if (ViewBag.AppliedCoupon is GameGaraj.WebUI.Models.Discounts.DiscountViewModel coupon)
+                            @if (ViewBag.AppliedCoupon is GameGaraj.WebUI.Models.Campaigns.CouponViewModel coupon)
                             {
-                                var couponDiscAmount = finalTotal * (coupon.Rate / 100m);
+                                decimal couponDiscAmount = 0;
+                                if (coupon.DiscountType == "Percentage" && coupon.DiscountRate > 0)
+                                {
+                                    couponDiscAmount = finalTotal * (coupon.DiscountRate.Value / 100m);
+                                    if (coupon.MaxDiscountAmount > 0 && couponDiscAmount > coupon.MaxDiscountAmount)
+                                    {
+                                        couponDiscAmount = coupon.MaxDiscountAmount.Value;
+                                    }
+                                }
+                                else if (coupon.DiscountType == "FixedAmount" && coupon.Amount > 0)
+                                {
+                                    couponDiscAmount = coupon.Amount.Value;
+                                }
+                                else if (coupon.DiscountType == "FreeShipping")
+                                {
+                                    couponDiscAmount = finalShippingFee;
+                                }
+
+                                if (couponDiscAmount > finalTotal)
+                                {
+                                    couponDiscAmount = finalTotal;
+                                }
+
                                 finalTotal -= couponDiscAmount;
 
                                 <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center">
                                     <span class="text-success fw-bold small">
-                                        <i class="fas fa-check-circle me-1"></i>@coupon.Code (%@coupon.Rate)
+                                        <i class="fas fa-check-circle me-1"></i>@coupon.Code 
+                                        (@(coupon.DiscountType == "Percentage" ? $"%{coupon.DiscountRate}" : (coupon.DiscountType == "FixedAmount" ? $"{coupon.Amount} TL" : "Kargo Bedava")))
                                     </span>
                                     <form asp-action="RemoveCoupon" method="post" class="m-0">
                                         <button type="submit" class="btn btn-sm text-danger p-0"><i class="fas fa-times"></i></button>
@@ -590,13 +651,13 @@
                                 
                                 <div class="d-flex justify-content-between mt-2 text-success">
                                     <span class="small">Kupon İndirimi</span>
-                                    <span class="fw-bold">-@couponDiscAmount.ToString("C2")</span>
+                                    <span class="fw-bold">-@couponDiscAmount.ToString("N2") TL</span>
                                 </div>
                             }
                             else
                             {
                                 <form asp-action="ApplyCoupon" method="post" class="input-group input-group-sm">
-                                    <input type="text" name="couponCode" class="form-control" placeholder="Kupon kodunuz">
+                                    <input type="text" name="couponCode" class="form-control" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()" placeholder="Kupon kodunuz">
                                     <button class="btn btn-primary" type="submit">Uygula</button>
                                 </form>
                                 

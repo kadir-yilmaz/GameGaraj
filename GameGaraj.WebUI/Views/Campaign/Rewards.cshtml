@@ -1,0 +1,161 @@
+@model List<GameGaraj.WebUI.Models.Campaigns.CouponRewardRuleViewModel>
+@{
+    ViewData["Title"] = "Kupon Kazan Fırsatları";
+}
+
+<style>
+    .campaign-list-header {
+        background: linear-gradient(135deg, #1e1e2f 0%, #111119 100%);
+        color: white;
+        padding: 50px 0;
+        border-radius: 16px;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
+    }
+    .campaign-list-header::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle at 80% 20%, rgba(246, 139, 30, 0.15) 0%, transparent 50%);
+    }
+
+    /* Reward card styling */
+    .reward-page-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .reward-page-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    }
+    .reward-icon-circle {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: rgba(246, 139, 30, 0.1);
+        color: #f68b1e;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px auto;
+        font-size: 1.5rem;
+    }
+    .reward-dashed-info {
+        border: 1px dashed #cbd5e1;
+        border-radius: 8px;
+        padding: 12px;
+        background: #f8fafc;
+        font-size: 0.85rem;
+        color: #475569;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    .reward-ticket-preview {
+        background: #f8fafc;
+        border-left: 4px solid #f68b1e;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .reward-ticket-title {
+        font-weight: 800;
+        color: #f68b1e;
+        font-size: 1.25rem;
+        letter-spacing: 1px;
+    }
+</style>
+
+<div class="container my-4">
+    <div class="campaign-list-header text-center text-md-start px-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-5 fw-bold mb-2">Kupon Kazan Görevleri</h1>
+                <p class="lead mb-0 text-white-50">Belirli şartları tamamlayın, alışveriş yaptıkça hediye indirim kuponları kazanın!</p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <i class="fa-solid fa-gift fa-4x text-primary opacity-50"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub Navigation for Promotions -->
+    <div class="d-flex gap-2 mb-4 flex-wrap border-bottom pb-3">
+        <a asp-controller="Campaign" asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Kampanyalar</a>
+        <a asp-controller="Campaign" asp-action="Coupons" class="btn btn-outline-secondary rounded-pill px-4">Herkese Açık Kuponlar</a>
+        <a asp-controller="Campaign" asp-action="Rewards" class="btn btn-primary rounded-pill px-4">Kupon Kazan</a>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            @foreach (var reward in Model)
+            {
+                var couponRewardCode = $"KAZAN{reward.RewardCouponAmount?.ToString("F0") ?? reward.RewardCouponRate?.ToString("F0") ?? "HEDIYE"}";
+                <div class="col">
+                    <div class="reward-page-card">
+                        <div>
+                            <div class="reward-icon-circle">
+                                <i class="fa-solid fa-gift"></i>
+                            </div>
+                            <h4 class="fw-bold text-dark text-center mb-3">@reward.RuleName</h4>
+                            
+                            @if (!string.IsNullOrEmpty(reward.Description))
+                            {
+                                <p class="text-muted small text-center mb-3">@reward.Description</p>
+                            }
+
+                            <div class="reward-dashed-info">
+                                <i class="fa-regular fa-clock me-1 text-primary"></i>
+                                <strong>@(reward.PeriodInDays) gün</strong> içerisinde toplam <strong>@reward.RequiredSpendAmount.ToString("N0") TL</strong> harcama yap.
+                            </div>
+
+                            <div class="reward-ticket-preview">
+                                <div class="reward-ticket-title">@couponRewardCode</div>
+                                <div class="small fw-semibold text-dark mt-1">
+                                    @if (reward.RewardCouponType == "FixedAmount")
+                                    {
+                                        <span>@((reward.RewardCouponAmount ?? 0).ToString("N0")) TL Hediye Kuponu</span>
+                                    }
+                                    else if (reward.RewardCouponType == "Percentage")
+                                    {
+                                        <span>%@((reward.RewardCouponRate ?? 0).ToString("N0")) Hediye Kuponu</span>
+                                    }
+                                    else if (reward.RewardCouponType == "FreeShipping")
+                                    {
+                                        <span>Kargo Bedava Kuponu</span>
+                                    }
+                                </div>
+                                <div class="text-muted" style="font-size: 0.75rem; margin-top: 4px;">Geçerlilik: Kupon oluştuktan sonra @reward.RewardValidDays gün</div>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-2">
+                            <a asp-controller="Campaign" asp-action="RewardDetail" asp-route-id="@reward.Id" class="btn btn-outline-primary w-100 rounded-pill py-2 fw-semibold">
+                                Detayları ve Şartları Gör
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <div class="p-5 bg-light rounded-3">
+                <i class="fas fa-gift fa-3x text-muted mb-3"></i>
+                <p class="text-muted mb-0">Şu an aktif bir kupon kazanma görevi bulunmamaktadır. Lütfen daha sonra tekrar kontrol edin.</p>
+            </div>
+        </div>
+    }
+</div>

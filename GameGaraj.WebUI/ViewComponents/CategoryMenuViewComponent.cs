@@ -15,7 +15,8 @@ namespace GameGaraj.WebUI.ViewComponents
         public async Task<IViewComponentResult> InvokeAsync()
         {
             var categories = await _catalogService.GetAllCategoriesAsync();
-            return View(categories);
+            var filteredCategories = categories.Where(c => c.Id != "uncategorized").ToList();
+            return View(filteredCategories);
         }
     }
 }

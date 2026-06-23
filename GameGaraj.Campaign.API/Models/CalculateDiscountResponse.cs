@@ -24,6 +24,12 @@ namespace GameGaraj.Campaign.API.Models
         /// <summary>Uygulanan tüm kuralların özeti</summary>
         public List<AppliedRuleSummary> AppliedRules { get; set; } = new();
 
+        /// <summary>Kupon başarıyla uygulandı mı?</summary>
+        public bool IsCouponApplied { get; set; }
+
+        /// <summary>Kupon uygulanamadıysa veya bilgi verilecekse mesaj (Örn: Süresi dolmuş)</summary>
+        public string? CouponMessage { get; set; }
+
         /// <summary>Ürün bazlı indirim detayları</summary>
         public List<DiscountDetail> Details { get; set; } = new();
     }
@@ -42,5 +48,6 @@ namespace GameGaraj.Campaign.API.Models
         public decimal OriginalLineTotal { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal DiscountedLineTotal { get; set; }
+        public string? RuleName { get; set; }
     }
 }

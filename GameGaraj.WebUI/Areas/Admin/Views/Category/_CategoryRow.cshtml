@@ -43,15 +43,23 @@
             </div>
         </div>
     </td>
+    <td class="text-center align-middle">
+        <div class="form-check form-switch d-flex justify-content-center">
+            <input class="form-check-input toggle-show-home" type="checkbox" role="switch" data-id="@Model.Category.Id" @(Model.Category.IsShowOnHome ? "checked" : "")>
+        </div>
+    </td>
     <td class="text-end pe-4">
         <div class="btn-group shadow-sm rounded">
+            <a asp-area="Admin" asp-controller="Campaign" asp-action="Create" asp-route-categoryId="@Model.Category.Id" class="btn btn-sm btn-white border text-warning" title="Kampanya Tanımla">
+                <i class="fas fa-tags"></i>
+            </a>
             <a asp-action="Edit" asp-route-id="@Model.Category.Id" class="btn btn-sm btn-white border text-primary" title="Düzenle">
                 <i class="fas fa-edit"></i>
             </a>
             <a asp-action="Create" asp-route-parentId="@Model.Category.Id" class="btn btn-sm btn-white border text-success" title="Alt Kategori Ekle">
                 <i class="fas fa-plus-circle"></i>
             </a>
-            <button type="button" class="btn btn-sm btn-white border text-danger" title="Sil">
+            <button type="button" class="btn btn-sm btn-white border text-danger delete-category-btn" data-id="@Model.Category.Id" title="Sil">
                 <i class="fas fa-trash-alt"></i>
             </button>
         </div>

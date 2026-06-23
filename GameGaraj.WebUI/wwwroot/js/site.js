@@ -50,34 +50,22 @@ window.updateBasketBadge = function (count) {
 };
 
 window.showAppToast = function (type, message) {
-    var toastEl = document.getElementById('liveToast');
-    if (!toastEl || !window.bootstrap) return;
+    var parser = new DOMParser();
+    var decodedMessage = parser.parseFromString(message, 'text/html').body.textContent || message;
 
-    var $toast = $(toastEl);
-    var $message = $toast.find('.app-toast-message');
-    var $icon = $toast.find('.app-toast-icon');
-
-    $toast.removeClass('bg-success bg-danger bg-warning bg-info text-dark text-white');
-    $icon.removeClass('fa-check-circle fa-times-circle fa-heart fa-info-circle fa-exclamation-triangle');
-
-    if (type === 'danger') {
-        $toast.addClass('bg-danger text-white');
-        $icon.addClass('fa-times-circle');
-    } else if (type === 'warning') {
-        $toast.addClass('bg-warning text-dark');
-        $icon.addClass('fa-exclamation-triangle');
-    } else if (type === 'favorite') {
-        $toast.addClass('bg-success text-white');
-        $icon.addClass('fa-heart');
+    if (typeof notyf !== 'undefined') {
+        if (type === 'danger' || type === 'error') {
+            notyf.error(decodedMessage);
+        } else if (type === 'warning') {
+            notyf.open({ type: 'warning', message: decodedMessage, background: '#ff9800' });
+        } else if (type === 'favorite') {
+            notyf.open({ type: 'favorite', message: decodedMessage, background: '#e91e63' });
+        } else {
+            notyf.success(decodedMessage);
+        }
     } else {
-        $toast.addClass('bg-success text-white');
-        $icon.addClass('fa-check-circle');
+        console.log("Notyf not loaded. Fallback:", type, decodedMessage);
     }
-
-    $message.html(message);
-
-    var toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3200 });
-    toast.show();
 };
 
 $(document).ready(function () {

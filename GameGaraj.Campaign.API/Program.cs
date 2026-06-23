@@ -3,6 +3,7 @@ using GameGaraj.Campaign.API.Services;
 using GameGaraj.Campaign.API.Services.Abstract;
 using GameGaraj.Campaign.API.Services.Concrete;
 using GameGaraj.Shared.Logging;
+using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,14 +27,43 @@ builder.Services.AddCors(options =>
 // Services (Dapper CRUD)
 builder.Services.AddScoped<ICampaignRuleService, CampaignRuleService>();
 builder.Services.AddScoped<ICampaignCalculationService, CampaignCalculationService>();
+builder.Services.AddScoped<ICouponService, CouponService>();
+builder.Services.AddScoped<ICouponRewardService, CouponRewardService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // Strategy Pattern: Kural stratejilerini DI'a kaydet
-// Yeni kural eklemek için buraya bir satır eklenmesi yeterli (Open/Closed Principle)
 builder.Services.AddSingleton<ICampaignRule, TotalAmountRule>();
 builder.Services.AddSingleton<ICampaignRule, BuyXGetYFreeRule>();
 builder.Services.AddSingleton<ICampaignRule, CheapestItemDiscountRule>();
+builder.Services.AddSingleton<ICampaignRule, BrandDiscountRule>();
 
-// Run Migration — campaign_rule tablosunu oluştur
+// MassTransit Configuration
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<GameGaraj.Campaign.API.Consumers.CouponRewardTriggeredConsumer>();
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        var rabbitMqUrl = builder.Configuration["RabbitMQUrl"];
+        if (string.IsNullOrEmpty(rabbitMqUrl))
+        {
+            rabbitMqUrl = "localhost";
+        }
+
+        cfg.Host(rabbitMqUrl, "/", host =>
+        {
+            host.Username("guest");
+            host.Password("guest");
+        });
+
+        cfg.ReceiveEndpoint("coupon-reward-triggered-campaign-service", e =>
+        {
+            e.ConfigureConsumer<GameGaraj.Campaign.API.Consumers.CouponRewardTriggeredConsumer>(context);
+        });
+    });
+});
+
+// Run Migration — campaign_rule, coupons, rewards, notifications, purchase logs tablolarını oluştur
 DbMigrationHelper.EnsureDatabaseSetup(builder.Configuration);
 
 var app = builder.Build();

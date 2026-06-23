@@ -62,7 +62,8 @@
             <table class="table tree-table align-middle mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th class="ps-4 py-3 border-0" style="width: 70%">Kategori Hiyerarşisi</th>
+                        <th class="ps-4 py-3 border-0" style="width: 50%">Kategori Hiyerarşisi</th>
+                        <th class="py-3 border-0 text-center" style="width: 25%">Ana Sayfada Göster</th>
                         <th class="py-3 border-0 text-end pe-4">İşlemler</th>
                     </tr>
                 </thead>
@@ -101,5 +102,68 @@
                 collapseRecursive(childId);
             });
         }
+
+        $(document).on('change', '.toggle-show-home', function () {
+            const id = $(this).data('id');
+            const isChecked = $(this).is(':checked');
+
+            $.ajax({
+                url: '@Url.Action("ToggleShowOnHome", "Category", new { area = "Admin" })',
+                type: 'POST',
+                data: { id: id },
+                success: function (res) {
+                    if (res.success) {
+                        // Toast or alert could be shown here
+                    } else {
+                        alert(res.message);
+                        // revert
+                        $(`input[data-id="${id}"]`).prop('checked', !isChecked);
+                    }
+                },
+                error: function () {
+                    alert('Bir hata oluştu.');
+                    $(`input[data-id="${id}"]`).prop('checked', !isChecked);
+                }
+            });
+        });
+
+        $(document).on('click', '.delete-category-btn', function () {
+            if (!confirm('Bu kategoriyi silmek istediğinize emin misiniz? Altındaki ürünler Kategorisiz alanına taşınacaktır.')) {
+                return;
+            }
+
+            const btn = $(this);
+            const id = btn.data('id');
+            const row = btn.closest('tr');
+
+            // Disable button to prevent double-clicks
+            btn.prop('disabled', true);
+
+            $.ajax({
+                url: '@Url.Action("Delete", "Category", new { area = "Admin" })',
+                type: 'POST',
+                data: { id: id },
+                success: function (res) {
+                    if (res.success) {
+                        // Remove the row visually
+                        row.fadeOut(300, function() {
+                            $(this).remove();
+                        });
+                        // Remove children recursively
+                        $(`tr[data-parent-id="${id}"]`).fadeOut(300, function() {
+                             $(this).remove();
+                        });
+                        // Optional toast could go here
+                    } else {
+                        alert(res.message);
+                        btn.prop('disabled', false);
+                    }
+                },
+                error: function () {
+                    alert('Kategori silinirken bir sunucu hatası oluştu.');
+                    btn.prop('disabled', false);
+                }
+            });
+        });
     </script>
 }

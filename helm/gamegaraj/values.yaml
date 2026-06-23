@@ -50,7 +50,6 @@ services:
       ReverseProxy__Clusters__payment-cluster__Destinations__destination1__Address: "http://payment-api:8080"
       ReverseProxy__Clusters__photostock-cluster__Destinations__destination1__Address: "http://photostock-api:8080"
       ReverseProxy__Clusters__campaign-cluster__Destinations__destination1__Address: "http://campaign-api:8080"
-      ReverseProxy__Clusters__discount-cluster__Destinations__destination1__Address: "http://discount-api:8080"
       # Identity — internal address for token validation
       IdentityOption__Address: "http://192.168.1.56:8080/realms/GameGaraj"
       # Issuer must match the issuer claim in JWT tokens (public URL)
@@ -97,13 +96,6 @@ services:
       ConnectionStrings__Redis: redis-connection
 
   # ---------------------------------------------------------------------------
-  # Discount API (PostgreSQL)
-  # ---------------------------------------------------------------------------
-  discount-api:
-    image: "discount-api:ccd3916"
-    nodePort: 30012
-    secretEnv:
-      ConnectionStrings__PostgreSql: discount-postgres-connection
 
   # ---------------------------------------------------------------------------
   # Order API (SQL Server)

@@ -1,6 +1,13 @@
-﻿@model List<GameGaraj.WebUI.Models.Products.ProductViewModel>
+@model List<GameGaraj.WebUI.Models.Products.ProductViewModel>
+@using GameGaraj.WebUI.Models.Campaigns
 @{
     ViewData["Title"] = "Hoş Geldiniz";
+    var activeRules = ViewBag.ActiveRules as List<CampaignRuleViewModel> ?? new List<CampaignRuleViewModel>();
+    var rewardRules = ViewBag.RewardRules as List<CouponRewardRuleViewModel> ?? new List<CouponRewardRuleViewModel>();
+    var publicCoupons = ViewBag.PublicCoupons as List<CouponViewModel> ?? new List<CouponViewModel>();
+    var ruleProducts = ViewBag.RuleProducts as Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel> ?? new Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel>();
+    var homeCategories = ViewBag.HomeCategories as List<GameGaraj.WebUI.Models.Products.CategoryViewModel> ?? new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
+    var homeCategoryProducts = ViewBag.HomeCategoryProducts as Dictionary<string, List<GameGaraj.WebUI.Models.Products.ProductViewModel>> ?? new Dictionary<string, List<GameGaraj.WebUI.Models.Products.ProductViewModel>>();
 }
 
 @await Html.PartialAsync("_ProductCardStyles")
@@ -47,40 +54,234 @@
         .carousel-caption h1 { font-size: 2rem; }
         .carousel-caption p { font-size: 1rem; }
     }
+
+    /* Campaign Slider Card */
+    .campaign-slider-card {
+        border-radius: 16px;
+        padding: 24px;
+        color: white;
+        height: 250px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .campaign-slider-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    }
+    .campaign-card-blue {
+        background: linear-gradient(135deg, #1A1C8B 0%, #0E0F57 100%);
+    }
+    .campaign-card-magenta {
+        background: linear-gradient(135deg, #9C1453 0%, #570A2D 100%);
+    }
+    .campaign-card-green {
+        background: linear-gradient(135deg, #0A874F 0%, #054F2E 100%);
+    }
+    .campaign-card-orange {
+        background: linear-gradient(135deg, #D45B12 0%, #7A3105 100%);
+    }
+    .campaign-left {
+        flex: 1;
+        padding-right: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+    }
+    .campaign-right {
+        width: 120px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+    }
+    .campaign-product-preview {
+        background: rgba(0,0,0,0.25);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 12px;
+        padding: 10px;
+        width: 120px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        backdrop-filter: blur(10px);
+    }
+    .campaign-product-preview img {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+        background: white;
+        border-radius: 8px;
+        padding: 4px;
+    }
+
+    /* Ticket Coupons */
+    .ticket-coupon-card {
+        background: #1e2029;
+        border-left: 4px dashed #f68b1e;
+        border-radius: 8px;
+        padding: 12px 16px;
+        color: white;
+        position: relative;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .ticket-coupon-card:hover {
+        transform: translateY(-3px);
+    }
+    .coupon-card-code {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #f68b1e;
+        letter-spacing: 1px;
+    }
+    .coupon-card-value {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: white;
+        margin: 6px 0;
+    }
+    .coupon-card-meta {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    /* Reward Cards */
+    .reward-step-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s;
+    }
+    .reward-step-card:hover {
+        transform: translateY(-3px);
+    }
+    .reward-dashed-box {
+        border: 1px dashed #cbd5e1;
+        border-radius: 8px;
+        padding: 8px;
+        background: #f8fafc;
+        text-align: center;
+        font-size: 0.8rem;
+        color: #475569;
+    }
+    .reward-ticket-box {
+        background: #f1f5f9;
+        border-left: 3px solid #3b82f6;
+        border-radius: 6px;
+        padding: 10px;
+        text-align: center;
+        margin-top: auto;
+    }
+    .reward-ticket-code {
+        font-weight: 800;
+        color: #3b82f6;
+        font-size: 1rem;
+    }
 </style>
 
 <!-- Hero Carousel -->
+@{
+    var carouselImages = new[]
+    {
+        "https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1591488320449-011701bb6704?w=1920&auto=format&fit=crop&q=80"
+    };
+    var carouselBtnClasses = new[] { "btn-primary", "btn-warning text-dark", "btn-success" };
+    var carouselTextClasses = new[] { "text-primary", "text-warning", "text-success" };
+    var carouselItemsCount = activeRules.Any() ? activeRules.Count : 3;
+}
 <div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel">
     <div class="carousel-indicators">
-        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active"></button>
-        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1"></button>
-        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2"></button>
+        @for (int i = 0; i < carouselItemsCount; i++)
+        {
+            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="@i" class="@(i == 0 ? "active" : "")"></button>
+        }
     </div>
     
     <div class="carousel-inner">
-        <div class="carousel-item active" style="background-image: url('https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=1920&auto=format&fit=crop&q=80');">
-            <div class="carousel-caption">
-                <h1 class="mb-3">Geleceğin Teknolojisi <span class="text-primary">Burada</span></h1>
-                <p class="mb-4">En güçlü oyun bilgisayarları ve ekipmanları</p>
-                <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold">Keşfet</a>
+        @if (activeRules.Any())
+        {
+            @for (int i = 0; i < activeRules.Count; i++)
+            {
+                var rule = activeRules[i];
+                var bgImage = carouselImages[i % carouselImages.Length];
+                var btnClass = carouselBtnClasses[i % carouselBtnClasses.Length];
+                var textClass = carouselTextClasses[i % carouselTextClasses.Length];
+                
+                string discountText = "";
+                if (rule.RuleType == "TotalAmount")
+                {
+                    discountText = $"Sepette {rule.MinAmount?.ToString("N0")} TL ve üzerine {(rule.FixedDiscount > 0 ? $"{rule.FixedDiscount?.ToString("N0")} TL" : $"%{rule.DiscountRate?.ToString("N0")}")} indirim!";
+                }
+                else if (rule.RuleType == "BuyXGetYFree")
+                {
+                    discountText = $"{rule.MinQuantity} Al {rule.FreeQuantity} Öde fırsatı!";
+                }
+                else if (rule.RuleType == "CheapestItemDiscount")
+                {
+                    discountText = $"En ucuz ürüne %{rule.DiscountRate?.ToString("N0")} indirim!";
+                }
+                else if (rule.RuleType == "BrandDiscount")
+                {
+                    discountText = $"{(string.IsNullOrEmpty(rule.BrandName) ? "Seçili" : rule.BrandName)} markalı ürünlerde %{rule.DiscountRate?.ToString("N0")} indirim!";
+                }
+                else
+                {
+                    discountText = rule.Description;
+                }
+
+                <div class="carousel-item @(i == 0 ? "active" : "")" style="background-image: url('@bgImage');">
+                    <div class="carousel-caption">
+                        <h1 class="mb-3">@rule.Name <span class="@textClass">Fırsatı</span></h1>
+                        <p class="mb-4">@discountText</p>
+                        <a asp-controller="Campaign" asp-action="Detail" asp-route-id="@rule.Id" class="btn @btnClass btn-lg px-5 py-3 rounded-pill fw-bold">Kampanyayı İncele</a>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="carousel-item active" style="background-image: url('https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=1920&auto=format&fit=crop&q=80');">
+                <div class="carousel-caption">
+                    <h1 class="mb-3">Geleceğin Teknolojisi <span class="text-primary">Burada</span></h1>
+                    <p class="mb-4">En güçlü oyun bilgisayarları ve ekipmanları</p>
+                    <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold">Keşfet</a>
+                </div>
             </div>
-        </div>
-        
-        <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1920&auto=format&fit=crop&q=80');">
-            <div class="carousel-caption">
-                <h1 class="mb-3">Profesyonel <span class="text-warning">Ekipmanlar</span></h1>
-                <p class="mb-4">E-spor oyuncuları için özel seçilmiş ürünler</p>
-                <a asp-controller="Product" asp-action="Index" class="btn btn-warning btn-lg px-5 py-3 rounded-pill fw-bold text-dark">İncele</a>
+            
+            <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1920&auto=format&fit=crop&q=80');">
+                <div class="carousel-caption">
+                    <h1 class="mb-3">Profesyonel <span class="text-warning">Ekipmanlar</span></h1>
+                    <p class="mb-4">E-spor oyuncuları için özel seçilmiş ürünler</p>
+                    <a asp-controller="Product" asp-action="Index" class="btn btn-warning btn-lg px-5 py-3 rounded-pill fw-bold text-dark">İncele</a>
+                </div>
             </div>
-        </div>
-        
-        <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1591488320449-011701bb6704?w=1920&auto=format&fit=crop&q=80');">
-            <div class="carousel-caption">
-                <h1 class="mb-3">Kampanyalı <span class="text-success">Fırsatlar</span></h1>
-                <p class="mb-4">Sınırlı sayıda özel indirimler</p>
-                <a asp-controller="Product" asp-action="Index" class="btn btn-success btn-lg px-5 py-3 rounded-pill fw-bold">Fırsatları Gör</a>
+            
+            <div class="carousel-item" style="background-image: url('https://images.unsplash.com/photo-1591488320449-011701bb6704?w=1920&auto=format&fit=crop&q=80');">
+                <div class="carousel-caption">
+                    <h1 class="mb-3">Kampanyalı <span class="text-success">Fırsatlar</span></h1>
+                    <p class="mb-4">Sınırlı sayıda özel indirimler</p>
+                    <a asp-controller="Product" asp-action="Index" class="btn btn-success btn-lg px-5 py-3 rounded-pill fw-bold">Fırsatları Gör</a>
+                </div>
             </div>
-        </div>
+        }
     </div>
     
     <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
@@ -90,6 +291,134 @@
         <span class="carousel-control-next-icon"></span>
     </button>
 </div>
+
+
+<!-- Kuponlar & Fırsatlar Section -->
+@if (publicCoupons.Any() || rewardRules.Any())
+{
+    <div class="container my-5 py-2">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="display-6 fw-bold mb-0 text-dark" style="font-size: 2rem;"><i class="fa-solid fa-ticket text-primary me-2"></i>Kuponlar & Fırsatlar</h2>
+        </div>
+
+        <ul class="nav nav-pills mb-4 gap-2" id="couponsTab" role="tablist">
+            @if (publicCoupons.Any())
+            {
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-semibold px-4 rounded-pill" id="public-coupons-tab" data-bs-toggle="tab" data-bs-target="#public-coupons" type="button" role="tab" aria-controls="public-coupons" aria-selected="true">
+                        <i class="fa-solid fa-ticket-simple me-2"></i>Kullanılabilir Kuponlar
+                    </button>
+                </li>
+            }
+            @if (rewardRules.Any())
+            {
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-semibold px-4 rounded-pill @(!publicCoupons.Any() ? "active" : "")" id="reward-coupons-tab" data-bs-toggle="tab" data-bs-target="#reward-coupons" type="button" role="tab" aria-controls="reward-coupons" aria-selected="@(!publicCoupons.Any() ? "true" : "false")">
+                        <i class="fa-solid fa-gift me-2"></i>Kupon Kazan Görevleri
+                    </button>
+                </li>
+            }
+        </ul>
+
+        <div class="tab-content" id="couponsTabContent">
+            @if (publicCoupons.Any())
+            {
+                <div class="tab-pane fade show active" id="public-coupons" role="tabpanel" aria-labelledby="public-coupons-tab">
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 row-cols-lg-5 g-3 justify-content-start">
+                        @foreach (var coupon in publicCoupons)
+                        {
+                            <div class="col">
+                                <div class="ticket-coupon-card">
+                                    <div>
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="coupon-card-code">@coupon.Code</span>
+                                            <button class="btn btn-link p-0 text-white-50" onclick="copyCouponCode('@coupon.Code', this)" title="Kopyala">
+                                                <i class="fa-regular fa-copy"></i>
+                                            </button>
+                                        </div>
+                                        <div class="coupon-card-value">
+                                            @if (coupon.DiscountType == "FixedAmount")
+                                            {
+                                                <span>@((coupon.Amount ?? 0).ToString("N0")) TL İndirim</span>
+                                            }
+                                            else if (coupon.DiscountType == "Percentage")
+                                            {
+                                                <span>%@((coupon.DiscountRate ?? 0).ToString("N0")) İndirim</span>
+                                            }
+                                            else if (coupon.DiscountType == "FreeShipping")
+                                            {
+                                                <span>Kargo Ücretsiz</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="coupon-card-meta border-top border-secondary pt-2 mt-2">
+                                        <div class="d-flex justify-content-between">
+                                            @if (coupon.MinPurchaseAmount > 0)
+                                            {
+                                                <span>Limit: @((coupon.MinPurchaseAmount ?? 0).ToString("N0")) TL</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Limit: Yok</span>
+                                            }
+                                        </div>
+                                        <div>SKT: @(coupon.ExpiryDate.HasValue ? coupon.ExpiryDate.Value.ToString("dd.MM.yy") : "Süresiz")</div>
+                                        <div class="text-end mt-1">
+                                            <a asp-controller="Campaign" asp-action="CouponDetail" asp-route-id="@coupon.Id" class="text-white text-decoration-none" style="font-size: 0.7rem; opacity: 0.8;">
+                                                Detay <i class="fas fa-chevron-right" style="font-size: 0.6rem;"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            @if (rewardRules.Any())
+            {
+                <div class="tab-pane fade @(!publicCoupons.Any() ? "show active" : "")" id="reward-coupons" role="tabpanel" aria-labelledby="reward-coupons-tab">
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 row-cols-lg-5 g-3 justify-content-start">
+                        @foreach (var reward in rewardRules)
+                        {
+                            var couponRewardCode = $"KAZAN{reward.RewardCouponAmount?.ToString("F0") ?? reward.RewardCouponRate?.ToString("F0") ?? "HEDIYE"}";
+                            <div class="col">
+                                <div class="reward-step-card text-center">
+                                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 40px; height: 40px;">
+                                        <i class="fa-solid fa-gift fs-5"></i>
+                                    </div>
+                                    
+                                    <h4 class="fw-bold text-dark fs-6 mb-2">
+                                        @(reward.RequiredSpendAmount.ToString("N0")) TL Harcamaya @(reward.RewardCouponAmount > 0 ? $"{reward.RewardCouponAmount?.ToString("N0")} TL" : $"%{reward.RewardCouponRate?.ToString("N0")}")
+                                    </h4>
+                                    
+                                    <div class="reward-dashed-box mb-2">
+                                        <i class="fa-regular fa-clock me-1"></i> @(reward.PeriodInDays) günde
+                                    </div>
+                                    
+                                    <div class="text-muted my-1">
+                                        <i class="fa-solid fa-arrow-down" style="font-size: 0.8rem;"></i>
+                                    </div>
+                                    
+                                    <div class="reward-ticket-box">
+                                        <div class="reward-ticket-code text-uppercase">@couponRewardCode</div>
+                                        <div class="text-muted" style="font-size: 0.7rem; margin-top: 2px;">Alt Limit: @((reward.RequiredSpendAmount).ToString("N0")) TL</div>
+                                    </div>
+
+                                    <div class="mt-2">
+                                        <a asp-controller="Campaign" asp-action="RewardDetail" asp-route-id="@reward.Id" class="btn btn-outline-primary btn-sm w-100 rounded-pill py-1" style="font-size: 0.75rem;">
+                                            Detay Gör
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
 
 <!-- Featured Products Section -->
 <div class="container my-5 py-4">
@@ -128,3 +457,60 @@
     </div>
 </div>
 
+<!-- Home Categories Section -->
+@if (homeCategories.Any())
+{
+    foreach (var category in homeCategories)
+    {
+        var categoryProducts = homeCategoryProducts.ContainsKey(category.Id) ? homeCategoryProducts[category.Id] : new List<GameGaraj.WebUI.Models.Products.ProductViewModel>();
+        if (categoryProducts.Any())
+        {
+            <div class="container my-5 py-4 border-top">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="display-6 fw-bold mb-0">@category.Name</h2>
+                    </div>
+                    <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@category.Id" class="btn btn-outline-dark rounded-pill px-4">
+                        Tümünü Gör <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                </div>
+
+                <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3">
+                    @foreach (var product in categoryProducts)
+                    {
+                        <div class="col">
+                            @{
+                                ViewBag.ShowFeaturedBadge = false;
+                            }
+                            @await Html.PartialAsync("_ProductCard", product)
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+}
+
+@section Scripts {
+    <script>
+        function copyCouponCode(code, btn) {
+            navigator.clipboard.writeText(code).then(function() {
+                // Change icon to check
+                const icon = btn.querySelector('i');
+                icon.className = 'fa-solid fa-check text-success';
+                
+                // Show toast using our global notification helper
+                if (window.showAppToast) {
+                    window.showAppToast('success', 'Kupon kodu (' + code + ') kopyalandı!');
+                }
+                
+                // Reset icon after 2 seconds
+                setTimeout(function() {
+                    icon.className = 'fa-regular fa-copy';
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Kopyalama başarısız: ', err);
+            });
+        }
+    </script>
+}

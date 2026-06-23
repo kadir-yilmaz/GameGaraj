@@ -35,6 +35,23 @@ namespace GameGaraj.Campaign.API.Models
         /// <summary>Yüzde indirim oranı (örn: 10 = %10)</summary>
         public decimal? DiscountRate { get; set; }
 
+        /// <summary>Sabit tutar indirimi (ör: sepet 1000 TL → 100 TL indirim)</summary>
+        public decimal? FixedDiscount { get; set; }
+
+        /// <summary>Marka bazlı kampanyalar için (ör: "Samsung")</summary>
+        public string? BrandName { get; set; }
+
+        /// <summary>Kampanya başlangıç tarihi (null ise hemen aktif)</summary>
+        public DateTime? StartDate { get; set; }
+
+        /// <summary>Kampanya bitiş tarihi (null ise süresiz)</summary>
+        public DateTime? EndDate { get; set; }
+
+        /// <summary>Kampanya banner görseli URL'i (opsiyonel)</summary>
+        public string? ImageUrl { get; set; }
+
+
+
         /// <summary>Kuralın aktif olup olmadığı</summary>
         public bool IsActive { get; set; } = true;
 

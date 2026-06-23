@@ -57,7 +57,8 @@ namespace GameGaraj.WebUI.Services.Concrete
                         Price = x.Price,
                         Quantity = x.Quantity,
                         ImageUrl = x.PictureUrl ?? "",
-                        ProductSlug = x.ProductSlug ?? ""
+                        ProductSlug = x.ProductSlug ?? "",
+                        Brand = x.Brand ?? string.Empty
                     }).ToList()
                 };
 
@@ -86,6 +87,7 @@ namespace GameGaraj.WebUI.Services.Concrete
             public decimal Price { get; set; }
             public string? PictureUrl { get; set; }
             public int Quantity { get; set; }
+            public string? Brand { get; set; }
         }
 
         public async Task<bool> SaveOrUpdateAsync(BasketViewModel basket)
@@ -105,7 +107,8 @@ namespace GameGaraj.WebUI.Services.Concrete
                         Price = x.Price,
                         PictureUrl = x.ImageUrl,
                         Quantity = x.Quantity,
-                        ProductSlug = x.ProductSlug
+                        ProductSlug = x.ProductSlug,
+                        Brand = x.Brand
                     }).ToList()
                 };
 
@@ -146,7 +149,8 @@ namespace GameGaraj.WebUI.Services.Concrete
                     Price = item.Price,
                     PictureUrl = item.ImageUrl,
                     ProductSlug = item.ProductSlug,
-                    Quantity = item.Quantity
+                    Quantity = item.Quantity,
+                    Brand = item.Brand
                 };
 
                 var json = JsonSerializer.Serialize(basketItem);
@@ -244,7 +248,8 @@ namespace GameGaraj.WebUI.Services.Concrete
                         Price = x.Price,
                         PictureUrl = x.PictureUrl,
                         ProductSlug = x.ProductSlug,
-                        Quantity = x.Quantity
+                        Quantity = x.Quantity,
+                        Brand = x.Brand
                     }).ToList()
                 };
 

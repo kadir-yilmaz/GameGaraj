@@ -13,7 +13,11 @@ namespace GameGaraj.Campaign.API.Rules
 
         public CalculateDiscountResponse? Calculate(CalculateDiscountRequest request, CampaignRule rule)
         {
-            if (rule.MinAmount == null || rule.DiscountRate == null)
+            if (rule.MinAmount == null)
+                return null;
+
+            // En az DiscountRate veya FixedDiscount olmalı
+            if (rule.DiscountRate == null && rule.FixedDiscount == null)
                 return null;
 
             // Filtreleme: Önce Ürün ID'sine, yoksa Kategori ID'sine bak. Hiçbiri yoksa tüm sepet.
@@ -36,13 +40,26 @@ namespace GameGaraj.Campaign.API.Rules
             if (targetedTotal < rule.MinAmount.Value)
                 return null;
 
-            var discountRate = rule.DiscountRate.Value / 100m;
-            var totalDiscount = Math.Round(originalTotal * discountRate, 2);
+            decimal totalDiscount;
+            decimal discountRate;
+
+            if (rule.FixedDiscount.HasValue && rule.FixedDiscount.Value > 0)
+            {
+                // Sabit tutar indirimi: Sepet 1000 TL ise 100 TL indirim
+                totalDiscount = Math.Min(rule.FixedDiscount.Value, originalTotal);
+                discountRate = originalTotal > 0 ? totalDiscount / originalTotal : 0;
+            }
+            else
+            {
+                // Yüzdelik indirim
+                discountRate = rule.DiscountRate!.Value / 100m;
+                totalDiscount = Math.Round(originalTotal * discountRate, 2);
+            }
 
             var details = request.Items.Select(item =>
             {
                 var lineTotal = item.UnitPrice * item.Quantity;
-                var itemDiscount = Math.Round(lineTotal * discountRate, 2);
+                var itemDiscount = Math.Round(lineTotal * (totalDiscount / originalTotal), 2);
                 return new DiscountDetail
                 {
                     ProductId = item.ProductId,

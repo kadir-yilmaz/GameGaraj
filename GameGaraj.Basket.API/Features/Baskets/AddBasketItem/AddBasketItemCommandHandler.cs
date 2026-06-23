@@ -25,7 +25,9 @@ public class AddBasketItemCommandHandler(BasketService basketService, IIdentityS
             CategoryId = request.CategoryId ?? string.Empty,
             Price = request.Price, 
             PictureUrl = request.PictureUrl,
-            Quantity = request.Quantity
+            Quantity = request.Quantity,
+            ProductSlug = request.ProductSlug,
+            Brand = request.Brand
         };
 
         if (existingItem != null)

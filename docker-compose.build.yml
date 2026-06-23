@@ -23,11 +23,6 @@ services:
       context: .
       dockerfile: GameGaraj.Basket.API/Dockerfile
 
-  discount-api:
-    image: discount-api:${IMAGE_TAG:-latest}
-    build:
-      context: .
-      dockerfile: GameGaraj.Discount.API/Dockerfile
 
   order-api:
     image: order-api:${IMAGE_TAG:-latest}

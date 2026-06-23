@@ -50,11 +50,26 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
         /// Yeni indirim kuralı oluşturma formu
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> Create()
+        public async Task<IActionResult> Create(string? productId, string? categoryId)
         {
-            await LoadCategoriesViewBag();
+            await LoadCategoriesViewBag(categoryId);
             LoadRuleTypesViewBag();
-            return View(new CampaignRuleCreateInput());
+
+            var model = new CampaignRuleCreateInput
+            {
+                ProductId = productId,
+                CategoryId = categoryId,
+                StartDate = DateTime.Today,
+                EndDate = DateTime.Today.AddDays(7)
+            };
+
+            if (!string.IsNullOrEmpty(productId))
+            {
+                var product = await _catalogService.GetProductByIdAsync(productId);
+                ViewBag.PreSelectedProductName = product != null ? $"{product.Brand} {product.Name}" : null;
+            }
+
+            return View(model);
         }
 
         /// <summary>
@@ -74,12 +89,15 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             if (string.IsNullOrWhiteSpace(model.CategoryId)) model.CategoryId = null;
             if (string.IsNullOrWhiteSpace(model.ProductId)) model.ProductId = null;
             if (string.IsNullOrWhiteSpace(model.Description)) model.Description = null;
+            if (string.IsNullOrWhiteSpace(model.BrandName)) model.BrandName = null;
+            if (string.IsNullOrWhiteSpace(model.ImageUrl)) model.ImageUrl = null;
 
             // TotalAmount kuralı için hedef seçim gereksiz — tüm sepete uygulanır
             if (model.RuleType == "TotalAmount")
             {
                 model.CategoryId = null;
                 model.ProductId = null;
+                model.BrandName = null;
             }
 
             var result = await _campaignService.CreateRuleAsync(model);
@@ -120,7 +138,12 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 FreeQuantity = rule.FreeQuantity,
                 DiscountRate = rule.DiscountRate,
                 IsActive = rule.IsActive,
-                ProductId = rule.ProductId
+                ProductId = rule.ProductId,
+                BrandName = rule.BrandName,
+                FixedDiscount = rule.FixedDiscount,
+                StartDate = rule.StartDate,
+                EndDate = rule.EndDate,
+                ImageUrl = rule.ImageUrl
             };
 
             // Ürün bazlı ise seçili ürün adını da gönder
@@ -154,6 +177,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             {
                 model.CategoryId = null;
                 model.ProductId = null;
+                model.BrandName = null;
             }
 
             var result = await _campaignService.UpdateRuleAsync(model);
@@ -224,7 +248,8 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             {
                 new("Toplam Tutar İndirimi", "TotalAmount"),
                 new("X Al Y Bedava", "BuyXGetYFree"),
-                new("En Ucuz Ürüne İndirim", "CheapestItemDiscount")
+                new("En Ucuz Ürüne İndirim", "CheapestItemDiscount"),
+                new("Seçili Ürün/Marka/Kategori İndirimi", "BrandDiscount")
             };
             ViewBag.RuleTypes = new SelectList(ruleTypes, "Value", "Text", selected);
         }

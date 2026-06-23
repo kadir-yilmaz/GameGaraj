@@ -1,0 +1,190 @@
+@model List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>
+@{
+    ViewData["Title"] = "Kuponlarım";
+}
+
+<style>
+    .coupon-card {
+        background: linear-gradient(135deg, #1e2235 0%, #151824 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+        color: #fff;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .coupon-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .coupon-card::before, .coupon-card::after {
+        content: '';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        background-color: #0f111a; /* Match body background */
+        border-radius: 50%;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
+    }
+
+    .coupon-card::before {
+        left: -10px;
+    }
+
+    .coupon-card::after {
+        right: -10px;
+    }
+
+    .coupon-divider {
+        border-left: 2px dashed rgba(255, 255, 255, 0.15);
+        height: 80%;
+        margin-left: 10px;
+        margin-right: 20px;
+    }
+
+    .coupon-code-badge {
+        font-family: 'Courier New', Courier, monospace;
+        letter-spacing: 1px;
+        font-size: 1.1rem;
+        background-color: rgba(255, 255, 255, 0.07);
+        border: 1px dashed rgba(255, 255, 255, 0.3);
+        padding: 6px 12px;
+        border-radius: 6px;
+        color: #f1c40f;
+    }
+
+    .btn-copy-coupon {
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        transition: color 0.2s;
+    }
+
+    .btn-copy-coupon:hover {
+        color: #fff;
+    }
+</style>
+
+<div class="container py-5" style="background-color: #0f111a; min-height: 80vh; border-radius: 12px; color: #fff;">
+    <div class="d-flex align-items-center mb-5">
+        <i class="fas fa-ticket-alt text-warning fa-2x me-3"></i>
+        <h2 class="mb-0 fw-bold">Kuponlarım</h2>
+    </div>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="fas fa-ticket-alt text-muted fa-4x mb-4 opacity-30"></i>
+            <h4 class="text-muted">Aktif kuponunuz bulunmamaktadır.</h4>
+            <p class="text-muted small">Sipariş vererek ve sadakat hedeflerini tamamlayarak yeni kuponlar kazanabilirsiniz!</p>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-warning mt-3 px-4 py-2 fw-bold text-dark">Alışverişe Başla</a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var coupon in Model)
+            {
+                var isExpired = coupon.ExpiryDate.HasValue && coupon.ExpiryDate.Value < DateTime.Now;
+                var statusText = coupon.IsUsed ? "Kullanıldı" : (isExpired ? "Süresi Doldu" : "Kullanılabilir");
+                var statusClass = coupon.IsUsed ? "bg-danger" : (isExpired ? "bg-secondary text-dark" : "bg-success");
+                
+                <div class="col-md-6">
+                    <div class="coupon-card p-4 d-flex align-items-center h-100 @(coupon.IsUsed || isExpired ? "opacity-60" : "")">
+                        <!-- Left Part (Discount Amount/Info) -->
+                        <div class="text-center pe-3 d-flex flex-column justify-content-center align-items-center" style="min-width: 120px;">
+                            @if (coupon.DiscountType == "Percentage")
+                            {
+                                <h2 class="fw-extrabold text-success mb-0" style="font-size: 2.2rem;">%@coupon.DiscountRate</h2>
+                                <span class="small text-muted">İndirim</span>
+                                @if (coupon.MaxDiscountAmount > 0)
+                                {
+                                    <span class="badge bg-dark mt-1" style="font-size: 0.65rem;">Max @coupon.MaxDiscountAmount TL</span>
+                                }
+                            }
+                            else if (coupon.DiscountType == "FixedAmount")
+                            {
+                                <h2 class="fw-extrabold text-success mb-0" style="font-size: 2rem;">@coupon.Amount</h2>
+                                <span class="small text-muted">TL İndirim</span>
+                            }
+                            else if (coupon.DiscountType == "FreeShipping")
+                            {
+                                <i class="fas fa-truck text-info fa-2x mb-2"></i>
+                                <span class="small text-muted fw-bold">Ücretsiz Kargo</span>
+                            }
+                        </div>
+
+                        <!-- Divider -->
+                        <div class="coupon-divider"></div>
+
+                        <!-- Right Part (Details & Code) -->
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge @statusClass px-2 py-1" style="font-size: 0.7rem;">@statusText</span>
+                                @if (coupon.ExpiryDate.HasValue)
+                                {
+                                    <small class="text-muted"><i class="far fa-clock me-1"></i>Süre: @coupon.ExpiryDate.Value.ToString("dd.MM.yyyy")</small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted"><i class="far fa-clock me-1"></i>Süresiz</small>
+                                }
+                            </div>
+                            
+                            @if (coupon.MinPurchaseAmount > 0)
+                            {
+                                <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1 text-warning"></i>Minimum sepet tutarı: <strong>@coupon.MinPurchaseAmount TL</strong></p>
+                            }
+                            else
+                            {
+                                <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1 text-success"></i>Tüm sepetlerde geçerli</p>
+                            }
+
+                            @if (!coupon.IsUsed && !isExpired)
+                            {
+                                <div class="d-flex align-items-center gap-2 mt-3">
+                                    <span class="coupon-code-badge" id="code-@coupon.Id">@coupon.Code</span>
+                                    <button class="btn btn-copy-coupon" onclick="copyCouponCode('@coupon.Code', @coupon.Id)" title="Kodu Kopyala">
+                                        <i class="far fa-copy fa-lg" id="icon-@coupon.Id"></i>
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-center gap-2 mt-3">
+                                    <span class="coupon-code-badge text-decoration-line-through text-muted" style="border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3) !important;">@coupon.Code</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function copyCouponCode(code, id) {
+            navigator.clipboard.writeText(code).then(() => {
+                const icon = document.getElementById('icon-' + id);
+                icon.className = 'fas fa-check text-success fa-lg';
+                
+                // Show standard site notifications if available
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification('Kupon kodu kopyalandı!', 'success');
+                } else {
+                    alert('Kupon kodu kopyalandı: ' + code);
+                }
+
+                setTimeout(() => {
+                    icon.className = 'far fa-copy fa-lg';
+                }, 2000);
+            });
+        }
+    </script>
+}

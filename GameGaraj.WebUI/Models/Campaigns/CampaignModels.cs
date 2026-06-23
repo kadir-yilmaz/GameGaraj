@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace GameGaraj.WebUI.Models.Campaigns
 {
     public class CampaignRuleViewModel
@@ -9,10 +11,15 @@ namespace GameGaraj.WebUI.Models.Campaigns
         public string? CategoryId { get; set; }
         public string? ProductId { get; set; }
         public string? ProductName { get; set; }
+        public string? BrandName { get; set; }
         public decimal? MinAmount { get; set; }
         public int? MinQuantity { get; set; }
         public int? FreeQuantity { get; set; }
         public decimal? DiscountRate { get; set; }
+        public decimal? FixedDiscount { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public string? ImageUrl { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedTime { get; set; }
 
@@ -22,6 +29,7 @@ namespace GameGaraj.WebUI.Models.Campaigns
             "TotalAmount" => "Toplam Tutar İndirimi",
             "BuyXGetYFree" => "X Al Y Bedava",
             "CheapestItemDiscount" => "En Ucuz Ürüne İndirim",
+            "BrandDiscount" => "Seçili Ürün/Marka/Kategori İndirimi",
             _ => RuleType
         };
     }
@@ -33,10 +41,20 @@ namespace GameGaraj.WebUI.Models.Campaigns
         public string RuleType { get; set; } = string.Empty;
         public string? CategoryId { get; set; }
         public string? ProductId { get; set; }
+        public string? BrandName { get; set; }
         public decimal? MinAmount { get; set; }
         public int? MinQuantity { get; set; }
         public int? FreeQuantity { get; set; }
         public decimal? DiscountRate { get; set; }
+        public decimal? FixedDiscount { get; set; }
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        public DateTime? StartDate { get; set; }
+        
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        public DateTime? EndDate { get; set; }
+        public string? ImageUrl { get; set; }
         public bool IsActive { get; set; } = true;
     }
 
@@ -48,10 +66,20 @@ namespace GameGaraj.WebUI.Models.Campaigns
         public string RuleType { get; set; } = string.Empty;
         public string? CategoryId { get; set; }
         public string? ProductId { get; set; }
+        public string? BrandName { get; set; }
         public decimal? MinAmount { get; set; }
         public int? MinQuantity { get; set; }
         public int? FreeQuantity { get; set; }
         public decimal? DiscountRate { get; set; }
+        public decimal? FixedDiscount { get; set; }
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        public DateTime? StartDate { get; set; }
+        
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        public DateTime? EndDate { get; set; }
+        public string? ImageUrl { get; set; }
         public bool IsActive { get; set; }
     }
 
@@ -63,6 +91,8 @@ namespace GameGaraj.WebUI.Models.Campaigns
         public string? AppliedRuleName { get; set; }
         public List<AppliedRuleSummary> AppliedRules { get; set; } = new();
         public List<DiscountDetail> Details { get; set; } = new();
+        public bool IsCouponApplied { get; set; }
+        public string? CouponMessage { get; set; }
     }
 
     public class AppliedRuleSummary
@@ -79,11 +109,14 @@ namespace GameGaraj.WebUI.Models.Campaigns
         public decimal OriginalLineTotal { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal DiscountedLineTotal { get; set; }
+        public string? RuleName { get; set; }
     }
 
     public class CalculateDiscountRequest
     {
         public List<OrderItemDto> Items { get; set; } = new();
+        public string? CouponCode { get; set; }
+        public string? UserId { get; set; }
     }
 
     public class OrderItemDto
@@ -91,6 +124,7 @@ namespace GameGaraj.WebUI.Models.Campaigns
         public string ProductId { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
         public string CategoryId { get; set; } = string.Empty;
+        public string? Brand { get; set; }
         public decimal UnitPrice { get; set; }
         public int Quantity { get; set; }
     }

@@ -33,6 +33,28 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             return View(categories);
         }
 
+        [HttpPost]
+        public async Task<IActionResult> ToggleShowOnHome(string id)
+        {
+            var result = await _catalogService.ToggleCategoryShowOnHomeAsync(id);
+            if (result)
+            {
+                return Json(new { success = true, message = "Kategori görünürlük durumu güncellendi." });
+            }
+            return Json(new { success = false, message = "Güncelleme başarısız." });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var result = await _catalogService.DeleteCategoryAsync(id);
+            if (result)
+            {
+                return Json(new { success = true, message = "Kategori başarıyla silindi." });
+            }
+            return Json(new { success = false, message = "Kategori silinemedi. Lütfen tekrar deneyin." });
+        }
+
         [HttpGet]
         public async Task<IActionResult> Create(string? parentId = null)
         {
@@ -125,7 +147,8 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             var model = new CategoryCreateInput
             {
                 Name = category.Name,
-                ParentId = category.ParentId
+                ParentId = category.ParentId,
+                IsShowOnHome = category.IsShowOnHome
             };
 
             ViewBag.ExistingAttributes = category.Attributes;

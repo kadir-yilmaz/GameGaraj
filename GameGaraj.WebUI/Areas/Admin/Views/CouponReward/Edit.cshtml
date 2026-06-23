@@ -1,0 +1,136 @@
+@model GameGaraj.WebUI.Models.Campaigns.CouponRewardRuleViewModel
+@{
+    ViewData["Title"] = "Kupon Kazan Kuralı Düzenle";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="mb-4">
+        <a asp-action="Index" class="btn btn-link ps-0 text-muted">
+            <i class="fas fa-arrow-left"></i> Listeye Dön
+        </a>
+        <h2 class="h3 mb-0 text-gray-800">Kupon Kazan Kuralı Düzenle</h2>
+    </div>
+
+    <form asp-action="Edit" method="post">
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow border-0 h-100">
+                    <div class="card-header bg-primary text-white py-3">
+                        <h5 class="mb-0"><i class="fas fa-gift me-2"></i>1. Adım: Verilecek Ödül (Kupon)</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label asp-for="RewardCouponType" class="form-label fw-bold">Kupon Türü</label>
+                                <select asp-for="RewardCouponType" id="RewardCouponType" class="form-select" required>
+                                    <option value="FixedAmount">Sabit Tutar Kuponu</option>
+                                    <option value="Percentage">Yüzdelik Kupon</option>
+                                    <option value="FreeShipping">Kargo Bedava Kuponu</option>
+                                </select>
+                                <span asp-validation-for="RewardCouponType" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-12" id="divAmount">
+                                <label asp-for="RewardCouponAmount" class="form-label fw-bold">İndirim Tutarı (TL)</label>
+                                <input asp-for="RewardCouponAmount" type="number" step="0.01" class="form-control" placeholder="0.00" />
+                                <span asp-validation-for="RewardCouponAmount" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6" id="divRate" style="display:none;">
+                                <label asp-for="RewardCouponRate" class="form-label fw-bold">İndirim Oranı (%)</label>
+                                <input asp-for="RewardCouponRate" type="number" class="form-control" placeholder="0" min="1" max="100" />
+                                <span asp-validation-for="RewardCouponRate" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6" id="divMaxAmount" style="display:none;">
+                                <label asp-for="RewardCouponMaxAmount" class="form-label fw-bold">Maksimum İndirim (TL)</label>
+                                <input asp-for="RewardCouponMaxAmount" type="number" step="0.01" class="form-control" placeholder="Sınırsız" />
+                                <span asp-validation-for="RewardCouponMaxAmount" class="text-danger small"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow border-0 h-100">
+                    <div class="card-header bg-success text-white py-3">
+                        <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>2. Adım: Kazanma Şartları & Detaylar</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <label asp-for="RuleName" class="form-label fw-bold">Kural Adı</label>
+                            <input asp-for="RuleName" class="form-control" placeholder="Örn: 30 Günlük Sadakat Ödülü" required />
+                            <span asp-validation-for="RuleName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label fw-bold">Açıklama</label>
+                            <textarea asp-for="Description" class="form-control" rows="2" placeholder="Örn: 30 gün içinde toplam 1000 TL harcayan kullanıcılara hediye kuponu."></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="RequiredSpendAmount" class="form-label fw-bold">Gerekli Toplam Harcama (TL)</label>
+                                <input asp-for="RequiredSpendAmount" type="number" step="0.01" class="form-control" placeholder="0.00" required />
+                                <span asp-validation-for="RequiredSpendAmount" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="PeriodInDays" class="form-label fw-bold">Kontrol Süresi (Gün)</label>
+                                <input asp-for="PeriodInDays" type="number" class="form-control" placeholder="30" required />
+                                <span asp-validation-for="PeriodInDays" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="form-check form-switch mb-2 mt-3">
+                            <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch">
+                            <label asp-for="IsActive" class="form-check-label fw-bold text-success">Kural Aktif</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-end mb-5">
+            <button type="submit" class="btn btn-primary btn-lg px-5 py-2 shadow-sm">
+                <i class="fas fa-save me-2"></i>Değişiklikleri Kaydet
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const rewardTypeSelect = document.getElementById("RewardCouponType");
+            const divAmount = document.getElementById("divAmount");
+            const divRate = document.getElementById("divRate");
+            const divMaxAmount = document.getElementById("divMaxAmount");
+
+            function toggleTypeFields() {
+                const selected = rewardTypeSelect.value;
+                if (selected === "FixedAmount") {
+                    divAmount.style.display = "block";
+                    divRate.style.display = "none";
+                    divMaxAmount.style.display = "none";
+                } else if (selected === "Percentage") {
+                    divAmount.style.display = "none";
+                    divRate.style.display = "block";
+                    divMaxAmount.style.display = "block";
+                } else if (selected === "FreeShipping") {
+                    divAmount.style.display = "none";
+                    divRate.style.display = "none";
+                    divMaxAmount.style.display = "none";
+                }
+            }
+
+            rewardTypeSelect.addEventListener("change", toggleTypeFields);
+            toggleTypeFields();
+        });
+    </script>
+}

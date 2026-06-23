@@ -1,0 +1,185 @@
+@model GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel
+@{
+    ViewData["Title"] = Model.Name;
+    var product = ViewBag.Product as GameGaraj.WebUI.Models.Products.ProductViewModel;
+    var categoryName = ViewBag.CategoryName as string;
+}
+
+<style>
+    .campaign-detail-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+    .campaign-detail-banner {
+        background: linear-gradient(135deg, #1e1e2f 0%, #111119 100%);
+        color: white;
+        padding: 60px 40px;
+        position: relative;
+    }
+    .campaign-detail-banner::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle at 90% 10%, rgba(246, 139, 30, 0.15) 0%, transparent 60%);
+    }
+    .product-preview-detail {
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 20px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        background: #f8fafc;
+    }
+    .product-preview-detail:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    }
+</style>
+
+<div class="container my-5">
+    <div class="mb-4">
+        <a asp-action="Index" class="btn btn-link text-decoration-none p-0 text-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Tüm Kampanyalara Dön
+        </a>
+    </div>
+
+    <div class="campaign-detail-card">
+        <div class="campaign-detail-banner">
+            <span class="badge bg-primary px-3 py-2 rounded-pill text-uppercase mb-3" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;">
+                @Model.RuleTypeDisplayName
+            </span>
+            <h1 class="display-6 fw-bold mb-3 text-white">@Model.Name</h1>
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <p class="lead text-white-50 mb-0">@Model.Description</p>
+            }
+        </div>
+        
+        <div class="card-body p-4 p-md-5">
+            <div class="row g-5">
+                <div class="col-lg-7">
+                    <h4 class="fw-bold text-dark mb-4"><i class="fa-solid fa-circle-info text-primary me-2"></i> Kampanya Detayları</h4>
+                    
+                    <table class="table table-borderless align-middle mb-4">
+                        <tbody>
+                            <tr>
+                                <td class="fw-semibold text-muted" style="width: 200px;">Kural Türü:</td>
+                                <td class="text-dark fw-bold">@Model.RuleTypeDisplayName</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Durum:</td>
+                                <td>
+                                    <span class="badge bg-success-subtle text-success px-3 py-1 rounded-pill">Aktif Kampanya</span>
+                                </td>
+                            </tr>
+                            @if (Model.StartDate.HasValue)
+                            {
+                                <tr>
+                                    <td class="fw-semibold text-muted">Başlangıç Tarihi:</td>
+                                    <td class="text-dark">@Model.StartDate.Value.ToString("dd MMMM yyyy")</td>
+                                </tr>
+                            }
+                            @if (Model.EndDate.HasValue)
+                            {
+                                <tr>
+                                    <td class="fw-semibold text-muted">Bitiş Tarihi:</td>
+                                    <td class="text-dark">@Model.EndDate.Value.ToString("dd MMMM yyyy")</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td class="fw-semibold text-muted">Bitiş Tarihi:</td>
+                                    <td class="text-muted">Süresiz</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-gift text-success me-2"></i>Kampanya Avantajı</h5>
+                    <div class="p-3 bg-light rounded-3 mb-4">
+                        @if (Model.RuleType == "TotalAmount")
+                        {
+                            <span class="text-dark fw-semibold">Sepette @(Model.MinAmount?.ToString("N0")) TL ve üzerine @(Model.FixedDiscount > 0 ? $"{Model.FixedDiscount?.ToString("N0")} TL" : $"%{Model.DiscountRate?.ToString("N0")}") indirim fırsatı!</span>
+                        }
+                        else if (Model.RuleType == "BuyXGetYFree")
+                        {
+                            <span class="text-dark fw-semibold">Seçili gruptan @Model.MinQuantity adet ürün ekleyin, @Model.FreeQuantity adet ürün bedava olsun! (En ucuz ürünler ücretsiz yapılacaktır.)</span>
+                        }
+                        else if (Model.RuleType == "CheapestItemDiscount")
+                        {
+                            <span class="text-dark fw-semibold">Seçili gruptan @Model.MinQuantity adet ve üzeri ürün alımlarında en ucuz ürüne %@(Model.DiscountRate?.ToString("N0")) indirim uygulanır!</span>
+                        }
+                        else if (Model.RuleType == "BrandDiscount")
+                        {
+                            <span class="text-dark fw-semibold">@(string.IsNullOrEmpty(Model.BrandName) ? "Seçili" : Model.BrandName) markalı ve/veya kategori kapsamındaki ürünlerde geçerli %@(Model.DiscountRate?.ToString("N0")) doğrudan indirim!</span>
+                        }
+                        else
+                        {
+                            <span class="text-dark">@Model.Description</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    @if (product != null)
+                    {
+                        <h4 class="fw-bold text-dark mb-4"><i class="fa-solid fa-box-open text-warning me-2"></i> Kampanyalı Ürün</h4>
+                        
+                        <div class="product-preview-detail text-center">
+                            <img src="@(product.FirstImageUrl ?? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl)" alt="@product.Name" class="img-fluid mb-3" style="max-height: 200px; object-fit: contain;" />
+                            <h5 class="fw-bold text-dark mb-1">@product.Brand @product.Name</h5>
+                            <div class="text-primary fw-bold fs-5 mb-3">@product.Price.ToString("C2")</div>
+                            <div class="d-flex gap-2">
+                                <a asp-controller="Product" asp-action="Detail" asp-route-slug="@(string.IsNullOrEmpty(product.Slug) ? product.Id : product.Slug)" class="btn btn-outline-primary flex-grow-1 rounded-pill py-2 fw-semibold">
+                                    <i class="fas fa-search me-1"></i> Ürünü İncele
+                                </a>
+                                @if (product.AvailableStock > 0 || (product.AvailableStock == 0 && product.Stock > 0))
+                                {
+                                    <form asp-controller="Basket" asp-action="AddItem" method="post" class="js-add-to-cart-form flex-grow-1 m-0">
+                                        <input type="hidden" name="productId" value="@product.Id" />
+                                        <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-semibold">
+                                            <i class="fas fa-shopping-cart me-1"></i> Sepete Ekle
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn btn-secondary flex-grow-1 rounded-pill py-2 fw-semibold" disabled>
+                                        <i class="fas fa-ban me-1"></i> Stokta Yok
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(Model.CategoryId))
+                    {
+                        <h4 class="fw-bold text-dark mb-4"><i class="fa-solid fa-layer-group text-info me-2"></i> Kampanyalı Kategori</h4>
+                        <div class="p-4 bg-light rounded-3 text-center border">
+                            <i class="fa-solid fa-layer-group fa-3x text-info mb-3"></i>
+                            <h5 class="fw-bold text-dark">@categoryName</h5>
+                            <p class="text-muted small">Bu kategorideki tüm ürünlerde geçerli özel indirimler sepetinizde otomatik hesaplanacaktır.</p>
+                            <a asp-controller="Product" asp-action="Index" asp-route-CategoryId="@Model.CategoryId" class="btn btn-outline-info w-100 rounded-pill py-2 mt-2">
+                                Kategoriyi İncele
+                            </a>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(Model.BrandName))
+                    {
+                        <h4 class="fw-bold text-dark mb-4"><i class="fa-solid fa-trademark text-secondary me-2"></i> Kampanyalı Marka</h4>
+                        <div class="p-4 bg-light rounded-3 text-center border">
+                            <i class="fa-solid fa-tags fa-3x text-secondary mb-3"></i>
+                            <h5 class="fw-bold text-dark text-uppercase">@Model.BrandName</h5>
+                            <p class="text-muted small">@Model.BrandName markalı tüm ürünlerde geçerli özel indirimler sepetinizde otomatik olarak uygulanır.</p>
+                            <a asp-controller="Product" asp-action="Index" asp-route-Query="@Model.BrandName" class="btn btn-outline-secondary w-100 rounded-pill py-2 mt-2">
+                                Marka Ürünlerini İncele
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

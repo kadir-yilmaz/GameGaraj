@@ -349,9 +349,13 @@
                    asp-area="Admin" asp-controller="Campaign" asp-action="Index">
                     <i class="fas fa-bullhorn"></i> İndirim Kuralları
                 </a>
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Discount" ? "active" : "")" 
-                   asp-area="Admin" asp-controller="Discount" asp-action="Index">
+                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Coupon" ? "active" : "")" 
+                   asp-area="Admin" asp-controller="Coupon" asp-action="Index">
                     <i class="fas fa-ticket-alt"></i> İndirim Kuponları
+                </a>
+                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CouponReward" ? "active" : "")" 
+                   asp-area="Admin" asp-controller="CouponReward" asp-action="Index">
+                    <i class="fas fa-gift"></i> Kupon Kazan Kuralları
                 </a>
                 <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "ShippingSetting" ? "active" : "")" 
                    asp-area="Admin" asp-controller="ShippingSetting" asp-action="Index">
@@ -440,39 +444,23 @@
                 });
             });
 
-            // Admin Toast Logic
+            // Admin Toast Logic (Mapped to Notyf)
             window.showNotification = function(message, type = 'success', duration = 5000) {
-                const container = document.getElementById('admin-toast-container');
-                const toast = document.createElement('div');
-                toast.className = `admin-toast admin-toast-${type}`;
-                
-                const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
-                
-                toast.innerHTML = `
-                    <div class="admin-toast-body">
-                        <i class="fas ${icon} admin-toast-icon"></i>
-                        <div>${message}</div>
-                    </div>
-                    <div class="admin-toast-progress">
-                        <div class="admin-toast-progress-bar" style="animation: progress-animation ${duration}ms linear forwards"></div>
-                    </div>
-                `;
-                
-                container.appendChild(toast);
-                setTimeout(() => toast.classList.add('show'), 10);
-                
-                const timeout = setTimeout(() => closeToast(toast), duration);
-                
-                toast.onclick = () => {
-                    clearTimeout(timeout);
-                    closeToast(toast);
-                };
-            };
+                var parser = new DOMParser();
+                var decodedMessage = parser.parseFromString(message, 'text/html').body.textContent || message;
 
-            function closeToast(toast) {
-                toast.classList.add('toast-closing');
-                setTimeout(() => toast.remove(), 400);
-            }
+                if (typeof notyf !== 'undefined') {
+                    if (type === 'success') {
+                        notyf.success(decodedMessage);
+                    } else if (type === 'error' || type === 'danger') {
+                        notyf.error(decodedMessage);
+                    } else {
+                        notyf.open({ type: 'warning', message: decodedMessage, background: '#ff9800' });
+                    }
+                } else {
+                    console.log("Notyf not loaded. Fallback admin toast:", type, decodedMessage);
+                }
+            };
 
             // TempData Check
             @if (TempData["Success"] != null)
@@ -485,6 +473,7 @@
             }
         });
     </script>
+    @await Component.InvokeAsync("Notyf")
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -351,5 +351,59 @@ namespace GameGaraj.WebUI.Services.Concrete
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme, "name", ClaimTypes.Role);
             return new ClaimsPrincipal(claimsIdentity);
         }
+
+        public async Task<List<UserSearchViewModel>> SearchUsersAsync(string query)
+        {
+            try
+            {
+                var adminTokenEndpoint = $"{_serviceApiSettings.IdentityBaseUri.Replace("/realms/GameGaraj", "")}/realms/master/protocol/openid-connect/token";
+                
+                var adminUsername = Environment.GetEnvironmentVariable("KEYCLOAK_ADMIN_USERNAME") ?? "admin";
+                var adminPassword = Environment.GetEnvironmentVariable("KEYCLOAK_ADMIN_PASSWORD") ?? "admin";
+
+                var adminTokenContent = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    { "client_id", "admin-cli" },
+                    { "grant_type", "password" },
+                    { "username", adminUsername },
+                    { "password", adminPassword }
+                });
+
+                var adminTokenResponse = await _httpClient.PostAsync(adminTokenEndpoint, adminTokenContent);
+                if (!adminTokenResponse.IsSuccessStatusCode)
+                {
+                    return new();
+                }
+
+                var adminTokenJson = await adminTokenResponse.Content.ReadAsStringAsync();
+                var adminToken = JsonSerializer.Deserialize<TokenResponse>(adminTokenJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (adminToken == null)
+                {
+                    return new();
+                }
+
+                var searchUsersEndpoint = $"{_serviceApiSettings.IdentityBaseUri.Replace("/realms/GameGaraj", "")}/admin/realms/GameGaraj/users?search={Uri.EscapeDataString(query)}&max=20";
+                
+                var searchRequest = new HttpRequestMessage(HttpMethod.Get, searchUsersEndpoint);
+                searchRequest.Headers.Add("Authorization", $"Bearer {adminToken.AccessToken}");
+
+                var searchResponse = await _httpClient.SendAsync(searchRequest);
+                if (!searchResponse.IsSuccessStatusCode)
+                {
+                    return new();
+                }
+
+                var searchContent = await searchResponse.Content.ReadAsStringAsync();
+                var users = JsonSerializer.Deserialize<List<UserSearchViewModel>>(searchContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                return users ?? new();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[IdentityService SearchUsersAsync Error] {ex.Message}");
+                return new();
+            }
+        }
     }
 }

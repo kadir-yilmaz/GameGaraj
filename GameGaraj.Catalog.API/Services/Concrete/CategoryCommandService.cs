@@ -31,6 +31,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 Name = dto.Name,
                 Slug = UrlHelper.GenerateSlug(dto.Name),
                 ParentId = dto.ParentId,
+                IsShowOnHome = dto.IsShowOnHome,
                 CreatedAt = now,
                 UpdatedAt = now
             };
@@ -51,11 +52,25 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             category.Name = dto.Name;
             category.Slug = UrlHelper.GenerateSlug(dto.Name);
             category.ParentId = dto.ParentId;
+            category.IsShowOnHome = dto.IsShowOnHome;
             category.UpdatedAt = DateTime.UtcNow;
 
             _context.Categories.Update(category);
             await _context.SaveChangesAsync();
             return _mapper.Map<CategoryDto>(category);
+        }
+
+        public async Task<bool> ToggleShowOnHomeAsync(string id)
+        {
+            var category = await _context.Categories.FindAsync(id);
+            if (category == null)
+                return false;
+
+            category.IsShowOnHome = !category.IsShowOnHome;
+            category.UpdatedAt = DateTime.UtcNow;
+
+            _context.Categories.Update(category);
+            return await _context.SaveChangesAsync() > 0;
         }
 
         public async Task<CategoryAttributeDto> AddAttributeAsync(string categoryId, CategoryAttributeCreateDto dto)
@@ -112,6 +127,31 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             await RemoveSpecFromProductsAsync(categoryId, existing.Name);
 
             _context.CategoryAttributes.Remove(existing);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> DeleteAsync(string id)
+        {
+            if (id == "uncategorized")
+                return false;
+
+            var category = await _context.Categories.FindAsync(id);
+            if (category == null)
+                return false;
+
+            var products = await _context.Products.Where(p => p.CategoryId == id).ToListAsync();
+            foreach (var p in products)
+            {
+                p.CategoryId = "uncategorized";
+            }
+
+            var children = await _context.Categories.Where(c => c.ParentId == id).ToListAsync();
+            foreach (var child in children)
+            {
+                child.ParentId = null;
+            }
+
+            _context.Categories.Remove(category);
             return await _context.SaveChangesAsync() > 0;
         }
 

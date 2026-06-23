@@ -9,5 +9,7 @@ namespace GameGaraj.Catalog.API.Services.Abstract
         Task<CategoryAttributeDto> AddAttributeAsync(string categoryId, CategoryAttributeCreateDto dto);
         Task<CategoryAttributeDto?> UpdateAttributeAsync(string categoryId, string attributeId, CategoryAttributeCreateDto dto);
         Task<bool> DeleteAttributeAsync(string categoryId, string attributeId);
+        Task<bool> ToggleShowOnHomeAsync(string id);
+        Task<bool> DeleteAsync(string id);
     }
 }

@@ -21,12 +21,14 @@ namespace GameGaraj.Campaign.API.Services.Concrete
 
         private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
 
+        private const string SelectColumns = @"Id, Name, Description, RuleType, CategoryId, ProductId,
+                                                MinAmount, MinQuantity, FreeQuantity, DiscountRate, FixedDiscount,
+                                                BrandName, StartDate, EndDate, ImageUrl,
+                                                IsActive, CreatedTime";
+
         public async Task<List<CampaignRule>> GetAllAsync()
         {
-            const string query = @"SELECT Id, Name, Description, RuleType, CategoryId, ProductId,
-                                    MinAmount, MinQuantity, FreeQuantity, DiscountRate, 
-                                    IsActive, CreatedTime
-                                   FROM CampaignRules ORDER BY CreatedTime DESC";
+            var query = $"SELECT {SelectColumns} FROM CampaignRules ORDER BY CreatedTime DESC";
 
             using var connection = CreateConnection();
             var rules = await connection.QueryAsync<CampaignRule>(query);
@@ -35,10 +37,11 @@ namespace GameGaraj.Campaign.API.Services.Concrete
 
         public async Task<List<CampaignRule>> GetActiveAsync()
         {
-            const string query = @"SELECT Id, Name, Description, RuleType, CategoryId, ProductId,
-                                    MinAmount, MinQuantity, FreeQuantity, DiscountRate, 
-                                    IsActive, CreatedTime
-                                   FROM CampaignRules WHERE IsActive = 1 ORDER BY CreatedTime DESC";
+            var query = $@"SELECT {SelectColumns} FROM CampaignRules 
+                           WHERE IsActive = 1 
+                             AND (StartDate IS NULL OR StartDate <= GETUTCDATE())
+                             AND (EndDate IS NULL OR EndDate >= GETUTCDATE())
+                           ORDER BY CreatedTime DESC";
 
             using var connection = CreateConnection();
             var rules = await connection.QueryAsync<CampaignRule>(query);
@@ -47,10 +50,7 @@ namespace GameGaraj.Campaign.API.Services.Concrete
 
         public async Task<CampaignRule?> GetByIdAsync(int id)
         {
-            const string query = @"SELECT Id, Name, Description, RuleType, CategoryId, ProductId,
-                                    MinAmount, MinQuantity, FreeQuantity, DiscountRate, 
-                                    IsActive, CreatedTime
-                                   FROM CampaignRules WHERE Id = @Id";
+            var query = $"SELECT {SelectColumns} FROM CampaignRules WHERE Id = @Id";
 
             using var connection = CreateConnection();
             return await connection.QuerySingleOrDefaultAsync<CampaignRule>(query, new { Id = id });
@@ -60,10 +60,12 @@ namespace GameGaraj.Campaign.API.Services.Concrete
         {
             const string query = @"INSERT INTO CampaignRules 
                                     (Name, Description, RuleType, CategoryId, ProductId, MinAmount, 
-                                     MinQuantity, FreeQuantity, DiscountRate, IsActive)
+                                     MinQuantity, FreeQuantity, DiscountRate, FixedDiscount,
+                                     BrandName, StartDate, EndDate, ImageUrl, IsActive)
                                    VALUES 
                                     (@Name, @Description, @RuleType, @CategoryId, @ProductId, @MinAmount, 
-                                     @MinQuantity, @FreeQuantity, @DiscountRate, @IsActive)";
+                                     @MinQuantity, @FreeQuantity, @DiscountRate, @FixedDiscount,
+                                     @BrandName, @StartDate, @EndDate, @ImageUrl, @IsActive)";
 
             using var connection = CreateConnection();
             var affectedRows = await connection.ExecuteAsync(query, rule);
@@ -82,6 +84,11 @@ namespace GameGaraj.Campaign.API.Services.Concrete
                                     MinQuantity = @MinQuantity,
                                     FreeQuantity = @FreeQuantity,
                                     DiscountRate = @DiscountRate,
+                                    FixedDiscount = @FixedDiscount,
+                                    BrandName = @BrandName,
+                                    StartDate = @StartDate,
+                                    EndDate = @EndDate,
+                                    ImageUrl = @ImageUrl,
                                     IsActive = @IsActive
                                    WHERE Id = @Id";
 

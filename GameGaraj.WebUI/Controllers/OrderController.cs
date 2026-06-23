@@ -18,7 +18,6 @@ namespace GameGaraj.WebUI.Controllers
         private readonly IPaymentService _paymentService;
         private readonly ICatalogService _catalogService;
         private readonly ICampaignService _campaignService;
-        private readonly IDiscountService _discountService;
         private readonly IPublishEndpoint _publishEndpoint;
         private readonly ILogger<OrderController> _logger;
 
@@ -28,18 +27,16 @@ namespace GameGaraj.WebUI.Controllers
             IPaymentService paymentService,
             ICatalogService catalogService,
             ICampaignService campaignService,
-            IDiscountService discountService,
             IPublishEndpoint publishEndpoint,
-            ILogger<OrderController> logger)
+            ILogger<OrderController> _logger)
         {
             _basketService = basketService;
             _orderService = orderService;
             _paymentService = paymentService;
             _catalogService = catalogService;
             _campaignService = campaignService;
-            _discountService = discountService;
             _publishEndpoint = publishEndpoint;
-            _logger = logger;
+            this._logger = _logger;
         }
 
         public async Task<IActionResult> Checkout()
@@ -53,7 +50,7 @@ namespace GameGaraj.WebUI.Controllers
             }
 
             // Kayıtlı adresleri getir
-            await EnsureBasketCategoryIdsAsync(basket);
+            await SyncBasketWithCatalogAsync(basket);
             var deliveryAddresses = await _orderService.GetUserAddressesAsync(Models.Addresses.AddressType.Delivery);
             var invoiceAddresses = await _orderService.GetUserAddressesAsync(Models.Addresses.AddressType.Invoice);
 
@@ -111,7 +108,7 @@ namespace GameGaraj.WebUI.Controllers
                 // Re-calculate discounts and shipping for error view
                 if (basket != null)
                 {
-                    await EnsureBasketCategoryIdsAsync(basket);
+                    await SyncBasketWithCatalogAsync(basket);
                     await PrepareCheckoutBag(basket);
                 }
 
@@ -133,7 +130,7 @@ namespace GameGaraj.WebUI.Controllers
 
             var orderBasket = basket2;
 
-            await EnsureBasketCategoryIdsAsync(orderBasket);
+            await SyncBasketWithCatalogAsync(orderBasket);
 
             _logger.LogInformation($"[OrderController] Basket before session:");
             _logger.LogInformation($"  - UserId: {orderBasket.UserId}");
@@ -166,7 +163,7 @@ namespace GameGaraj.WebUI.Controllers
                 // Re-calculate discounts and shipping for error view
                 if (basket != null)
                 {
-                    await EnsureBasketCategoryIdsAsync(basket);
+                    await SyncBasketWithCatalogAsync(basket);
                     await PrepareCheckoutBag(basket);
                 }
 
@@ -208,7 +205,7 @@ namespace GameGaraj.WebUI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ApplyCoupon(string couponCode)
+        public IActionResult ApplyCoupon([FromForm] string couponCode)
         {
             if (string.IsNullOrEmpty(couponCode))
             {
@@ -216,31 +213,16 @@ namespace GameGaraj.WebUI.Controllers
                 return RedirectToAction("Checkout");
             }
 
-            var discount = await _discountService.GetByCodeAsync(couponCode);
-            if (discount == null)
-            {
-                TempData["CouponError"] = "Geçersiz veya süresi dolmuş kupon kodu.";
-                return RedirectToAction("Checkout");
-            }
-
-            // UserId kontrolü (opsiyonel, eğer kupon bir kullanıcıya özel ise)
-            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!string.IsNullOrEmpty(discount.UserId) && discount.UserId != currentUserId)
-            {
-                TempData["CouponError"] = "Bu kupon sizin hesabınız için geçerli değil.";
-                return RedirectToAction("Checkout");
-            }
-
-            HttpContext.Session.SetString("AppliedCoupon", JsonSerializer.Serialize(discount));
-            TempData["CouponSuccess"] = $"'{couponCode}' kuponu başarıyla uygulandı!";
+            couponCode = couponCode.ToUpperInvariant();
+            HttpContext.Session.SetString("AppliedCouponCode", couponCode);
             
             return RedirectToAction("Checkout");
         }
 
         [HttpPost]
-        public async Task<IActionResult> RemoveCoupon()
+        public IActionResult RemoveCoupon()
         {
-            HttpContext.Session.Remove("AppliedCoupon");
+            HttpContext.Session.Remove("AppliedCouponCode");
             return RedirectToAction("Checkout");
         }
 
@@ -325,6 +307,15 @@ namespace GameGaraj.WebUI.Controllers
 
             if (paymentResult.Success)
             {
+                // Kupon kullanıldıysa DB'de güncelle
+                var couponCode = HttpContext.Session.GetString("AppliedCouponCode");
+                if (!string.IsNullOrEmpty(couponCode))
+                {
+                    await _campaignService.MarkCouponAsUsedAsync(couponCode);
+                    _logger.LogInformation($"[OrderController] Coupon {couponCode} marked as used in DB.");
+                }
+                HttpContext.Session.Remove("AppliedCouponCode");
+
                 // Sepeti temizle
                 await _basketService.DeleteAsync();
                 _logger.LogInformation($"[OrderController] Basket cleared after successful payment");
@@ -353,11 +344,14 @@ namespace GameGaraj.WebUI.Controllers
 
         private async Task PrepareCheckoutBag(Models.Baskets.BasketViewModel basket)
         {
-            await EnsureBasketCategoryIdsAsync(basket);
+            await SyncBasketWithCatalogAsync(basket);
 
             // Kampanya indirim hesaplama
             try
             {
+                var couponCode = HttpContext.Session.GetString("AppliedCouponCode");
+                var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
                 var discountRequest = new CalculateDiscountRequest
                 {
                     Items = basket.Items.Select(i => new OrderItemDto
@@ -365,13 +359,26 @@ namespace GameGaraj.WebUI.Controllers
                         ProductId = i.ProductId,
                         ProductName = i.ProductName,
                         CategoryId = i.CategoryId,
+                        Brand = i.Brand,
                         UnitPrice = i.Price,
                         Quantity = i.Quantity
-                    }).ToList()
+                    }).ToList(),
+                    CouponCode = couponCode,
+                    UserId = currentUserId
                 };
 
                 var discountResult = await _campaignService.CalculateDiscountAsync(discountRequest);
                 ViewBag.DiscountResult = discountResult;
+
+                if (!string.IsNullOrEmpty(couponCode) && discountResult != null && !discountResult.IsCouponApplied)
+                {
+                    HttpContext.Session.Remove("AppliedCouponCode");
+                    TempData["CouponError"] = discountResult.CouponMessage ?? "Kupon geçersiz.";
+                }
+                else if (!string.IsNullOrEmpty(couponCode) && discountResult != null && discountResult.IsCouponApplied)
+                {
+                    TempData["CouponSuccess"] = discountResult.CouponMessage ?? "Kupon uygulandı.";
+                }
             }
             catch (Exception ex)
             {
@@ -382,7 +389,7 @@ namespace GameGaraj.WebUI.Controllers
             var shippingSetting = await _campaignService.GetShippingSettingAsync();
             if (shippingSetting == null)
             {
-                shippingSetting = new GameGaraj.WebUI.Models.Campaigns.ShippingSettingViewModel
+                shippingSetting = new ShippingSettingViewModel
                 {
                     FreeShippingThreshold = 500,
                     DefaultShippingFee = 0,
@@ -390,19 +397,11 @@ namespace GameGaraj.WebUI.Controllers
                 };
             }
             ViewBag.ShippingSetting = shippingSetting;
-
-            // Kupon hesaplama
-            var couponJson = HttpContext.Session.GetString("AppliedCoupon");
-            if (!string.IsNullOrEmpty(couponJson))
-            {
-                var coupon = JsonSerializer.Deserialize<GameGaraj.WebUI.Models.Discounts.DiscountViewModel>(couponJson);
-                ViewBag.AppliedCoupon = coupon;
-            }
         }
 
         private async Task<OrderPricingSnapshot> BuildOrderPricingSnapshotAsync(Models.Baskets.BasketViewModel basket)
         {
-            await EnsureBasketCategoryIdsAsync(basket);
+            await SyncBasketWithCatalogAsync(basket);
 
             basket.Items ??= new List<Models.Baskets.BasketItemViewModel>();
             var basketItems = basket.Items;
@@ -413,6 +412,9 @@ namespace GameGaraj.WebUI.Controllers
                 TotalPaidAmount = basket.TotalPrice
             };
 
+            var couponCode = HttpContext.Session.GetString("AppliedCouponCode");
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             var discountRequest = new CalculateDiscountRequest
             {
                 Items = basketItems.Select(i => new OrderItemDto
@@ -420,9 +422,12 @@ namespace GameGaraj.WebUI.Controllers
                     ProductId = i.ProductId,
                     ProductName = i.ProductName,
                     CategoryId = i.CategoryId,
+                    Brand = i.Brand,
                     UnitPrice = i.Price,
                     Quantity = i.Quantity
-                }).ToList()
+                }).ToList(),
+                CouponCode = couponCode,
+                UserId = currentUserId
             };
 
             var discountResult = await _campaignService.CalculateDiscountAsync(discountRequest);
@@ -441,70 +446,97 @@ namespace GameGaraj.WebUI.Controllers
                         Type = 1 // Discount
                     }).ToList();
                 }
+
+                if (discountResult.IsCouponApplied)
+                {
+                    snapshot.CouponCode = couponCode;
+                }
             }
 
             var shippingSetting = await _campaignService.GetShippingSettingAsync();
             if (shippingSetting != null && shippingSetting.IsActive && basket.TotalPrice < shippingSetting.FreeShippingThreshold)
             {
                 snapshot.ShippingFee = shippingSetting.DefaultShippingFee;
-                snapshot.TotalPaidAmount += snapshot.ShippingFee;
-            }
-
-            var couponJson = HttpContext.Session.GetString("AppliedCoupon");
-            if (!string.IsNullOrEmpty(couponJson))
-            {
-                var coupon = JsonSerializer.Deserialize<GameGaraj.WebUI.Models.Discounts.DiscountViewModel>(couponJson);
-                if (coupon != null)
+                // Eğer kupon kargo bedava ise ve discountResult içinde bu uygulanmışsa, 
+                // FinalTotal'a ShippingFee eklenmemesi veya OrderPricingLedgers'da düşülmesi gerekir.
+                // CampaignCalculationService Kargo Bedava uyguladığında CouponMessage döner.
+                if (discountResult != null && discountResult.IsCouponApplied && discountResult.CouponMessage == "Kargo Bedava kuponu uygulandı.")
                 {
-                    snapshot.CouponCode = coupon.Code;
-
-                    if (coupon.Rate > 0)
-                    {
-                        snapshot.CouponDiscountAmount = snapshot.TotalPaidAmount * (coupon.Rate / 100m);
-                    }
-                    else if (coupon.Amount > 0)
-                    {
-                        snapshot.CouponDiscountAmount = coupon.Amount;
-                    }
-
-                    if (snapshot.CouponDiscountAmount > snapshot.TotalPaidAmount)
-                    {
-                        snapshot.CouponDiscountAmount = snapshot.TotalPaidAmount;
-                    }
-
-                    snapshot.TotalPaidAmount -= snapshot.CouponDiscountAmount;
+                    snapshot.ShippingFee = 0;
                 }
+                snapshot.TotalPaidAmount += snapshot.ShippingFee;
             }
 
             return snapshot;
         }
 
-        private async Task EnsureBasketCategoryIdsAsync(Models.Baskets.BasketViewModel basket)
+        private async Task SyncBasketWithCatalogAsync(Models.Baskets.BasketViewModel basket)
         {
             basket.Items ??= new List<Models.Baskets.BasketItemViewModel>();
 
             var needsSave = false;
             foreach (var item in basket.Items)
             {
-                if (!string.IsNullOrWhiteSpace(item.CategoryId))
-                {
-                    continue;
-                }
-
                 var product = await _catalogService.GetProductByIdAsync(item.ProductId);
-                if (product == null || string.IsNullOrWhiteSpace(product.CategoryId))
+                if (product == null)
                 {
                     continue;
                 }
 
-                item.CategoryId = product.CategoryId;
-                needsSave = true;
+                if (item.Price != product.Price)
+                {
+                    item.Price = product.Price;
+                    needsSave = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(item.CategoryId) && !string.IsNullOrWhiteSpace(product.CategoryId))
+                {
+                    item.CategoryId = product.CategoryId;
+                    needsSave = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(item.Brand) && !string.IsNullOrWhiteSpace(product.Brand))
+                {
+                    item.Brand = product.Brand;
+                    needsSave = true;
+                }
             }
 
             if (needsSave && !string.IsNullOrWhiteSpace(basket.UserId))
             {
                 await _basketService.SaveOrUpdateAsync(basket);
             }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> MyCoupons()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return RedirectToAction("SignIn", "Auth");
+            }
+            var coupons = await _campaignService.GetUserCouponsAsync(userId);
+            return View(coupons);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetNotifications()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Json(new List<NotificationViewModel>());
+            }
+            var notifications = await _campaignService.GetNotificationsAsync(userId);
+            return Json(notifications);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> MarkNotificationRead(int id)
+        {
+            var success = await _campaignService.MarkNotificationAsReadAsync(id);
+            return Json(new { success });
         }
     }
 }

@@ -1,0 +1,181 @@
+@model GameGaraj.WebUI.Models.Campaigns.CouponRewardRuleViewModel
+@{
+    ViewData["Title"] = $"Görev Detayı - {Model.RuleName}";
+}
+
+<style>
+    .reward-detail-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+    .reward-detail-banner {
+        background: linear-gradient(135deg, #1e1e2f 0%, #111119 100%);
+        color: white;
+        padding: 50px 40px;
+        position: relative;
+    }
+    .reward-detail-banner::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle at 90% 10%, rgba(246, 139, 30, 0.15) 0%, transparent 60%);
+    }
+
+    /* Step visualization design */
+    .step-flow {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        position: relative;
+        padding-left: 40px;
+    }
+    .step-flow::before {
+        content: "";
+        position: absolute;
+        top: 10px;
+        bottom: 10px;
+        left: 19px;
+        width: 2px;
+        border-left: 2px dashed #cbd5e1;
+    }
+    .step-item {
+        position: relative;
+    }
+    .step-dot {
+        position: absolute;
+        left: -31px;
+        top: 2px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: white;
+        border: 4px solid #f68b1e;
+        z-index: 2;
+    }
+    .step-dot.active {
+        background: #f68b1e;
+    }
+
+    /* Gift ticket style */
+    .gift-ticket {
+        background: #1f2937;
+        border-radius: 12px;
+        padding: 24px;
+        color: white;
+        text-align: center;
+        border-left: 6px solid #f68b1e;
+        position: relative;
+    }
+    .gift-ticket-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #f68b1e;
+    }
+</style>
+
+<div class="container my-5">
+    <div class="mb-4">
+        <a asp-action="Rewards" class="btn btn-link text-decoration-none p-0 text-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Tüm Görevlere Dön
+        </a>
+    </div>
+
+    <div class="reward-detail-card">
+        <div class="reward-detail-banner">
+            <span class="badge bg-primary px-3 py-2 rounded-pill text-uppercase mb-3" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;">
+                Kupon Kazan Görevi
+            </span>
+            <h1 class="display-6 fw-bold mb-2 text-white">@Model.RuleName</h1>
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <p class="lead text-white-50 mb-0">@Model.Description</p>
+            }
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+            <div class="row g-5">
+                <div class="col-lg-7">
+                    <h4 class="fw-bold text-dark mb-4">
+                        <i class="fa-solid fa-circle-question text-primary me-2"></i> Nasıl Kupon Kazanırım?
+                    </h4>
+
+                    <div class="step-flow mb-5">
+                        <div class="step-item">
+                            <div class="step-dot active"></div>
+                            <h5 class="fw-bold text-dark mb-1">Görevi Başlatın</h5>
+                            <p class="text-muted small">Bu görev tüm GameGaraj üyeleri için otomatik olarak aktiftir. Kayıt olmanız veya ek işlem yapmanız gerekmez.</p>
+                        </div>
+                        
+                        <div class="step-item">
+                            <div class="step-dot active"></div>
+                            <h5 class="fw-bold text-dark mb-1">Alışveriş Limiti Şartını Tamamlayın</h5>
+                            <p class="text-muted small">
+                                <strong>@(Model.PeriodInDays) gün</strong> içerisinde toplamda <strong>@Model.RequiredSpendAmount.ToString("C0")</strong> değerinde sepet siparişi verin. 
+                                Birden fazla siparişinizin toplamı bu tutara ulaştığında veya tek bir siparişle tamamlandığında ödülünüz otomatik olarak oluşturulur.
+                            </p>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-dot"></div>
+                            <h5 class="fw-bold text-dark mb-1">Hediye Kuponunuz Profilinize Tanımlansın</h5>
+                            <p class="text-muted small">Görev tamamlandığında hediye kupon kodunuz oluşturulur ve "Kuponlarım" sayfanıza eklenir. Ayrıca bildirim ile haberdar edilirsiniz.</p>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-clock text-warning me-2"></i>Görev Kuralları</h5>
+                    <div class="p-3 bg-light rounded-3">
+                        <ul class="mb-0 small text-muted ps-3">
+                            <li class="mb-2">Görevin başlangıç tarihi itibariyle siparişleriniz sayılmaya başlar.</li>
+                            <li class="mb-2">Kazanılan kuponlar, oluşturulduğu andan itibaren <strong>@Model.RewardValidDays gün</strong> geçerlidir.</li>
+                            <li class="mb-2">İptal veya iade edilen siparişler görev harcama toplamından düşülür.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <h4 class="fw-bold text-dark mb-4">
+                        <i class="fa-solid fa-gift text-success me-2"></i> Hediye Ödül Biletiniz
+                    </h4>
+
+                    <div class="gift-ticket shadow-sm mb-4">
+                        <span class="text-uppercase text-white-50 small tracking-wider">KAZANILACAK ÖDÜL</span>
+                        <div class="gift-ticket-value my-3">
+                            @if (Model.RewardCouponType == "FixedAmount")
+                            {
+                                <span>@((Model.RewardCouponAmount ?? 0).ToString("N0")) TL İndirim</span>
+                            }
+                            else if (Model.RewardCouponType == "Percentage")
+                            {
+                                <span>%@((Model.RewardCouponRate ?? 0).ToString("N0")) İndirim</span>
+                            }
+                            else if (Model.RewardCouponType == "FreeShipping")
+                            {
+                                <span>Kargo Bedava</span>
+                            }
+                        </div>
+                        <div class="small text-white-50 border-top border-secondary pt-3 mt-3">
+                            <div>Kullanım Süresi: <strong>@Model.RewardValidDays Gün</strong></div>
+                            @if (Model.RewardCouponMaxAmount.HasValue && Model.RewardCouponMaxAmount > 0)
+                            {
+                                <div class="mt-1">Maksimum İndirim Limiti: <strong>@Model.RewardCouponMaxAmount.Value.ToString("C0")</strong></div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="card border-primary-subtle bg-primary-subtle text-primary rounded-3">
+                        <div class="card-body">
+                            <h6 class="fw-bold"><i class="fa-solid fa-shopping-bag me-2"></i>Hemen Alışverişe Başlayın</h6>
+                            <p class="small mb-3 text-dark-50">Sipariş vererek bu hediye kuponunu kazanma yolundaki ilk adımınızı atın.</p>
+                            <a asp-controller="Product" asp-action="Index" class="btn btn-primary w-100 rounded-pill fw-semibold py-2">
+                                Ürünleri Keşfet
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

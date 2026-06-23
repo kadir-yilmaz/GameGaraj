@@ -78,14 +78,6 @@ namespace GameGaraj.WebUI.Extensions
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
-
-            // Discount Service
-            services.AddHttpClient<IDiscountService, DiscountService>(client =>
-            {
-                client.BaseAddress = new Uri(gatewayUri, "api/discount/");
-                client.Timeout = TimeSpan.FromSeconds(10);
-            })
-            .AddHttpMessageHandler<UserIdDelegatingHandler>();
         }
     }
 }

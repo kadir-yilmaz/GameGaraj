@@ -21,5 +21,27 @@ namespace GameGaraj.WebUI.Services.Abstract
         // Kargo Ayarları
         Task<ShippingSettingViewModel?> GetShippingSettingAsync();
         Task<bool> UpdateShippingSettingAsync(ShippingSettingViewModel input);
+
+        // --- KUPON YÖNETİMİ ---
+        Task<List<CouponViewModel>> GetAllCouponsAsync();
+        Task<CouponViewModel?> GetCouponByIdAsync(int id);
+        Task<CouponViewModel?> GetCouponByCodeAsync(string code);
+        Task<List<CouponViewModel>> GetPublicCouponsAsync();
+        Task<List<CouponViewModel>> GetUserCouponsAsync(string userId);
+        Task<bool> CreateCouponAsync(CouponCreateInput input);
+        Task<bool> DeleteCouponAsync(int id);
+        Task<bool> MarkCouponAsUsedAsync(string code);
+
+        // --- KUPON KAZAN KURALLARI ---
+        Task<List<CouponRewardRuleViewModel>> GetAllRewardRulesAsync();
+        Task<CouponRewardRuleViewModel?> GetRewardRuleByIdAsync(int id);
+        Task<bool> CreateRewardRuleAsync(CouponRewardRuleCreateInput input);
+        Task<bool> UpdateRewardRuleAsync(CouponRewardRuleViewModel input);
+        Task<bool> DeleteRewardRuleAsync(int id);
+
+        // --- BİLDİRİMLER ---
+        Task<List<NotificationViewModel>> GetNotificationsAsync(string userId, bool unreadOnly = false);
+        Task<int> GetUnreadNotificationCountAsync(string userId);
+        Task<bool> MarkNotificationAsReadAsync(int id);
     }
 }
