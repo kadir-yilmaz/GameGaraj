@@ -9,12 +9,17 @@ namespace GameGaraj.PhotoStock.API.Services
     {
         private readonly IMinioClient _minioClient;
         private readonly string _bucketName;
+        private readonly ILogger<MinioStorageService> _logger;
         private bool _bucketInitialized = false;
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
-        public MinioStorageService(IMinioClient minioClient, IConfiguration configuration)
+        public MinioStorageService(
+            IMinioClient minioClient,
+            IConfiguration configuration,
+            ILogger<MinioStorageService> logger)
         {
             _minioClient = minioClient;
+            _logger = logger;
             _bucketName = configuration["Minio:BucketName"] ?? "gamegaraj";
         }
 
@@ -31,6 +36,8 @@ namespace GameGaraj.PhotoStock.API.Services
                 bool exists = await _minioClient.BucketExistsAsync(existsArgs, cancellationToken);
                 if (!exists)
                 {
+                    _logger.LogInformation("MinIO bucket {BucketName} does not exist. Creating it.", _bucketName);
+
                     var makeArgs = new MakeBucketArgs().WithBucket(_bucketName);
                     await _minioClient.MakeBucketAsync(makeArgs, cancellationToken);
 
@@ -63,6 +70,13 @@ namespace GameGaraj.PhotoStock.API.Services
 
             var objectName = $"photos/{fileName}";
             using var stream = file.OpenReadStream();
+
+            _logger.LogInformation(
+                "Uploading photo to MinIO bucket {BucketName} as object {ObjectName}. ContentType: {ContentType}, Size: {Size}",
+                _bucketName,
+                objectName,
+                file.ContentType,
+                file.Length);
 
             var putArgs = new PutObjectArgs()
                 .WithBucket(_bucketName)

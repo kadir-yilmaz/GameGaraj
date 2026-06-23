@@ -7,10 +7,12 @@ namespace GameGaraj.WebUI.Services.Concrete
     public class PhotoStockService : IPhotoStockService
     {
         private readonly HttpClient _httpClient;
+        private readonly ILogger<PhotoStockService> _logger;
 
-        public PhotoStockService(HttpClient httpClient)
+        public PhotoStockService(HttpClient httpClient, ILogger<PhotoStockService> logger)
         {
             _httpClient = httpClient;
+            _logger = logger;
         }
 
         public async Task<List<string>> UploadPhotosAsync(IFormFileCollection photos, string? brand, string? productName)
@@ -18,7 +20,7 @@ namespace GameGaraj.WebUI.Services.Concrete
             if (photos == null || photos.Count == 0)
                 return new List<string>();
 
-            var multipartFormDataContent = new MultipartFormDataContent();
+            using var multipartFormDataContent = new MultipartFormDataContent();
             multipartFormDataContent.Add(new StringContent(brand ?? string.Empty), "brand");
             multipartFormDataContent.Add(new StringContent(productName ?? string.Empty), "productName");
 
@@ -29,10 +31,26 @@ namespace GameGaraj.WebUI.Services.Concrete
                 multipartFormDataContent.Add(streamContent, "photos", photo.FileName);
             }
 
-            var response = await _httpClient.PostAsync("api/photos", multipartFormDataContent);
+            HttpResponseMessage response;
+            try
+            {
+                response = await _httpClient.PostAsync("photos", multipartFormDataContent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "PhotoStock API request failed while uploading photos");
+                throw;
+            }
 
             if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _logger.LogError(
+                    "PhotoStock API returned {StatusCode} while uploading photos. Body: {Body}",
+                    (int)response.StatusCode,
+                    errorBody);
                 return new List<string>();
+            }
 
             var responseString = await response.Content.ReadAsStringAsync();
             var jsonDocument = JsonDocument.Parse(responseString);
@@ -50,7 +68,7 @@ namespace GameGaraj.WebUI.Services.Concrete
         {
             // Remove full path/domain if present, keep only the filename
             var fileName = Path.GetFileName(photoUrl);
-            var response = await _httpClient.DeleteAsync($"api/photos/{fileName}");
+            var response = await _httpClient.DeleteAsync($"photos/{fileName}");
             return response.IsSuccessStatusCode;
         }
     }

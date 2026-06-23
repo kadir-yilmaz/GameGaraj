@@ -11,10 +11,12 @@ namespace GameGaraj.PhotoStock.API.Controllers;
 public class PhotosController : ControllerBase
 {
     private readonly IStorageService _storageService;
+    private readonly ILogger<PhotosController> _logger;
 
-    public PhotosController(IStorageService storageService)
+    public PhotosController(IStorageService storageService, ILogger<PhotosController> logger)
     {
         _storageService = storageService;
+        _logger = logger;
     }
 
     private const int MaxPhotos = 5;
@@ -63,6 +65,12 @@ public class PhotosController : ControllerBase
             }
             catch (Exception ex)
             {
+                _logger.LogError(
+                    ex,
+                    "Photo upload failed for file {FileName}. ContentType: {ContentType}, Size: {Size}",
+                    photo.FileName,
+                    photo.ContentType,
+                    photo.Length);
                 errors.Add($"{photo.FileName}: {ex.Message}");
             }
         }
@@ -88,6 +96,7 @@ public class PhotosController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Photo delete failed for file {FileName}", fileName);
             return StatusCode(500, ex.Message);
         }
     }
@@ -112,6 +121,7 @@ public class PhotosController : ControllerBase
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Photo delete failed for file {FileName}", fileName);
                 errors.Add($"{fileName}: {ex.Message}");
             }
         }
