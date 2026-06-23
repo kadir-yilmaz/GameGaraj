@@ -143,14 +143,14 @@ services:
   # WebUI (MVC — routes through Gateway internally)
   # ---------------------------------------------------------------------------
   webui:
-    image: "webui:feb725c"
+    image: "webui:202abbd"
     nodePort: 30075
     replicas: 1
     env:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
-      APP_VERSION: "feb725c"
+      APP_VERSION: "202abbd"
     secretEnv:
       ConnectionStrings__Redis: redis-connection
       KEYCLOAK_ADMIN_USERNAME: keycloak-admin-username
