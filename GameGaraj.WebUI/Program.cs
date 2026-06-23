@@ -11,6 +11,8 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using AspNetCoreHero.ToastNotification;
 using AspNetCoreHero.ToastNotification.Extensions;
+using Microsoft.AspNetCore.DataProtection;
+using StackExchange.Redis;
 
 var cultureInfo = new System.Globalization.CultureInfo("tr-TR");
 cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
@@ -39,6 +41,13 @@ builder.Services.AddHttpClientServices(builder.Configuration);
 
 var serviceApiSettings = builder.Configuration.GetSection("ServiceApiSettings").Get<ServiceApiSettings>() ?? new ServiceApiSettings();
 
+// Data Protection via Redis
+var redisUrl = builder.Configuration["RedisUrl"] ?? "localhost:6379";
+var redis = ConnectionMultiplexer.Connect(redisUrl);
+builder.Services.AddDataProtection()
+    .SetApplicationName("GameGarajWebUI")
+    .PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys");
+
 // Authentication
 builder.Services.AddAuthentication(options =>
     {
@@ -52,6 +61,12 @@ builder.Services.AddAuthentication(options =>
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
         options.Cookie.Name = "GameGarajWebCookie";
+        
+        // Güvenlik (Security) Ayarları: XSS ve CSRF koruması
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // HTTPS zorunlu
+        options.Cookie.SameSite = SameSiteMode.Lax; // CSRF koruması
+
         options.Events = new CookieAuthenticationEvents
         {
             OnValidatePrincipal = async context =>
