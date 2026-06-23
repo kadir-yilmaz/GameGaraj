@@ -45,6 +45,7 @@ namespace GameGaraj.WebUI.Models.Campaigns
         public decimal? MinAmount { get; set; }
         public int? MinQuantity { get; set; }
         public int? FreeQuantity { get; set; }
+        [System.ComponentModel.DataAnnotations.Range(0, 100, ErrorMessage = "İndirim oranı %0 ile %100 arasında olmalıdır.")]
         public decimal? DiscountRate { get; set; }
         public decimal? FixedDiscount { get; set; }
         [DataType(DataType.Date)]
@@ -70,6 +71,7 @@ namespace GameGaraj.WebUI.Models.Campaigns
         public decimal? MinAmount { get; set; }
         public int? MinQuantity { get; set; }
         public int? FreeQuantity { get; set; }
+        [System.ComponentModel.DataAnnotations.Range(0, 100, ErrorMessage = "İndirim oranı %0 ile %100 arasında olmalıdır.")]
         public decimal? DiscountRate { get; set; }
         public decimal? FixedDiscount { get; set; }
         [DataType(DataType.Date)]

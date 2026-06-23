@@ -115,8 +115,8 @@ namespace GameGaraj.Campaign.API.Services.Concrete
             var finalResponse = new CalculateDiscountResponse
             {
                 OriginalTotal = originalTotal,
-                TotalDiscount = totalItemDiscount + (bestGlobalResult?.TotalDiscount ?? 0),
-                FinalTotal = originalTotal - (totalItemDiscount + (bestGlobalResult?.TotalDiscount ?? 0)),
+                TotalDiscount = Math.Min(originalTotal, totalItemDiscount + (bestGlobalResult?.TotalDiscount ?? 0)),
+                FinalTotal = Math.Max(0, originalTotal - (totalItemDiscount + (bestGlobalResult?.TotalDiscount ?? 0))),
                 Details = new List<DiscountDetail>(),
                 AppliedRules = new List<AppliedRuleSummary>(),
                 IsCouponApplied = false
@@ -232,8 +232,8 @@ namespace GameGaraj.Campaign.API.Services.Concrete
 
                     if (couponDiscount > 0)
                     {
-                        finalResponse.TotalDiscount += couponDiscount;
-                        finalResponse.FinalTotal -= couponDiscount;
+                        finalResponse.TotalDiscount = Math.Min(finalResponse.OriginalTotal, finalResponse.TotalDiscount + couponDiscount);
+                        finalResponse.FinalTotal = Math.Max(0, finalResponse.FinalTotal - couponDiscount);
                         finalResponse.IsCouponApplied = true;
                         finalResponse.CouponMessage = "Kupon başarıyla uygulandı.";
 

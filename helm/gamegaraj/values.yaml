@@ -112,6 +112,8 @@ services:
   payment-api:
     image: "payment-api:562d8af"
     nodePort: 30014
+    env:
+      Iyzipay__BaseUrl: "https://sandbox-api.iyzipay.com"
     secretEnv:
       Iyzipay__ApiKey: iyzico-api-key
       Iyzipay__SecretKey: iyzico-secret-key
@@ -143,7 +145,7 @@ services:
   webui:
     image: "webui:f1ef2d1"
     nodePort: 30075
-    replicas: 2
+    replicas: 1
     env:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"

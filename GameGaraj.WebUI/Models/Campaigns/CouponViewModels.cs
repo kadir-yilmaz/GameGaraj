@@ -49,6 +49,7 @@ namespace GameGaraj.WebUI.Models.Campaigns
         public decimal? Amount { get; set; }
 
         [JsonPropertyName("Rate")]
+        [System.ComponentModel.DataAnnotations.Range(0, 100, ErrorMessage = "İndirim oranı %0 ile %100 arasında olmalıdır.")]
         public decimal? DiscountRate { get; set; }
 
         public decimal? MaxDiscountAmount { get; set; }
@@ -121,6 +122,7 @@ namespace GameGaraj.WebUI.Models.Campaigns
         public decimal? RewardCouponAmount { get; set; }
 
         [JsonPropertyName("RewardRate")]
+        [System.ComponentModel.DataAnnotations.Range(0, 100, ErrorMessage = "İndirim oranı %0 ile %100 arasında olmalıdır.")]
         public decimal? RewardCouponRate { get; set; }
 
         [JsonPropertyName("RewardMaxDiscount")]
