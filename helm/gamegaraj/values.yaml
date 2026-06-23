@@ -40,7 +40,7 @@ services:
   # API Gateway (YARP reverse proxy)
   # ---------------------------------------------------------------------------
   gateway:
-    image: "gateway:562d8af"
+    image: "gateway:53c2d22"
     nodePort: 30000
     env:
       # Cluster addresses — K8s service DNS + port
@@ -60,7 +60,7 @@ services:
   # Catalog API (PostgreSQL)
   # ---------------------------------------------------------------------------
   catalog-api:
-    image: "catalog-api:562d8af"
+    image: "catalog-api:53c2d22"
     nodePort: 30010
     skipCommonRabbit: true
     env:
@@ -73,7 +73,7 @@ services:
   # PhotoStock API (MinIO)
   # ---------------------------------------------------------------------------
   photostock-api:
-    image: "photostock-api:562d8af"
+    image: "photostock-api:53c2d22"
     nodePort: 30015
     env:
       IdentityOption__Audience: "photostock.api"
@@ -88,7 +88,7 @@ services:
   # Basket API (Redis Sentinel)
   # ---------------------------------------------------------------------------
   basket-api:
-    image: "basket-api:562d8af"
+    image: "basket-api:53c2d22"
     nodePort: 30011
     env:
       IdentityOption__Audience: "basket.api"
@@ -101,7 +101,7 @@ services:
   # Order API (SQL Server)
   # ---------------------------------------------------------------------------
   order-api:
-    image: "order-api:562d8af"
+    image: "order-api:53c2d22"
     nodePort: 30013
     secretEnv:
       ConnectionStrings__DefaultConnection: order-sqlserver-connection
@@ -110,7 +110,7 @@ services:
   # Payment API (Iyzico)
   # ---------------------------------------------------------------------------
   payment-api:
-    image: "payment-api:562d8af"
+    image: "payment-api:53c2d22"
     nodePort: 30014
     env:
       Iyzipay__BaseUrl: "https://sandbox-api.iyzipay.com"
@@ -122,7 +122,7 @@ services:
   # Invoice API (SMTP)
   # ---------------------------------------------------------------------------
   invoice-api:
-    image: "invoice-api:562d8af"
+    image: "invoice-api:53c2d22"
     nodePort: 30017
     env:
       IdentityOption__Audience: "invoice.api"
@@ -134,7 +134,7 @@ services:
   # Campaign API (SQL Server)
   # ---------------------------------------------------------------------------
   campaign-api:
-    image: "campaign-api:89da0ba"
+    image: "campaign-api:53c2d22"
     nodePort: 30016
     secretEnv:
       ConnectionStrings__SqlServer: campaign-sqlserver-connection
@@ -143,14 +143,14 @@ services:
   # WebUI (MVC — routes through Gateway internally)
   # ---------------------------------------------------------------------------
   webui:
-    image: "webui:658c334"
+    image: "webui:53c2d22"
     nodePort: 30075
     replicas: 1
     env:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
-      APP_VERSION: "658c334"
+      APP_VERSION: "53c2d22"
     secretEnv:
       ConnectionStrings__Redis: redis-connection
       KEYCLOAK_ADMIN_USERNAME: keycloak-admin-username
