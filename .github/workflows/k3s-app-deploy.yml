@@ -20,27 +20,6 @@ on:
           - campaign-api
           - webui
 
-  push:
-    branches:
-      - main
-      - master
-    paths:
-      - "GameGaraj.Gateway/**"
-      - "GameGaraj.Catalog.API/**"
-      - "GameGaraj.PhotoStock.API/**"
-      - "GameGaraj.Basket.API/**"
-      - "GameGaraj.Order.API/**"
-      - "GameGaraj.Order.Application/**"
-      - "GameGaraj.Order.Domain/**"
-      - "GameGaraj.Order.Infrastructure/**"
-      - "GameGaraj.Payment.API/**"
-      - "GameGaraj.Invoice.API/**"
-      - "GameGaraj.Campaign.API/**"
-      - "GameGaraj.WebUI/**"
-      - "GameGaraj.Shared/**"
-      - ".github/workflows/k3s-app-deploy.yml"
-      - "docker-compose.build.yml"
-
 concurrency:
   group: gamegaraj-k3s-app-deploy
   cancel-in-progress: false
