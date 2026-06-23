@@ -1,7 +1,43 @@
 @model GameGaraj.WebUI.Models.Products.ProductViewModel
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject GameGaraj.WebUI.Services.Abstract.ICampaignService CampaignService
 @{
     ViewData["Title"] = Model.Name;
     var displayImageUrls = Model.DisplayImageUrls;
+
+    var httpContext = HttpContextAccessor.HttpContext;
+    List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel> activeRules = null;
+    if (httpContext != null)
+    {
+        if (httpContext.Items.TryGetValue("ActiveCampaignRules", out var cachedRules))
+        {
+            activeRules = cachedRules as List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>;
+        }
+        else
+        {
+            try
+            {
+                var allRules = await CampaignService.GetAllRulesAsync();
+                activeRules = allRules.Where(r => r.IsActive).ToList();
+                httpContext.Items["ActiveCampaignRules"] = activeRules;
+            }
+            catch
+            {
+                activeRules = new List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>();
+            }
+        }
+    }
+
+    // Find matching campaign for this product
+    GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel matchingCampaign = null;
+    if (activeRules != null)
+    {
+        matchingCampaign = activeRules.FirstOrDefault(r => 
+            (!string.IsNullOrEmpty(r.ProductId) && r.ProductId.Equals(Model.Id, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(r.CategoryId) && r.CategoryId.Equals(Model.CategoryId, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(r.BrandName) && !string.IsNullOrEmpty(Model.Brand) && r.BrandName.Equals(Model.Brand, StringComparison.OrdinalIgnoreCase))
+        );
+    }
 }
 
 <style>
@@ -1139,8 +1175,39 @@
 
                         <!-- Price -->
                         <div class="price-section">
-                            <div class="main-price">
-                                @Model.Price.ToString("N2") <span class="currency">TL</span>
+                            @if (matchingCampaign != null)
+                            {
+                                <div class="product-card-campaign" title="@matchingCampaign.Name">
+                                    @matchingCampaign.Name
+                                </div>
+                            }
+                            <div class="main-price" style="display: flex; flex-direction: column;">
+                                @if (matchingCampaign != null && ((matchingCampaign.DiscountRate.HasValue && matchingCampaign.DiscountRate.Value > 0) || (matchingCampaign.FixedDiscount.HasValue && matchingCampaign.FixedDiscount.Value > 0)))
+                                {
+                                    decimal discountedPrice = Model.Price;
+                                    if (matchingCampaign.DiscountRate.HasValue && matchingCampaign.DiscountRate.Value > 0)
+                                    {
+                                        var discountRate = matchingCampaign.DiscountRate.Value;
+                                        discountedPrice = Model.Price - (Model.Price * (discountRate / 100m));
+                                    }
+                                    else if (matchingCampaign.FixedDiscount.HasValue && matchingCampaign.FixedDiscount.Value > 0)
+                                    {
+                                        discountedPrice = Model.Price - matchingCampaign.FixedDiscount.Value;
+                                        if (discountedPrice < 0) discountedPrice = 0;
+                                    }
+                                    <div style="font-size: 1.1rem; color: #999; text-decoration: line-through; margin-bottom: -5px; font-weight: 600;">
+                                        @Model.Price.ToString("N2") <span class="currency" style="font-size: 0.9rem;">TL</span>
+                                    </div>
+                                    <div style="color: #ff4757;">
+                                        @discountedPrice.ToString("N2") <span class="currency" style="color: #ff4757;">TL</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div>
+                                        @Model.Price.ToString("N2") <span class="currency">TL</span>
+                                    </div>
+                                }
                             </div>
                             <div class="installment-info">
                                 <i class="far fa-credit-card"></i>

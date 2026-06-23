@@ -75,8 +75,8 @@
     <div class="card-body product-card-body d-flex flex-column">
         @if (matchingCampaign != null)
         {
-            <div class="product-card-campaign d-inline-flex align-items-center gap-1" style="background: #230808; color: #ff5252; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; border: 1px solid #4d1414; margin-bottom: 8px; letter-spacing: 0.5px; width: fit-content;">
-                <i class="fas fa-bolt" style="color: #ff5252;"></i> @matchingCampaign.Name
+            <div class="product-card-campaign" title="@matchingCampaign.Name">
+                @matchingCampaign.Name
             </div>
         }
         else
@@ -116,12 +116,21 @@
 
         <div class="product-card-footer mt-auto">
             <div class="product-card-price-wrap d-flex align-items-baseline gap-2 flex-wrap">
-                @if (matchingCampaign != null && matchingCampaign.DiscountRate.HasValue && matchingCampaign.DiscountRate.Value > 0)
+                @if (matchingCampaign != null && ((matchingCampaign.DiscountRate.HasValue && matchingCampaign.DiscountRate.Value > 0) || (matchingCampaign.FixedDiscount.HasValue && matchingCampaign.FixedDiscount.Value > 0)))
                 {
-                    var discountRate = matchingCampaign.DiscountRate.Value;
-                    var originalPrice = Model.Price + (Model.Price * (discountRate / 100m));
-                    <span class="price-tag fw-bold" style="color: #ff4757; font-size: 1.25rem;">@Model.Price.ToString("N0") TL</span>
-                    <span class="text-muted text-decoration-line-through small" style="font-size: 0.85rem;">@originalPrice.ToString("N2") TL</span>
+                    decimal discountedPrice = Model.Price;
+                    if (matchingCampaign.DiscountRate.HasValue && matchingCampaign.DiscountRate.Value > 0)
+                    {
+                        var discountRate = matchingCampaign.DiscountRate.Value;
+                        discountedPrice = Model.Price - (Model.Price * (discountRate / 100m));
+                    }
+                    else if (matchingCampaign.FixedDiscount.HasValue && matchingCampaign.FixedDiscount.Value > 0)
+                    {
+                        discountedPrice = Model.Price - matchingCampaign.FixedDiscount.Value;
+                        if (discountedPrice < 0) discountedPrice = 0;
+                    }
+                    <span class="price-tag fw-bold" style="color: #ff4757; font-size: 1.25rem;">@discountedPrice.ToString("N0") TL</span>
+                    <span class="text-muted text-decoration-line-through small" style="font-size: 0.85rem;">@Model.Price.ToString("N2") TL</span>
                 }
                 else
                 {

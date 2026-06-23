@@ -27,7 +27,7 @@ namespace GameGaraj.Order.Application.Handlers
                 TotalPaidAmount = request.TotalPaidAmount,
                 CouponCode = request.CouponCode,
                 AppliedCampaignName = request.AppliedCampaignName,
-                Status = 1, // Ödeme Tamamlandı
+                Status = 0, // Beklemede
                 DeliveryAddress = new Address
                 {
                     FirstName = request.Address.FirstName,

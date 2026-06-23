@@ -74,13 +74,23 @@
                                 <li><hr class="dropdown-divider my-0"></li>
                             }
                             <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="History"><i class="fas fa-box me-2 text-muted"></i>Siparişlerim</a></li>
-                            <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="MyCoupons"><i class="fas fa-ticket-alt me-2 text-muted"></i>Kuponlarım</a></li>
+                            <li class="position-relative">
+                                <a class="dropdown-item py-2" asp-controller="Order" asp-action="MyCoupons">
+                                    <i class="fas fa-ticket-alt me-2 text-muted"></i>Kuponlarım
+                                </a>
+                                <div style="position: absolute; right: 25px; top: 15px; transform: scale(0.9);">
+                                    @await Component.InvokeAsync("NotificationCount")
+                                </div>
+                            </li>
                             <li><a class="dropdown-item py-2" asp-controller="Address" asp-action="Index"><i class="fas fa-map-marker-alt me-2 text-muted"></i>Adreslerim</a></li>
                             
                             <li><hr class="dropdown-divider my-0"></li>
                             
-                            <li class="px-3 py-2 bg-light d-flex justify-content-between align-items-center border-bottom border-top">
-                                <span class="fw-bold text-dark" style="font-size: 0.85rem;"><i class="fas fa-bell text-warning me-1"></i> Bildirimler</span>
+                            <li class="px-0">
+                                <a class="dropdown-item py-2 bg-light d-flex justify-content-between align-items-center border-bottom border-top" asp-controller="Order" asp-action="Notifications">
+                                    <span class="fw-bold text-dark" style="font-size: 0.85rem;"><i class="fas fa-bell text-warning me-1"></i> Tüm Bildirimler</span>
+                                    <i class="fas fa-chevron-right text-muted" style="font-size: 0.7rem;"></i>
+                                </a>
                             </li>
                             <div id="notificationsContentList">
                                 <li class="px-3 py-3 text-center text-muted small">Yükleniyor...</li>
@@ -148,13 +158,23 @@
                                     <small class="text-muted">@mobileUserName</small>
                                 </li>
                                 <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="History"><i class="fas fa-box me-2 text-muted"></i>Siparişlerim</a></li>
-                                <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="MyCoupons"><i class="fas fa-ticket-alt me-2 text-muted"></i>Kuponlarım</a></li>
+                                <li class="position-relative">
+                                    <a class="dropdown-item py-2" asp-controller="Order" asp-action="MyCoupons">
+                                        <i class="fas fa-ticket-alt me-2 text-muted"></i>Kuponlarım
+                                    </a>
+                                    <div style="position: absolute; right: 25px; top: 15px; transform: scale(0.9);">
+                                        @await Component.InvokeAsync("NotificationCount")
+                                    </div>
+                                </li>
                                 <li><a class="dropdown-item py-2" asp-controller="Address" asp-action="Index"><i class="fas fa-map-marker-alt me-2 text-muted"></i>Adreslerim</a></li>
                                 
                                 <li><hr class="dropdown-divider my-0"></li>
                                 
-                                <li class="px-3 py-2 bg-light d-flex justify-content-between align-items-center border-bottom border-top">
-                                    <span class="fw-bold text-dark" style="font-size: 0.85rem;"><i class="fas fa-bell text-warning me-1"></i> Bildirimler</span>
+                                <li class="px-0">
+                                    <a class="dropdown-item py-2 bg-light d-flex justify-content-between align-items-center border-bottom border-top" asp-controller="Order" asp-action="Notifications">
+                                        <span class="fw-bold text-dark" style="font-size: 0.85rem;"><i class="fas fa-bell text-warning me-1"></i> Tüm Bildirimler</span>
+                                        <i class="fas fa-chevron-right text-muted" style="font-size: 0.7rem;"></i>
+                                    </a>
                                 </li>
                                 <div id="mobileNotificationsContentList">
                                     <li class="px-3 py-3 text-center text-muted small">Yükleniyor...</li>

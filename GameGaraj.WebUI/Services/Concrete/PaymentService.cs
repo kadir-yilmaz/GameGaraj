@@ -27,7 +27,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 _logger.LogInformation($"[PaymentService] Request URL: {_httpClient.BaseAddress}");
                 _logger.LogInformation($"[PaymentService] Request Body: {json}");
                 
-                var response = await _httpClient.PostAsync("payments", content);
+                var response = await _httpClient.PostAsync("", content);
                 
                 var responseContent = await response.Content.ReadAsStringAsync();
                 _logger.LogInformation($"[PaymentService] Response Status: {response.StatusCode}");

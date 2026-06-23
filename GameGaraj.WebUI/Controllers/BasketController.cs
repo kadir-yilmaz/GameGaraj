@@ -93,6 +93,7 @@ namespace GameGaraj.WebUI.Controllers
                     else if (!string.IsNullOrEmpty(couponCode) && discountResult != null && discountResult.IsCouponApplied)
                     {
                         TempData["CouponSuccess"] = discountResult.CouponMessage ?? "Kupon uygulandı.";
+                        ViewBag.AppliedCoupon = await _campaignService.GetCouponByCodeAsync(couponCode);
                     }
                 }
                 catch (Exception)

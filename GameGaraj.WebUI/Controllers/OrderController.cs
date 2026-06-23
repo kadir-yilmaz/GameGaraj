@@ -342,6 +342,28 @@ namespace GameGaraj.WebUI.Controllers
             return View(orders);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> Notifications()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return RedirectToAction("SignIn", "Auth");
+            }
+
+            var notifications = await _campaignService.GetNotificationsAsync(userId);
+            
+            // Okunmamış olanları "okundu" olarak işaretle
+            var unreadNotifications = notifications.Where(n => !n.IsRead).ToList();
+            foreach (var n in unreadNotifications)
+            {
+                await _campaignService.MarkNotificationAsReadAsync(n.Id);
+                n.IsRead = true; // View için modelde de güncelle
+            }
+
+            return View(notifications.OrderByDescending(n => n.CreatedDate).ToList());
+        }
+
         private async Task PrepareCheckoutBag(Models.Baskets.BasketViewModel basket)
         {
             await SyncBasketWithCatalogAsync(basket);
@@ -378,6 +400,7 @@ namespace GameGaraj.WebUI.Controllers
                 else if (!string.IsNullOrEmpty(couponCode) && discountResult != null && discountResult.IsCouponApplied)
                 {
                     TempData["CouponSuccess"] = discountResult.CouponMessage ?? "Kupon uygulandı.";
+                    ViewBag.AppliedCoupon = await _campaignService.GetCouponByCodeAsync(couponCode);
                 }
             }
             catch (Exception ex)

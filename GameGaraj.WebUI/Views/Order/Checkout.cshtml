@@ -337,15 +337,11 @@
                                 <input asp-for="CustomerSurname" class="form-control" id="customerSurnameInput" required>
                                 <span asp-validation-for="CustomerSurname" class="text-danger small"></span>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <label asp-for="CustomerPhone" class="form-label small">Telefon</label>
                                 <input asp-for="CustomerPhone" class="form-control" id="customerPhoneInput" placeholder="05XX XXX XX XX" required>
                                 <span asp-validation-for="CustomerPhone" class="text-danger small"></span>
-                            </div>
-                            <div class="col-md-6">
-                                <label asp-for="CustomerEmail" class="form-label small">E-Posta</label>
-                                <input asp-for="CustomerEmail" class="form-control" id="customerEmailInput" required>
-                                <span asp-validation-for="CustomerEmail" class="text-danger small"></span>
+                                <input type="hidden" asp-for="CustomerEmail" id="customerEmailInput" />
                             </div>
                             <div class="col-md-4">
                                 <label asp-for="Province" class="form-label small">İl</label>

@@ -366,6 +366,32 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(err => console.error('Markalar yüklenemedi:', err));
     }
 
+    // Pre-fill panel inputs on page load based on model values (useful after validation error)
+    const currentRuleVal = ruleSelect.value;
+    const modelDiscountRate = document.getElementById('modelDiscountRate').value;
+    const modelMinQuantity = document.getElementById('modelMinQuantity').value;
+    const modelFreeQuantity = document.getElementById('modelFreeQuantity').value;
+    const modelMinAmount = document.getElementById('modelMinAmount').value.replace(',', '.');
+    const modelFixedDiscount = document.getElementById('modelFixedDiscount').value.replace(',', '.');
+
+    if (currentRuleVal === 'TotalAmount') {
+        document.getElementById('input_MinAmount_TotalAmount').value = modelMinAmount;
+        document.getElementById('input_DiscountRate_TotalAmount').value = modelDiscountRate;
+        document.getElementById('input_FixedDiscount_TotalAmount').value = modelFixedDiscount;
+    } 
+    else if (currentRuleVal === 'BuyXGetYFree') {
+        document.getElementById('input_MinQuantity_BuyX').value = modelMinQuantity;
+        document.getElementById('input_FreeQuantity_BuyX').value = modelFreeQuantity;
+    } 
+    else if (currentRuleVal === 'CheapestItemDiscount') {
+        document.getElementById('input_MinQuantity_Cheapest').value = modelMinQuantity;
+        document.getElementById('input_DiscountRate_Cheapest').value = modelDiscountRate;
+    } 
+    else if (currentRuleVal === 'BrandDiscount') {
+        document.getElementById('input_DiscountRate_Brand').value = modelDiscountRate;
+        document.getElementById('input_MinAmount_Brand').value = modelMinAmount;
+    }
+
     // Copy panel inputs to model hidden inputs on submit
     const form = document.querySelector('form');
     if (form) {

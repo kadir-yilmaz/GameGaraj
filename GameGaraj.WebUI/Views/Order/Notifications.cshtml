@@ -1,0 +1,58 @@
+@model List<GameGaraj.WebUI.Models.Campaigns.NotificationViewModel>
+@{
+    ViewData["Title"] = "Bildirimlerim";
+}
+
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="fw-bold">
+                <i class="fas fa-bell text-warning me-2"></i>Bildirimlerim
+            </h2>
+            <p class="text-muted">Size özel kampanyalar, duyurular ve sipariş bildirimleri.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-0">
+                    @if (Model != null && Model.Any())
+                    {
+                        <div class="list-group list-group-flush rounded-4">
+                            @foreach (var item in Model)
+                            {
+                                <div class="list-group-item list-group-item-action p-4 border-bottom">
+                                    <div class="d-flex w-100 justify-content-between align-items-center mb-2">
+                                        <h5 class="mb-1 fw-bold text-dark">@item.Title</h5>
+                                        <small class="text-muted"><i class="far fa-clock me-1"></i>@item.CreatedDate.ToString("dd MMM yyyy HH:mm")</small>
+                                    </div>
+                                    <p class="mb-1 text-secondary" style="font-size: 1rem; line-height: 1.5;">@item.Message</p>
+                                    
+                                    @if (item.Title.Contains("Kupon") || item.Title.Contains("KAZAN"))
+                                    {
+                                        <div class="mt-3">
+                                            <a asp-controller="Order" asp-action="MyCoupons" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                <i class="fas fa-ticket-alt me-1"></i> Kuponlarımı Gör
+                                            </a>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center p-5">
+                            <div class="mb-3">
+                                <i class="far fa-bell-slash text-muted" style="font-size: 4rem; opacity: 0.5;"></i>
+                            </div>
+                            <h5 class="text-dark fw-bold">Hiç bildiriminiz yok</h5>
+                            <p class="text-muted">Yeni duyurular ve kampanyalar olduğunda burada görebileceksiniz.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
