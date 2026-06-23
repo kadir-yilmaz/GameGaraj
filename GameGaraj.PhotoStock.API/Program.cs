@@ -16,12 +16,17 @@ builder.Services.AddSwaggerGen();
 var useLocalStorage = builder.Configuration.GetValue<bool>("Minio:UseLocalStorage");
 var minioEndpoint = builder.Configuration["Minio:Endpoint"];
 
-if (useLocalStorage || string.IsNullOrWhiteSpace(minioEndpoint))
+if (useLocalStorage)
 {
     builder.Services.AddScoped<IStorageService, LocalStorageService>();
 }
 else
 {
+    if (string.IsNullOrWhiteSpace(minioEndpoint))
+    {
+        throw new InvalidOperationException("Minio endpoint is required unless Minio:UseLocalStorage is true.");
+    }
+
     builder.Services.AddScoped<IMinioClient>(sp =>
     {
         var endpoint = builder.Configuration["Minio:Endpoint"] ?? string.Empty;

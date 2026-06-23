@@ -287,8 +287,14 @@
         background: #fff;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
-        overflow: hidden;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .admin-table-shell table {
+        min-width: 1180px;
     }
 
     .product-img-container {
