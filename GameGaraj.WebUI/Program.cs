@@ -106,8 +106,9 @@ builder.Services.AddAuthentication(options =>
                     // Check if token has expired or is about to expire in less than 60 seconds
                     if (expiresAt.ToUniversalTime() - DateTime.UtcNow < TimeSpan.FromSeconds(60))
                     {
+                        var refreshToken = context.Properties.GetTokens().FirstOrDefault(t => t.Name == "refresh_token")?.Value;
                         var identityService = context.HttpContext.RequestServices.GetRequiredService<IIdentityService>();
-                        var tokenResponse = await identityService.GetAccessTokenByRefreshTokenAsync();
+                        var tokenResponse = await identityService.GetAccessTokenByRefreshTokenAsync(refreshToken);
 
                         if (tokenResponse != null)
                         {

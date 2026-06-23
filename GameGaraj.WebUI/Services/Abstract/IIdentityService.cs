@@ -16,7 +16,7 @@ namespace GameGaraj.WebUI.Services.Abstract
     {
         Task<(string? Error, string? UserId)> SignInAsync(SignInViewModel model);
         Task<string?> SignUpAsync(SignUpViewModel model);
-        Task<TokenResponse?> GetAccessTokenByRefreshTokenAsync();
+        Task<TokenResponse?> GetAccessTokenByRefreshTokenAsync(string? refreshToken = null);
         Task RevokeRefreshToken();
         string GetUserId();
         Task<List<UserSearchViewModel>> SearchUsersAsync(string query);

@@ -161,12 +161,15 @@ namespace GameGaraj.WebUI.Services.Concrete
             }
         }
 
-        public async Task<TokenResponse?> GetAccessTokenByRefreshTokenAsync()
+        public async Task<TokenResponse?> GetAccessTokenByRefreshTokenAsync(string? refreshToken = null)
         {
             var httpContext = _httpContextAccessor.HttpContext;
-            if (httpContext == null) return null;
 
-            var refreshToken = await httpContext.GetTokenAsync(OpenIdConnectParameterNames.RefreshToken);
+            if (string.IsNullOrEmpty(refreshToken) && httpContext != null)
+            {
+                refreshToken = await httpContext.GetTokenAsync(OpenIdConnectParameterNames.RefreshToken);
+            }
+
             if (string.IsNullOrEmpty(refreshToken)) return null;
 
             var tokenEndpoint = $"{_serviceApiSettings.IdentityBaseUri}/protocol/openid-connect/token";
