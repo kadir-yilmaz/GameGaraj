@@ -175,8 +175,6 @@ services:
       APP_VERSION: "4cf79ef"
     secretEnv:
       ConnectionStrings__Redis: redis-connection
-      KEYCLOAK_ADMIN_USERNAME: keycloak-admin-username
-      KEYCLOAK_ADMIN_PASSWORD: keycloak-admin-password
 
 # =============================================================================
 # Kubernetes Secret (gamegaraj-secrets)
