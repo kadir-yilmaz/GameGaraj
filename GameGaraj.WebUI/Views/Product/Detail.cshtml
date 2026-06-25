@@ -1461,7 +1461,7 @@
                                         <textarea name="Comment" class="form-control mb-2" rows="4" maxlength="1000">@userReview.Comment</textarea>
                                         <button type="submit" class="btn btn-primary btn-sm">G&uuml;ncelle</button>
                                     </form>
-                                    <form asp-controller="Product" asp-action="DeleteReview" method="post" class="mt-2">
+                                    <form asp-controller="Product" asp-action="DeleteReview" method="post" class="mt-2" onsubmit="return confirm('Yorumunuzu silmek istiyor musunuz?');">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="reviewId" value="@userReview.Id" />
                                         <input type="hidden" name="productId" value="@Model.Id" />

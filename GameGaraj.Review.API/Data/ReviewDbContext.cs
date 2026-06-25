@@ -11,6 +11,7 @@ public class ReviewDbContext : DbContext
 
     public DbSet<ProductReview> ProductReviews { get; set; } = null!;
     public DbSet<ProductReviewReaction> ProductReviewReactions { get; set; } = null!;
+    public DbSet<ModerationTerm> ModerationTerms { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,6 +54,15 @@ public class ReviewDbContext : DbContext
                 .WithMany(review => review.Reactions)
                 .HasForeignKey(reaction => reaction.ReviewId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ModerationTerm>(entity =>
+        {
+            entity.HasKey(term => term.Id);
+            entity.Property(term => term.Type).HasMaxLength(32).IsRequired();
+            entity.Property(term => term.Term).HasMaxLength(128).IsRequired();
+            entity.HasIndex(term => new { term.Type, term.Term }).IsUnique();
+            entity.HasIndex(term => new { term.Type, term.IsActive });
         });
     }
 }

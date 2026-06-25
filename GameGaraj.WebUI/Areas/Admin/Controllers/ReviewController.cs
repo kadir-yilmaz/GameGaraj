@@ -47,4 +47,19 @@ public class ReviewController : Controller
 
         return RedirectToAction(nameof(Index));
     }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(string reviewId, string? returnUrl = null)
+    {
+        var result = await _reviewService.DeleteAsAdminAsync(reviewId);
+        TempData[result.Succeeded ? "Success" : "Error"] = result.Message;
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return LocalRedirect(returnUrl);
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
 }

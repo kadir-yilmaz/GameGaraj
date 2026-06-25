@@ -109,6 +109,14 @@ public class ReviewsController : ControllerBase
         return result.Succeeded ? Ok(result) : BadRequest(result);
     }
 
+    [HttpDelete("admin/{id}")]
+    [Authorize(Roles = "admin, editor")]
+    public async Task<IActionResult> DeleteAsAdmin(string id, CancellationToken cancellationToken)
+    {
+        var result = await _reviewService.DeleteAsAdminAsync(id, cancellationToken);
+        return result.Succeeded ? Ok(result) : BadRequest(result);
+    }
+
     private string? GetUserIdOrNull()
     {
         return User.FindFirst("sub")?.Value

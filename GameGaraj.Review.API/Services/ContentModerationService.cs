@@ -1,52 +1,34 @@
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
+using GameGaraj.Review.API.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GameGaraj.Review.API.Services;
 
 public class ContentModerationService : IContentModerationService
 {
-    private readonly string[] _profanityRoots;
-    private readonly string[] _priceKeywords;
+    private const string ProfanityTermType = "profanity";
+    private const string PriceTermType = "price";
+    private const string ModerationTermsCacheKey = "review-api:moderation-terms:v1";
+
+    private readonly ReviewDbContext _dbContext;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<ContentModerationService> _logger;
 
     private static readonly Regex PricePatternRegex = new(@"(\d+[\.,]?\d*)\s*(tl|try|lira|kurus|\$|\u20ac|eur|usd)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex UrlRegex = new(@"https?://|www\.|\.com|\.net|\.org", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex RepeatedCharsRegex = new(@"(.)\1{5,}", RegexOptions.Compiled);
 
-    private static readonly string[] DefaultProfanityRoots =
-    [
-        "amk",
-        "aq",
-        "siktir",
-        "orospu",
-        "pic",
-        "oc",
-        "pezevenk",
-        "gavat",
-        "ibne",
-        "got",
-        "yarak",
-        "salak",
-        "aptal",
-        "mal",
-        "serefsiz",
-        "namussuz",
-        "kahpe",
-        "pust",
-        "bok",
-        "sktr"
-    ];
-
-    public ContentModerationService(IConfiguration configuration, ILogger<ContentModerationService> logger)
+    public ContentModerationService(
+        ReviewDbContext dbContext,
+        IMemoryCache cache,
+        ILogger<ContentModerationService> logger)
     {
+        _dbContext = dbContext;
+        _cache = cache;
         _logger = logger;
-        var dataDir = ResolveDataDirectory(configuration);
-        Directory.CreateDirectory(dataDir);
-
-        _profanityRoots = LoadWordList(Path.Combine(dataDir, "profanity-words.json"), DefaultProfanityRoots);
-        _priceKeywords = LoadWordList(Path.Combine(dataDir, "price-keywords.json"));
     }
 
     public ContentAnalysisResult Analyze(string text, IReadOnlyList<string> recentUserComments)
@@ -63,62 +45,21 @@ public class ContentModerationService : IContentModerationService
         return result;
     }
 
-    private static string ResolveDataDirectory(IConfiguration configuration)
-    {
-        var configuredPath = configuration["Moderation:DataPath"];
-        if (!string.IsNullOrWhiteSpace(configuredPath))
-        {
-            return Path.GetFullPath(configuredPath);
-        }
-
-        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
-    }
-
-    private string[] LoadWordList(string path, IEnumerable<string>? fallbackWords = null)
-    {
-        var fallback = (fallbackWords ?? [])
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(NormalizeText);
-
-        if (!File.Exists(path))
-        {
-            File.WriteAllText(path, "[]", Encoding.UTF8);
-            _logger.LogWarning("Moderation word list was missing and an empty file was created at {Path}", path);
-            return fallback.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        }
-
-        try
-        {
-            var json = File.ReadAllText(path);
-            var words = JsonSerializer.Deserialize<string[]>(json)?
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Select(NormalizeText) ?? [];
-
-            return words
-                .Concat(fallback)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Moderation word list could not be loaded from {Path}", path);
-            return fallback.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        }
-    }
-
     private void DetectProfanity(string text, ContentAnalysisResult result)
     {
         var normalizedText = NormalizeText(text);
         var strippedText = StripSeparators(normalizedText);
+        var terms = GetModerationTerms();
 
-        foreach (var profanity in _profanityRoots)
+        foreach (var term in terms.ProfanityTerms)
         {
-            if (ContainsWord(normalizedText, profanity) || strippedText.Contains(profanity, StringComparison.OrdinalIgnoreCase))
+            if (ContainsWord(normalizedText, term) ||
+                (term.Length >= 3 && strippedText.Contains(term, StringComparison.OrdinalIgnoreCase)))
             {
                 result.HasProfanity = true;
-                if (!result.DetectedProfanities.Contains(profanity))
+                if (!result.DetectedProfanities.Contains(term))
                 {
-                    result.DetectedProfanities.Add(profanity);
+                    result.DetectedProfanities.Add(term);
                 }
             }
         }
@@ -127,8 +68,9 @@ public class ContentModerationService : IContentModerationService
     private void DetectPriceInfo(string text, ContentAnalysisResult result)
     {
         var lowerText = NormalizeText(text);
+        var terms = GetModerationTerms();
 
-        foreach (var keyword in _priceKeywords)
+        foreach (var keyword in terms.PriceTerms)
         {
             if (lowerText.Contains(keyword, StringComparison.OrdinalIgnoreCase))
             {
@@ -142,6 +84,42 @@ public class ContentModerationService : IContentModerationService
             result.HasPriceInfo = true;
             result.DetectedPricePatterns.Add(match.Value);
         }
+    }
+
+    private ModerationTermsSnapshot GetModerationTerms()
+    {
+        return _cache.GetOrCreate(ModerationTermsCacheKey, entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+
+            try
+            {
+                var terms = _dbContext.ModerationTerms
+                    .AsNoTracking()
+                    .Where(term => term.IsActive)
+                    .Select(term => new { term.Type, term.Term })
+                    .ToList();
+
+                return new ModerationTermsSnapshot(
+                    terms
+                        .Where(term => term.Type == ProfanityTermType)
+                        .Select(term => NormalizeText(term.Term))
+                        .Where(term => !string.IsNullOrWhiteSpace(term))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToArray(),
+                    terms
+                        .Where(term => term.Type == PriceTermType)
+                        .Select(term => NormalizeText(term.Term))
+                        .Where(term => !string.IsNullOrWhiteSpace(term))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToArray());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Moderation terms could not be loaded from database.");
+                return ModerationTermsSnapshot.Empty;
+            }
+        }) ?? ModerationTermsSnapshot.Empty;
     }
 
     private static void DetectSpam(string text, IReadOnlyList<string> recentUserComments, ContentAnalysisResult result)
@@ -208,5 +186,10 @@ public class ContentModerationService : IContentModerationService
         }
 
         return text.Contains(word, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed record ModerationTermsSnapshot(string[] ProfanityTerms, string[] PriceTerms)
+    {
+        public static readonly ModerationTermsSnapshot Empty = new([], []);
     }
 }

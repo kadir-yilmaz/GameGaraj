@@ -378,15 +378,6 @@
     </div>
 </div>
 
-<div class="position-fixed bottom-0 start-0 p-3" style="z-index: 1050;">
-    <div id="orderToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-            <div class="toast-body"></div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    </div>
-</div>
-
 <style>
     .admin-filter-panel,
     .admin-stat-card,
@@ -551,17 +542,6 @@
 
 @section Scripts {
     <script>
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('orderToast');
-            const toastBody = toast.querySelector('.toast-body');
-
-            toast.classList.remove('bg-success', 'bg-danger');
-            toast.classList.add(type === 'success' ? 'bg-success' : 'bg-danger', 'text-white');
-            toastBody.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i><span>${message}</span>`;
-
-            bootstrap.Toast.getOrCreateInstance(toast, { delay: 4000 }).show();
-        }
-
         function showPrepareConfirm(orderId) {
             document.getElementById('prepareOrderId').value = orderId;
             bootstrap.Modal.getOrCreateInstance(document.getElementById('prepareConfirmModal')).show();
@@ -579,16 +559,5 @@
         function showOrderDetail(orderId) {
             bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal' + orderId)).show();
         }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            @if (TempData["Success"] != null)
-            {
-                <text>showToast('@TempData["Success"]', 'success');</text>
-            }
-            @if (TempData["Error"] != null)
-            {
-                <text>showToast('@TempData["Error"]', 'error');</text>
-            }
-        });
     </script>
 }

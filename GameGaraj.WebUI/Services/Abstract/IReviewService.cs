@@ -14,4 +14,5 @@ public interface IReviewService
     Task<ReviewMutationResultViewModel> DeleteAsync(string reviewId);
     Task<AdminReviewListViewModel> GetAdminReviewsAsync(int? status = null, string? query = null, int page = 1, int pageSize = 20);
     Task<ReviewMutationResultViewModel> ModerateAsync(ModerateReviewInput input);
+    Task<ReviewMutationResultViewModel> DeleteAsAdminAsync(string reviewId);
 }

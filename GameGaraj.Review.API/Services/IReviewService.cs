@@ -13,6 +13,7 @@ public interface IReviewService
     Task<ReviewMutationResultDto> CreateAsync(CreateReviewDto dto, UserContext user, CancellationToken cancellationToken);
     Task<ReviewMutationResultDto> UpdateAsync(UpdateReviewDto dto, string userId, CancellationToken cancellationToken);
     Task<ReviewMutationResultDto> DeleteAsync(string reviewId, string userId, CancellationToken cancellationToken);
+    Task<ReviewMutationResultDto> DeleteAsAdminAsync(string reviewId, CancellationToken cancellationToken);
     Task<ReviewMutationResultDto> ModerateAsync(ModerateReviewDto dto, CancellationToken cancellationToken);
     Task<ReviewReactionResultDto> ToggleReactionAsync(ToggleReviewReactionDto dto, string userId, CancellationToken cancellationToken);
 }

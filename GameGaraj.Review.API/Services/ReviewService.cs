@@ -324,6 +324,26 @@ public class ReviewService : IReviewService
         return new ReviewMutationResultDto { Succeeded = true, Message = "Yorum silindi." };
     }
 
+    public async Task<ReviewMutationResultDto> DeleteAsAdminAsync(string reviewId, CancellationToken cancellationToken)
+    {
+        var review = await _context.ProductReviews
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(item => item.Id == reviewId && !item.IsDeleted, cancellationToken);
+
+        if (review == null)
+        {
+            return new ReviewMutationResultDto { Succeeded = false, Message = "Yorum bulunamadi." };
+        }
+
+        review.IsDeleted = true;
+        review.DeletedAt = DateTime.UtcNow;
+        review.AdminNote = "Admin tarafindan silindi.";
+        review.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return new ReviewMutationResultDto { Succeeded = true, Id = review.Id, Message = "Yorum silindi." };
+    }
+
     public async Task<ReviewMutationResultDto> ModerateAsync(ModerateReviewDto dto, CancellationToken cancellationToken)
     {
         if (dto.Status != (int)ReviewStatus.Approved && dto.Status != (int)ReviewStatus.Rejected)

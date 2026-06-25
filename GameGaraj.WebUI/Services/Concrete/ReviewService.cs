@@ -128,6 +128,12 @@ public class ReviewService : IReviewService
         return await ReadMutationResultAsync(response, _logger);
     }
 
+    public async Task<ReviewMutationResultViewModel> DeleteAsAdminAsync(string reviewId)
+    {
+        var response = await _httpClient.DeleteAsync($"reviews/admin/{Uri.EscapeDataString(reviewId)}");
+        return await ReadMutationResultAsync(response, _logger);
+    }
+
     private static async Task<T> ReadOrDefaultAsync<T>(HttpResponseMessage response, T defaultValue)
     {
         if (!response.IsSuccessStatusCode)

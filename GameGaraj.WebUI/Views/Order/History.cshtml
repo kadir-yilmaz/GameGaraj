@@ -66,17 +66,29 @@
                                     var myReviews = ViewBag.MyReviews as Dictionary<string, GameGaraj.WebUI.Models.Reviews.ReviewViewModel> ?? new();
                                     myReviews.TryGetValue(item.ProductId, out var existingReview);
                                     var isDelivered = order.Status == 5;
+                                    var reviewIsApproved = existingReview?.Status == 1;
 
                                     <div class="order-item-row mb-3 pb-3 border-bottom last-border-0">
                                         <div class="d-flex justify-content-between align-items-start gap-3 order-item-content">
                                             <div class="d-flex align-items-start flex-grow-1 min-width-0">
-                                                <img src="@(string.IsNullOrWhiteSpace(item.PictureUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.PictureUrl)"
-                                                     class="rounded border me-3"
-                                                     style="width: 50px; height: 50px; object-fit: cover;"
-                                                     alt="@item.ProductName"
-                                                     onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
+                                                <a asp-controller="Product"
+                                                   asp-action="Detail"
+                                                   asp-route-slug="@item.ProductId"
+                                                   class="order-product-image-link me-3"
+                                                   aria-label="@item.ProductName detay sayfasına git">
+                                                    <img src="@(string.IsNullOrWhiteSpace(item.PictureUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.PictureUrl)"
+                                                         class="rounded border"
+                                                         style="width: 50px; height: 50px; object-fit: cover;"
+                                                         alt="@item.ProductName"
+                                                         onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
+                                                </a>
                                                 <div class="flex-grow-1 min-width-0">
-                                                    <div class="fw-bold text-dark">@item.ProductName</div>
+                                                    <a asp-controller="Product"
+                                                       asp-action="Detail"
+                                                       asp-route-slug="@item.ProductId"
+                                                       class="fw-bold text-dark order-product-link">
+                                                        @item.ProductName
+                                                    </a>
                                                     <div class="text-secondary small">
                                                         @((item.Quantity > 0 ? item.Quantity : 1)) Adet x @item.Price.ToString("C2")
                                                         @if (isDelivered && item.ProductId == "__legacy_disabled__")
@@ -117,14 +129,32 @@
                                                     @if (existingReview != null)
                                                     {
                                                         <div class="review-preview mt-2">
-                                                            <div class="text-warning small mb-1">
-                                                                @for (var i = 1; i <= 5; i++)
-                                                                {
-                                                                    <i class="@(i <= existingReview.Rating ? "fas" : "far") fa-star"></i>
-                                                                }
-                                                                <span class="text-muted ms-1">@existingReview.Rating / 5</span>
+                                                            <div class="review-preview-header">
+                                                                <div class="review-stars">
+                                                                    @for (var i = 1; i <= 5; i++)
+                                                                    {
+                                                                        <i class="@(i <= existingReview.Rating ? "fas" : "far") fa-star"></i>
+                                                                    }
+                                                                    <span class="text-muted ms-1">@existingReview.Rating / 5</span>
+                                                                </div>
+                                                                <span class="badge rounded-pill @(reviewIsApproved ? "bg-success-subtle text-success-emphasis" : "bg-warning-subtle text-warning-emphasis")">
+                                                                    @(reviewIsApproved ? "Yayında" : "İncelemede")
+                                                                </span>
                                                             </div>
                                                             <div class="small text-dark review-comment-text">@existingReview.Comment</div>
+                                                            <form asp-controller="Product"
+                                                                  asp-action="DeleteReview"
+                                                                  method="post"
+                                                                  class="mt-2"
+                                                                  onsubmit="return confirm('Yorumunuzu silmek istiyor musunuz?');">
+                                                                @Html.AntiForgeryToken()
+                                                                <input type="hidden" name="reviewId" value="@existingReview.Id" />
+                                                                <input type="hidden" name="productId" value="@item.ProductId" />
+                                                                <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                                                <button type="submit" class="btn btn-link btn-sm text-danger p-0 review-delete-link">
+                                                                    <i class="far fa-trash-alt me-1"></i>Yorumu Sil
+                                                                </button>
+                                                            </form>
                                                         </div>
                                                     }
                                                 </div>
@@ -435,10 +465,40 @@
     
     .order-tracking { padding: 10px 0; }
     .order-item-actions { min-width: 150px; }
+    .order-product-image-link {
+        flex: 0 0 auto;
+        line-height: 0;
+    }
+    .order-product-link {
+        display: inline-block;
+        text-decoration: none;
+        line-height: 1.25;
+    }
+    .order-product-link:hover,
+    .order-product-image-link:hover + div .order-product-link {
+        color: #0d6efd !important;
+        text-decoration: underline;
+    }
     .review-preview {
         max-width: 100%;
+        background: #fff;
+        border: 1px solid #e5e7eb;
         border-left: 3px solid #ffc107;
-        padding-left: 10px;
+        border-radius: 8px;
+        margin-top: 10px;
+        padding: 10px 12px;
+    }
+    .review-preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+    }
+    .review-stars {
+        color: #ffc107;
+        font-size: 0.92rem;
+        white-space: nowrap;
     }
     .review-comment-text {
         display: -webkit-box;
@@ -446,6 +506,13 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
         line-height: 1.35;
+    }
+    .review-delete-link {
+        text-decoration: none;
+        font-weight: 600;
+    }
+    .review-delete-link:hover {
+        text-decoration: underline;
     }
     .steps { display: flex; justify-content: space-between; position: relative; margin: 0 auto; max-width: 650px; }
     .steps::before { content: ''; position: absolute; top: 20px; left: 0; right: 0; height: 3px; background: #f0f0f0; z-index: 0; }
