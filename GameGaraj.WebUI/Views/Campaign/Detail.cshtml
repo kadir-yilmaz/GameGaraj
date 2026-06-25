@@ -3,6 +3,7 @@
     ViewData["Title"] = Model.Name;
     var product = ViewBag.Product as GameGaraj.WebUI.Models.Products.ProductViewModel;
     var categoryName = ViewBag.CategoryName as string;
+    var campaignProductsUrl = Url.Action("Index", "Product", new { categoryId = Model.CategoryId, brand = Model.BrandName });
 }
 
 <style>
@@ -161,7 +162,7 @@
                             <i class="fa-solid fa-layer-group fa-3x text-info mb-3"></i>
                             <h5 class="fw-bold text-dark">@categoryName</h5>
                             <p class="text-muted small">Bu kategorideki tüm ürünlerde geçerli özel indirimler sepetinizde otomatik hesaplanacaktır.</p>
-                            <a asp-controller="Product" asp-action="Index" asp-route-CategoryId="@Model.CategoryId" class="btn btn-outline-info w-100 rounded-pill py-2 mt-2">
+                            <a href="@campaignProductsUrl" class="btn btn-outline-info w-100 rounded-pill py-2 mt-2">
                                 Kategoriyi İncele
                             </a>
                         </div>
@@ -173,7 +174,7 @@
                             <i class="fa-solid fa-tags fa-3x text-secondary mb-3"></i>
                             <h5 class="fw-bold text-dark text-uppercase">@Model.BrandName</h5>
                             <p class="text-muted small">@Model.BrandName markalı tüm ürünlerde geçerli özel indirimler sepetinizde otomatik olarak uygulanır.</p>
-                            <a asp-controller="Product" asp-action="Index" asp-route-Query="@Model.BrandName" class="btn btn-outline-secondary w-100 rounded-pill py-2 mt-2">
+                            <a href="@campaignProductsUrl" class="btn btn-outline-secondary w-100 rounded-pill py-2 mt-2">
                                 Marka Ürünlerini İncele
                             </a>
                         </div>

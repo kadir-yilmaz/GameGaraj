@@ -48,15 +48,32 @@
         }
     }
 
+    bool CampaignAppliesToProduct(GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel rule)
+    {
+        if (!string.IsNullOrWhiteSpace(rule.ProductId))
+        {
+            return rule.ProductId.Equals(Model.Id, StringComparison.OrdinalIgnoreCase);
+        }
+
+        var hasCategory = !string.IsNullOrWhiteSpace(rule.CategoryId);
+        var hasBrand = !string.IsNullOrWhiteSpace(rule.BrandName);
+
+        if (!hasCategory && !hasBrand)
+        {
+            return false;
+        }
+
+        var categoryMatches = !hasCategory || rule.CategoryId!.Equals(Model.CategoryId, StringComparison.OrdinalIgnoreCase);
+        var brandMatches = !hasBrand || (!string.IsNullOrWhiteSpace(Model.Brand) && rule.BrandName!.Equals(Model.Brand, StringComparison.OrdinalIgnoreCase));
+
+        return categoryMatches && brandMatches;
+    }
+
     // Find matching campaign for this product
     GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel matchingCampaign = null;
     if (activeRules != null)
     {
-        matchingCampaign = activeRules.FirstOrDefault(r => 
-            (!string.IsNullOrEmpty(r.ProductId) && r.ProductId.Equals(Model.Id, StringComparison.OrdinalIgnoreCase)) ||
-            (!string.IsNullOrEmpty(r.CategoryId) && r.CategoryId.Equals(Model.CategoryId, StringComparison.OrdinalIgnoreCase)) ||
-            (!string.IsNullOrEmpty(r.BrandName) && !string.IsNullOrEmpty(Model.Brand) && r.BrandName.Equals(Model.Brand, StringComparison.OrdinalIgnoreCase))
-        );
+        matchingCampaign = activeRules.FirstOrDefault(CampaignAppliesToProduct);
     }
 }
 

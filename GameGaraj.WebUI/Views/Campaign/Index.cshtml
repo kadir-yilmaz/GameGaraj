@@ -115,6 +115,19 @@
                 }
 
                 var colorClass = $"card-color-{i % 4}";
+                var targetUrl = Url.Action("Detail", "Campaign", new { id = rule.Id });
+                var targetText = "Detayları Gör";
+
+                if (targetProduct != null)
+                {
+                    targetUrl = Url.Action("Detail", "Product", new { slug = string.IsNullOrEmpty(targetProduct.Slug) ? targetProduct.Id : targetProduct.Slug });
+                    targetText = "Ürünü Gör";
+                }
+                else if (!string.IsNullOrWhiteSpace(rule.CategoryId) || !string.IsNullOrWhiteSpace(rule.BrandName))
+                {
+                    targetUrl = Url.Action("Index", "Product", new { categoryId = rule.CategoryId, brand = rule.BrandName });
+                    targetText = "Ürünleri Gör";
+                }
 
                 <div class="col">
                     <div class="campaign-item-card @colorClass">
@@ -146,8 +159,8 @@
                                 </p>
                             </div>
                             <div class="mt-2">
-                                <a asp-controller="Campaign" asp-action="Detail" asp-route-id="@rule.Id" class="btn btn-light rounded-pill px-3 py-1 fw-semibold btn-sm">
-                                    Detayları Gör <i class="fas fa-chevron-right ms-1" style="font-size: 0.75rem;"></i>
+                                <a href="@targetUrl" class="btn btn-light rounded-pill px-3 py-1 fw-semibold btn-sm">
+                                    @targetText <i class="fas fa-chevron-right ms-1" style="font-size: 0.75rem;"></i>
                                 </a>
                             </div>
                         </div>

@@ -124,7 +124,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 var queryParams = new List<string>();
 
                 if (!string.IsNullOrEmpty(categoryId))
-                    queryParams.Add($"categoryId={categoryId}");
+                    queryParams.Add($"categoryId={Uri.EscapeDataString(categoryId)}");
 
                 if (!string.IsNullOrEmpty(sortBy))
                     queryParams.Add($"sortBy={sortBy}");

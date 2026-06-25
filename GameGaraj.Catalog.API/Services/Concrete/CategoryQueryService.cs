@@ -1,6 +1,8 @@
 using AutoMapper;
+using Elastic.Clients.Elasticsearch;
 using GameGaraj.Catalog.API.Data;
 using GameGaraj.Catalog.API.Dtos;
+using GameGaraj.Catalog.API.Models;
 using GameGaraj.Catalog.API.Services.Abstract;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,26 +12,28 @@ namespace GameGaraj.Catalog.API.Services.Concrete
     {
         private readonly CatalogDbContext _context;
         private readonly IMapper _mapper;
+        private readonly ElasticsearchClient _elasticClient;
+        private readonly ILogger<CategoryQueryService> _logger;
 
         public CategoryQueryService(
             CatalogDbContext context,
-            IMapper mapper)
+            IMapper mapper,
+            ElasticsearchClient elasticClient,
+            ILogger<CategoryQueryService> logger)
         {
             _context = context;
             _mapper = mapper;
+            _elasticClient = elasticClient;
+            _logger = logger;
         }
 
         public async Task<List<CategoryDto>> GetAllAsync()
         {
             var categories = await _context.Categories.AsNoTracking().ToListAsync();
             var attributes = await _context.CategoryAttributes.AsNoTracking().ToListAsync();
-            var products = await _context.Products.AsNoTracking().Select(p => new { p.CategoryId, p.IsActive }).ToListAsync();
 
             var categoryDtos = _mapper.Map<List<CategoryDto>>(categories);
-            var directProductCounts = products
-                .Where(p => p.IsActive)
-                .GroupBy(p => p.CategoryId)
-                .ToDictionary(g => g.Key, g => g.Count());
+            var directProductCounts = await GetDirectProductCountsFromElasticAsync();
 
             // Build tree structure
             var lookup = categoryDtos.ToDictionary(c => c.Id);
@@ -104,12 +108,10 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             }
 
             dto.Attributes = dtos;
-            dto.ProductCount = (await _context.Products
-                    .Where(p => allDescendantIds.Contains(p.CategoryId))
-                    .AsNoTracking()
-                    .Select(p => p.IsActive)
-                    .ToListAsync())
-                .Count(isActive => isActive);
+
+            var directProductCounts = await GetDirectProductCountsFromElasticAsync();
+            dto.ProductCount = allDescendantIds.Sum(categoryId =>
+                directProductCounts.TryGetValue(categoryId, out var count) ? count : 0);
 
             return dto;
         }
@@ -180,19 +182,69 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
         private async Task<List<string>> GetDistinctValuesForAttributeAsync(List<string> categoryIds, string attributeName)
         {
-            var specsList = await _context.Products
-                .Where(p => categoryIds.Contains(p.CategoryId))
-                .AsNoTracking()
-                .Select(p => p.Specs)
-                .ToListAsync();
+            var categorySet = categoryIds
+                .Where(categoryId => !string.IsNullOrWhiteSpace(categoryId))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            return specsList
-                .Where(specs => specs != null && specs.ContainsKey(attributeName))
+            if (!categorySet.Any() || string.IsNullOrWhiteSpace(attributeName))
+            {
+                return new List<string>();
+            }
+
+            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
+                .Index("products")
+                .Query(q => q.Bool(b => b.Filter(f => f.Term(t => t.Field("isActive").Value(true)))))
+                .Size(1000)
+            );
+
+            if (!response.IsValidResponse)
+            {
+                _logger.LogWarning("Elasticsearch category attribute option query failed: {Error}", response.DebugInformation);
+                return new List<string>();
+            }
+
+            return response.Documents
+                .Where(product => categorySet.Contains(product.CategoryId))
+                .Select(product => product.Specs)
+                .Where(specs => specs != null && specs.TryGetValue(attributeName, out _))
                 .Select(specs => specs[attributeName])
                 .Where(value => !string.IsNullOrWhiteSpace(value))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(value => value)
                 .ToList();
+        }
+
+        private async Task<Dictionary<string, int>> GetDirectProductCountsFromElasticAsync()
+        {
+            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
+                .Index("products")
+                .Size(0)
+                .Query(q => q.Bool(b => b.Filter(f => f.Term(t => t.Field("isActive").Value(true)))))
+                .Aggregations(a => a
+                    .Add("categories", agg => agg
+                        .Terms(t => t
+                            .Field("categoryId")
+                            .Size(1000)
+                        )
+                    )
+                )
+            );
+
+            if (!response.IsValidResponse)
+            {
+                _logger.LogWarning("Elasticsearch category count query failed: {Error}", response.DebugInformation);
+                return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var buckets = response.Aggregations?.GetStringTerms("categories")?.Buckets;
+
+            return buckets?
+                .Where(bucket => !string.IsNullOrWhiteSpace(bucket.Key.ToString()))
+                .ToDictionary(
+                    bucket => bucket.Key.ToString(),
+                    bucket => (int)bucket.DocCount,
+                    StringComparer.OrdinalIgnoreCase)
+                ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         }
     }
 }
