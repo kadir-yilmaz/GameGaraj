@@ -88,7 +88,16 @@ namespace GameGaraj.PhotoStock.API.Services
 
             await _minioClient.PutObjectAsync(putArgs, cancellationToken);
 
-            _logger.LogInformation("Photo uploaded to MinIO bucket {BucketName} as object {ObjectName}.", _bucketName, objectName);
+            var statArgs = new StatObjectArgs()
+                .WithBucket(_bucketName)
+                .WithObject(objectName);
+            var stat = await _minioClient.StatObjectAsync(statArgs, cancellationToken);
+
+            _logger.LogInformation(
+                "Photo uploaded and verified in MinIO bucket {BucketName} as object {ObjectName}. Size: {Size}",
+                _bucketName,
+                objectName,
+                stat.Size);
 
             return objectName;
         }

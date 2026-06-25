@@ -99,6 +99,7 @@ services:
     nodePort: 30015
     env:
       IdentityOption__Audience: "photostock.api"
+      Minio__UseLocalStorage: "false"
     secretEnv:
       Minio__Endpoint: minio-endpoint
       Minio__AccessKey: minio-access-key
