@@ -185,6 +185,13 @@
                                             <span class="badge bg-warning text-dark">Spam supheli</span>
                                         }
                                     </div>
+                                    @if (review.Status == 2 && !string.IsNullOrWhiteSpace(review.AdminNote))
+                                    {
+                                        <div class="alert alert-danger py-2 px-3 mt-2 mb-0 small">
+                                            <i class="fas fa-circle-info me-1"></i>
+                                            Reddedilme gerekcesi: @review.AdminNote
+                                        </div>
+                                    }
                                 </td>
                                 <td>
                                     <span class="badge bg-@StatusClass(review.Status)">@StatusText(review.Status)</span>
@@ -205,11 +212,11 @@
                                         }
                                         @if (review.Status != 2)
                                         {
-                                            <form asp-action="Moderate" method="post">
+                                            <form asp-action="Moderate" method="post" onsubmit="return prepareRejectReview(this);">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="ReviewId" value="@review.Id" />
                                                 <input type="hidden" name="Status" value="2" />
-                                                <input type="hidden" name="AdminNote" value="Admin tarafindan reddedildi." />
+                                                <input type="hidden" name="AdminNote" value="" />
                                                 <input type="hidden" name="returnUrl" value="@currentUrl" />
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">Reddet</button>
                                             </form>
@@ -243,5 +250,23 @@
         const warningInput = form.querySelector('input[name="moderationWarning"]');
         const warning = warningInput ? warningInput.value : '';
         return !warning || window.confirm(warning);
+    }
+
+    function prepareRejectReview(form) {
+        const noteInput = form.querySelector('input[name="AdminNote"]');
+        const note = window.prompt('Reddedilme gerekcesini yazin:');
+
+        if (note === null) {
+            return false;
+        }
+
+        const trimmedNote = note.trim();
+        if (!trimmedNote) {
+            window.alert('Reddetmek icin gerekce yazmalisiniz.');
+            return false;
+        }
+
+        noteInput.value = trimmedNote;
+        return true;
     }
 </script>

@@ -94,9 +94,12 @@
                                     }
                                 </div>
                                 <p class="mb-2 text-muted">@review.Comment</p>
-                                @if (!string.IsNullOrWhiteSpace(review.AdminNote))
+                                @if (review.Status == 2)
                                 {
-                                    <div class="small text-danger">Admin notu: @review.AdminNote</div>
+                                    <div class="small text-danger mb-1">
+                                        <strong>Reddedilme gerekcesi:</strong>
+                                        @(string.IsNullOrWhiteSpace(review.AdminNote) ? "Gerekce belirtilmedi." : review.AdminNote)
+                                    </div>
                                 }
                                 <small class="text-muted">@review.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
                                 <div class="mt-2">
