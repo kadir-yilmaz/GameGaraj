@@ -152,9 +152,6 @@
         font-size: 0.82rem;
         line-height: 1.35;
         overflow: hidden;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
     }
 
     .product-card-brand-inline {
@@ -170,7 +167,11 @@
         font-size: 0.82rem;
         font-weight: 600;
         line-height: 1.35;
-        display: inline;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .product-card-stock {

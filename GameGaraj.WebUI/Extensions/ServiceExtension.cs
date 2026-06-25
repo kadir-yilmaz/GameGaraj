@@ -41,6 +41,14 @@ namespace GameGaraj.WebUI.Extensions
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
+            // Review Service
+            services.AddHttpClient<IReviewService, ReviewService>(client =>
+            {
+                client.BaseAddress = new Uri(gatewayUri, "api/review/");
+                client.Timeout = TimeSpan.FromSeconds(4);
+            })
+            .AddHttpMessageHandler<UserIdDelegatingHandler>();
+
             // Favorites Service (lives in basket-api, routed through gateway)
             services.AddHttpClient<IFavoritesService, FavoritesService>(client =>
             {

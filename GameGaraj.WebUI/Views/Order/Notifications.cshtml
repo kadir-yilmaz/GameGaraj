@@ -3,13 +3,54 @@
     ViewData["Title"] = "Bildirimlerim";
 }
 
+<style>
+    .notification-item {
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+        position: relative;
+    }
+    .notification-item.unread {
+        background-color: #f7faff !important;
+        border-left-color: #f1c40f !important;
+    }
+    .notification-item:hover {
+        background-color: #f8f9fa !important;
+    }
+    .notification-item.unread:hover {
+        background-color: #eff5fc !important;
+    }
+    .unread-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #f1c40f;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .js-mark-read {
+        opacity: 0.7;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+    .js-mark-read:hover {
+        opacity: 1;
+        transform: scale(1.15);
+    }
+</style>
+
 <div class="container py-5">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="fw-bold">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6 col-12">
+            <h2 class="fw-bold m-0">
                 <i class="fas fa-bell text-warning me-2"></i>Bildirimlerim
             </h2>
-            <p class="text-muted">Size özel kampanyalar, duyurular ve sipariş bildirimleri.</p>
+            <p class="text-muted m-0">Size özel kampanyalar, duyurular ve sipariş bildirimleri.</p>
+        </div>
+        <div class="col-md-6 col-12 text-md-end mt-3 mt-md-0">
+            @if (Model != null && Model.Any(n => !n.IsRead))
+            {
+                <button id="btnMarkAllRead" class="btn btn-warning rounded-pill px-4 shadow-sm" style="color: #232f3e; font-weight: bold; border: none; background-color: #f1c40f;">
+                    <i class="fas fa-check-double me-2"></i>Hepsini Okundu Olarak İşaretle
+                </button>
+            }
         </div>
     </div>
 
@@ -22,10 +63,24 @@
                         <div class="list-group list-group-flush rounded-4">
                             @foreach (var item in Model)
                             {
-                                <div class="list-group-item list-group-item-action p-4 border-bottom">
-                                    <div class="d-flex w-100 justify-content-between align-items-center mb-2">
-                                        <h5 class="mb-1 fw-bold text-dark">@item.Title</h5>
-                                        <small class="text-muted"><i class="far fa-clock me-1"></i>@item.CreatedDate.ToString("dd MMM yyyy HH:mm")</small>
+                                <div class="list-group-item list-group-item-action p-4 border-bottom notification-item @(item.IsRead ? "" : "unread")" data-id="@item.Id">
+                                    <div class="d-flex w-100 justify-content-between align-items-start mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            @if (!item.IsRead)
+                                            {
+                                                <span class="unread-dot js-unread-dot" title="Okunmadı"></span>
+                                            }
+                                            <h5 class="mb-1 fw-bold text-dark">@item.Title</h5>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <small class="text-muted"><i class="far fa-clock me-1"></i>@item.CreatedDate.ToString("dd MMM yyyy HH:mm")</small>
+                                            @if (!item.IsRead)
+                                            {
+                                                <button class="btn btn-sm btn-link text-decoration-none text-success p-1 js-mark-read" data-id="@item.Id" title="Okundu olarak işaretle">
+                                                    <i class="fas fa-check-circle" style="font-size: 1.25rem;"></i>
+                                                </button>
+                                            }
+                                        </div>
                                     </div>
                                     <p class="mb-1 text-secondary" style="font-size: 1rem; line-height: 1.5;">@item.Message</p>
                                     
@@ -56,3 +111,95 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Mark single notification read
+            const markReadBtns = document.querySelectorAll(".js-mark-read");
+            markReadBtns.forEach(btn => {
+                btn.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    const id = this.getAttribute("data-id");
+                    const row = this.closest(".notification-item");
+                    
+                    fetch(`/Order/MarkNotificationRead?id=${id}`, {
+                        method: "POST"
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update row style
+                            row.classList.remove("unread");
+                            const dot = row.querySelector(".js-unread-dot");
+                            if (dot) dot.remove();
+                            this.remove(); // Remove the mark read button
+                            
+                            // Decrement navbar/dropdown badges
+                            updateNavbarBadges(1);
+                            
+                            // If no unread notifications left on page, hide the bulk mark all read button
+                            if (document.querySelectorAll(".notification-item.unread").length === 0) {
+                                const btnMarkAllRead = document.getElementById("btnMarkAllRead");
+                                if (btnMarkAllRead) btnMarkAllRead.remove();
+                            }
+                        }
+                    })
+                    .catch(err => console.error("Error marking notification as read:", err));
+                });
+            });
+
+            // Mark all notifications read
+            const btnMarkAllRead = document.getElementById("btnMarkAllRead");
+            if (btnMarkAllRead) {
+                btnMarkAllRead.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    
+                    fetch("/Order/MarkAllNotificationsRead", {
+                        method: "POST"
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update all rows style
+                            document.querySelectorAll(".notification-item.unread").forEach(row => {
+                                row.classList.remove("unread");
+                                const dot = row.querySelector(".js-unread-dot");
+                                if (dot) dot.remove();
+                                const btn = row.querySelector(".js-mark-read");
+                                if (btn) btn.remove();
+                            });
+                            
+                            // Hide the bulk mark all read button
+                            btnMarkAllRead.remove();
+                            
+                            // Clear navbar/dropdown badges
+                            clearAllNavbarBadges();
+                        }
+                    })
+                    .catch(err => console.error("Error marking all notifications as read:", err));
+                });
+            }
+
+            function updateNavbarBadges(amount) {
+                const badges = document.querySelectorAll(".notification-badge");
+                badges.forEach(badge => {
+                    let count = parseInt(badge.textContent.trim());
+                    if (!isNaN(count)) {
+                        count -= amount;
+                        if (count > 0) {
+                            badge.textContent = count;
+                        } else {
+                            badge.remove();
+                        }
+                    }
+                });
+            }
+
+            function clearAllNavbarBadges() {
+                const badges = document.querySelectorAll(".notification-badge");
+                badges.forEach(badge => badge.remove());
+            }
+        });
+    </script>
+}

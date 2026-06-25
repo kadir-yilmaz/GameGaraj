@@ -345,6 +345,10 @@
                    asp-area="Admin" asp-controller="Product" asp-action="Index">
                     <i class="fas fa-box"></i> Ürün Yönetimi
                 </a>
+                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Review" ? "active" : "")" 
+                   asp-area="Admin" asp-controller="Review" asp-action="Index">
+                    <i class="fas fa-comments"></i> Yorum Yönetimi
+                </a>
                 <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Campaign" ? "active" : "")" 
                    asp-area="Admin" asp-controller="Campaign" asp-action="Index">
                     <i class="fas fa-bullhorn"></i> İndirim Kuralları

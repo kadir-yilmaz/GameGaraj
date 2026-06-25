@@ -4,6 +4,10 @@
 @{
     ViewData["Title"] = Model.Name;
     var displayImageUrls = Model.DisplayImageUrls;
+    var reviewSummary = ViewBag.Reviews as GameGaraj.WebUI.Models.Reviews.ReviewListViewModel ?? new GameGaraj.WebUI.Models.Reviews.ReviewListViewModel();
+    var canReview = ViewBag.CanReview as GameGaraj.WebUI.Models.Reviews.CanReviewViewModel;
+    var userReviewResponse = ViewBag.UserReview as GameGaraj.WebUI.Models.Reviews.UserReviewResponseViewModel;
+    var userReview = userReviewResponse?.Review;
 
     var httpContext = HttpContextAccessor.HttpContext;
     List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel> activeRules = null;
@@ -1160,17 +1164,25 @@
                         <h1 class="product-title">@Model.Name</h1>
 
                         <!-- Rating -->
-                        <div class="product-rating">
-                            <span class="stars">
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star-half-alt"></i>
-                            </span>
-                            <span>4.5</span>
-                            <a href="#reviews" class="rating-count">38 De&#287;erlendirme</a>
-                        </div>
+                        @if (reviewSummary.TotalCount == 0)
+                        {
+                            <div class="product-rating">
+                                <span class="text-muted small">Henüz değerlendirilmemiş</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="product-rating">
+                                <span class="stars">
+                                    @for (var i = 1; i <= 5; i++)
+                                    {
+                                        <i class="@(i <= Math.Round(reviewSummary.AverageRating) ? "fas" : "far") fa-star"></i>
+                                    }
+                                </span>
+                                <span>@reviewSummary.AverageRating.ToString("0.0")</span>
+                                <a href="#reviews" class="rating-count">@reviewSummary.TotalCount Değerlendirme</a>
+                            </div>
+                        }
 
 
                         <!-- Price -->
@@ -1347,7 +1359,7 @@
                 <button class="tab-btn active" onclick="openTab(event, 'description')">&Uuml;r&uuml;n A&ccedil;&#305;klamas&#305;</button>
                 <button class="tab-btn" onclick="openTab(event, 'specs')">Teknik &Ouml;zellikler</button>
                 <button class="tab-btn" onclick="openTab(event, 'reviews')">De&#287;erlendirmeler <span
-                        style="background: #ff6000; color: white; padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.7rem; margin-left: 0.25rem;">38</span></button>
+                        style="background: #ff6000; color: white; padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.7rem; margin-left: 0.25rem;">@reviewSummary.TotalCount</span></button>
                 <button class="tab-btn" onclick="openTab(event, 'qa')">Soru & Cevap</button>
             </div>
 
@@ -1404,10 +1416,117 @@
                 <!-- Reviews Tab -->
                 <div id="reviews" class="tab-pane">
                     <h2 class="specs-header">De&#287;erlendirmeler</h2>
-                    <div class="text-center py-5">
-                        <i class="far fa-comment-dots fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">Hen&uuml;z de&#287;erlendirme yap&#305;lmam&#305;&#351;.</p>
-                        <button class="btn btn-outline-primary">&#304;lk De&#287;erlendirmeyi Yaz</button>
+                    <div class="row g-4">
+                        <div class="col-lg-4">
+                            <div class="border rounded-3 p-3 bg-light">
+                                <div class="d-flex align-items-baseline gap-2">
+                                    <strong style="font-size: 2rem; color: var(--dark-blue);">@reviewSummary.AverageRating.ToString("0.0")</strong>
+                                    <span class="stars">
+                                        @for (var i = 1; i <= 5; i++)
+                                        {
+                                            <i class="@(i <= Math.Round(reviewSummary.AverageRating) ? "fas" : "far") fa-star"></i>
+                                        }
+                                    </span>
+                                </div>
+                                <div class="text-muted small">@reviewSummary.TotalCount de&#287;erlendirme</div>
+                            </div>
+
+                            <div class="border rounded-3 p-3 mt-3">
+                                @if (User.Identity?.IsAuthenticated != true)
+                                {
+                                    <p class="text-muted mb-2">Yorum yapmak i&ccedil;in giri&#351; yapmal&#305;s&#305;n&#305;z.</p>
+                                    <a asp-controller="Auth" asp-action="SignIn" class="btn btn-outline-primary btn-sm">Giri&#351; Yap</a>
+                                }
+                                else if (userReview != null)
+                                {
+                                    <div class="fw-bold mb-2">Yorumunuz</div>
+                                    <form asp-controller="Product" asp-action="UpdateReview" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="ReviewId" value="@userReview.Id" />
+                                        <input type="hidden" name="productId" value="@Model.Id" />
+                                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString#reviews" />
+                                        <select name="Rating" class="form-select mb-2">
+                                            @for (var i = 5; i >= 1; i--)
+                                            {
+                                                if (userReview.Rating == i)
+                                                {
+                                                    <option value="@i" selected>@i y&#305;ld&#305;z</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@i">@i y&#305;ld&#305;z</option>
+                                                }
+                                            }
+                                        </select>
+                                        <textarea name="Comment" class="form-control mb-2" rows="4" maxlength="1000">@userReview.Comment</textarea>
+                                        <button type="submit" class="btn btn-primary btn-sm">G&uuml;ncelle</button>
+                                    </form>
+                                    <form asp-controller="Product" asp-action="DeleteReview" method="post" class="mt-2">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="reviewId" value="@userReview.Id" />
+                                        <input type="hidden" name="productId" value="@Model.Id" />
+                                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString#reviews" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">Yorumu Sil</button>
+                                    </form>
+                                }
+                                else if (canReview?.CanReview == true)
+                                {
+                                    <div class="fw-bold mb-2">De&#287;erlendirme Yaz</div>
+                                    <form asp-controller="Product" asp-action="CreateReview" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="ProductId" value="@Model.Id" />
+                                        <input type="hidden" name="ProductName" value="@Model.Name" />
+                                        <input type="hidden" name="ProductImageUrl" value="@Model.FirstImageUrl" />
+                                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString#reviews" />
+                                        <select name="Rating" class="form-select mb-2" required>
+                                            <option value="">Puan se&ccedil;in</option>
+                                            <option value="5">5 y&#305;ld&#305;z</option>
+                                            <option value="4">4 y&#305;ld&#305;z</option>
+                                            <option value="3">3 y&#305;ld&#305;z</option>
+                                            <option value="2">2 y&#305;ld&#305;z</option>
+                                            <option value="1">1 y&#305;ld&#305;z</option>
+                                        </select>
+                                        <textarea name="Comment" class="form-control mb-2" rows="4" minlength="10" maxlength="1000" placeholder="Deneyiminizi yaz&#305;n" required></textarea>
+                                        <button type="submit" class="btn btn-primary btn-sm">Yorumu G&ouml;nder</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <p class="text-muted mb-0">@(canReview?.Reason ?? "Bu &uuml;r&uuml;n i&ccedil;in yorum yazamazs&#305;n&#305;z.")</p>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="col-lg-8">
+                            @if (reviewSummary.Reviews.Any())
+                            {
+                                foreach (var review in reviewSummary.Reviews)
+                                {
+                                    <div class="border-bottom py-3">
+                                        <div class="d-flex justify-content-between gap-3 flex-wrap">
+                                            <div>
+                                                <strong>@review.UserName</strong>
+                                                <div class="stars small">
+                                                    @for (var i = 1; i <= 5; i++)
+                                                    {
+                                                        <i class="@(i <= review.Rating ? "fas" : "far") fa-star"></i>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">@review.CreatedAt.ToString("dd.MM.yyyy")</small>
+                                        </div>
+                                        <p class="mb-0 mt-2">@review.Comment</p>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center py-5">
+                                    <i class="far fa-comment-dots fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">Hen&uuml;z de&#287;erlendirme yap&#305;lmam&#305;&#351;.</p>
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
 

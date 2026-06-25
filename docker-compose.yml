@@ -13,6 +13,19 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=GameGarajCatalogDb
 
+  # PostgreSQL for Review Service
+  reviewdb:
+    image: postgres:16-alpine
+    container_name: gamegaraj-review-postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - review_postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=GameGarajReviewDb
+
   # ============ REDIS SENTINEL CLUSTER (Basket API) ============
 
   # Redis Master — Yazma + Okuma yapılır
@@ -230,4 +243,5 @@ volumes:
   keycloak_postgres_data:
   rabbitmq_data:
   catalog_postgres_data:
+  review_postgres_data:
   elasticsearch_data:

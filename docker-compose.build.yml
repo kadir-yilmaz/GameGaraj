@@ -11,6 +11,12 @@ services:
       context: .
       dockerfile: GameGaraj.Catalog.API/Dockerfile
 
+  review-api:
+    image: review-api:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: GameGaraj.Review.API/Dockerfile
+
   photostock-api:
     image: photostock-api:${IMAGE_TAG:-latest}
     build:

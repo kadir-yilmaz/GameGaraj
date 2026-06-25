@@ -18,6 +18,7 @@ on:
           - payment-api
           - invoice-api
           - campaign-api
+          - review-api
           - webui
 
 concurrency:
@@ -59,6 +60,7 @@ jobs:
           build_payment_api=false
           build_invoice_api=false
           build_campaign_api=false
+          build_review_api=false
           build_webui=false
 
           if [ "$TRIGGER_TYPE" = "workflow_dispatch" ]; then
@@ -72,6 +74,7 @@ jobs:
               build_payment_api=true
               build_invoice_api=true
               build_campaign_api=true
+              build_review_api=true
               build_webui=true
             else
               # Enable only the manually selected service
@@ -101,6 +104,7 @@ jobs:
               build_payment_api=true
               build_invoice_api=true
               build_campaign_api=true
+              build_review_api=true
               build_webui=true
             else
               if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Gateway/" >/dev/null; then build_gateway=true; fi
@@ -111,6 +115,7 @@ jobs:
               if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Payment\.API/" >/dev/null; then build_payment_api=true; fi
               if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Invoice\.API/" >/dev/null; then build_invoice_api=true; fi
               if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Campaign\.API/" >/dev/null; then build_campaign_api=true; fi
+              if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.Review\.API/" >/dev/null; then build_review_api=true; fi
               if echo "$CHANGED_FILES" | grep -E "^GameGaraj\.WebUI/" >/dev/null; then build_webui=true; fi
             fi
           fi
@@ -123,6 +128,7 @@ jobs:
           echo "build_payment_api=$build_payment_api" >> "$GITHUB_OUTPUT"
           echo "build_invoice_api=$build_invoice_api" >> "$GITHUB_OUTPUT"
           echo "build_campaign_api=$build_campaign_api" >> "$GITHUB_OUTPUT"
+          echo "build_review_api=$build_review_api" >> "$GITHUB_OUTPUT"
           echo "build_webui=$build_webui" >> "$GITHUB_OUTPUT"
 
           echo "Decisions:"
@@ -134,6 +140,7 @@ jobs:
           echo " - Payment API: $build_payment_api"
           echo " - Invoice API: $build_invoice_api"
           echo " - Campaign API: $build_campaign_api"
+          echo " - Review API: $build_review_api"
           echo " - WebUI: $build_webui"
 
       - name: Verify Tooling
@@ -158,6 +165,7 @@ jobs:
           if [ "${{ steps.filter.outputs.build_payment_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD payment-api"; fi
           if [ "${{ steps.filter.outputs.build_invoice_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD invoice-api"; fi
           if [ "${{ steps.filter.outputs.build_campaign_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD campaign-api"; fi
+          if [ "${{ steps.filter.outputs.build_review_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD review-api"; fi
           if [ "${{ steps.filter.outputs.build_webui }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD webui"; fi
 
           if [ -z "$SERVICES_TO_BUILD" ]; then
@@ -189,6 +197,7 @@ jobs:
             ["payment-api"]="payment-api"
             ["invoice-api"]="invoice-api"
             ["campaign-api"]="campaign-api"
+            ["review-api"]="review-api"
             ["webui"]="webui"
           )
 

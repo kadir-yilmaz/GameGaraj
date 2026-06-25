@@ -12,24 +12,28 @@ namespace GameGaraj.WebUI.Controllers
         private readonly IBasketService _basketService;
         private readonly IFavoritesService _favoritesService;
         private readonly ICampaignService _campaignService;
+        private readonly IReviewService _reviewService;
 
         public HomeController(ILogger<HomeController> logger, 
             ICatalogService catalogService, 
             IBasketService basketService, 
             IFavoritesService favoritesService,
-            ICampaignService campaignService)
+            ICampaignService campaignService,
+            IReviewService reviewService)
         {
             _logger = logger;
             _catalogService = catalogService;
             _basketService = basketService;
             _favoritesService = favoritesService;
             _campaignService = campaignService;
+            _reviewService = reviewService;
         }
 
         public async Task<IActionResult> Index()
         {
             var featuredProducts = await _catalogService.GetFeaturedProductsAsync();
             await ApplyUserProductStateAsync(featuredProducts);
+            await ApplyReviewSummariesAsync(featuredProducts);
 
             var allCategories = await _catalogService.GetAllCategoriesAsync();
             var flattenedCategories = new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
@@ -99,6 +103,7 @@ namespace GameGaraj.WebUI.Controllers
                 .ToList();
 
             await ApplyUserProductStateAsync(products);
+            await ApplyReviewSummariesAsync(products);
 
             ViewBag.ShowFeaturedBadge = false;
             return PartialView("_HomeCategoryProducts", products);
@@ -124,6 +129,29 @@ namespace GameGaraj.WebUI.Controllers
             {
                 product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
                 product.IsFavorite = favoriteIds.Contains(product.Id ?? string.Empty);
+            }
+        }
+
+        private async Task ApplyReviewSummariesAsync(List<GameGaraj.WebUI.Models.Products.ProductViewModel> products)
+        {
+            if (products == null || products.Count == 0)
+            {
+                return;
+            }
+
+            var summaries = await _reviewService.GetProductReviewSummariesAsync(products.Select(product => product.Id));
+            foreach (var product in products)
+            {
+                if (summaries.TryGetValue(product.Id, out var summary))
+                {
+                    product.AverageRating = summary.AverageRating;
+                    product.ReviewCount = summary.TotalCount;
+                }
+                else
+                {
+                    product.AverageRating = 0;
+                    product.ReviewCount = 0;
+                }
             }
         }
 

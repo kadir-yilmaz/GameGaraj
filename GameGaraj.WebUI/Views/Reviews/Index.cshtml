@@ -1,0 +1,305 @@
+@model List<GameGaraj.WebUI.Models.Reviews.ReviewViewModel>
+@{
+    ViewData["Title"] = "Yorumlarim";
+    var reviewableItems = ViewBag.ReviewableItems as List<GameGaraj.WebUI.Models.Reviews.ReviewableProductViewModel> ?? new();
+
+    static string StatusText(int status) => status switch
+    {
+        0 => "Onay bekliyor",
+        1 => "Onaylandi",
+        2 => "Reddedildi",
+        _ => "Bilinmiyor"
+    };
+
+    static string StatusClass(int status) => status switch
+    {
+        0 => "bg-warning text-dark",
+        1 => "bg-success",
+        2 => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-4">
+        <div>
+            <h2 class="mb-1">Yorumlarim</h2>
+            <p class="text-muted mb-0">Urun degerlendirmelerinizi ve onay durumlarini buradan takip edebilirsiniz.</p>
+        </div>
+        <a asp-controller="Order" asp-action="History" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-box me-1"></i>Siparislerim
+        </a>
+    </div>
+
+    @if (reviewableItems.Any())
+    {
+        <section class="mb-4">
+            <h5 class="mb-3">Yorum bekleyen urunler</h5>
+            <div class="row g-3">
+                @foreach (var item in reviewableItems)
+                {
+                    <div class="col-lg-4">
+                        <article class="border rounded-3 p-3 h-100 bg-white shadow-sm">
+                            <div class="d-flex gap-3">
+                                <img src="@(string.IsNullOrWhiteSpace(item.ProductImageUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.ProductImageUrl)"
+                                     alt="@item.ProductName"
+                                     class="rounded border"
+                                     style="width: 64px; height: 64px; object-fit: contain;"
+                                     onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
+                                <div>
+                                    <div class="fw-bold">@item.ProductName</div>
+                                    <small class="text-muted d-block mb-2">Siparis #@item.OrderId - @item.OrderDate.ToString("dd.MM.yyyy")</small>
+                                    <button type="button"
+                                            class="btn btn-outline-primary btn-sm btn-make-comment"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#commentModal"
+                                            data-product-id="@item.ProductId"
+                                            data-product-name="@item.ProductName"
+                                            data-product-image="@(string.IsNullOrWhiteSpace(item.ProductImageUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.ProductImageUrl)"
+                                            data-is-edit="false">
+                                        <i class="far fa-comment-dots me-1"></i>Yorum Yap
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+
+    @if (Model.Any())
+    {
+        <h5 class="mb-3">Yorum gecmisi</h5>
+        <div class="row g-3">
+            @foreach (var review in Model)
+            {
+                <div class="col-lg-6">
+                    <article class="border rounded-3 p-3 h-100 bg-white shadow-sm">
+                        <div class="d-flex gap-3">
+                            <img src="@(string.IsNullOrWhiteSpace(review.ProductImageUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : review.ProductImageUrl)"
+                                 alt="@review.ProductName"
+                                 class="rounded border"
+                                 style="width: 76px; height: 76px; object-fit: contain;"
+                                 onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
+                            <div class="flex-grow-1 min-width-0">
+                                <div class="d-flex justify-content-between gap-2">
+                                    <a asp-controller="Product" asp-action="Detail" asp-route-slug="@review.ProductId" class="fw-bold text-dark text-decoration-none">@review.ProductName</a>
+                                    <span class="badge @StatusClass(review.Status)">@StatusText(review.Status)</span>
+                                </div>
+                                <div class="text-warning small my-1">
+                                    @for (var i = 1; i <= 5; i++)
+                                    {
+                                        <i class="@(i <= review.Rating ? "fas" : "far") fa-star"></i>
+                                    }
+                                </div>
+                                <p class="mb-2 text-muted">@review.Comment</p>
+                                @if (!string.IsNullOrWhiteSpace(review.AdminNote))
+                                {
+                                    <div class="small text-danger">Admin notu: @review.AdminNote</div>
+                                }
+                                <small class="text-muted">@review.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                                <div class="mt-2">
+                                     <button type="button"
+                                             class="btn btn-outline-success btn-sm btn-make-comment"
+                                             data-bs-toggle="modal"
+                                             data-bs-target="#commentModal"
+                                             data-product-id="@review.ProductId"
+                                             data-product-name="@review.ProductName"
+                                             data-product-image="@(string.IsNullOrWhiteSpace(review.ProductImageUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : review.ProductImageUrl)"
+                                             data-is-edit="true"
+                                             data-review-id="@review.Id"
+                                             data-rating="@review.Rating"
+                                             data-comment="@review.Comment">
+                                         <i class="far fa-edit me-1"></i>Yorumu Düzenle
+                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center border rounded-3 py-5 bg-white">
+            <i class="far fa-comment-dots fa-3x text-muted mb-3"></i>
+            <p class="text-muted mb-2">Henuz yorumunuz yok.</p>
+            <a asp-controller="Order" asp-action="History" class="btn btn-primary btn-sm">Tamamlanan siparisleri gor</a>
+        </div>
+    }
+
+<!-- Comment Modal -->
+<div class="modal fade" id="commentModal" tabindex="-1" aria-labelledby="commentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold" id="commentModalLabel">Ürünü Değerlendir</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form asp-controller="Product" asp-action="CreateReview" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ProductId" id="modalProductId" />
+                <input type="hidden" name="ProductName" id="modalProductName" />
+                <input type="hidden" name="ProductImageUrl" id="modalProductImageUrl" />
+                <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                <input type="hidden" name="ReviewId" id="modalReviewId" />
+                
+                <div class="modal-body pt-3">
+                    <!-- Product Info Header -->
+                    <div class="d-flex align-items-center mb-4 bg-light p-3 rounded-3 border">
+                        <img src="" id="modalProductImageDisplay" alt="" class="rounded border me-3 bg-white" style="width: 60px; height: 60px; object-fit: contain;" />
+                        <div>
+                            <div class="fw-bold text-dark text-truncate" id="modalProductNameDisplay" style="max-width: 320px;"></div>
+                            <small class="text-muted">Bu ürünü değerlendiriyorsunuz</small>
+                        </div>
+                    </div>
+
+                    <!-- Star Rating Selector -->
+                    <div class="text-center mb-4">
+                        <label class="form-label d-block text-secondary small fw-bold text-uppercase mb-2">Puanınız</label>
+                        <div class="star-rating-input fs-2 text-muted">
+                            <i class="far fa-star cursor-pointer px-1" data-value="1" style="cursor: pointer; transition: transform 0.15s ease;"></i>
+                            <i class="far fa-star cursor-pointer px-1" data-value="2" style="cursor: pointer; transition: transform 0.15s ease;"></i>
+                            <i class="far fa-star cursor-pointer px-1" data-value="3" style="cursor: pointer; transition: transform 0.15s ease;"></i>
+                            <i class="far fa-star cursor-pointer px-1" data-value="4" style="cursor: pointer; transition: transform 0.15s ease;"></i>
+                            <i class="far fa-star cursor-pointer px-1" data-value="5" style="cursor: pointer; transition: transform 0.15s ease;"></i>
+                        </div>
+                        <input type="hidden" name="Rating" id="selectedRating" required />
+                        <div class="invalid-feedback d-block text-danger small mt-1" id="ratingValidationMsg" style="display:none;">Lütfen bir puan seçin.</div>
+                    </div>
+
+                    <!-- Comment Text -->
+                    <div class="mb-3">
+                        <label for="modalComment" class="form-label text-secondary small fw-bold text-uppercase mb-2">Değerlendirmeniz (Yorumunuz)</label>
+                        <textarea class="form-control border-2" id="modalComment" name="Comment" rows="4" minlength="10" maxlength="1000" placeholder="Deneyiminizi buraya yazın (En az 10, en fazla 1000 karakter)..." required></textarea>
+                        <div class="form-text d-flex justify-content-between mt-1">
+                            <span class="text-muted small">Minimum 10 karakter</span>
+                            <span id="charCount" class="text-muted small">0 / 1000</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" id="btnSubmitComment">Yorumu Gönder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .star-rating-input i {
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    .star-rating-input i:hover {
+        transform: scale(1.2);
+    }
+    .cursor-pointer {
+        cursor: pointer;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const commentModal = document.getElementById('commentModal');
+        if (commentModal) {
+            const ratingInput = document.getElementById('selectedRating');
+            const ratingStars = commentModal.querySelectorAll('.star-rating-input i');
+            const commentTextarea = document.getElementById('modalComment');
+            const charCount = document.getElementById('charCount');
+            const form = commentModal.querySelector('form');
+
+            commentModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const productId = button.getAttribute('data-product-id');
+                const productName = button.getAttribute('data-product-name');
+                const productImage = button.getAttribute('data-product-image');
+                const isEdit = button.getAttribute('data-is-edit') === 'true';
+
+                // Reset before assigning modal values; reset clears hidden inputs too.
+                form.reset();
+                document.getElementById('ratingValidationMsg').style.display = 'none';
+
+                commentModal.querySelector('#modalProductId').value = productId;
+                commentModal.querySelector('#modalProductName').value = productName;
+                commentModal.querySelector('#modalProductImageUrl').value = productImage;
+
+                commentModal.querySelector('#modalProductNameDisplay').textContent = productName;
+                commentModal.querySelector('#modalProductImageDisplay').src = productImage;
+
+                if (isEdit) {
+                    form.action = '/Product/UpdateReview';
+                    commentModal.querySelector('#modalReviewId').value = button.getAttribute('data-review-id');
+                    commentModal.querySelector('#commentModalLabel').textContent = 'Yorumu Düzenle';
+
+                    const rating = button.getAttribute('data-rating');
+                    const comment = button.getAttribute('data-comment');
+
+                    ratingInput.value = rating;
+                    highlightStars(parseInt(rating));
+                    commentTextarea.value = comment;
+                    charCount.textContent = `${comment.length} / 1000`;
+                } else {
+                    form.action = '/Product/CreateReview';
+                    commentModal.querySelector('#modalReviewId').value = '';
+                    commentModal.querySelector('#commentModalLabel').textContent = 'Ürünü Değerlendir';
+
+                    ratingInput.value = '';
+                    highlightStars(0);
+                    commentTextarea.value = '';
+                    charCount.textContent = '0 / 1000';
+                }
+            });
+
+            // Star Rating logic
+            ratingStars.forEach(star => {
+                star.addEventListener('mouseover', function () {
+                    const val = parseInt(this.getAttribute('data-value'));
+                    highlightStars(val);
+                });
+
+                star.addEventListener('mouseout', function () {
+                    const currentVal = parseInt(ratingInput.value) || 0;
+                    highlightStars(currentVal);
+                });
+
+                star.addEventListener('click', function () {
+                    const val = parseInt(this.getAttribute('data-value'));
+                    ratingInput.value = val;
+                    highlightStars(val);
+                    document.getElementById('ratingValidationMsg').style.display = 'none';
+                });
+            });
+
+            function highlightStars(val) {
+                ratingStars.forEach(star => {
+                    const starVal = parseInt(star.getAttribute('data-value'));
+                    if (starVal <= val) {
+                        star.classList.remove('far');
+                        star.classList.add('fas', 'text-warning');
+                    } else {
+                        star.classList.remove('fas', 'text-warning');
+                        star.classList.add('far');
+                    }
+                });
+            }
+
+            // Character Count logic
+            commentTextarea.addEventListener('input', function () {
+                charCount.textContent = `${this.value.length} / 1000`;
+            });
+
+            // Validation before submit
+            form.addEventListener('submit', function (e) {
+                if (!ratingInput.value) {
+                    e.preventDefault();
+                    document.getElementById('ratingValidationMsg').style.display = 'block';
+                }
+            });
+        }
+    });
+</script>
+</div>

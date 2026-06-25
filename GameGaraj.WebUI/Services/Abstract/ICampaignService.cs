@@ -43,6 +43,7 @@ namespace GameGaraj.WebUI.Services.Abstract
         Task<List<NotificationViewModel>> GetNotificationsAsync(string userId, bool unreadOnly = false);
         Task<int> GetUnreadNotificationCountAsync(string userId);
         Task<bool> MarkNotificationAsReadAsync(int id);
+        Task<bool> MarkAllNotificationsAsReadAsync(string userId);
 
         // --- CAROUSEL IMAGES ---
         Task<List<CarouselImageViewModel>> GetCarouselImagesAsync();

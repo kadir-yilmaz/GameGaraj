@@ -47,6 +47,7 @@ services:
       ReverseProxy__Clusters__catalog-cluster__Destinations__destination1__Address: "http://catalog-api:8080"
       ReverseProxy__Clusters__basket-cluster__Destinations__destination1__Address: "http://basket-api:8080"
       ReverseProxy__Clusters__order-cluster__Destinations__destination1__Address: "http://order-api:8080"
+      ReverseProxy__Clusters__review-cluster__Destinations__destination1__Address: "http://review-api:8080"
       ReverseProxy__Clusters__payment-cluster__Destinations__destination1__Address: "http://payment-api:8080"
       ReverseProxy__Clusters__photostock-cluster__Destinations__destination1__Address: "http://photostock-api:8080"
       ReverseProxy__Clusters__campaign-cluster__Destinations__destination1__Address: "http://campaign-api:8080"
@@ -68,6 +69,19 @@ services:
     secretEnv:
       RabbitMQUrl: rabbitmq-url
       ConnectionStrings__PostgresConnection: catalog-postgres-connection
+
+  # ---------------------------------------------------------------------------
+  # Review API (PostgreSQL)
+  # ---------------------------------------------------------------------------
+  review-api:
+    image: "review-api:36e788e"
+    nodePort: 30018
+    skipCommonRabbit: true
+    env:
+      IdentityOption__Audience: "review.api"
+      ServiceUrls__OrderApi: "http://order-api:8080"
+    secretEnv:
+      ConnectionStrings__PostgresConnection: review-postgres-connection
 
   # ---------------------------------------------------------------------------
   # PhotoStock API (MinIO)

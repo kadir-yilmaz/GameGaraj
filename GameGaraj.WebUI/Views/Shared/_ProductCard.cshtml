@@ -3,8 +3,8 @@
 @inject GameGaraj.WebUI.Services.Abstract.ICampaignService CampaignService
 @{
     var cardImagesJson = System.Text.Json.JsonSerializer.Serialize(Model.DisplayImageUrls);
-    var ratingValue = 4.4m + (Math.Abs(Model.Id.GetHashCode()) % 6) / 10m;
-    var reviewCount = 120 + (Math.Abs(Model.Id.GetHashCode()) % 1800);
+    var ratingValue = Model.AverageRating;
+    var reviewCount = Model.ReviewCount;
     var stockCount = Model.AvailableStock > 0 ? Model.AvailableStock : Model.Stock;
     var isOutOfStock = stockCount <= 0;
     var isLowStock = !isOutOfStock && stockCount < 20;
@@ -87,27 +87,36 @@
         }
 
         <div class="product-card-name-block">
-            @if (!string.IsNullOrWhiteSpace(Model.Brand))
-            {
-                <small class="product-card-brand-inline">
-                    @Model.Brand
-                    @if (Model.Brand.Equals("Samsung", StringComparison.OrdinalIgnoreCase) || Model.Brand.Equals("MSI", StringComparison.OrdinalIgnoreCase) || Model.Brand.Equals("Asus", StringComparison.OrdinalIgnoreCase))
-                    {
-                        <i class="fas fa-check-circle text-primary ms-1" style="font-size: 0.8rem; color: #1e90ff !important;" title="Onaylı Marka"></i>
-                    }
-                </small>
-            }
             <a asp-controller="Product" asp-action="Detail" asp-route-slug="@Model.Slug"
                class="text-decoration-none text-dark product-card-title-link product-card-title-inline">
+                @if (!string.IsNullOrWhiteSpace(Model.Brand))
+                {
+                    <small class="product-card-brand-inline">
+                        @Model.Brand
+                        @if (Model.Brand.Equals("Samsung", StringComparison.OrdinalIgnoreCase) || Model.Brand.Equals("MSI", StringComparison.OrdinalIgnoreCase) || Model.Brand.Equals("Asus", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <i class="fas fa-check-circle text-primary ms-1" style="font-size: 0.8rem; color: #1e90ff !important;" title="Onaylı Marka"></i>
+                        }
+                    </small>
+                }
                 @Model.Name
             </a>
         </div>
 
-        <div class="product-card-rating">
-            <i class="fas fa-star"></i>
-            <span class="product-card-rating-value">@ratingValue.ToString("0.0").Replace(".", ",")</span>
-            <span class="product-card-rating-count">(@reviewCount)</span>
-        </div>
+        @if (reviewCount == 0)
+        {
+            <div class="product-card-rating">
+                <span class="text-muted small">Henüz değerlendirilmemiş</span>
+            </div>
+        }
+        else
+        {
+            <div class="product-card-rating">
+                <i class="fas fa-star"></i>
+                <span class="product-card-rating-value">@ratingValue.ToString("0.0")</span>
+                <span class="product-card-rating-count">(@reviewCount)</span>
+            </div>
+        }
 
         <div class="product-card-stock @(isOutOfStock ? "out" : isLowStock ? "low" : "good")">
             <i class="fas @(isOutOfStock ? "fa-ban" : "fa-box")"></i>

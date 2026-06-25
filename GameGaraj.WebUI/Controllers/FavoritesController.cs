@@ -8,12 +8,14 @@ namespace GameGaraj.WebUI.Controllers
     {
         private readonly IFavoritesService _favoritesService;
         private readonly ICatalogService _catalogService;
+        private readonly IReviewService _reviewService;
         private readonly ILogger<FavoritesController> _logger;
 
-        public FavoritesController(IFavoritesService favoritesService, ICatalogService catalogService, ILogger<FavoritesController> logger)
+        public FavoritesController(IFavoritesService favoritesService, ICatalogService catalogService, IReviewService reviewService, ILogger<FavoritesController> logger)
         {
             _favoritesService = favoritesService;
             _catalogService = catalogService;
+            _reviewService = reviewService;
             _logger = logger;
         }
 
@@ -38,8 +40,32 @@ namespace GameGaraj.WebUI.Controllers
             {
                 product.IsFavorite = true;
             }
+            await ApplyReviewSummariesAsync(favoriteProducts);
 
             return View(favoriteProducts);
+        }
+
+        private async Task ApplyReviewSummariesAsync(List<Models.Products.ProductViewModel> products)
+        {
+            if (products == null || products.Count == 0)
+            {
+                return;
+            }
+
+            var summaries = await _reviewService.GetProductReviewSummariesAsync(products.Select(product => product.Id));
+            foreach (var product in products)
+            {
+                if (summaries.TryGetValue(product.Id, out var summary))
+                {
+                    product.AverageRating = summary.AverageRating;
+                    product.ReviewCount = summary.TotalCount;
+                }
+                else
+                {
+                    product.AverageRating = 0;
+                    product.ReviewCount = 0;
+                }
+            }
         }
 
         [HttpPost]

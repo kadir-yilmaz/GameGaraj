@@ -402,7 +402,7 @@ namespace GameGaraj.WebUI.Services.Concrete
         {
             try
             {
-                var response = await _httpClient.GetAsync($"notifications/unread-count/{userId}");
+                var response = await _httpClient.GetAsync($"notifications/user/{userId}/unreadcount");
                 if (!response.IsSuccessStatusCode) return 0;
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -419,12 +419,26 @@ namespace GameGaraj.WebUI.Services.Concrete
         {
             try
             {
-                var response = await _httpClient.PutAsync($"notifications/read/{id}", null);
+                var response = await _httpClient.PostAsync($"notifications/{id}/markread", null);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[CampaignService] MarkNotificationAsReadAsync hatası — ID: {Id}", id);
+                return false;
+            }
+        }
+
+        public async Task<bool> MarkAllNotificationsAsReadAsync(string userId)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"notifications/user/{userId}/markallread", null);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CampaignService] MarkAllNotificationsAsReadAsync hatası — User: {UserId}", userId);
                 return false;
             }
         }

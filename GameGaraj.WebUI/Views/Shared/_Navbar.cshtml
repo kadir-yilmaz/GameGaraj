@@ -74,27 +74,25 @@
                                 <li><hr class="dropdown-divider my-0"></li>
                             }
                             <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="History"><i class="fas fa-box me-2 text-muted"></i>Siparişlerim</a></li>
-                            <li class="position-relative">
+                            <li><a class="dropdown-item py-2" asp-controller="Reviews" asp-action="Index"><i class="fas fa-comments me-2 text-muted"></i>Yorumlarım</a></li>
+                            <li>
                                 <a class="dropdown-item py-2" asp-controller="Order" asp-action="MyCoupons">
                                     <i class="fas fa-ticket-alt me-2 text-muted"></i>Kuponlarım
                                 </a>
-                                <div style="position: absolute; right: 25px; top: 15px; transform: scale(0.9);">
-                                    @await Component.InvokeAsync("NotificationCount")
-                                </div>
                             </li>
                             <li><a class="dropdown-item py-2" asp-controller="Address" asp-action="Index"><i class="fas fa-map-marker-alt me-2 text-muted"></i>Adreslerim</a></li>
                             
                             <li><hr class="dropdown-divider my-0"></li>
                             
-                            <li class="px-0">
+                            <li class="px-0 position-relative">
                                 <a class="dropdown-item py-2 bg-light d-flex justify-content-between align-items-center border-bottom border-top" asp-controller="Order" asp-action="Notifications">
                                     <span class="fw-bold text-dark" style="font-size: 0.85rem;"><i class="fas fa-bell text-warning me-1"></i> Tüm Bildirimler</span>
+                                    <span style="position: absolute; right: 35px; top: 12px;">
+                                        @await Component.InvokeAsync("NotificationCount")
+                                    </span>
                                     <i class="fas fa-chevron-right text-muted" style="font-size: 0.7rem;"></i>
                                 </a>
                             </li>
-                            <div id="notificationsContentList">
-                                <li class="px-3 py-3 text-center text-muted small">Yükleniyor...</li>
-                            </div>
 
                             <li><hr class="dropdown-divider my-0"></li>
                             <li><a class="dropdown-item py-2 text-danger" asp-controller="Auth" asp-action="SignOut"><i class="fas fa-sign-out-alt me-2"></i>Çıkış Yap</a></li>
@@ -158,27 +156,25 @@
                                     <small class="text-muted">@mobileUserName</small>
                                 </li>
                                 <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="History"><i class="fas fa-box me-2 text-muted"></i>Siparişlerim</a></li>
-                                <li class="position-relative">
+                                <li><a class="dropdown-item py-2" asp-controller="Reviews" asp-action="Index"><i class="fas fa-comments me-2 text-muted"></i>Yorumlarım</a></li>
+                                <li>
                                     <a class="dropdown-item py-2" asp-controller="Order" asp-action="MyCoupons">
                                         <i class="fas fa-ticket-alt me-2 text-muted"></i>Kuponlarım
                                     </a>
-                                    <div style="position: absolute; right: 25px; top: 15px; transform: scale(0.9);">
-                                        @await Component.InvokeAsync("NotificationCount")
-                                    </div>
                                 </li>
                                 <li><a class="dropdown-item py-2" asp-controller="Address" asp-action="Index"><i class="fas fa-map-marker-alt me-2 text-muted"></i>Adreslerim</a></li>
                                 
                                 <li><hr class="dropdown-divider my-0"></li>
                                 
-                                <li class="px-0">
+                                <li class="px-0 position-relative">
                                     <a class="dropdown-item py-2 bg-light d-flex justify-content-between align-items-center border-bottom border-top" asp-controller="Order" asp-action="Notifications">
                                         <span class="fw-bold text-dark" style="font-size: 0.85rem;"><i class="fas fa-bell text-warning me-1"></i> Tüm Bildirimler</span>
+                                        <span style="position: absolute; right: 35px; top: 12px;">
+                                            @await Component.InvokeAsync("NotificationCount")
+                                        </span>
                                         <i class="fas fa-chevron-right text-muted" style="font-size: 0.7rem;"></i>
                                     </a>
                                 </li>
-                                <div id="mobileNotificationsContentList">
-                                    <li class="px-3 py-3 text-center text-muted small">Yükleniyor...</li>
-                                </div>
 
                                 <li><hr class="dropdown-divider my-0"></li>
                                 <li><a class="dropdown-item py-2 text-danger" asp-controller="Auth" asp-action="SignOut"><i class="fas fa-sign-out-alt me-2"></i>Çıkış</a></li>
@@ -215,65 +211,4 @@
     </div>
 </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const desktopLink = document.getElementById("profileDropdownLink");
-    const mobileLink = document.getElementById("mobileProfileDropdownLink");
-    
-    function loadNotifications() {
-        fetch("/Order/GetNotifications")
-            .then(r => r.json())
-            .then(data => {
-                const listDesktop = document.getElementById("notificationsContentList");
-                const listMobile = document.getElementById("mobileNotificationsContentList");
-                
-                let html = "";
-                if (!data || data.length === 0) {
-                    html = '<li class="px-3 py-3 text-center text-muted small">Henüz bildiriminiz yok.</li>';
-                } else {
-                    data.forEach(n => {
-                        const bgClass = n.isRead ? "" : "bg-light";
-                        const unreadDot = n.isRead ? "" : '<span class="position-absolute bg-primary rounded-circle" style="width:8px; height:8px; top:12px; right:12px;"></span>';
-                        html += `
-                            <li class="px-3 py-2 border-bottom position-relative ${bgClass}" style="cursor: pointer; transition: background 0.2s;" onclick="markNotificationRead(${n.id}, this)">
-                                <div class="fw-bold text-dark" style="font-size:0.85rem; padding-right: 15px;">${n.title}</div>
-                                <div class="text-muted" style="font-size:0.75rem;">${n.message}</div>
-                                <small class="text-muted" style="font-size:0.65rem;">${new Date(n.createdDate).toLocaleDateString("tr-TR")}</small>
-                                ${unreadDot}
-                            </li>
-                        `;
-                    });
-                }
-                
-                if (listDesktop) listDesktop.innerHTML = html;
-                if (listMobile) listMobile.innerHTML = html;
-            });
-    }
 
-    if (desktopLink) desktopLink.addEventListener("click", loadNotifications);
-    if (mobileLink) mobileLink.addEventListener("click", loadNotifications);
-
-    window.markNotificationRead = function(id, element) {
-        fetch("/Order/MarkNotificationRead?id=" + id, { method: "POST" })
-            .then(r => r.json())
-            .then(res => {
-                if (res.success) {
-                    element.classList.remove("bg-light");
-                    const dot = element.querySelector(".bg-primary");
-                    if (dot) dot.remove();
-                    
-                    // Update badges
-                    const badges = document.querySelectorAll(".notification-badge");
-                    badges.forEach(b => {
-                        let count = parseInt(b.textContent.trim());
-                        if (count > 1) {
-                            b.textContent = count - 1;
-                        } else {
-                            b.remove();
-                        }
-                    });
-                }
-            });
-    };
-});
-</script>

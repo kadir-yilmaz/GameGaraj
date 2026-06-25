@@ -18,6 +18,7 @@ namespace GameGaraj.WebUI.Controllers
         private readonly IPaymentService _paymentService;
         private readonly ICatalogService _catalogService;
         private readonly ICampaignService _campaignService;
+        private readonly IReviewService _reviewService;
         private readonly IPublishEndpoint _publishEndpoint;
         private readonly ILogger<OrderController> _logger;
 
@@ -27,6 +28,7 @@ namespace GameGaraj.WebUI.Controllers
             IPaymentService paymentService,
             ICatalogService catalogService,
             ICampaignService campaignService,
+            IReviewService reviewService,
             IPublishEndpoint publishEndpoint,
             ILogger<OrderController> _logger)
         {
@@ -35,6 +37,7 @@ namespace GameGaraj.WebUI.Controllers
             _paymentService = paymentService;
             _catalogService = catalogService;
             _campaignService = campaignService;
+            _reviewService = reviewService;
             _publishEndpoint = publishEndpoint;
             this._logger = _logger;
         }
@@ -339,6 +342,11 @@ namespace GameGaraj.WebUI.Controllers
         public async Task<IActionResult> History()
         {
             var orders = await _orderService.GetOrders();
+            var reviews = await _reviewService.GetMyReviewsAsync();
+            ViewBag.ReviewedProductIds = reviews
+                .Select(review => review.ProductId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            ViewBag.MyReviews = reviews.ToDictionary(r => r.ProductId, r => r, StringComparer.OrdinalIgnoreCase);
             return View(orders);
         }
 
@@ -353,14 +361,6 @@ namespace GameGaraj.WebUI.Controllers
 
             var notifications = await _campaignService.GetNotificationsAsync(userId);
             
-            // Okunmamış olanları "okundu" olarak işaretle
-            var unreadNotifications = notifications.Where(n => !n.IsRead).ToList();
-            foreach (var n in unreadNotifications)
-            {
-                await _campaignService.MarkNotificationAsReadAsync(n.Id);
-                n.IsRead = true; // View için modelde de güncelle
-            }
-
             return View(notifications.OrderByDescending(n => n.CreatedDate).ToList());
         }
 
@@ -559,6 +559,19 @@ namespace GameGaraj.WebUI.Controllers
         public async Task<IActionResult> MarkNotificationRead(int id)
         {
             var success = await _campaignService.MarkNotificationAsReadAsync(id);
+            return Json(new { success });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> MarkAllNotificationsRead()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Json(new { success = false, message = "Kullanıcı bulunamadı." });
+            }
+
+            var success = await _campaignService.MarkAllNotificationsAsReadAsync(userId);
             return Json(new { success });
         }
     }

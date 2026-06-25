@@ -1,0 +1,241 @@
+@model GameGaraj.WebUI.Models.Reviews.AdminReviewListViewModel
+@{
+    ViewData["Title"] = "Yorum Yonetimi";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var currentUrl = Context.Request.Path + Context.Request.QueryString;
+    var selectedStatus = ViewBag.Status as int?;
+    var currentQuery = ViewBag.Query as string;
+    var totalAll = Model.PendingCount + Model.ApprovedCount + Model.RejectedCount;
+
+    static string StatusText(int status) => status switch
+    {
+        0 => "Onay bekliyor",
+        1 => "Onaylandi",
+        2 => "Reddedildi",
+        _ => "Bilinmiyor"
+    };
+
+    static string StatusClass(int status) => status switch
+    {
+        0 => "warning",
+        1 => "success",
+        2 => "danger",
+        _ => "secondary"
+    };
+
+    static string ModerationWarning(GameGaraj.WebUI.Models.Reviews.ReviewViewModel review)
+    {
+        var warnings = new List<string>();
+        if (review.HasProfanity)
+        {
+            warnings.Add("kufur/yasakli kelime");
+        }
+
+        if (review.HasPriceInfo)
+        {
+            warnings.Add("fiyat bilgisi");
+        }
+
+        return warnings.Any()
+            ? "Bu yorumda " + string.Join(" ve ", warnings) + " tespit edildi. Yine de onaylamak istiyor musunuz?"
+            : string.Empty;
+    }
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-4">
+        <div>
+            <h2 class="mb-1"><i class="fas fa-comments me-2 text-primary"></i>Yorum Yonetimi</h2>
+            <p class="text-muted mb-0">Toplam <strong>@Model.TotalCount</strong> yorum, sayfa <strong>@Model.Page</strong> / <strong>@Math.Max(Model.TotalPages, 1)</strong></p>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <a class="text-decoration-none" asp-action="Index" asp-route-q="@currentQuery" asp-route-pageSize="@Model.PageSize">
+                <div class="border rounded-3 bg-white p-3 shadow-sm h-100 @(selectedStatus == null ? "border-primary" : "")">
+                    <div class="text-muted small">Tum yorumlar</div>
+                    <div class="h4 mb-0 text-dark">@totalAll</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a class="text-decoration-none" asp-action="Index" asp-route-status="0" asp-route-q="@currentQuery" asp-route-pageSize="@Model.PageSize">
+                <div class="border rounded-3 bg-white p-3 shadow-sm h-100 @(selectedStatus == 0 ? "border-warning" : "")">
+                    <div class="text-muted small">Onay bekleyen</div>
+                    <div class="h4 mb-0 text-warning">@Model.PendingCount</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a class="text-decoration-none" asp-action="Index" asp-route-status="1" asp-route-q="@currentQuery" asp-route-pageSize="@Model.PageSize">
+                <div class="border rounded-3 bg-white p-3 shadow-sm h-100 @(selectedStatus == 1 ? "border-success" : "")">
+                    <div class="text-muted small">Onaylanan</div>
+                    <div class="h4 mb-0 text-success">@Model.ApprovedCount</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a class="text-decoration-none" asp-action="Index" asp-route-status="2" asp-route-q="@currentQuery" asp-route-pageSize="@Model.PageSize">
+                <div class="border rounded-3 bg-white p-3 shadow-sm h-100 @(selectedStatus == 2 ? "border-danger" : "")">
+                    <div class="text-muted small">Reddedilen</div>
+                    <div class="h4 mb-0 text-danger">@Model.RejectedCount</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <form method="get" class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-5">
+                    <label class="form-label">Ara</label>
+                    <input type="text" name="q" value="@ViewBag.Query" class="form-control" placeholder="Urun, kullanici, e-posta veya yorum" />
+                </div>
+                <div class="col-lg-3">
+                    <label class="form-label">Durum</label>
+                    <select name="status" asp-items="ViewBag.StatusOptions" class="form-select"></select>
+                </div>
+                <div class="col-lg-2">
+                    <label class="form-label">Sayfa boyutu</label>
+                    <select name="pageSize" class="form-select">
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                <div class="col-lg-2">
+                    <button type="submit" class="btn btn-dark w-100"><i class="fas fa-filter me-2"></i>Filtrele</button>
+                </div>
+            </div>
+            <input type="hidden" name="page" value="1" />
+        </div>
+    </form>
+
+    @if (Model.Items.Any())
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Urun</th>
+                            <th>Kullanici</th>
+                            <th>Puan</th>
+                            <th>Yorum</th>
+                            <th>Durum</th>
+                            <th class="text-end">Islem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var review in Model.Items)
+                        {
+                            <tr class="@(review.HasProfanity ? "table-danger" : review.IsSpamSuspected ? "table-warning" : "")">
+                                <td style="min-width: 220px;">
+                                    <div class="fw-bold">@review.ProductName</div>
+                                    <small class="text-muted">@review.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                                </td>
+                                <td>
+                                    <div>@review.UserName</div>
+                                    <small class="text-muted">@review.UserEmail</small>
+                                </td>
+                                <td class="text-warning">
+                                    @for (var i = 1; i <= 5; i++)
+                                    {
+                                        <i class="@(i <= review.Rating ? "fas" : "far") fa-star"></i>
+                                    }
+                                </td>
+                                <td style="min-width: 320px;">
+                                    <div>@review.Comment</div>
+                                    @if (review.Status == 0 && (review.HasProfanity || review.HasPriceInfo))
+                                    {
+                                        <div class="alert alert-warning py-2 px-3 mt-2 mb-0 small">
+                                            <i class="fas fa-triangle-exclamation me-1"></i>
+                                            Onaydan once dikkat: Bu yorumda
+                                            @if (review.HasProfanity && review.HasPriceInfo)
+                                            {
+                                                <strong>kufur/yasakli kelime ve fiyat bilgisi</strong>
+                                            }
+                                            else if (review.HasProfanity)
+                                            {
+                                                <strong>kufur/yasakli kelime</strong>
+                                            }
+                                            else
+                                            {
+                                                <strong>fiyat bilgisi</strong>
+                                            }
+                                            tespit edildi.
+                                        </div>
+                                    }
+                                    <div class="mt-2 d-flex gap-1 flex-wrap">
+                                        @if (review.HasProfanity)
+                                        {
+                                            <span class="badge bg-danger">Yasakli kelime</span>
+                                        }
+                                        @if (review.Status == 0 && (review.HasProfanity || review.HasPriceInfo))
+                                        {
+                                            <span class="badge bg-dark">Inceleme gerekli</span>
+                                        }
+                                        @if (review.HasPriceInfo)
+                                        {
+                                            <span class="badge bg-info text-dark">Fiyat bilgisi</span>
+                                        }
+                                        @if (review.IsSpamSuspected)
+                                        {
+                                            <span class="badge bg-warning text-dark">Spam supheli</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-@StatusClass(review.Status)">@StatusText(review.Status)</span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        @if (review.Status != 1)
+                                        {
+                                            var warning = ModerationWarning(review);
+                                            <form asp-action="Moderate" method="post" onsubmit="return confirmFlaggedReview(this);">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="ReviewId" value="@review.Id" />
+                                                <input type="hidden" name="Status" value="1" />
+                                                <input type="hidden" name="returnUrl" value="@currentUrl" />
+                                                <input type="hidden" name="moderationWarning" value="@warning" />
+                                                <button type="submit" class="btn btn-sm btn-success">Onayla</button>
+                                            </form>
+                                        }
+                                        @if (review.Status != 2)
+                                        {
+                                            <form asp-action="Moderate" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="ReviewId" value="@review.Id" />
+                                                <input type="hidden" name="Status" value="2" />
+                                                <input type="hidden" name="AdminNote" value="Admin tarafindan reddedildi." />
+                                                <input type="hidden" name="returnUrl" value="@currentUrl" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Reddet</button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-center bg-white border rounded-3 py-5">
+            <i class="far fa-comment-dots fa-3x text-muted mb-3"></i>
+            <p class="text-muted mb-0">Yorum bulunamadi.</p>
+        </div>
+    }
+</div>
+
+<script>
+    function confirmFlaggedReview(form) {
+        const warningInput = form.querySelector('input[name="moderationWarning"]');
+        const warning = warningInput ? warningInput.value : '';
+        return !warning || window.confirm(warning);
+    }
+</script>

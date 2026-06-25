@@ -182,8 +182,13 @@ namespace GameGaraj.Order.API.Controllers
         [HttpGet("{userId}/owned-products")]
         public async Task<IActionResult> GetOwnedProductIds(string userId)
         {
+            var ownershipStatuses = new[]
+            {
+                (int)OrderStatus.Delivered
+            };
+
             var ownedProductIds = await _context.Orders
-                .Where(x => x.BuyerId == userId && x.Status == (int)OrderStatus.Completed)
+                .Where(x => x.BuyerId == userId && ownershipStatuses.Contains(x.Status))
                 .SelectMany(x => x.OrderItems)
                 .Select(x => x.ProductId)
                 .Distinct()
@@ -198,15 +203,20 @@ namespace GameGaraj.Order.API.Controllers
         [HttpGet("{userId}/owns/{productId}")]
         public async Task<IActionResult> CheckProductOwnership(string userId, string productId)
         {
+            var ownershipStatuses = new[]
+            {
+                (int)OrderStatus.Delivered
+            };
+
             var owns = await _context.Orders
-                .Where(x => x.BuyerId == userId && x.Status == (int)OrderStatus.Completed)
+                .Where(x => x.BuyerId == userId && ownershipStatuses.Contains(x.Status))
                 .SelectMany(x => x.OrderItems)
                 .AnyAsync(x => x.ProductId == productId);
 
             if (owns)
             {
                 var purchaseDate = await _context.Orders
-                    .Where(x => x.BuyerId == userId && x.Status == (int)OrderStatus.Completed)
+                    .Where(x => x.BuyerId == userId && ownershipStatuses.Contains(x.Status))
                     .Where(x => x.OrderItems.Any(oi => oi.ProductId == productId))
                     .Select(x => x.CreatedDate)
                     .FirstOrDefaultAsync();

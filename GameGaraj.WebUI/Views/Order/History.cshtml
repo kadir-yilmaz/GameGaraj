@@ -73,7 +73,43 @@
                                                      onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
                                                 <div>
                                                     <div class="fw-bold text-dark">@item.ProductName</div>
-                                                    <div class="text-secondary small">@((item.Quantity > 0 ? item.Quantity : 1)) Adet x @item.Price.ToString("C2")</div>
+                                                    <div class="text-secondary small">
+                                                        @((item.Quantity > 0 ? item.Quantity : 1)) Adet x @item.Price.ToString("C2")
+                                                        @if (order.Status == 5)
+                                                        {
+                                                            var myReviews = ViewBag.MyReviews as Dictionary<string, GameGaraj.WebUI.Models.Reviews.ReviewViewModel> ?? new();
+                                                            myReviews.TryGetValue(item.ProductId, out var existingReview);
+                                                            if (existingReview != null)
+                                                            {
+                                                                <button type="button"
+                                                                        class="btn btn-outline-success btn-sm mt-2 btn-make-comment"
+                                                                        data-bs-toggle="modal"
+                                                                        data-bs-target="#commentModal"
+                                                                        data-product-id="@item.ProductId"
+                                                                        data-product-name="@item.ProductName"
+                                                                        data-product-image="@(string.IsNullOrWhiteSpace(item.PictureUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.PictureUrl)"
+                                                                        data-is-edit="true"
+                                                                        data-review-id="@existingReview.Id"
+                                                                        data-rating="@existingReview.Rating"
+                                                                        data-comment="@existingReview.Comment">
+                                                                    <i class="far fa-edit me-1"></i>Yorumu Düzenle
+                                                                </button>
+                                                            }
+                                                            else
+                                                            {
+                                                                <button type="button"
+                                                                        class="btn btn-outline-primary btn-sm mt-2 btn-make-comment"
+                                                                        data-bs-toggle="modal"
+                                                                        data-bs-target="#commentModal"
+                                                                        data-product-id="@item.ProductId"
+                                                                        data-product-name="@item.ProductName"
+                                                                        data-product-image="@(string.IsNullOrWhiteSpace(item.PictureUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.PictureUrl)"
+                                                                        data-is-edit="false">
+                                                                    <i class="far fa-comment-dots me-1"></i>Yorum Yap
+                                                                </button>
+                                                            }
+                                                        }
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="text-end">
@@ -183,6 +219,166 @@
     }
 </div>
 
+<!-- Comment Modal -->
+<div class="modal fade" id="commentModal" tabindex="-1" aria-labelledby="commentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold" id="commentModalLabel">Ürünü Değerlendir</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form asp-controller="Product" asp-action="CreateReview" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ProductId" id="modalProductId" />
+                <input type="hidden" name="ProductName" id="modalProductName" />
+                <input type="hidden" name="ProductImageUrl" id="modalProductImageUrl" />
+                <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                <input type="hidden" name="ReviewId" id="modalReviewId" />
+                
+                <div class="modal-body pt-3">
+                    <!-- Product Info Header -->
+                    <div class="d-flex align-items-center mb-4 bg-light p-3 rounded-3 border">
+                        <img src="" id="modalProductImageDisplay" alt="" class="rounded border me-3 bg-white" style="width: 60px; height: 60px; object-fit: contain;" />
+                        <div>
+                            <div class="fw-bold text-dark text-truncate" id="modalProductNameDisplay" style="max-width: 320px;"></div>
+                            <small class="text-muted">Bu ürünü değerlendiriyorsunuz</small>
+                        </div>
+                    </div>
+
+                    <!-- Star Rating Selector -->
+                    <div class="text-center mb-4">
+                        <label class="form-label d-block text-secondary small fw-bold text-uppercase mb-2">Puanınız</label>
+                        <div class="star-rating-input fs-2 text-muted">
+                            <i class="far fa-star cursor-pointer px-1" data-value="1" style="cursor: pointer; transition: transform 0.15s ease;"></i>
+                            <i class="far fa-star cursor-pointer px-1" data-value="2" style="cursor: pointer; transition: transform 0.15s ease;"></i>
+                            <i class="far fa-star cursor-pointer px-1" data-value="3" style="cursor: pointer; transition: transform 0.15s ease;"></i>
+                            <i class="far fa-star cursor-pointer px-1" data-value="4" style="cursor: pointer; transition: transform 0.15s ease;"></i>
+                            <i class="far fa-star cursor-pointer px-1" data-value="5" style="cursor: pointer; transition: transform 0.15s ease;"></i>
+                        </div>
+                        <input type="hidden" name="Rating" id="selectedRating" required />
+                        <div class="invalid-feedback d-block text-danger small mt-1" id="ratingValidationMsg" style="display:none;">Lütfen bir puan seçin.</div>
+                    </div>
+
+                    <!-- Comment Text -->
+                    <div class="mb-3">
+                        <label for="modalComment" class="form-label text-secondary small fw-bold text-uppercase mb-2">Değerlendirmeniz (Yorumunuz)</label>
+                        <textarea class="form-control border-2" id="modalComment" name="Comment" rows="4" minlength="10" maxlength="1000" placeholder="Deneyiminizi buraya yazın (En az 10, en fazla 1000 karakter)..." required></textarea>
+                        <div class="form-text d-flex justify-content-between mt-1">
+                            <span class="text-muted small">Minimum 10 karakter</span>
+                            <span id="charCount" class="text-muted small">0 / 1000</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" id="btnSubmitComment">Yorumu Gönder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const commentModal = document.getElementById('commentModal');
+        if (commentModal) {
+            const ratingInput = document.getElementById('selectedRating');
+            const ratingStars = commentModal.querySelectorAll('.star-rating-input i');
+            const commentTextarea = document.getElementById('modalComment');
+            const charCount = document.getElementById('charCount');
+            const form = commentModal.querySelector('form');
+
+            commentModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const productId = button.getAttribute('data-product-id');
+                const productName = button.getAttribute('data-product-name');
+                const productImage = button.getAttribute('data-product-image');
+                const isEdit = button.getAttribute('data-is-edit') === 'true';
+
+                // Reset before assigning modal values; reset clears hidden inputs too.
+                form.reset();
+                document.getElementById('ratingValidationMsg').style.display = 'none';
+
+                commentModal.querySelector('#modalProductId').value = productId;
+                commentModal.querySelector('#modalProductName').value = productName;
+                commentModal.querySelector('#modalProductImageUrl').value = productImage;
+
+                commentModal.querySelector('#modalProductNameDisplay').textContent = productName;
+                commentModal.querySelector('#modalProductImageDisplay').src = productImage;
+
+                if (isEdit) {
+                    form.action = '/Product/UpdateReview';
+                    commentModal.querySelector('#modalReviewId').value = button.getAttribute('data-review-id');
+                    commentModal.querySelector('#commentModalLabel').textContent = 'Yorumu Düzenle';
+
+                    const rating = button.getAttribute('data-rating');
+                    const comment = button.getAttribute('data-comment');
+
+                    ratingInput.value = rating;
+                    highlightStars(parseInt(rating));
+                    commentTextarea.value = comment;
+                    charCount.textContent = `${comment.length} / 1000`;
+                } else {
+                    form.action = '/Product/CreateReview';
+                    commentModal.querySelector('#modalReviewId').value = '';
+                    commentModal.querySelector('#commentModalLabel').textContent = 'Ürünü Değerlendir';
+
+                    ratingInput.value = '';
+                    highlightStars(0);
+                    commentTextarea.value = '';
+                    charCount.textContent = '0 / 1000';
+                }
+            });
+
+            // Star Rating logic
+            ratingStars.forEach(star => {
+                star.addEventListener('mouseover', function () {
+                    const val = parseInt(this.getAttribute('data-value'));
+                    highlightStars(val);
+                });
+
+                star.addEventListener('mouseout', function () {
+                    const currentVal = parseInt(ratingInput.value) || 0;
+                    highlightStars(currentVal);
+                });
+
+                star.addEventListener('click', function () {
+                    const val = parseInt(this.getAttribute('data-value'));
+                    ratingInput.value = val;
+                    highlightStars(val);
+                    document.getElementById('ratingValidationMsg').style.display = 'none';
+                });
+            });
+
+            function highlightStars(val) {
+                ratingStars.forEach(star => {
+                    const starVal = parseInt(star.getAttribute('data-value'));
+                    if (starVal <= val) {
+                        star.classList.remove('far');
+                        star.classList.add('fas', 'text-warning');
+                    } else {
+                        star.classList.remove('fas', 'text-warning');
+                        star.classList.add('far');
+                    }
+                });
+            }
+
+            // Character Count logic
+            commentTextarea.addEventListener('input', function () {
+                charCount.textContent = `${this.value.length} / 1000`;
+            });
+
+            // Validation before submit
+            form.addEventListener('submit', function (e) {
+                if (!ratingInput.value) {
+                    e.preventDefault();
+                    document.getElementById('ratingValidationMsg').style.display = 'block';
+                }
+            });
+        }
+    });
+</script>
+
 <style>
     body { background-color: #f8f9fa; }
     .card { transition: all 0.25s ease-in-out; border-radius: 16px; border: 1px solid rgba(0,0,0,.05); }
@@ -255,5 +451,16 @@
         .step-icon { margin: 0 20px 0 0; }
         .step-label { margin-top: 0; font-size: 14px; }
         .summary-card { border-left: 0 !important; border-top: 1px solid #eee; margin-top: 20px; }
+    }
+
+    .star-rating-input i {
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    .star-rating-input i:hover {
+        transform: scale(1.2);
+    }
+    .cursor-pointer {
+        cursor: pointer;
     }
 </style>

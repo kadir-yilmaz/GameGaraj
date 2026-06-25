@@ -17,6 +17,8 @@ namespace GameGaraj.WebUI.Models.Products
         public bool IsFeatured { get; set; }
         public bool IsInBasket { get; set; }
         public bool IsFavorite { get; set; }
+        public double AverageRating { get; set; }
+        public int ReviewCount { get; set; }
         public List<string> ImageUrls { get; set; } = new();
         public DateTime CreatedAt { get; set; }
         public string CategoryId { get; set; } = string.Empty;

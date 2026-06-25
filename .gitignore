@@ -42,6 +42,8 @@ build/
 ## [App Specific]
 ConsoleLogs/
 docker-compose.override.yml
+**/Data/profanity-words.json
+**/Data/price-keywords.json
 
 # Ensure all frontend assets are tracked (overriding global dist/ etc.)
 !**/wwwroot/**

@@ -1,5 +1,7 @@
+using AspNetCoreHero.ToastNotification.Abstractions;
 using GameGaraj.WebUI.Services.Abstract;
 using GameGaraj.WebUI.Models.Products;
+using GameGaraj.WebUI.Models.Reviews;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GameGaraj.WebUI.Controllers
@@ -9,12 +11,16 @@ namespace GameGaraj.WebUI.Controllers
         private readonly ICatalogService _catalogService;
         private readonly IBasketService _basketService;
         private readonly IFavoritesService _favoritesService;
+        private readonly IReviewService _reviewService;
+        private readonly INotyfService _notyf;
 
-        public ProductController(ICatalogService catalogService, IBasketService basketService, IFavoritesService favoritesService)
+        public ProductController(ICatalogService catalogService, IBasketService basketService, IFavoritesService favoritesService, IReviewService reviewService, INotyfService notyf)
         {
             _catalogService = catalogService;
             _basketService = basketService;
             _favoritesService = favoritesService;
+            _reviewService = reviewService;
+            _notyf = notyf;
         }
 
         [Route("product/c/{category}")]
@@ -120,6 +126,7 @@ namespace GameGaraj.WebUI.Controllers
                 product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
                 product.IsFavorite = favoriteIds.Contains(product.Id ?? string.Empty);
             }
+            await ApplyReviewSummariesAsync(products);
 
             return View(products);
         }
@@ -147,11 +154,103 @@ namespace GameGaraj.WebUI.Controllers
                 .Select(x => x!)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase)
                 ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
+            var productId = product.Id?.Trim() ?? string.Empty;
+            product.IsInBasket = basketProductIds.Contains(productId);
 
-            product.IsFavorite = await _favoritesService.IsFavoriteAsync(product.Id ?? string.Empty);
+            product.IsFavorite = await _favoritesService.IsFavoriteAsync(productId);
+
+            var reviews = await _reviewService.GetProductReviewsAsync(productId, 0, 10);
+            ViewBag.Reviews = reviews;
+
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                ViewBag.CanReview = await _reviewService.CanReviewAsync(productId);
+                ViewBag.UserReview = await _reviewService.GetUserReviewAsync(productId);
+            }
 
             return View(product);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateReview(CreateReviewInput input, string? returnUrl = null)
+        {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                return RedirectToAction("SignIn", "Auth");
+            }
+
+            var result = await _reviewService.CreateAsync(input);
+            NotifyReviewResult(result);
+            return RedirectToLocalOrProduct(input.ProductId, returnUrl);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateReview(UpdateReviewInput input, string productId, string? returnUrl = null)
+        {
+            var result = await _reviewService.UpdateAsync(input);
+            NotifyReviewResult(result);
+            return RedirectToLocalOrProduct(productId, returnUrl);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteReview(string reviewId, string productId, string? returnUrl = null)
+        {
+            var result = await _reviewService.DeleteAsync(reviewId);
+            NotifyReviewResult(result);
+            return RedirectToLocalOrProduct(productId, returnUrl);
+        }
+
+        private void NotifyReviewResult(ReviewMutationResultViewModel result)
+        {
+            if (result.Succeeded)
+            {
+                if (result.HasProfanity || result.HasPriceInfo)
+                {
+                    _notyf.Warning(result.Message);
+                    return;
+                }
+
+                _notyf.Success(result.Message);
+                return;
+            }
+
+            _notyf.Error(string.IsNullOrWhiteSpace(result.Message) ? "Islem tamamlanamadi." : result.Message);
+        }
+
+        private async Task ApplyReviewSummariesAsync(List<ProductViewModel> products)
+        {
+            if (products == null || products.Count == 0)
+            {
+                return;
+            }
+
+            var summaries = await _reviewService.GetProductReviewSummariesAsync(products.Select(product => product.Id));
+            foreach (var product in products)
+            {
+                if (summaries.TryGetValue(product.Id, out var summary))
+                {
+                    product.AverageRating = summary.AverageRating;
+                    product.ReviewCount = summary.TotalCount;
+                }
+                else
+                {
+                    product.AverageRating = 0;
+                    product.ReviewCount = 0;
+                }
+            }
+        }
+
+        private IActionResult RedirectToLocalOrProduct(string productId, string? returnUrl)
+        {
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return LocalRedirect(returnUrl);
+            }
+
+            return RedirectToAction(nameof(Detail), new { slug = productId });
         }
 
         [HttpGet("api/products/search")]
