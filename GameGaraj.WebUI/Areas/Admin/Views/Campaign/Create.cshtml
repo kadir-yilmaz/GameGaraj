@@ -336,11 +336,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function clearProduct() {
-        hiddenInput.value = '';
-        badgeText.textContent = '';
-        badge.style.display = 'none';
-        searchInput.value = '';
-        suggestions.style.display = 'none';
+        const currentHiddenInput = document.getElementById('productIdHidden');
+        const currentBadgeText = document.getElementById('selectedProductText');
+        const currentBadge = document.getElementById('selectedProductBadge');
+        const currentSearchInput = document.getElementById('productSearchInput');
+        const currentSuggestions = document.getElementById('productSuggestions');
+
+        if (currentHiddenInput) currentHiddenInput.value = '';
+        if (currentBadgeText) currentBadgeText.textContent = '';
+        if (currentBadge) currentBadge.style.display = 'none';
+        if (currentSearchInput) currentSearchInput.value = '';
+        if (currentSuggestions) currentSuggestions.style.display = 'none';
     }
 
     clearBtn.addEventListener('click', clearProduct);

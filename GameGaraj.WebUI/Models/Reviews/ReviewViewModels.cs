@@ -12,6 +12,7 @@ public class CreateReviewInput
 public class UpdateReviewInput
 {
     public string ReviewId { get; set; } = string.Empty;
+    public string ProductId { get; set; } = string.Empty;
     public int Rating { get; set; }
     public string Comment { get; set; } = string.Empty;
 }

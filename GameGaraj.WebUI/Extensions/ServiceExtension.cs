@@ -45,7 +45,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<IReviewService, ReviewService>(client =>
             {
                 client.BaseAddress = new Uri(gatewayUri, "api/review/");
-                client.Timeout = TimeSpan.FromSeconds(4);
+                client.Timeout = TimeSpan.FromSeconds(10);
             })
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 

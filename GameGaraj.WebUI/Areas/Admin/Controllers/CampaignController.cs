@@ -223,6 +223,12 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 return Json(new List<object>());
 
             var products = await _catalogService.SearchProductsAsync(q);
+            if (!products.Any())
+            {
+                var fallbackPage = await _catalogService.GetAdminProductsPageAsync(query: q, isActive: true, page: 1, pageSize: 20);
+                products = fallbackPage.Items;
+            }
+
             var result = products.Take(10).Select(p => new
             {
                 id = p.Id,

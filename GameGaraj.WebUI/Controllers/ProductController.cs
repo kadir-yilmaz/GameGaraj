@@ -187,11 +187,11 @@ namespace GameGaraj.WebUI.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateReview(UpdateReviewInput input, string productId, string? returnUrl = null)
+        public async Task<IActionResult> UpdateReview(UpdateReviewInput input, string? productId = null, string? returnUrl = null)
         {
             var result = await _reviewService.UpdateAsync(input);
             NotifyReviewResult(result);
-            return RedirectToLocalOrProduct(productId, returnUrl);
+            return RedirectToLocalOrProduct(productId ?? input.ProductId, returnUrl);
         }
 
         [HttpPost]

@@ -63,23 +63,27 @@
                             <div class="order-items border rounded-3 p-3 bg-light">
                                 @foreach (var item in order.OrderItems)
                                 {
+                                    var myReviews = ViewBag.MyReviews as Dictionary<string, GameGaraj.WebUI.Models.Reviews.ReviewViewModel> ?? new();
+                                    myReviews.TryGetValue(item.ProductId, out var existingReview);
+                                    var isDelivered = order.Status == 5;
+
                                     <div class="order-item-row mb-3 pb-3 border-bottom last-border-0">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="d-flex align-items-center">
+                                        <div class="d-flex justify-content-between align-items-start gap-3 order-item-content">
+                                            <div class="d-flex align-items-start flex-grow-1 min-width-0">
                                                 <img src="@(string.IsNullOrWhiteSpace(item.PictureUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.PictureUrl)"
                                                      class="rounded border me-3"
                                                      style="width: 50px; height: 50px; object-fit: cover;"
                                                      alt="@item.ProductName"
                                                      onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
-                                                <div>
+                                                <div class="flex-grow-1 min-width-0">
                                                     <div class="fw-bold text-dark">@item.ProductName</div>
                                                     <div class="text-secondary small">
                                                         @((item.Quantity > 0 ? item.Quantity : 1)) Adet x @item.Price.ToString("C2")
-                                                        @if (order.Status == 5)
+                                                        @if (isDelivered && item.ProductId == "__legacy_disabled__")
                                                         {
-                                                            var myReviews = ViewBag.MyReviews as Dictionary<string, GameGaraj.WebUI.Models.Reviews.ReviewViewModel> ?? new();
-                                                            myReviews.TryGetValue(item.ProductId, out var existingReview);
-                                                            if (existingReview != null)
+                                                            var legacyReviews = ViewBag.MyReviews as Dictionary<string, GameGaraj.WebUI.Models.Reviews.ReviewViewModel> ?? new();
+                                                            legacyReviews.TryGetValue(item.ProductId, out var legacyReview);
+                                                            if (legacyReview != null)
                                                             {
                                                                 <button type="button"
                                                                         class="btn btn-outline-success btn-sm mt-2 btn-make-comment"
@@ -89,9 +93,9 @@
                                                                         data-product-name="@item.ProductName"
                                                                         data-product-image="@(string.IsNullOrWhiteSpace(item.PictureUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.PictureUrl)"
                                                                         data-is-edit="true"
-                                                                        data-review-id="@existingReview.Id"
-                                                                        data-rating="@existingReview.Rating"
-                                                                        data-comment="@existingReview.Comment">
+                                                                        data-review-id="@legacyReview.Id"
+                                                                        data-rating="@legacyReview.Rating"
+                                                                        data-comment="@legacyReview.Comment">
                                                                     <i class="far fa-edit me-1"></i>Yorumu Düzenle
                                                                 </button>
                                                             }
@@ -110,10 +114,55 @@
                                                             }
                                                         }
                                                     </div>
+                                                    @if (existingReview != null)
+                                                    {
+                                                        <div class="review-preview mt-2">
+                                                            <div class="text-warning small mb-1">
+                                                                @for (var i = 1; i <= 5; i++)
+                                                                {
+                                                                    <i class="@(i <= existingReview.Rating ? "fas" : "far") fa-star"></i>
+                                                                }
+                                                                <span class="text-muted ms-1">@existingReview.Rating / 5</span>
+                                                            </div>
+                                                            <div class="small text-dark review-comment-text">@existingReview.Comment</div>
+                                                        </div>
+                                                    }
                                                 </div>
                                             </div>
-                                            <div class="text-end">
-                                                <div class="fw-bold fs-6">@((item.Price * (item.Quantity > 0 ? item.Quantity : 1)).ToString("C2"))</div>
+                                            <div class="text-end order-item-actions">
+                                                <div class="fw-bold fs-6 mb-2">@((item.Price * (item.Quantity > 0 ? item.Quantity : 1)).ToString("C2"))</div>
+                                                @if (isDelivered)
+                                                {
+                                                    if (existingReview != null)
+                                                    {
+                                                        <button type="button"
+                                                                class="btn btn-outline-success btn-sm btn-make-comment"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#commentModal"
+                                                                data-product-id="@item.ProductId"
+                                                                data-product-name="@item.ProductName"
+                                                                data-product-image="@(string.IsNullOrWhiteSpace(item.PictureUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.PictureUrl)"
+                                                                data-is-edit="true"
+                                                                data-review-id="@existingReview.Id"
+                                                                data-rating="@existingReview.Rating"
+                                                                data-comment="@existingReview.Comment">
+                                                            <i class="far fa-edit me-1"></i>Yorumu D&#252;zenle
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button type="button"
+                                                                class="btn btn-outline-primary btn-sm btn-make-comment"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#commentModal"
+                                                                data-product-id="@item.ProductId"
+                                                                data-product-name="@item.ProductName"
+                                                                data-product-image="@(string.IsNullOrWhiteSpace(item.PictureUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.PictureUrl)"
+                                                                data-is-edit="false">
+                                                            <i class="far fa-comment-dots me-1"></i>Yorum Yap
+                                                        </button>
+                                                    }
+                                                }
                                             </div>
                                         </div>
                                         @if (item.DiscountAmount > 0)
@@ -385,6 +434,19 @@
     .last-border-0:last-child { border-bottom: 0 !important; margin-bottom: 0 !important; padding-bottom: 0 !important; }
     
     .order-tracking { padding: 10px 0; }
+    .order-item-actions { min-width: 150px; }
+    .review-preview {
+        max-width: 100%;
+        border-left: 3px solid #ffc107;
+        padding-left: 10px;
+    }
+    .review-comment-text {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: 1.35;
+    }
     .steps { display: flex; justify-content: space-between; position: relative; margin: 0 auto; max-width: 650px; }
     .steps::before { content: ''; position: absolute; top: 20px; left: 0; right: 0; height: 3px; background: #f0f0f0; z-index: 0; }
     .step { flex: 1; text-align: center; position: relative; z-index: 1; }
@@ -445,6 +507,8 @@
     .btn-outline-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,123,255,0.2); }
 
     @@media (max-width: 768px) {
+        .order-item-content { flex-direction: column; }
+        .order-item-actions { width: 100%; text-align: left !important; padding-left: 66px; }
         .steps { flex-direction: column; text-align: left; max-width: 100%; border-left: 3px solid #f0f0f0; padding-left: 30px; margin-left: 20px; }
         .steps::before { display: none; }
         .step { display: flex; align-items: center; text-align: left; margin-bottom: 25px; }

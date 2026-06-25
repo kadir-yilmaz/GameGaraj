@@ -561,10 +561,41 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             if (!response.IsValidResponse)
             {
                 _logger.LogError("Elasticsearch query failed: {Error}", response.DebugInformation);
-                return new List<ProductDto>();
+                return await SearchFromDatabaseAsync(keyword);
             }
 
-            return response.Documents.Select(MapSearchDocumentToDto).ToList();
+            var results = response.Documents.Select(MapSearchDocumentToDto).ToList();
+            return results.Any()
+                ? results
+                : await SearchFromDatabaseAsync(keyword);
+        }
+
+        private async Task<List<ProductDto>> SearchFromDatabaseAsync(string keyword)
+        {
+            var products = await _context.Products
+                .AsNoTracking()
+                .Where(product => product.IsActive)
+                .ToListAsync();
+
+            return products
+                .Select(product => new
+                {
+                    Product = product,
+                    Score = new[]
+                    {
+                        GetSearchScore(product.Name ?? string.Empty, keyword),
+                        GetSearchScore(product.Brand ?? string.Empty, keyword),
+                        GetSearchScore(product.Slug ?? string.Empty, keyword),
+                        GetSearchScore(product.Id ?? string.Empty, keyword),
+                        GetSearchScore($"{product.Brand} {product.Name}", keyword)
+                    }.Min()
+                })
+                .Where(item => item.Score < int.MaxValue)
+                .OrderBy(item => item.Score)
+                .ThenBy(item => item.Product.Name)
+                .Take(20)
+                .Select(item => _mapper.Map<ProductDto>(item.Product))
+                .ToList();
         }
 
         private static ProductDto MapSearchDocumentToDto(ProductSearchDocument document)
