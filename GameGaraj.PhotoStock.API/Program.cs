@@ -86,6 +86,12 @@ builder.WebHost.ConfigureKestrel(options =>
 
 var app = builder.Build();
 
+app.Logger.LogInformation(
+    "PhotoStock storage configured. Provider: {Provider}, MinioEndpoint: {MinioEndpoint}, MinioBucket: {MinioBucket}",
+    useLocalStorage ? "LocalStorage" : "MinIO",
+    minioEndpoint,
+    builder.Configuration["Minio:BucketName"] ?? "gamegaraj");
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

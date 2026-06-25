@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using GameGaraj.PhotoStock.API.Models;
 
 namespace GameGaraj.PhotoStock.API.Services
 {
@@ -13,5 +14,10 @@ namespace GameGaraj.PhotoStock.API.Services
         /// Deletes a file from storage by its filename (e.g. "filename.ext" or "photos/filename.ext")
         /// </summary>
         Task DeleteFileAsync(string fileName, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Checks whether the configured storage backend is reachable.
+        /// </summary>
+        Task<StorageHealthResult> CheckHealthAsync(CancellationToken cancellationToken);
     }
 }

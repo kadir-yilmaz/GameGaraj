@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Minio;
 using Minio.DataModel.Args;
+using GameGaraj.PhotoStock.API.Models;
 
 namespace GameGaraj.PhotoStock.API.Services
 {
@@ -114,6 +115,33 @@ namespace GameGaraj.PhotoStock.API.Services
                 .WithObject(objectName);
 
             await _minioClient.RemoveObjectAsync(removeArgs, cancellationToken);
+        }
+
+        public async Task<StorageHealthResult> CheckHealthAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var existsArgs = new BucketExistsArgs().WithBucket(_bucketName);
+                var exists = await _minioClient.BucketExistsAsync(existsArgs, cancellationToken);
+
+                return new StorageHealthResult(
+                    exists,
+                    "MinIO",
+                    _bucketName,
+                    exists
+                        ? $"MinIO bucket '{_bucketName}' is reachable."
+                        : $"MinIO is reachable, but bucket '{_bucketName}' does not exist.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "MinIO storage health check failed for bucket {BucketName}", _bucketName);
+
+                return new StorageHealthResult(
+                    false,
+                    "MinIO",
+                    _bucketName,
+                    ex.Message);
+            }
         }
     }
 }

@@ -25,6 +25,15 @@ public class PhotosController : ControllerBase
     private static readonly string[] AllowedExtensions =
         { ".jpg", ".jpeg", ".png", ".webp" };
 
+    [HttpGet("storage-health")]
+    public async Task<IActionResult> StorageHealth(CancellationToken cancellationToken)
+    {
+        var result = await _storageService.CheckHealthAsync(cancellationToken);
+
+        return result.Healthy
+            ? Ok(result)
+            : StatusCode(StatusCodes.Status503ServiceUnavailable, result);
+    }
 
     [HttpPost]
     public async Task<IActionResult> UploadPhotos(
