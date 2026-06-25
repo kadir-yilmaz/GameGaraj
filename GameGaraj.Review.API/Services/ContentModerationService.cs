@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -9,9 +11,33 @@ public class ContentModerationService : IContentModerationService
     private readonly string[] _priceKeywords;
     private readonly ILogger<ContentModerationService> _logger;
 
-    private static readonly Regex PricePatternRegex = new(@"(\d+[\.,]?\d*)\s*(tl|try|lira|kurus|\$|€|eur|usd)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex PricePatternRegex = new(@"(\d+[\.,]?\d*)\s*(tl|try|lira|kurus|\$|\u20ac|eur|usd)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex UrlRegex = new(@"https?://|www\.|\.com|\.net|\.org", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex RepeatedCharsRegex = new(@"(.)\1{5,}", RegexOptions.Compiled);
+
+    private static readonly string[] DefaultProfanityRoots =
+    [
+        "amk",
+        "aq",
+        "siktir",
+        "orospu",
+        "pic",
+        "oc",
+        "pezevenk",
+        "gavat",
+        "ibne",
+        "got",
+        "yarak",
+        "salak",
+        "aptal",
+        "mal",
+        "serefsiz",
+        "namussuz",
+        "kahpe",
+        "pust",
+        "bok",
+        "sktr"
+    ];
 
     public ContentModerationService(IConfiguration configuration, ILogger<ContentModerationService> logger)
     {
@@ -19,7 +45,7 @@ public class ContentModerationService : IContentModerationService
         var dataDir = ResolveDataDirectory(configuration);
         Directory.CreateDirectory(dataDir);
 
-        _profanityRoots = LoadWordList(Path.Combine(dataDir, "profanity-words.json"));
+        _profanityRoots = LoadWordList(Path.Combine(dataDir, "profanity-words.json"), DefaultProfanityRoots);
         _priceKeywords = LoadWordList(Path.Combine(dataDir, "price-keywords.json"));
     }
 
@@ -48,28 +74,35 @@ public class ContentModerationService : IContentModerationService
         return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
     }
 
-    private string[] LoadWordList(string path)
+    private string[] LoadWordList(string path, IEnumerable<string>? fallbackWords = null)
     {
+        var fallback = (fallbackWords ?? [])
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(NormalizeText);
+
         if (!File.Exists(path))
         {
-            File.WriteAllText(path, "[]", System.Text.Encoding.UTF8);
+            File.WriteAllText(path, "[]", Encoding.UTF8);
             _logger.LogWarning("Moderation word list was missing and an empty file was created at {Path}", path);
-            return Array.Empty<string>();
+            return fallback.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
 
         try
         {
             var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<string[]>(json)?
+            var words = JsonSerializer.Deserialize<string[]>(json)?
                 .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Select(NormalizeText)
+                .Select(NormalizeText) ?? [];
+
+            return words
+                .Concat(fallback)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray() ?? Array.Empty<string>();
+                .ToArray();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Moderation word list could not be loaded from {Path}", path);
-            return Array.Empty<string>();
+            return fallback.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
     }
 
@@ -136,18 +169,30 @@ public class ContentModerationService : IContentModerationService
 
     private static string NormalizeText(string text)
     {
-        return text
+        var normalized = text
             .Trim()
             .ToLowerInvariant()
-            .Replace('ı', 'i')
-            .Replace('ğ', 'g')
-            .Replace('ü', 'u')
-            .Replace('ş', 's')
-            .Replace('ö', 'o')
-            .Replace('ç', 'c')
-            .Replace('â', 'a')
-            .Replace('î', 'i')
-            .Replace('û', 'u');
+            .Replace('\u0131', 'i')
+            .Replace('\u011f', 'g')
+            .Replace('\u00fc', 'u')
+            .Replace('\u015f', 's')
+            .Replace('\u00f6', 'o')
+            .Replace('\u00e7', 'c')
+            .Replace('\u00e2', 'a')
+            .Replace('\u00ee', 'i')
+            .Replace('\u00fb', 'u')
+            .Normalize(NormalizationForm.FormD);
+
+        var builder = new StringBuilder(normalized.Length);
+        foreach (var c in normalized)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            {
+                builder.Append(c);
+            }
+        }
+
+        return builder.ToString().Normalize(NormalizationForm.FormC);
     }
 
     private static string StripSeparators(string text)
