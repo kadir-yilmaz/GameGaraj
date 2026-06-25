@@ -40,22 +40,23 @@ namespace GameGaraj.PhotoStock.API.Services
 
                     var makeArgs = new MakeBucketArgs().WithBucket(_bucketName);
                     await _minioClient.MakeBucketAsync(makeArgs, cancellationToken);
-
-                    // Set bucket read policy to public so clients can download directly
-                    var policyJson = $@"{{
-                        ""Version"": ""2012-10-17"",
-                        ""Statement"": [
-                            {{
-                                ""Effect"": ""Allow"",
-                                ""Principal"": ""*"",
-                                ""Action"": [""s3:GetObject""],
-                                ""Resource"": [""arn:aws:s3:::{_bucketName}/*""]
-                            }}
-                        ]
-                    }}";
-                    var policyArgs = new SetPolicyArgs().WithBucket(_bucketName).WithPolicy(policyJson);
-                    await _minioClient.SetPolicyAsync(policyArgs, cancellationToken);
                 }
+
+                // Ensure existing buckets are also readable by the browser.
+                var policyJson = $@"{{
+                    ""Version"": ""2012-10-17"",
+                    ""Statement"": [
+                        {{
+                            ""Effect"": ""Allow"",
+                            ""Principal"": ""*"",
+                            ""Action"": [""s3:GetObject""],
+                            ""Resource"": [""arn:aws:s3:::{_bucketName}/*""]
+                        }}
+                    ]
+                }}";
+                var policyArgs = new SetPolicyArgs().WithBucket(_bucketName).WithPolicy(policyJson);
+                await _minioClient.SetPolicyAsync(policyArgs, cancellationToken);
+
                 _bucketInitialized = true;
             }
             finally
@@ -86,6 +87,8 @@ namespace GameGaraj.PhotoStock.API.Services
                 .WithContentType(file.ContentType);
 
             await _minioClient.PutObjectAsync(putArgs, cancellationToken);
+
+            _logger.LogInformation("Photo uploaded to MinIO bucket {BucketName} as object {ObjectName}.", _bucketName, objectName);
 
             return objectName;
         }
