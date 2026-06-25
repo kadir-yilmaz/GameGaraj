@@ -43,28 +43,51 @@ builder.Services.AddHttpClientServices(builder.Configuration);
 var serviceApiSettings = builder.Configuration.GetSection("ServiceApiSettings").Get<ServiceApiSettings>() ?? new ServiceApiSettings();
 
 // Data Protection via Redis
-var redisUrl = builder.Configuration.GetConnectionString("Redis") ?? builder.Configuration["RedisUrl"] ?? "localhost:6379";
-if (!redisUrl.Contains("abortConnect=false", StringComparison.OrdinalIgnoreCase))
+var redisUrl = builder.Configuration.GetConnectionString("Redis") ?? builder.Configuration["RedisUrl"];
+var dataProtectionBuilder = builder.Services.AddDataProtection()
+    .SetApplicationName("GameGarajWebUI");
+
+if (!string.IsNullOrWhiteSpace(redisUrl) &&
+    !redisUrl.Contains("abortConnect=false", StringComparison.OrdinalIgnoreCase))
 {
     redisUrl = redisUrl.Contains('?') ? $"{redisUrl}&abortConnect=false" : $"{redisUrl},abortConnect=false";
 }
 
   try
   {
+      if (string.IsNullOrWhiteSpace(redisUrl))
+      {
+          throw new InvalidOperationException("Redis connection is not configured.");
+      }
+
       var redisOptions = ConfigurationOptions.Parse(redisUrl);
       redisOptions.AbortOnConnectFail = true; // Hızlı hata fırlatması için
       redisOptions.ConnectTimeout = 3000; // 3 saniye içinde bağlanamazsa pes et
       var redis = ConnectionMultiplexer.Connect(redisOptions);
       
-      builder.Services.AddDataProtection()
-          .SetApplicationName("GameGarajWebUI")
-          .PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys");
+      dataProtectionBuilder.PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys");
+      builder.Services.AddStackExchangeRedisCache(options =>
+      {
+          options.Configuration = redisUrl;
+          options.InstanceName = "GameGarajWebUI:";
+      });
   }
   catch (Exception ex)
   {
-      Console.WriteLine($"[CRITICAL] Redis for DataProtection failed: {ex.Message}. Falling back to default DataProtection.");
-      builder.Services.AddDataProtection()
-          .SetApplicationName("GameGarajWebUI");
+      if (!builder.Environment.IsDevelopment())
+      {
+          throw new InvalidOperationException(
+              "Redis DataProtection is required in non-development environments. Refusing to start with ephemeral cookie keys.",
+              ex);
+      }
+
+      var keyPath = builder.Configuration["DataProtection:KeysPath"]
+          ?? Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtectionKeys");
+      Directory.CreateDirectory(keyPath);
+
+      Console.WriteLine($"[WARNING] Redis for DataProtection failed: {ex.Message}. Persisting local development keys to {keyPath}.");
+      dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(keyPath));
+      builder.Services.AddDistributedMemoryCache();
   }
 
 // Authentication
@@ -83,7 +106,9 @@ builder.Services.AddAuthentication(options =>
         
         // Güvenlik (Security) Ayarları: XSS ve CSRF koruması
         options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // HTTPS zorunlu
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always; // HTTPS zorunlu
         options.Cookie.SameSite = SameSiteMode.Lax; // CSRF koruması
 
         options.Events = new CookieAuthenticationEvents

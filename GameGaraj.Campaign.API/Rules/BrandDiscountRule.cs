@@ -3,9 +3,7 @@ using GameGaraj.Campaign.API.Models;
 namespace GameGaraj.Campaign.API.Rules
 {
     /// <summary>
-    /// Belirli bir markaya (opsiyonel olarak + kategori) ait ürünlere yüzdelik indirim uygular.
-    /// Örnek: "Samsung telefonlara %20 indirim" (BrandName=Samsung, CategoryId=telefon-kategorisi)
-    /// Örnek: "Samsung tüm ürünlerine %10 indirim" (BrandName=Samsung, CategoryId=null)
+    /// Applies a percentage discount to a selected product, category, brand, or category + brand scope.
     /// </summary>
     public class BrandDiscountRule : ICampaignRule
     {
@@ -16,35 +14,37 @@ namespace GameGaraj.Campaign.API.Rules
             if (rule.DiscountRate == null)
                 return null;
 
-            // Kapsam eşleme
+            var ruleProductId = rule.ProductId?.Trim();
+            var ruleCategoryId = rule.CategoryId?.Trim();
+            var ruleBrandName = rule.BrandName?.Trim();
+
             var targetedItems = request.Items.AsEnumerable();
 
-            if (!string.IsNullOrEmpty(rule.ProductId))
+            if (!string.IsNullOrEmpty(ruleProductId))
             {
-                // Ürün bazlı
-                targetedItems = targetedItems.Where(i => i.ProductId.Equals(rule.ProductId, StringComparison.OrdinalIgnoreCase));
+                targetedItems = targetedItems.Where(i =>
+                    i.ProductId.Equals(ruleProductId, StringComparison.OrdinalIgnoreCase));
             }
-            else if (!string.IsNullOrEmpty(rule.BrandName) && !string.IsNullOrEmpty(rule.CategoryId))
+            else if (!string.IsNullOrEmpty(ruleBrandName) && !string.IsNullOrEmpty(ruleCategoryId))
             {
-                // Marka + Kategori bazlı
-                targetedItems = targetedItems.Where(i => i.CategoryId == rule.CategoryId &&
-                                                         !string.IsNullOrEmpty(i.Brand) &&
-                                                         i.Brand.Equals(rule.BrandName, StringComparison.OrdinalIgnoreCase));
+                targetedItems = targetedItems.Where(i =>
+                    string.Equals(i.CategoryId?.Trim(), ruleCategoryId, StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrEmpty(i.Brand) &&
+                    string.Equals(i.Brand.Trim(), ruleBrandName, StringComparison.OrdinalIgnoreCase));
             }
-            else if (!string.IsNullOrEmpty(rule.CategoryId))
+            else if (!string.IsNullOrEmpty(ruleCategoryId))
             {
-                // Kategori bazlı
-                targetedItems = targetedItems.Where(i => i.CategoryId == rule.CategoryId);
+                targetedItems = targetedItems.Where(i =>
+                    string.Equals(i.CategoryId?.Trim(), ruleCategoryId, StringComparison.OrdinalIgnoreCase));
             }
-            else if (!string.IsNullOrEmpty(rule.BrandName))
+            else if (!string.IsNullOrEmpty(ruleBrandName))
             {
-                // Marka bazlı
-                targetedItems = targetedItems.Where(i => !string.IsNullOrEmpty(i.Brand) &&
-                                                         i.Brand.Equals(rule.BrandName, StringComparison.OrdinalIgnoreCase));
+                targetedItems = targetedItems.Where(i =>
+                    !string.IsNullOrEmpty(i.Brand) &&
+                    string.Equals(i.Brand.Trim(), ruleBrandName, StringComparison.OrdinalIgnoreCase));
             }
             else
             {
-                // Hiçbiri girilmemişse indirim uygulanamaz
                 return null;
             }
 
@@ -54,19 +54,14 @@ namespace GameGaraj.Campaign.API.Rules
 
             var discountRate = rule.DiscountRate.Value / 100m;
             var originalTotal = request.Items.Sum(i => i.UnitPrice * i.Quantity);
-            
-            // Sadece eşleşen marka/ürün/kategori ürünlerine indirim uygula
             var matchedProductIds = matchedItems.Select(m => m.ProductId).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             var details = request.Items.Select(item =>
             {
                 var lineTotal = item.UnitPrice * item.Quantity;
-                var itemDiscount = 0m;
-
-                if (matchedProductIds.Contains(item.ProductId))
-                {
-                    itemDiscount = Math.Round(lineTotal * discountRate, 2);
-                }
+                var itemDiscount = matchedProductIds.Contains(item.ProductId)
+                    ? Math.Round(lineTotal * discountRate, 2)
+                    : 0m;
 
                 return new DiscountDetail
                 {

@@ -63,11 +63,13 @@ namespace GameGaraj.Campaign.API.Services.Concrete
                     // Kuralın hangi kural nesnesinden geldiğini bulup hedefini belirle
                     var rule = itemLevelRules.First(ir => ir.Id == r.AppliedRuleId);
                     if (!string.IsNullOrEmpty(rule.ProductId))
-                        return $"P_{rule.ProductId}";
+                        return $"P_{rule.ProductId.Trim()}";
+                    if (!string.IsNullOrEmpty(rule.CategoryId) && !string.IsNullOrEmpty(rule.BrandName))
+                        return $"C_{rule.CategoryId.Trim()}_B_{rule.BrandName.Trim()}";
                     if (!string.IsNullOrEmpty(rule.CategoryId))
-                        return $"C_{rule.CategoryId}";
+                        return $"C_{rule.CategoryId.Trim()}";
                     if (!string.IsNullOrEmpty(rule.BrandName))
-                        return $"B_{rule.BrandName}";
+                        return $"B_{rule.BrandName.Trim()}";
                     return $"G_{rule.Id}";
                 })
                 .Select(g => g.OrderByDescending(r => r.TotalDiscount).First())

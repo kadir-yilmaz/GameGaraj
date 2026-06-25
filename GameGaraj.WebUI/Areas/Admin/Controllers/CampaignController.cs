@@ -85,12 +85,12 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 return View(model);
             }
 
-            // Boş string'leri null'a çevir
-            if (string.IsNullOrWhiteSpace(model.CategoryId)) model.CategoryId = null;
-            if (string.IsNullOrWhiteSpace(model.ProductId)) model.ProductId = null;
-            if (string.IsNullOrWhiteSpace(model.Description)) model.Description = null;
-            if (string.IsNullOrWhiteSpace(model.BrandName)) model.BrandName = null;
-            if (string.IsNullOrWhiteSpace(model.ImageUrl)) model.ImageUrl = null;
+            // Boş string'leri null'a çevir, dolu değerleri trimle.
+            model.CategoryId = NormalizeOptional(model.CategoryId);
+            model.ProductId = NormalizeOptional(model.ProductId);
+            model.Description = NormalizeOptional(model.Description);
+            model.BrandName = NormalizeOptional(model.BrandName);
+            model.ImageUrl = NormalizeOptional(model.ImageUrl);
 
             // TotalAmount kuralı için hedef seçim gereksiz — tüm sepete uygulanır
             if (model.RuleType == "TotalAmount")
@@ -172,6 +172,13 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 LoadRuleTypesViewBag(model.RuleType);
                 return View(model);
             }
+
+            // Boş string'leri null'a çevir, dolu değerleri trimle.
+            model.CategoryId = NormalizeOptional(model.CategoryId);
+            model.ProductId = NormalizeOptional(model.ProductId);
+            model.Description = NormalizeOptional(model.Description);
+            model.BrandName = NormalizeOptional(model.BrandName);
+            model.ImageUrl = NormalizeOptional(model.ImageUrl);
 
             if (model.RuleType == "TotalAmount")
             {
@@ -258,6 +265,11 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                 new("Seçili Ürün/Marka/Kategori İndirimi", "BrandDiscount")
             };
             ViewBag.RuleTypes = new SelectList(ruleTypes, "Value", "Text", selected);
+        }
+
+        private static string? NormalizeOptional(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
         private void FlattenCategories(List<CategoryViewModel> categories, List<CategoryDropdownViewModel> result, string prefix)

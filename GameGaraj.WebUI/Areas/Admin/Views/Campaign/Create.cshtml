@@ -54,7 +54,7 @@
                         <div class="col-md-6" id="targetTypeCol" style="display:none;">
                             <label class="form-label fw-semibold">Uygulama Kapsamı</label>
                             <select class="form-select" id="targetTypeSelect">
-                                <option value="category">Kategori Bazlı</option>
+                                <option value="category">Kategori Bazlı (Marka Opsiyonel)</option>
                                 <option value="product">Ürün Bazlı</option>
                                 <option value="brand">Marka Bazlı</option>
                             </select>
@@ -72,8 +72,9 @@
                     @* Marka seçimi *@
                     <div class="mb-3" id="brandField" style="display:none;">
                         <label class="form-label fw-semibold">Marka Adı</label>
-                        <input asp-for="BrandName" class="form-control" list="brandsDatalist" placeholder="Örn: Samsung" />
+                        <input asp-for="BrandName" class="form-control" list="brandsDatalist" placeholder="Hepsi" />
                         <datalist id="brandsDatalist"></datalist>
+                        <div class="form-text text-muted">Boş bırakırsanız seçili kapsamdaki tüm markalar için geçerli olur.</div>
                     </div>
 
                     @* Ürün arama (AJAX) *@
@@ -261,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function () {
         
         categoryField.style.display = (needsTarget && targetVal === 'category') ? 'block' : 'none';
         productField.style.display  = (needsTarget && targetVal === 'product')  ? 'block' : 'none';
-        brandField.style.display    = (needsTarget && targetVal === 'brand')    ? 'block' : 'none';
+        brandField.style.display    = (needsTarget && (targetVal === 'brand' || targetVal === 'category')) ? 'block' : 'none';
 
         // Aktif olmayan alanları temizle
         if (!needsTarget || targetVal !== 'category') {
@@ -271,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!needsTarget || targetVal !== 'product') {
             clearProduct();
         }
-        if (!needsTarget || targetVal !== 'brand') {
+        if (!needsTarget || targetVal === 'product') {
             const brandInp = document.querySelector('input[name="BrandName"]');
             if (brandInp) brandInp.value = '';
         }
@@ -285,6 +286,8 @@ document.addEventListener('DOMContentLoaded', function () {
         targetTypeSelect.value = 'product';
     } else if (document.querySelector('select[name="CategoryId"]').value) {
         targetTypeSelect.value = 'category';
+    } else if (document.querySelector('input[name="BrandName"]').value) {
+        targetTypeSelect.value = 'brand';
     }
     
     toggleFields();
