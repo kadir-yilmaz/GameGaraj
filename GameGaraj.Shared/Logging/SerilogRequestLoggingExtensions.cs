@@ -53,6 +53,7 @@ namespace GameGaraj.Shared.Logging
                         userIdentity = userIdHeader == "anonymous-user" ? "Anonymous" : $"User-{userIdHeader}";
                     }
 
+                    diagnosticContext.Set("LogType", "HttpRequest");
                     diagnosticContext.Set("UserIdentity", userIdentity);
                     diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
                     diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].ToString());

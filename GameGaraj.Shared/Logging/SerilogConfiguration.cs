@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using Serilog.Events;
 using Serilog.Exceptions;
 using Serilog.Sinks.Elasticsearch;
 using Serilog.Enrichers.Span;
@@ -35,13 +36,32 @@ namespace GameGaraj.Shared.Logging
             // Elasticsearch logging (if configured)
             if (!string.IsNullOrEmpty(elasticUri))
             {
-                loggerConfig.WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticUri))
-                {
-                    AutoRegisterTemplate = true,
-                    IndexFormat = $"gamegaraj-logs-{serviceName.ToLower()}-{environment.ToLower()}-{DateTime.UtcNow:yyyy.MM}",
-                    NumberOfReplicas = 0,
-                    NumberOfShards = 1
-                });
+                // ── Application/Operational Logs (Without LogType = HttpRequest) ──
+                loggerConfig.WriteTo.Conditional(
+                    evt => !evt.Properties.TryGetValue("LogType", out var logType) || 
+                           !(logType is ScalarValue sv && sv.Value?.ToString() == "HttpRequest"),
+                    wt => wt.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticUri))
+                    {
+                        AutoRegisterTemplate = true,
+                        IndexFormat = $"gamegaraj-logs-{serviceName.ToLower().Replace(".", "-")}-{environment.ToLower()}-{DateTime.UtcNow:yyyy.MM}",
+                        NumberOfReplicas = 0,
+                        NumberOfShards = 1
+                    })
+                );
+
+                // ── HTTP Request/Access Logs (Only LogType = HttpRequest) ──
+                loggerConfig.WriteTo.Conditional(
+                    evt => evt.Properties.TryGetValue("LogType", out var logType) && 
+                           logType is ScalarValue sv && 
+                           sv.Value?.ToString() == "HttpRequest",
+                    wt => wt.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticUri))
+                    {
+                        AutoRegisterTemplate = true,
+                        IndexFormat = $"gamegaraj-requests-{serviceName.ToLower().Replace(".", "-")}-{environment.ToLower()}-{DateTime.UtcNow:yyyy.MM}",
+                        NumberOfReplicas = 0,
+                        NumberOfShards = 1
+                    })
+                );
             }
 
             Log.Logger = loggerConfig.CreateLogger();
