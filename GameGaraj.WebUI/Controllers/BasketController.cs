@@ -115,6 +115,26 @@ namespace GameGaraj.WebUI.Controllers
             }
             ViewBag.ShippingSetting = shippingSetting;
 
+            // Fetch public and user-specific coupons
+            try
+            {
+                var publicCoupons = await _campaignService.GetPublicCouponsAsync() ?? new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>();
+                ViewBag.PublicCoupons = publicCoupons;
+
+                var userCoupons = new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>();
+                var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    userCoupons = await _campaignService.GetUserCouponsAsync(currentUserId) ?? new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>();
+                }
+                ViewBag.UserCoupons = userCoupons;
+            }
+            catch (Exception)
+            {
+                ViewBag.PublicCoupons = new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>();
+                ViewBag.UserCoupons = new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>();
+            }
+
             return View(basket);
         }
 

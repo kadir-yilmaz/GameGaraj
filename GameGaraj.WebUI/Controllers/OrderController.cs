@@ -402,10 +402,23 @@ namespace GameGaraj.WebUI.Controllers
                     TempData["CouponSuccess"] = discountResult.CouponMessage ?? "Kupon uygulandı.";
                     ViewBag.AppliedCoupon = await _campaignService.GetCouponByCodeAsync(couponCode);
                 }
+
+                // Fetch public and user-specific coupons
+                var publicCoupons = await _campaignService.GetPublicCouponsAsync() ?? new List<CouponViewModel>();
+                ViewBag.PublicCoupons = publicCoupons;
+
+                var userCoupons = new List<CouponViewModel>();
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    userCoupons = await _campaignService.GetUserCouponsAsync(currentUserId) ?? new List<CouponViewModel>();
+                }
+                ViewBag.UserCoupons = userCoupons;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "[OrderController] Kampanya indirimi hesaplanamadı.");
+                ViewBag.PublicCoupons = new List<CouponViewModel>();
+                ViewBag.UserCoupons = new List<CouponViewModel>();
             }
 
             // Kargo ayarlarını çek

@@ -675,6 +675,79 @@
                                 <button class="btn btn-primary" type="submit">Uygula</button>
                             </form>
                             
+                            @if ((ViewBag.UserCoupons as List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>)?.Any(c => !c.IsUsed) == true || 
+                                 (ViewBag.PublicCoupons as List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>)?.Any() == true)
+                            {
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-secondary w-100 d-flex align-items-center justify-content-between text-decoration-none collapsed" 
+                                       type="button"
+                                       data-bs-toggle="collapse" 
+                                       data-bs-target="#availableCouponsList" 
+                                       aria-expanded="false" 
+                                       aria-controls="availableCouponsList"
+                                       style="font-size: 0.78rem; border-style: dashed; padding: 6px 12px; border-width: 1px; border-radius: 6px;">
+                                        <span><i class="fas fa-ticket-alt me-1 text-primary"></i> Kullanılabilir Kuponlar</span>
+                                        <i class="fas fa-chevron-down ms-1" style="font-size: 0.7rem;"></i>
+                                    </button>
+                                    
+                                    <div class="collapse mt-2" id="availableCouponsList">
+                                        <div class="card card-body p-2 border bg-light rounded" style="max-height: 250px; overflow-y: auto; font-size: 0.75rem;">
+                                            @{
+                                                var userCoupons = ViewBag.UserCoupons as List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>;
+                                                var publicCoupons = ViewBag.PublicCoupons as List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>;
+                                            }
+                                            
+                                            @if (userCoupons != null && userCoupons.Any(c => !c.IsUsed))
+                                            {
+                                                <div class="fw-bold text-secondary mb-2 border-bottom pb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                                                    <i class="fas fa-user-tag me-1"></i> BANA ÖZEL KUPONLAR
+                                                </div>
+                                                @foreach (var c in userCoupons.Where(x => !x.IsUsed && (!x.ExpiryDate.HasValue || x.ExpiryDate.Value > DateTime.Now)))
+                                                {
+                                                    <div class="d-flex align-items-center justify-content-between p-2 mb-2 bg-white rounded border shadow-sm">
+                                                        <div class="text-start">
+                                                            <span class="badge bg-success text-white fw-bold me-1" style="font-size: 0.7rem; padding: 3px 6px;">@c.Code</span>
+                                                            <div class="text-dark fw-bold mt-1" style="font-size: 0.8rem;">
+                                                                @(c.DiscountType == "Percentage" ? $"%{c.DiscountRate} İndirim" : (c.DiscountType == "FixedAmount" ? $"{c.Amount} TL İndirim" : "Kargo Bedava"))
+                                                            </div>
+                                                            @if (c.MinPurchaseAmount > 0)
+                                                            {
+                                                                <div class="text-muted mt-1" style="font-size: 0.68rem;">Min. Sepet: <strong>@c.MinPurchaseAmount TL</strong></div>
+                                                            }
+                                                        </div>
+                                                        <button type="button" class="btn btn-sm btn-primary py-1 px-2 fw-bold" onclick="applyCouponDirectly('@c.Code')" style="font-size: 0.68rem; border-radius: 4px;">Uygula</button>
+                                                    </div>
+                                                }
+                                            }
+                                            
+                                            @if (publicCoupons != null && publicCoupons.Any())
+                                            {
+                                                <div class="fw-bold text-secondary @(userCoupons != null && userCoupons.Any(c => !c.IsUsed) ? "mt-3" : "") mb-2 border-bottom pb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                                                    <i class="fas fa-globe me-1"></i> HERKESE AÇIK KUPONLAR
+                                                </div>
+                                                @foreach (var c in publicCoupons.Where(x => !x.IsUsed && (!x.ExpiryDate.HasValue || x.ExpiryDate.Value > DateTime.Now)))
+                                                {
+                                                    <div class="d-flex align-items-center justify-content-between p-2 mb-2 bg-white rounded border shadow-sm">
+                                                        <div class="text-start">
+                                                            <span class="badge bg-primary text-white fw-bold me-1" style="font-size: 0.7rem; padding: 3px 6px;">@c.Code</span>
+                                                            <div class="text-dark fw-bold mt-1" style="font-size: 0.8rem;">
+                                                                @(c.DiscountType == "Percentage" ? $"%{c.DiscountRate} İndirim" : (c.DiscountType == "FixedAmount" ? $"{c.Amount} TL İndirim" : "Kargo Bedava"))
+                                                            </div>
+                                                            @if (c.MinPurchaseAmount > 0)
+                                                            {
+                                                                <div class="text-muted mt-1" style="font-size: 0.68rem;">Min. Sepet: <strong>@c.MinPurchaseAmount TL</strong></div>
+                                                            }
+                                                        </div>
+                                                        <button type="button" class="btn btn-sm btn-primary py-1 px-2 fw-bold" onclick="applyCouponDirectly('@c.Code')" style="font-size: 0.68rem; border-radius: 4px;">Uygula</button>
+                                                    </div>
+                                                }
+                                            }
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            
                             @if (TempData["CouponError"] != null)
                             {
                                 <div class="text-danger x-small mt-1" style="font-size: 0.75rem;">
@@ -811,6 +884,22 @@
 
 @section Scripts {
     <script>
+        function applyCouponDirectly(code) {
+            const couponInput = document.querySelector('input[name="couponCode"]');
+            if (couponInput) {
+                couponInput.value = code;
+                const form = couponInput.closest('form');
+                if (form) {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.click();
+                    } else {
+                        form.submit();
+                    }
+                }
+            }
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
             // --- ADDRESS DATA LOGIC ---
             let addressData = {};
