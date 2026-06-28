@@ -1,4 +1,4 @@
-@model IEnumerable<GameGaraj.WebUI.Areas.Admin.Controllers.ServiceObservabilityStatus>
+@model GameGaraj.WebUI.Areas.Admin.Controllers.ObservabilityDashboardViewModel
 @{
     ViewData["Title"] = "Gözlemlenebilirlik Ayarları";
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
@@ -6,14 +6,31 @@
 
 <div class="container-fluid py-4">
     <div class="row mb-4">
-        <div class="col-12">
-            <h2><i class="fas fa-eye me-2 text-danger"></i>Gözlemlenebilirlik (Observability) Ayarları</h2>
-            <p class="text-muted">Mikroservislerin log seviyelerini ve trace örnekleme oranlarını runtime'da (yeniden dağıtmadan) yönetin.</p>
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="fas fa-eye me-2 text-danger"></i>Gözlemlenebilirlik (Observability) Ayarları</h2>
+                <p class="text-muted mb-0">Mikroservislerin log seviyelerini, trace örnekleme oranlarını ve Elasticsearch log indekslerini yönetin.</p>
+            </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-12">
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-pills mb-4" id="observabilityTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active btn px-4 py-2 me-2" id="services-tab" data-bs-toggle="tab" data-bs-target="#services" type="button" role="tab" aria-controls="services" aria-selected="true">
+                <i class="fas fa-server me-2"></i> Mikroservisler
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link btn px-4 py-2" id="elastic-tab" data-bs-toggle="tab" data-bs-target="#elastic" type="button" role="tab" aria-controls="elastic" aria-selected="false">
+                <i class="fas fa-database me-2"></i> Elasticsearch İndeksleri
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="observabilityTabContent">
+        <!-- Tab 1: Microservices -->
+        <div class="tab-pane fade show active" id="services" role="tabpanel" aria-labelledby="services-tab">
             <div class="card border-0 shadow-sm rounded-3">
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -29,53 +46,156 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var service in Model)
+                                @if (Model.Services == null || !Model.Services.Any())
                                 {
                                     <tr>
-                                        <td class="ps-4 fw-bold text-dark">@service.Key</td>
-                                        <td><code>@service.BaseUrl</code></td>
-                                        <td>
-                                            @if (service.IsHealthy)
-                                            {
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2">
-                                                    <i class="fas fa-check-circle me-1"></i> Aktif
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-2">
-                                                    <i class="fas fa-exclamation-triangle me-1"></i> Erişim Yok
-                                                </span>
-                                            }
-                                        </td>
-                                        <td>
-                                            <span class="badge @GetLogLevelBadgeClass(service.CurrentLogLevel) rounded-pill px-3 py-2">
-                                                @service.CurrentLogLevel
-                                            </span>
-                                        </td>
-                                        <td class="fw-semibold">
-                                            @(service.IsHealthy ? $"{service.TraceSamplingRatio * 100:F1}%" : "Unknown")
-                                        </td>
-                                        <td class="text-end pe-4">
-                                            <div class="btn-group">
-                                                <button class="btn btn-outline-primary btn-sm rounded-start" 
-                                                        onclick="openLogLevelModal('@service.Key', '@service.CurrentLogLevel')" 
-                                                        @(service.IsHealthy ? "" : "disabled")>
-                                                    <i class="fas fa-edit me-1"></i> Log Seviyesi
-                                                </button>
-                                                <button class="btn btn-outline-secondary btn-sm" 
-                                                        onclick="openTraceModal('@service.Key', @service.TraceSamplingRatio)" 
-                                                        @(service.IsHealthy ? "" : "disabled")>
-                                                    <i class="fas fa-filter me-1"></i> Trace Oranı
-                                                </button>
-                                                <button class="btn btn-outline-info btn-sm rounded-end" 
-                                                        onclick="openAuditModal('@service.Key')" 
-                                                        @(service.IsHealthy ? "" : "disabled")>
-                                                    <i class="fas fa-history me-1"></i> Geçmiş
-                                                </button>
-                                            </div>
-                                        </td>
+                                        <td colspan="6" class="text-center py-4 text-muted">Ayar dosyasında yapılandırılmış servis bulunamadı.</td>
                                     </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var service in Model.Services)
+                                    {
+                                        <tr>
+                                            <td class="ps-4 fw-bold text-dark">@service.Key</td>
+                                            <td><code>@service.BaseUrl</code></td>
+                                            <td>
+                                                @if (service.IsHealthy)
+                                                {
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2">
+                                                        <i class="fas fa-check-circle me-1"></i> Aktif
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-2">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i> Erişim Yok
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge @GetLogLevelBadgeClass(service.CurrentLogLevel) rounded-pill px-3 py-2">
+                                                    @service.CurrentLogLevel
+                                                </span>
+                                            </td>
+                                            <td class="fw-semibold">
+                                                @(service.IsHealthy ? $"{service.TraceSamplingRatio * 100:F1}%" : "Unknown")
+                                            </td>
+                                            <td class="text-end pe-4">
+                                                <div class="btn-group">
+                                                    <button class="btn btn-outline-primary btn-sm rounded-start" 
+                                                            onclick="openLogLevelModal('@service.Key', '@service.CurrentLogLevel')" 
+                                                            @(service.IsHealthy ? "" : "disabled")>
+                                                        <i class="fas fa-edit me-1"></i> Log Seviyesi
+                                                    </button>
+                                                    <button class="btn btn-outline-secondary btn-sm" 
+                                                            onclick="openTraceModal('@service.Key', @service.TraceSamplingRatio)" 
+                                                            @(service.IsHealthy ? "" : "disabled")>
+                                                        <i class="fas fa-filter me-1"></i> Trace Oranı
+                                                    </button>
+                                                    <button class="btn btn-outline-info btn-sm rounded-end" 
+                                                            onclick="openAuditModal('@service.Key')" 
+                                                            @(service.IsHealthy ? "" : "disabled")>
+                                                        <i class="fas fa-history me-1"></i> Geçmiş
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Elasticsearch Indices -->
+        <div class="tab-pane fade" id="elastic" role="tabpanel" aria-labelledby="elastic-tab">
+            <div class="row g-4 mb-4">
+                <!-- ILM Status Card -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title fw-bold text-dark"><i class="fas fa-clock text-warning me-2"></i>ILM Politikası Durumu</h5>
+                            <p class="text-muted small mt-2">Log temizleme ve saklama politikası (7 gün warm, 30 gün cold, 180 gün delete).</p>
+                            <div class="d-flex align-items-center mt-3 justify-content-between">
+                                @if (Model.IsIlmConfigured)
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2">
+                                        <i class="fas fa-shield-alt me-1"></i> Yapılandırıldı (Aktif)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-2">
+                                        <i class="fas fa-times-circle me-1"></i> Yapılandırılmadı
+                                    </span>
+                                }
+                                <form asp-area="Admin" asp-controller="ObservabilityAdmin" asp-action="SyncElasticsearchIlm" method="post">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-sync me-1"></i> ILM Eşitle
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Index Count Card -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title fw-bold text-dark"><i class="fas fa-list text-info me-2"></i>Aktif İndeks Sayısı</h5>
+                            <p class="text-muted small mt-2">Elasticsearch üzerindeki toplam GameGaraj log indeks sayısı.</p>
+                            <div class="fs-2 fw-bold text-dark mt-3">
+                                @Model.ElasticIndices.Count <span class="fs-6 text-muted font-normal">adet indeks</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Elasticsearch Indices Table -->
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-dark text-white fw-bold py-3">
+                    <i class="fas fa-database me-2"></i>Log İndeks Listesi (gamegaraj-logs-*)
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4">İndeks Adı</th>
+                                    <th>Sağlık</th>
+                                    <th>Durum</th>
+                                    <th>Belge Sayısı (Docs)</th>
+                                    <th class="text-end pe-4">Boyut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.ElasticIndices == null || !Model.ElasticIndices.Any())
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">Elasticsearch üzerinde log indeksi bulunamadı.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var index in Model.ElasticIndices)
+                                    {
+                                        <tr>
+                                            <td class="ps-4 fw-semibold text-dark"><code>@index.Index</code></td>
+                                            <td>
+                                                <span class="badge @GetIndexHealthBadge(index.Health) rounded-pill px-2 py-1">
+                                                    @index.Health
+                                                </span>
+                                            </td>
+                                            <td><span class="text-capitalize small">@index.Status</span></td>
+                                            <td class="fw-semibold">@index.DocsCount</td>
+                                            <td class="text-end pe-4 fw-semibold text-muted">@index.StoreSize</td>
+                                        </tr>
+                                    }
                                 }
                             </tbody>
                         </table>
@@ -247,6 +367,17 @@
             "error" => "bg-danger-subtle text-danger border border-danger-subtle",
             "fatal" => "bg-danger text-white",
             _ => "bg-light text-dark"
+        };
+    }
+
+    string GetIndexHealthBadge(string health)
+    {
+        return health?.ToLower() switch
+        {
+            "green" => "bg-success text-white",
+            "yellow" => "bg-warning text-dark",
+            "red" => "bg-danger text-white",
+            _ => "bg-secondary text-white"
         };
     }
 }

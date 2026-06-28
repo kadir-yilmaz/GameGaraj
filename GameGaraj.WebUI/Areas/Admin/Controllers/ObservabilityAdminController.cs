@@ -27,10 +27,11 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var serviceStatuses = new List<ServiceObservabilityStatus>();
+            var viewModel = new ObservabilityDashboardViewModel();
             using var client = _httpClientFactory.CreateClient();
             client.Timeout = TimeSpan.FromSeconds(3); // Fast timeout for unhealthy services
 
+            // 1. Fetch Microservice Statuses
             var tasks = _settings.Services.Select(async service =>
             {
                 var status = new ServiceObservabilityStatus
@@ -70,9 +71,39 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             });
 
             var results = await Task.WhenAll(tasks);
-            serviceStatuses.AddRange(results.OrderBy(x => x.Key));
+            viewModel.Services = results.OrderBy(x => x.Key).ToList();
 
-            return View(serviceStatuses);
+            // 2. Fetch Elasticsearch Indices matching gamegaraj-logs-*
+            if (!string.IsNullOrEmpty(_settings.ElasticSearchUri))
+            {
+                try
+                {
+                    var esResponse = await client.GetAsync($"{_settings.ElasticSearchUri}/_cat/indices/gamegaraj-logs-*?format=json&s=index");
+                    if (esResponse.IsSuccessStatusCode)
+                    {
+                        var esContent = await esResponse.Content.ReadAsStringAsync();
+                        var indices = JsonSerializer.Deserialize<List<ElasticIndexDto>>(esContent, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (indices != null)
+                        {
+                            viewModel.ElasticIndices = indices.OrderByDescending(x => x.Index).ToList();
+                        }
+                    }
+
+                    // Check ILM status
+                    var ilmResponse = await client.GetAsync($"{_settings.ElasticSearchUri}/_ilm/policy/gamegaraj-logs-policy");
+                    viewModel.IsIlmConfigured = ilmResponse.IsSuccessStatusCode;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Failed to fetch Elasticsearch data from {Uri}: {Message}", _settings.ElasticSearchUri, ex.Message);
+                }
+            }
+
+            return View(viewModel);
         }
 
         [HttpPost]
@@ -188,9 +219,126 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
 
             return BadRequest("Audit logları alınamadı.");
         }
+
+        [HttpPost]
+        public async Task<IActionResult> SyncElasticsearchIlm()
+        {
+            if (string.IsNullOrEmpty(_settings.ElasticSearchUri))
+            {
+                TempData["Error"] = "ElasticSearchUri ayarı bulunamadı.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            using var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(10);
+
+            try
+            {
+                // 1. Create ILM Policy
+                var policyJson = @"{
+                  ""policy"": {
+                    ""phases"": {
+                      ""hot"": {
+                        ""min_age"": ""0ms"",
+                        ""actions"": {
+                          ""rollover"": {
+                            ""max_age"": ""1d"",
+                            ""max_primary_shard_size"": ""5gb""
+                          },
+                          ""set_priority"": {
+                            ""priority"": 100
+                          }
+                        }
+                      },
+                      ""warm"": {
+                        ""min_age"": ""7d"",
+                        ""actions"": {
+                          ""shrink"": {
+                            ""number_of_shards"": 1
+                          },
+                          ""forcemerge"": {
+                            ""max_num_segments"": 1
+                          },
+                          ""set_priority"": {
+                            ""priority"": 50
+                          }
+                        }
+                      },
+                      ""cold"": {
+                        ""min_age"": ""30d"",
+                        ""actions"": {
+                          ""set_priority"": {
+                            ""priority"": 0
+                          }
+                        }
+                      },
+                      ""delete"": {
+                        ""min_age"": ""180d"",
+                        ""actions"": {
+                          ""delete"": {}
+                        }
+                      }
+                    }
+                  }
+                }";
+
+                var policyContent = new StringContent(policyJson, Encoding.UTF8, "application/json");
+                var policyResponse = await client.PutAsync($"{_settings.ElasticSearchUri}/_ilm/policy/gamegaraj-logs-policy", policyContent);
+
+                if (!policyResponse.IsSuccessStatusCode)
+                {
+                    var error = await policyResponse.Content.ReadAsStringAsync();
+                    TempData["Error"] = $"ILM Politikasını oluştururken hata alındı: {error}";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                // 2. Create Index Template
+                var templateJson = @"{
+                  ""index_patterns"": [""gamegaraj-logs-*""],
+                  ""template"": {
+                    ""settings"": {
+                      ""index.lifecycle.name"": ""gamegaraj-logs-policy"",
+                      ""index.lifecycle.rollover_alias"": ""gamegaraj-logs"",
+                      ""number_of_shards"": 1,
+                      ""number_of_replicas"": 0
+                    }
+                  },
+                  ""priority"": 500,
+                  ""composed_of"": [],
+                  ""_meta"": {
+                    ""description"": ""GameGaraj log indices with ILM lifecycle management""
+                  }
+                }";
+
+                var templateContent = new StringContent(templateJson, Encoding.UTF8, "application/json");
+                var templateResponse = await client.PutAsync($"{_settings.ElasticSearchUri}/_index_template/gamegaraj-logs-template", templateContent);
+
+                if (!templateResponse.IsSuccessStatusCode)
+                {
+                    var error = await templateResponse.Content.ReadAsStringAsync();
+                    TempData["Error"] = $"Index Template'ini oluştururken hata alındı: {error}";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                TempData["Success"] = "Elasticsearch ILM Politikası ve İndeks Şablonu başarıyla senkronize edildi!";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Elasticsearch bağlantı hatası: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
     }
 
     // ── Helper Models & DTOs ──
+
+    public class ObservabilityDashboardViewModel
+    {
+        public List<ServiceObservabilityStatus> Services { get; set; } = new();
+        public List<ElasticIndexDto> ElasticIndices { get; set; } = new();
+        public bool IsIlmConfigured { get; set; }
+    }
 
     public class ServiceObservabilityStatus
     {
@@ -222,5 +370,16 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
         public string OldValue { get; set; } = string.Empty;
         public string NewValue { get; set; } = string.Empty;
         public string Reason { get; set; } = string.Empty;
+    }
+
+    public class ElasticIndexDto
+    {
+        public string Index { get; set; } = string.Empty;
+        public string Health { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        [System.Text.Json.Serialization.JsonPropertyName("docs.count")]
+        public string DocsCount { get; set; } = "0";
+        [System.Text.Json.Serialization.JsonPropertyName("store.size")]
+        public string StoreSize { get; set; } = "0B";
     }
 }
