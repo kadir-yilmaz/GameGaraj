@@ -16,6 +16,7 @@ namespace GameGaraj.Shared.Observability
         public const string ReviewService = "GameGaraj.Review";
         public const string CampaignService = "GameGaraj.Campaign";
         public const string PhotoStockService = "GameGaraj.PhotoStock";
+        public const string WebUIService = "GameGaraj.WebUI";
 
         // ── Metric Name Prefixes ──
         public const string MetricPrefix = "gamegaraj";

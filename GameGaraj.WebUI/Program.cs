@@ -3,6 +3,7 @@ using GameGaraj.WebUI.Services.Abstract;
 using GameGaraj.WebUI.Services.Concrete;
 using GameGaraj.WebUI.Settings;
 using GameGaraj.Shared.Logging;
+using GameGaraj.Shared.Observability;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -27,6 +28,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Ekle
 builder.AddSerilogLogging("WebUI");
+builder.AddObservability(ObservabilityConstants.WebUIService);
 
 // Options Pattern - appsettings.json'dan ayarları okuma
 builder.Services.Configure<ServiceApiSettings>(builder.Configuration.GetSection("ServiceApiSettings"));
@@ -308,6 +310,7 @@ app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseObservability();
 
 app.UseNotyf();
 
