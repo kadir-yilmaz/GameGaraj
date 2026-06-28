@@ -171,10 +171,15 @@ data:
         access: proxy
         url: http://prometheus:9090
         isDefault: true
+        jsonData:
+          exemplarTraceIdDestinations:
+            - name: Jaeger
+              datasourceUid: jaeger
       - name: Jaeger
         type: jaeger
         access: proxy
         url: http://192.168.1.56:16686
+        uid: jaeger
 
 ---
 apiVersion: v1
@@ -244,7 +249,8 @@ data:
           "targets": [
             {
               "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, service_name))",
-              "legendFormat": "{{ "{{" }}service_name{{ "}}" }} P95"
+              "legendFormat": "{{ "{{" }}service_name{{ "}}" }} P95",
+              "exemplar": true
             }
           ],
           "fieldConfig": {
@@ -572,15 +578,18 @@ data:
           "targets": [
             {
               "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
-              "legendFormat": "P50 (Ortanca)"
+              "legendFormat": "P50 (Ortanca)",
+              "exemplar": true
             },
             {
               "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
-              "legendFormat": "P95"
+              "legendFormat": "P95",
+              "exemplar": true
             },
             {
               "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
-              "legendFormat": "P99 (En Yavas)"
+              "legendFormat": "P99 (En Yavas)",
+              "exemplar": true
             }
           ],
           "fieldConfig": {
