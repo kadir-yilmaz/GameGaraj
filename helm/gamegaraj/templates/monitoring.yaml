@@ -601,6 +601,7 @@ data:
     groups:
       - orgId: 1
         name: GameGaraj - Critical Alerts
+        folder: GameGaraj
         interval: 1m
         rules:
           - uid: gamegaraj-high-cpu
