@@ -17,13 +17,13 @@ namespace GameGaraj.Shared.Observability.Metrics
             var meter = meterFactory.Create("GameGaraj.Gateway");
 
             _requestsRouted = meter.CreateCounter<long>(
-                "gateway.requests.routed.total", "requests", "Total requests routed to backend services");
+                "gateway.requests.routed.total", null, "Total requests routed to backend services");
 
             _upstreamErrors = meter.CreateCounter<long>(
-                "gateway.upstream.errors.total", "errors", "Total upstream service errors");
+                "gateway.upstream.errors.total", null, "Total upstream service errors");
 
             _authFailures = meter.CreateCounter<long>(
-                "gateway.auth.failures.total", "failures", "Total authentication failures at gateway");
+                "gateway.auth.failures.total", null, "Total authentication failures at gateway");
         }
 
         public void RequestRouted(string? cluster = null)

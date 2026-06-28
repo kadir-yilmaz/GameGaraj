@@ -18,16 +18,16 @@ namespace GameGaraj.Shared.Observability.Metrics
             var meter = meterFactory.Create("GameGaraj.Review");
 
             _reviewsSubmitted = meter.CreateCounter<long>(
-                "reviews.submitted.total", "reviews", "Total reviews submitted");
+                "reviews.submitted.total", null, "Total reviews submitted");
 
             _reviewsApproved = meter.CreateCounter<long>(
-                "reviews.approved.total", "reviews", "Total reviews approved");
+                "reviews.approved.total", null, "Total reviews approved");
 
             _reviewsRejected = meter.CreateCounter<long>(
-                "reviews.rejected.total", "reviews", "Total reviews rejected by moderation");
+                "reviews.rejected.total", null, "Total reviews rejected by moderation");
 
             _reviewsModerated = meter.CreateCounter<long>(
-                "reviews.moderated.total", "reviews", "Total reviews processed by moderation");
+                "reviews.moderated.total", null, "Total reviews processed by moderation");
         }
 
         public void ReviewSubmitted() => _reviewsSubmitted.Add(1);

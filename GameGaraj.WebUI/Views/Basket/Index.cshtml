@@ -597,9 +597,9 @@
                             }
                         }
 
-                        @if (discountResult != null && discountResult.AppliedRules != null && discountResult.AppliedRules.Any())
+                        @if (discountResult != null && discountResult.AppliedRules != null && discountResult.AppliedRules.Any(r => !r.RuleName.StartsWith("Kupon (", StringComparison.OrdinalIgnoreCase)))
                         {
-                            foreach (var appliedRule in discountResult.AppliedRules)
+                            foreach (var appliedRule in discountResult.AppliedRules.Where(r => !r.RuleName.StartsWith("Kupon (", StringComparison.OrdinalIgnoreCase)))
                             {
                                 <div class="d-flex justify-content-between align-items-center mb-2 px-3 py-2 rounded" style="background: #edf5fd; color: #1976d2; border: 1px solid #d0e3f7; font-weight: 600; font-size: 0.9rem;">
                                     <span>@appliedRule.RuleName</span>
@@ -614,30 +614,8 @@
                             
                             @if (ViewBag.AppliedCoupon is GameGaraj.WebUI.Models.Campaigns.CouponViewModel coupon)
                             {
-                                decimal couponDiscAmount = 0;
-                                if (coupon.DiscountType == "Percentage" && coupon.DiscountRate > 0)
-                                {
-                                    couponDiscAmount = finalTotal * (coupon.DiscountRate.Value / 100m);
-                                    if (coupon.MaxDiscountAmount > 0 && couponDiscAmount > coupon.MaxDiscountAmount)
-                                    {
-                                        couponDiscAmount = coupon.MaxDiscountAmount.Value;
-                                    }
-                                }
-                                else if (coupon.DiscountType == "FixedAmount" && coupon.Amount > 0)
-                                {
-                                    couponDiscAmount = coupon.Amount.Value;
-                                }
-                                else if (coupon.DiscountType == "FreeShipping")
-                                {
-                                    couponDiscAmount = finalShippingFee;
-                                }
-
-                                if (couponDiscAmount > finalTotal)
-                                {
-                                    couponDiscAmount = finalTotal;
-                                }
-
-                                finalTotal -= couponDiscAmount;
+                                var couponRule = discountResult?.AppliedRules?.FirstOrDefault(r => r.RuleName.StartsWith("Kupon (", StringComparison.OrdinalIgnoreCase));
+                                decimal couponDiscAmount = couponRule?.DiscountAmount ?? 0;
 
                                 <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center">
                                     <span class="text-success fw-bold small">

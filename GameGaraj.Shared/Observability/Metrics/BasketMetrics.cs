@@ -19,19 +19,19 @@ namespace GameGaraj.Shared.Observability.Metrics
             var meter = meterFactory.Create("GameGaraj.Basket");
 
             _itemsAdded = meter.CreateCounter<long>(
-                "basket.items.added.total", "items", "Total items added to baskets");
+                "basket.items.added.total", null, "Total items added to baskets");
 
             _itemsRemoved = meter.CreateCounter<long>(
-                "basket.items.removed.total", "items", "Total items removed from baskets");
+                "basket.items.removed.total", null, "Total items removed from baskets");
 
             _basketsDeleted = meter.CreateCounter<long>(
-                "basket.deleted.total", "baskets", "Total baskets deleted");
+                "basket.deleted.total", null, "Total baskets deleted");
 
             _favoritesAdded = meter.CreateCounter<long>(
-                "basket.favorites.added.total", "favorites", "Total favorites added");
+                "basket.favorites.added.total", null, "Total favorites added");
 
             _favoritesRemoved = meter.CreateCounter<long>(
-                "basket.favorites.removed.total", "favorites", "Total favorites removed");
+                "basket.favorites.removed.total", null, "Total favorites removed");
         }
 
         public void ItemAdded() => _itemsAdded.Add(1);

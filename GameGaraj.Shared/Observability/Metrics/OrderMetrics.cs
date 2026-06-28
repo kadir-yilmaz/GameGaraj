@@ -18,13 +18,13 @@ namespace GameGaraj.Shared.Observability.Metrics
             var meter = meterFactory.Create("GameGaraj.Order");
 
             _ordersCreated = meter.CreateCounter<long>(
-                "orders.created.total", "orders", "Total orders created");
+                "orders.created.total", null, "Total orders created");
 
             _ordersCancelled = meter.CreateCounter<long>(
-                "orders.cancelled.total", "orders", "Total orders cancelled");
+                "orders.cancelled.total", null, "Total orders cancelled");
 
             _ordersCompleted = meter.CreateCounter<long>(
-                "orders.completed.total", "orders", "Total orders completed successfully");
+                "orders.completed.total", null, "Total orders completed successfully");
 
             _orderProcessingDuration = meter.CreateHistogram<double>(
                 "orders.processing.duration", "ms", "Order processing duration in milliseconds");

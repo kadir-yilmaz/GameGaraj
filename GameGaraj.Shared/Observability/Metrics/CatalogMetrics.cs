@@ -20,19 +20,19 @@ namespace GameGaraj.Shared.Observability.Metrics
             var meter = meterFactory.Create("GameGaraj.Catalog");
 
             _productSearches = meter.CreateCounter<long>(
-                "catalog.product.searches.total", "searches", "Total product searches");
+                "catalog.product.searches.total", null, "Total product searches");
 
             _stockReserved = meter.CreateCounter<long>(
-                "catalog.stock.reserved.total", "reservations", "Total stock reservations");
+                "catalog.stock.reserved.total", null, "Total stock reservations");
 
             _stockReservationFailed = meter.CreateCounter<long>(
-                "catalog.stock.reservation.failed.total", "failures", "Total failed stock reservations");
+                "catalog.stock.reservation.failed.total", null, "Total failed stock reservations");
 
             _productCreated = meter.CreateCounter<long>(
-                "catalog.product.created.total", "products", "Total products created");
+                "catalog.product.created.total", null, "Total products created");
 
             _productUpdated = meter.CreateCounter<long>(
-                "catalog.product.updated.total", "products", "Total products updated");
+                "catalog.product.updated.total", null, "Total products updated");
 
             _searchDuration = meter.CreateHistogram<double>(
                 "catalog.search.duration", "ms", "Product search duration in milliseconds");

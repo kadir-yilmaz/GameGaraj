@@ -20,22 +20,22 @@ namespace GameGaraj.Shared.Observability.Metrics
             var meter = meterFactory.Create("GameGaraj.Campaign");
 
             _couponsUsed = meter.CreateCounter<long>(
-                "campaign.coupons.used.total", "coupons", "Total coupons used");
+                "campaign.coupons.used.total", null, "Total coupons used");
 
             _couponsCreated = meter.CreateCounter<long>(
-                "campaign.coupons.created.total", "coupons", "Total coupons created");
+                "campaign.coupons.created.total", null, "Total coupons created");
 
             _campaignCalculations = meter.CreateCounter<long>(
-                "campaign.calculations.total", "calculations", "Total campaign calculations performed");
+                "campaign.calculations.total", null, "Total campaign calculations performed");
 
             _rewardsDistributed = meter.CreateCounter<long>(
-                "campaign.rewards.distributed.total", "rewards", "Total rewards distributed");
+                "campaign.rewards.distributed.total", null, "Total rewards distributed");
 
             _notificationsSent = meter.CreateCounter<long>(
-                "campaign.notifications.sent.total", "notifications", "Total notifications sent");
+                "campaign.notifications.sent.total", null, "Total notifications sent");
 
             _notificationsFailed = meter.CreateCounter<long>(
-                "campaign.notifications.failed.total", "notifications", "Total notifications failed");
+                "campaign.notifications.failed.total", null, "Total notifications failed");
         }
 
         public void CouponUsed() => _couponsUsed.Add(1);

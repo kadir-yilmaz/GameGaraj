@@ -18,13 +18,13 @@ namespace GameGaraj.Shared.Observability.Metrics
             var meter = meterFactory.Create("GameGaraj.Invoice");
 
             _invoicesGenerated = meter.CreateCounter<long>(
-                "invoices.generated.total", "invoices", "Total invoices generated");
+                "invoices.generated.total", null, "Total invoices generated");
 
             _emailsSent = meter.CreateCounter<long>(
-                "invoices.emails.sent.total", "emails", "Total invoice emails sent");
+                "invoices.emails.sent.total", null, "Total invoice emails sent");
 
             _emailsFailed = meter.CreateCounter<long>(
-                "invoices.emails.failed.total", "emails", "Total invoice emails failed");
+                "invoices.emails.failed.total", null, "Total invoice emails failed");
 
             _invoiceGenerationDuration = meter.CreateHistogram<double>(
                 "invoices.generation.duration", "ms", "Invoice generation duration in milliseconds");

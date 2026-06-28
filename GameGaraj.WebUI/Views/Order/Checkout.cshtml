@@ -583,14 +583,14 @@
                     var finalItemsTotal = discountResult != null ? discountResult.FinalTotal : basket.TotalPrice;
                     var finalGrossTotal = finalItemsTotal + finalShippingFee;
 
-                    @if (discountResult != null && discountResult.AppliedRules != null && discountResult.AppliedRules.Any())
+                    @if (discountResult != null && discountResult.AppliedRules != null && discountResult.AppliedRules.Any(r => !r.RuleName.StartsWith("Kupon (", StringComparison.OrdinalIgnoreCase)))
                     {
                         <div class="d-flex justify-content-between mb-2">
                             <span>Ara Toplam</span>
                             <span>@discountResult.OriginalTotal.ToString("C2")</span>
                         </div>
 
-                        foreach (var appliedRule in discountResult.AppliedRules)
+                        foreach (var appliedRule in discountResult.AppliedRules.Where(r => !r.RuleName.StartsWith("Kupon (", StringComparison.OrdinalIgnoreCase)))
                         {
                             <div class="d-flex justify-content-between mb-2 text-success">
                                 <span>
@@ -628,31 +628,22 @@
                         
                         @if (ViewBag.AppliedCoupon is GameGaraj.WebUI.Models.Campaigns.CouponViewModel coupon)
                         {
-                            decimal couponDiscAmount = 0;
+                            var couponRule = discountResult?.AppliedRules?.FirstOrDefault(r => r.RuleName.StartsWith("Kupon (", StringComparison.OrdinalIgnoreCase));
+                            decimal couponDiscAmount = couponRule?.DiscountAmount ?? 0;
                             string couponDisplay = coupon.Code;
 
                             if (coupon.DiscountType == "Percentage" && coupon.DiscountRate > 0)
                             {
-                                couponDiscAmount = finalGrossTotal * (coupon.DiscountRate.Value / 100m);
-                                if (coupon.MaxDiscountAmount > 0 && couponDiscAmount > coupon.MaxDiscountAmount)
-                                {
-                                    couponDiscAmount = coupon.MaxDiscountAmount.Value;
-                                }
                                 couponDisplay += $" (%{coupon.DiscountRate})";
                             }
                             else if (coupon.DiscountType == "FixedAmount" && coupon.Amount > 0)
                             {
-                                couponDiscAmount = coupon.Amount.Value;
                                 couponDisplay += $" (-{coupon.Amount} TL)";
                             }
                             else if (coupon.DiscountType == "FreeShipping")
                             {
-                                couponDiscAmount = finalShippingFee;
                                 couponDisplay += " (Kargo Bedava)";
                             }
-
-                            finalGrossTotal -= couponDiscAmount;
-                            if (finalGrossTotal < 0) finalGrossTotal = 0;
 
                             <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center">
                                 <span class="text-success fw-bold small">

@@ -18,13 +18,13 @@ namespace GameGaraj.Shared.Observability.Metrics
             var meter = meterFactory.Create("GameGaraj.Payment");
 
             _paymentsTotal = meter.CreateCounter<long>(
-                "payments.total", "payments", "Total payment attempts");
+                "payments.total", null, "Total payment attempts");
 
             _paymentsSucceeded = meter.CreateCounter<long>(
-                "payments.succeeded.total", "payments", "Total successful payments");
+                "payments.succeeded.total", null, "Total successful payments");
 
             _paymentsFailed = meter.CreateCounter<long>(
-                "payments.failed.total", "payments", "Total failed payments");
+                "payments.failed.total", null, "Total failed payments");
 
             _paymentDuration = meter.CreateHistogram<double>(
                 "payments.duration", "ms", "Payment processing duration in milliseconds");

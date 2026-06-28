@@ -18,13 +18,13 @@ namespace GameGaraj.Shared.Observability.Metrics
             var meter = meterFactory.Create("GameGaraj.PhotoStock");
 
             _photosUploaded = meter.CreateCounter<long>(
-                "photostock.photos.uploaded.total", "photos", "Total photos uploaded");
+                "photostock.photos.uploaded.total", null, "Total photos uploaded");
 
             _photosDeleted = meter.CreateCounter<long>(
-                "photostock.photos.deleted.total", "photos", "Total photos deleted");
+                "photostock.photos.deleted.total", null, "Total photos deleted");
 
             _uploadsFailed = meter.CreateCounter<long>(
-                "photostock.uploads.failed.total", "uploads", "Total failed photo uploads");
+                "photostock.uploads.failed.total", null, "Total failed photo uploads");
 
             _uploadDuration = meter.CreateHistogram<double>(
                 "photostock.upload.duration", "ms", "Photo upload duration in milliseconds");
