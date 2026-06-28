@@ -9,136 +9,60 @@
   "links": [],
   "panels": [
     {
-      "title": "Orders Created (Rate)",
+      "title": "📊 Counter: Sepete Eklenen Ürünler (Rate)",
+      "description": "Counter metriği: Toplam sepete eklenen ürün sayısının saniye başına artış hızı. rate() fonksiyonu counter'ı hıza dönüştürür.",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
-      "targets": [
-        {
-          "expr": "rate(orders_created_total[5m])",
-          "legendFormat": "Orders/sec"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": { "drawStyle": "line", "fillOpacity": 20 }
-        }
-      }
-    },
-    {
-      "title": "Orders Cancelled (Rate)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
-      "targets": [
-        {
-          "expr": "rate(orders_cancelled_total[5m])",
-          "legendFormat": "Cancellations/sec"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": { "drawStyle": "line", "fillOpacity": 20 },
-          "color": { "mode": "fixed", "fixedColor": "orange" }
-        }
-      }
-    },
-    {
-      "title": "Payments (Success vs Failed)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
-      "targets": [
-        {
-          "expr": "rate(payments_succeeded_total[5m])",
-          "legendFormat": "Succeeded"
-        },
-        {
-          "expr": "rate(payments_failed_total[5m])",
-          "legendFormat": "Failed"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": { "drawStyle": "line", "fillOpacity": 20 }
-        },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Failed" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "title": "Payment Processing Duration (P95)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(payments_duration_bucket[5m])) by (le))",
-          "legendFormat": "P95"
-        },
-        {
-          "expr": "histogram_quantile(0.50, sum(rate(payments_duration_bucket[5m])) by (le))",
-          "legendFormat": "P50"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ms",
-          "custom": { "drawStyle": "line", "fillOpacity": 10 }
-        }
-      }
-    },
-    {
-      "title": "Basket Items Added (Rate)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "targets": [
         {
           "expr": "rate(basket_items_added_total[5m])",
-          "legendFormat": "Items Added/sec"
+          "legendFormat": "Sepete Ekleme/sn"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
-          "custom": { "drawStyle": "line", "fillOpacity": 20 }
+          "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "gradientMode": "scheme" },
+          "color": { "mode": "fixed", "fixedColor": "green" }
         }
       }
     },
     {
-      "title": "Reviews Submitted vs Rejected",
+      "title": "📊 Counter: Siparişler Oluşturuldu (Rate)",
+      "description": "Counter metriği: Toplam sipariş sayısının saniye başına artış hızı.",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "targets": [
         {
-          "expr": "rate(reviews_submitted_total[5m])",
-          "legendFormat": "Submitted"
+          "expr": "rate(orders_created_total[5m])",
+          "legendFormat": "Sipariş/sn"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "gradientMode": "scheme" },
+          "color": { "mode": "fixed", "fixedColor": "blue" }
+        }
+      }
+    },
+    {
+      "title": "📊 Counter: Sepet İşlemleri (Toplam)",
+      "description": "Counter metrikleri: increase() fonksiyonu ile son 1 saatte kaç adet işlem olduğunu gösterir. Counter her zaman artar, asla azalmaz.",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "increase(basket_items_added_total[1h])",
+          "legendFormat": "Eklenen"
         },
         {
-          "expr": "rate(reviews_rejected_total[5m])",
-          "legendFormat": "Rejected"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": { "drawStyle": "line", "fillOpacity": 20 }
-        }
-      }
-    },
-    {
-      "title": "Coupons Used (Total)",
-      "type": "stat",
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
-      "targets": [
+          "expr": "increase(basket_items_removed_total[1h])",
+          "legendFormat": "Çıkarılan"
+        },
         {
-          "expr": "increase(campaign_coupons_used_total[24h])",
-          "legendFormat": "Last 24h"
+          "expr": "increase(basket_deleted_total[1h])",
+          "legendFormat": "Silinen Sepet"
         }
       ],
       "fieldConfig": {
@@ -147,30 +71,252 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "blue", "value": null }
+              { "color": "blue", "value": null },
+              { "color": "green", "value": 5 },
+              { "color": "yellow", "value": 50 }
             ]
           }
         }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "value_and_name",
+        "colorMode": "value"
       }
     },
     {
-      "title": "Invoice Emails (Success vs Failed)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "title": "📊 Counter: Sipariş Durumları (Toplam)",
+      "description": "Birden fazla counter'ı karşılaştırarak iş akışının sağlığını ölçebilirsiniz.",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
       "targets": [
         {
-          "expr": "rate(invoices_emails_sent_total[5m])",
-          "legendFormat": "Sent"
+          "expr": "increase(orders_created_total[1h])",
+          "legendFormat": "Oluşturulan"
         },
         {
-          "expr": "rate(invoices_emails_failed_total[5m])",
-          "legendFormat": "Failed"
+          "expr": "increase(orders_cancelled_total[1h])",
+          "legendFormat": "İptal Edilen"
+        },
+        {
+          "expr": "increase(orders_completed_total[1h])",
+          "legendFormat": "Tamamlanan"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "green", "value": 1 },
+              { "color": "orange", "value": 20 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "value_and_name",
+        "colorMode": "value"
+      }
+    },
+    {
+      "title": "📊 Counter: Ödeme Başarı vs Hata",
+      "description": "İki counter'ı aynı grafikte karşılaştırmak sık kullanılan bir pattern. Başarılı ve başarısız ödemeleri aynı anda görüntüler.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "targets": [
+        {
+          "expr": "rate(payments_succeeded_total[5m])",
+          "legendFormat": "Başarılı"
+        },
+        {
+          "expr": "rate(payments_failed_total[5m])",
+          "legendFormat": "Başarısız"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
-          "custom": { "drawStyle": "line", "fillOpacity": 20 }
+          "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2 }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Başarılı" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Başarısız" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "📐 Histogram: HTTP İstek Süresi Dağılımı (P50 / P95 / P99)",
+      "description": "Histogram metriği: İsteklerin süre dağılımını gösterir. histogram_quantile() ile yüzdelik dilimler hesaplanır. P50=ortanca, P95=yavaş istekler, P99=en yavaşlar.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P50 (Ortanca)"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P99 (En Yavaş)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "P50 (Ortanca)" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "P95" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "P99 (En Yavaş)" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "📏 Gauge: Anlık Aktif Bağlantı Sayısı (Servis Bazlı)",
+      "description": "Gauge metriği: Anlık değer gösterir, yukarı-aşağı gidebilir. Counter'dan farkı: counter sadece artar, gauge ise anlık durumu yansıtır.",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(http_server_active_requests) by (service_name)",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 30 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      }
+    },
+    {
+      "title": "📏 Gauge: .NET Heap Bellek (Anlık)",
+      "description": "Gauge metriği: GC heap boyutunu anlık olarak gösterir. Büyüyen trend memory leak işareti olabilir.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 16 },
+      "targets": [
+        {
+          "expr": "process_runtime_dotnet_gc_heap_size_bytes",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "fillOpacity": 15, "lineWidth": 2 }
+        }
+      }
+    },
+    {
+      "title": "📊 Counter: Favori İşlemleri (Rate)",
+      "description": "Counter: Favori ekleme ve çıkarma işlemlerinin hız karşılaştırması.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "rate(basket_favorites_added_total[5m])",
+          "legendFormat": "Favori Eklendi"
+        },
+        {
+          "expr": "rate(basket_favorites_removed_total[5m])",
+          "legendFormat": "Favori Çıkarıldı"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2 }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Favori Eklendi" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "purple" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Favori Çıkarıldı" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "📐 Histogram: HTTP İstek Hızı (Status Code Bazlı)",
+      "description": "Counter metriği HTTP status code label'ı ile gruplandırarak kullanılan bir pattern. Label bazlı filtreleme Prometheus'un en güçlü özelliklerinden biridir.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"2..\"}[5m])) by (service_name)",
+          "legendFormat": "{{service_name}} 2xx"
+        },
+        {
+          "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"4..\"}[5m])) by (service_name)",
+          "legendFormat": "{{service_name}} 4xx"
+        },
+        {
+          "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) by (service_name)",
+          "legendFormat": "{{service_name}} 5xx"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "line", "fillOpacity": 15, "lineWidth": 2 }
         }
       }
     }
@@ -178,7 +324,7 @@
   "schemaVersion": 39,
   "tags": ["gamegaraj", "business-metrics"],
   "templating": { "list": [] },
-  "time": { "from": "now-6h", "to": "now" },
+  "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
   "title": "GameGaraj - Business Metrics",

@@ -232,7 +232,7 @@ data:
           "fieldConfig": {
             "defaults": {
               "unit": "reqps",
-              "custom": { "drawStyle": "line", "fillOpacity": 10 }
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 5 }
             }
           }
         },
@@ -249,7 +249,7 @@ data:
           "fieldConfig": {
             "defaults": {
               "unit": "s",
-              "custom": { "drawStyle": "line", "fillOpacity": 10 },
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -274,7 +274,7 @@ data:
           "fieldConfig": {
             "defaults": {
               "unit": "percentunit",
-              "custom": { "drawStyle": "line", "fillOpacity": 10 },
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -282,7 +282,8 @@ data:
                   { "color": "yellow", "value": 0.01 },
                   { "color": "red", "value": 0.03 }
                 ]
-              }
+              },
+              "noValue": "0% (No 5xx)"
             }
           }
         },
@@ -292,14 +293,14 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
           "targets": [
             {
-              "expr": "process_cpu_usage",
+              "expr": "rate(process_cpu_time_seconds_total[5m])",
               "legendFormat": "{{ "{{" }}service_name{{ "}}" }}"
             }
           ],
           "fieldConfig": {
             "defaults": {
               "unit": "percentunit",
-              "custom": { "drawStyle": "line", "fillOpacity": 10 },
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -317,14 +318,14 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
           "targets": [
             {
-              "expr": "process_memory_usage",
+              "expr": "process_memory_usage_bytes",
               "legendFormat": "{{ "{{" }}service_name{{ "}}" }}"
             }
           ],
           "fieldConfig": {
             "defaults": {
               "unit": "bytes",
-              "custom": { "drawStyle": "line", "fillOpacity": 10 }
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }
             }
           }
         },
@@ -335,7 +336,7 @@ data:
           "targets": [
             {
               "expr": "rate(process_runtime_dotnet_gc_collections_count_total[5m])",
-              "legendFormat": "{{ "{{" }}service_name{{ "}}" }} Gen{{ "{{" }}generation{{ "}}" }}"
+              "legendFormat": "{{ "{{" }}service_name{{ "}}" }} {{ "{{" }}generation{{ "}}" }}"
             }
           ],
           "fieldConfig": {
@@ -351,14 +352,14 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
           "targets": [
             {
-              "expr": "process_runtime_dotnet_threadpool_queue_length",
+              "expr": "process_runtime_dotnet_thread_pool_queue_length",
               "legendFormat": "{{ "{{" }}service_name{{ "}}" }}"
             }
           ],
           "fieldConfig": {
             "defaults": {
               "unit": "none",
-              "custom": { "drawStyle": "line", "fillOpacity": 10 }
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }
             }
           }
         },
@@ -409,136 +410,60 @@ data:
       "links": [],
       "panels": [
         {
-          "title": "Orders Created (Rate)",
+          "title": "Counter: Sepete Eklenen Urunler (Rate)",
+          "description": "Counter metrigi: rate() fonksiyonu counter'i saniye basina hiza donusturur.",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
-          "targets": [
-            {
-              "expr": "rate(orders_created_total[5m])",
-              "legendFormat": "Orders/sec"
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "unit": "ops",
-              "custom": { "drawStyle": "line", "fillOpacity": 20 }
-            }
-          }
-        },
-        {
-          "title": "Orders Cancelled (Rate)",
-          "type": "timeseries",
-          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
-          "targets": [
-            {
-              "expr": "rate(orders_cancelled_total[5m])",
-              "legendFormat": "Cancellations/sec"
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "unit": "ops",
-              "custom": { "drawStyle": "line", "fillOpacity": 20 },
-              "color": { "mode": "fixed", "fixedColor": "orange" }
-            }
-          }
-        },
-        {
-          "title": "Payments (Success vs Failed)",
-          "type": "timeseries",
-          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
-          "targets": [
-            {
-              "expr": "rate(payments_succeeded_total[5m])",
-              "legendFormat": "Succeeded"
-            },
-            {
-              "expr": "rate(payments_failed_total[5m])",
-              "legendFormat": "Failed"
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "unit": "ops",
-              "custom": { "drawStyle": "line", "fillOpacity": 20 }
-            },
-            "overrides": [
-              {
-                "matcher": { "id": "byName", "options": "Failed" },
-                "properties": [
-                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "title": "Payment Processing Duration (P95)",
-          "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-          "targets": [
-            {
-              "expr": "histogram_quantile(0.95, sum(rate(payments_duration_bucket[5m])) by (le))",
-              "legendFormat": "P95"
-            },
-            {
-              "expr": "histogram_quantile(0.50, sum(rate(payments_duration_bucket[5m])) by (le))",
-              "legendFormat": "P50"
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "unit": "ms",
-              "custom": { "drawStyle": "line", "fillOpacity": 10 }
-            }
-          }
-        },
-        {
-          "title": "Basket Items Added (Rate)",
-          "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
           "targets": [
             {
               "expr": "rate(basket_items_added_total[5m])",
-              "legendFormat": "Items Added/sec"
+              "legendFormat": "Sepete Ekleme/sn"
             }
           ],
           "fieldConfig": {
             "defaults": {
               "unit": "ops",
-              "custom": { "drawStyle": "line", "fillOpacity": 20 }
+              "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "gradientMode": "scheme" },
+              "color": { "mode": "fixed", "fixedColor": "green" }
             }
           }
         },
         {
-          "title": "Reviews Submitted vs Rejected",
+          "title": "Counter: Siparisler Olusturuldu (Rate)",
+          "description": "Counter metrigi: Toplam siparis sayisinin saniye basina artis hizi.",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
           "targets": [
             {
-              "expr": "rate(reviews_submitted_total[5m])",
-              "legendFormat": "Submitted"
+              "expr": "rate(orders_created_total[5m])",
+              "legendFormat": "Siparis/sn"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "gradientMode": "scheme" },
+              "color": { "mode": "fixed", "fixedColor": "blue" }
+            }
+          }
+        },
+        {
+          "title": "Counter: Sepet Islemleri (Toplam)",
+          "description": "Counter: increase() ile son 1 saatte kac adet islem oldugunu gosterir.",
+          "type": "stat",
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "expr": "increase(basket_items_added_total[1h])",
+              "legendFormat": "Eklenen"
             },
             {
-              "expr": "rate(reviews_rejected_total[5m])",
-              "legendFormat": "Rejected"
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "unit": "ops",
-              "custom": { "drawStyle": "line", "fillOpacity": 20 }
-            }
-          }
-        },
-        {
-          "title": "Coupons Used (Total)",
-          "type": "stat",
-          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
-          "targets": [
+              "expr": "increase(basket_items_removed_total[1h])",
+              "legendFormat": "Cikarilan"
+            },
             {
-              "expr": "increase(campaign_coupons_used_total[24h])",
-              "legendFormat": "Last 24h"
+              "expr": "increase(basket_deleted_total[1h])",
+              "legendFormat": "Silinen Sepet"
             }
           ],
           "fieldConfig": {
@@ -547,30 +472,252 @@ data:
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
-                  { "color": "blue", "value": null }
+                  { "color": "blue", "value": null },
+                  { "color": "green", "value": 5 },
+                  { "color": "yellow", "value": 50 }
                 ]
               }
             }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"]
+            },
+            "textMode": "value_and_name",
+            "colorMode": "value"
           }
         },
         {
-          "title": "Invoice Emails (Success vs Failed)",
-          "type": "timeseries",
-          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+          "title": "Counter: Siparis Durumlari (Toplam)",
+          "description": "Birden fazla counter karsilastirarak is akisinin sagligini olcebilirsiniz.",
+          "type": "stat",
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
           "targets": [
             {
-              "expr": "rate(invoices_emails_sent_total[5m])",
-              "legendFormat": "Sent"
+              "expr": "increase(orders_created_total[1h])",
+              "legendFormat": "Olusturulan"
             },
             {
-              "expr": "rate(invoices_emails_failed_total[5m])",
-              "legendFormat": "Failed"
+              "expr": "increase(orders_cancelled_total[1h])",
+              "legendFormat": "Iptal Edilen"
+            },
+            {
+              "expr": "increase(orders_completed_total[1h])",
+              "legendFormat": "Tamamlanan"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "blue", "value": null },
+                  { "color": "green", "value": 1 },
+                  { "color": "orange", "value": 20 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"]
+            },
+            "textMode": "value_and_name",
+            "colorMode": "value"
+          }
+        },
+        {
+          "title": "Counter: Odeme Basari vs Hata",
+          "description": "Iki counter'i ayni grafikte karsilastirmak sik kullanilan bir pattern.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+          "targets": [
+            {
+              "expr": "rate(payments_succeeded_total[5m])",
+              "legendFormat": "Basarili"
+            },
+            {
+              "expr": "rate(payments_failed_total[5m])",
+              "legendFormat": "Basarisiz"
             }
           ],
           "fieldConfig": {
             "defaults": {
               "unit": "ops",
-              "custom": { "drawStyle": "line", "fillOpacity": 20 }
+              "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2 }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Basarili" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Basarisiz" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Histogram: HTTP Istek Suresi Dagilimi (P50/P95/P99)",
+          "description": "Histogram metrigi: histogram_quantile() ile yuzdelik dilimler hesaplanir.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P50 (Ortanca)"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P95"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P99 (En Yavas)"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "P50 (Ortanca)" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "P95" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "P99 (En Yavas)" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Gauge: Anlik Aktif Baglanti Sayisi",
+          "description": "Gauge metrigi: Anlik deger gosterir, yukari-asagi gidebilir.",
+          "type": "stat",
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 16 },
+          "targets": [
+            {
+              "expr": "sum(http_server_active_requests) by (service_name)",
+              "legendFormat": "{{ "{{" }}service_name{{ "}}" }}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 30 },
+                  { "color": "red", "value": 80 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"]
+            },
+            "colorMode": "background",
+            "graphMode": "area"
+          }
+        },
+        {
+          "title": "Gauge: .NET Heap Bellek (Anlik)",
+          "description": "Gauge: GC heap boyutunu anlik olarak gosterir.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 16 },
+          "targets": [
+            {
+              "expr": "process_runtime_dotnet_gc_heap_size_bytes",
+              "legendFormat": "{{ "{{" }}service_name{{ "}}" }}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": { "drawStyle": "line", "fillOpacity": 15, "lineWidth": 2 }
+            }
+          }
+        },
+        {
+          "title": "Counter: Favori Islemleri (Rate)",
+          "description": "Counter: Favori ekleme ve cikarma islemlerinin hiz karsilastirmasi.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+          "targets": [
+            {
+              "expr": "rate(basket_favorites_added_total[5m])",
+              "legendFormat": "Favori Eklendi"
+            },
+            {
+              "expr": "rate(basket_favorites_removed_total[5m])",
+              "legendFormat": "Favori Cikarildi"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2 }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Favori Eklendi" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "purple" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Favori Cikarildi" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Counter: HTTP Istek Hizi (Status Code Bazli)",
+          "description": "Label bazli filtreleme Prometheus'un en guclu ozelliklerinden biridir.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"2..\"}[5m])) by (service_name)",
+              "legendFormat": "{{ "{{" }}service_name{{ "}}" }} 2xx"
+            },
+            {
+              "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"4..\"}[5m])) by (service_name)",
+              "legendFormat": "{{ "{{" }}service_name{{ "}}" }} 4xx"
+            },
+            {
+              "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) by (service_name)",
+              "legendFormat": "{{ "{{" }}service_name{{ "}}" }} 5xx"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": { "drawStyle": "line", "fillOpacity": 15, "lineWidth": 2 }
             }
           }
         }
@@ -578,7 +725,7 @@ data:
       "schemaVersion": 39,
       "tags": ["gamegaraj", "business-metrics"],
       "templating": { "list": [] },
-      "time": { "from": "now-6h", "to": "now" },
+      "time": { "from": "now-1h", "to": "now" },
       "timepicker": {},
       "timezone": "browser",
       "title": "GameGaraj - Business Metrics",
@@ -614,7 +761,7 @@ data:
                   to: 0
                 datasourceUid: prometheus
                 model:
-                  expr: process_cpu_usage
+                  expr: rate(process_cpu_time_seconds_total[5m])
                   instant: false
                   range: true
               - refId: C

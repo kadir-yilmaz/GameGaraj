@@ -21,7 +21,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 5 }
         }
       }
     },
@@ -38,7 +38,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "custom": { "drawStyle": "line", "fillOpacity": 10 },
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -63,7 +63,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "custom": { "drawStyle": "line", "fillOpacity": 10 },
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -71,7 +71,8 @@
               { "color": "yellow", "value": 0.01 },
               { "color": "red", "value": 0.03 }
             ]
-          }
+          },
+          "noValue": "0% (No 5xx)"
         }
       }
     },
@@ -81,14 +82,14 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "targets": [
         {
-          "expr": "process_cpu_usage",
+          "expr": "rate(process_cpu_time_seconds_total[5m])",
           "legendFormat": "{{service_name}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "custom": { "drawStyle": "line", "fillOpacity": 10 },
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -106,14 +107,14 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "targets": [
         {
-          "expr": "process_memory_usage",
+          "expr": "process_memory_usage_bytes",
           "legendFormat": "{{service_name}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
-          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }
         }
       }
     },
@@ -124,7 +125,7 @@
       "targets": [
         {
           "expr": "rate(process_runtime_dotnet_gc_collections_count_total[5m])",
-          "legendFormat": "{{service_name}} Gen{{generation}}"
+          "legendFormat": "{{service_name}} {{generation}}"
         }
       ],
       "fieldConfig": {
@@ -140,14 +141,14 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
       "targets": [
         {
-          "expr": "process_runtime_dotnet_threadpool_queue_length",
+          "expr": "process_runtime_dotnet_thread_pool_queue_length",
           "legendFormat": "{{service_name}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }
         }
       }
     },
