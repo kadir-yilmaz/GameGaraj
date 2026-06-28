@@ -30,6 +30,7 @@ builder.AddSerilogLogging("WebUI");
 
 // Options Pattern - appsettings.json'dan ayarları okuma
 builder.Services.Configure<ServiceApiSettings>(builder.Configuration.GetSection("ServiceApiSettings"));
+builder.Services.Configure<ObservabilitySettings>(builder.Configuration.GetSection("ObservabilitySettings"));
 
 // HttpContextAccessor
 builder.Services.AddHttpContextAccessor();

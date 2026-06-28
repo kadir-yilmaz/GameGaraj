@@ -1,0 +1,342 @@
+@model IEnumerable<GameGaraj.WebUI.Areas.Admin.Controllers.ServiceObservabilityStatus>
+@{
+    ViewData["Title"] = "Gözlemlenebilirlik Ayarları";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-eye me-2 text-danger"></i>Gözlemlenebilirlik (Observability) Ayarları</h2>
+            <p class="text-muted">Mikroservislerin log seviyelerini ve trace örnekleme oranlarını runtime'da (yeniden dağıtmadan) yönetin.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="ps-4">Servis Adı</th>
+                                    <th>İç Ağ Adresi (DNS/Port)</th>
+                                    <th>Durum</th>
+                                    <th>Log Seviyesi</th>
+                                    <th>Trace Örnekleme Oranı</th>
+                                    <th class="text-end pe-4">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var service in Model)
+                                {
+                                    <tr>
+                                        <td class="ps-4 fw-bold text-dark">@service.Key</td>
+                                        <td><code>@service.BaseUrl</code></td>
+                                        <td>
+                                            @if (service.IsHealthy)
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2">
+                                                    <i class="fas fa-check-circle me-1"></i> Aktif
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-2">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i> Erişim Yok
+                                                </span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge @GetLogLevelBadgeClass(service.CurrentLogLevel) rounded-pill px-3 py-2">
+                                                @service.CurrentLogLevel
+                                            </span>
+                                        </td>
+                                        <td class="fw-semibold">
+                                            @(service.IsHealthy ? $"{service.TraceSamplingRatio * 100:F1}%" : "Unknown")
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <div class="btn-group">
+                                                <button class="btn btn-outline-primary btn-sm rounded-start" 
+                                                        onclick="openLogLevelModal('@service.Key', '@service.CurrentLogLevel')" 
+                                                        @(service.IsHealthy ? "" : "disabled")>
+                                                    <i class="fas fa-edit me-1"></i> Log Seviyesi
+                                                </button>
+                                                <button class="btn btn-outline-secondary btn-sm" 
+                                                        onclick="openTraceModal('@service.Key', @service.TraceSamplingRatio)" 
+                                                        @(service.IsHealthy ? "" : "disabled")>
+                                                    <i class="fas fa-filter me-1"></i> Trace Oranı
+                                                </button>
+                                                <button class="btn btn-outline-info btn-sm rounded-end" 
+                                                        onclick="openAuditModal('@service.Key')" 
+                                                        @(service.IsHealthy ? "" : "disabled")>
+                                                    <i class="fas fa-history me-1"></i> Geçmiş
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log Level Modal -->
+<div class="modal fade" id="logLevelModal" tabindex="-1" aria-labelledby="logLevelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form asp-area="Admin" asp-controller="ObservabilityAdmin" asp-action="UpdateLogLevel" method="post">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white border-0">
+                    <h5 class="modal-title" id="logLevelModalLabel"><i class="fas fa-cog me-2"></i>Log Seviyesi Güncelle</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="serviceKey" id="logLevelServiceKey" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Seçili Servis</label>
+                        <input type="text" class="form-control bg-light" id="logLevelServiceName" readonly />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Yeni Log Seviyesi</label>
+                        <select name="level" class="form-select" required>
+                            <option value="Verbose">Verbose (Tüm Detaylar)</option>
+                            <option value="Debug">Debug (Geliştirici İpuçları)</option>
+                            <option value="Information">Information (Standart Bilgi)</option>
+                            <option value="Warning">Warning (Uyarılar)</option>
+                            <option value="Error">Error (Hatalar)</option>
+                            <option value="Fatal">Fatal (Kritik Çökmeler)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Geçerlilik Süresi</label>
+                        <select name="durationMinutes" class="form-select" required>
+                            <option value="0">Kalıcı (Manuel Değiştirilene Kadar)</option>
+                            <option value="5">5 Dakika</option>
+                            <option value="15" selected>15 Dakika</option>
+                            <option value="30">30 Dakika</option>
+                            <option value="60">1 Saat</option>
+                            <option value="180">3 Saat</option>
+                        </select>
+                        <div class="form-text text-muted">Belirtilen süre sonunda sistem otomatik olarak eski log seviyesine geri döner.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Değişiklik Nedeni</label>
+                        <textarea name="reason" class="form-control" rows="2" placeholder="Ör: Sepete ekleme akışındaki hatayı izlemek için" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Değişiklikleri Kaydet</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Trace Sampling Modal -->
+<div class="modal fade" id="traceModal" tabindex="-1" aria-labelledby="traceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form asp-area="Admin" asp-controller="ObservabilityAdmin" asp-action="UpdateTraceSampling" method="post">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-secondary text-white border-0">
+                    <h5 class="modal-title" id="traceModalLabel"><i class="fas fa-filter me-2"></i>Trace Örnekleme Oranı Güncelle</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="serviceKey" id="traceServiceKey" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Seçili Servis</label>
+                        <input type="text" class="form-control bg-light" id="traceServiceName" readonly />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Yeni Örnekleme Oranı (Ratio)</label>
+                        <select name="ratio" class="form-select" required>
+                            <option value="0.0">0% (Örnekleme Yok - Kapalı)</option>
+                            <option value="0.01">1% (Düşük Trafik/Üretim)</option>
+                            <option value="0.05">5% (Önerilen Üretim Seviyesi)</option>
+                            <option value="0.1">10%</option>
+                            <option value="0.25">25%</option>
+                            <option value="0.5">50%</option>
+                            <option value="1.0">100% (Tüm İstekleri İzle - Debug)</option>
+                        </select>
+                        <div class="form-text text-muted">Oranın artırılması sistemde oluşturulan trace trafiğini ve disk yazma işlemlerini artırır.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Geçerlilik Süresi</label>
+                        <select name="durationMinutes" class="form-select" required>
+                            <option value="0">Kalıcı (Manuel Değiştirilene Kadar)</option>
+                            <option value="5">5 Dakika</option>
+                            <option value="15" selected>15 Dakika</option>
+                            <option value="30">30 Dakika</option>
+                            <option value="60">1 Saat</option>
+                        </select>
+                        <div class="form-text text-muted">Süre sonunda otomatik olarak varsayılan baseline oranına geri dönülür.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Değişiklik Nedeni</label>
+                        <textarea name="reason" class="form-control" rows="2" placeholder="Ör: Kampanya hesaplama işlemlerini detaylı trace etmek için" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-secondary">Değişiklikleri Kaydet</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Audit Logs Modal -->
+<div class="modal fade" id="auditModal" tabindex="-1" aria-labelledby="auditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-info text-dark border-0">
+                <h5 class="modal-title" id="auditModalLabel"><i class="fas fa-history me-2"></i>Observability Değişiklik Geçmişi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Tarih (UTC)</th>
+                                <th>Yapan Kişi</th>
+                                <th>Tür</th>
+                                <th>Eski Değer</th>
+                                <th>Yeni Değer</th>
+                                <th>Açıklama</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">Yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetLogLevelBadgeClass(string level)
+    {
+        return level?.ToLower() switch
+        {
+            "verbose" => "bg-light text-dark border border-secondary-subtle",
+            "debug" => "bg-secondary-subtle text-secondary border border-secondary-subtle",
+            "information" => "bg-success-subtle text-success border border-success-subtle",
+            "warning" => "bg-warning-subtle text-warning border border-warning-subtle",
+            "error" => "bg-danger-subtle text-danger border border-danger-subtle",
+            "fatal" => "bg-danger text-white",
+            _ => "bg-light text-dark"
+        };
+    }
+}
+
+@section Scripts {
+    <script>
+        function openLogLevelModal(serviceKey, currentLevel) {
+            document.getElementById('logLevelServiceKey').value = serviceKey;
+            document.getElementById('logLevelServiceName').value = serviceKey;
+            
+            // Set the current level in dropdown if matches
+            const select = document.querySelector('#logLevelModal select[name="level"]');
+            if (select) {
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value.toLowerCase() === currentLevel.toLowerCase()) {
+                        select.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            var modal = new bootstrap.Modal(document.getElementById('logLevelModal'));
+            modal.show();
+        }
+
+        function openTraceModal(serviceKey, currentRatio) {
+            document.getElementById('traceServiceKey').value = serviceKey;
+            document.getElementById('traceServiceName').value = serviceKey;
+            
+            // Match current ratio in select options
+            const select = document.querySelector('#traceModal select[name="ratio"]');
+            if (select) {
+                let matched = false;
+                for (let i = 0; i < select.options.length; i++) {
+                    if (parseFloat(select.options[i].value) === parseFloat(currentRatio)) {
+                        select.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) {
+                    // fallback to 5% if not found
+                    select.value = "0.05";
+                }
+            }
+
+            var modal = new bootstrap.Modal(document.getElementById('traceModal'));
+            modal.show();
+        }
+
+        function openAuditModal(serviceKey) {
+            const tableBody = document.getElementById('auditTableBody');
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loglar alınıyor...</td></tr>';
+            
+            var modal = new bootstrap.Modal(document.getElementById('auditModal'));
+            modal.show();
+
+            fetch(`/Admin/ObservabilityAdmin/AuditLogs?serviceKey=${encodeURIComponent(serviceKey)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error("HTTP error " + response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Kayıtlı değişiklik bulunamadı.</td></tr>';
+                        return;
+                    }
+
+                    let html = '';
+                    data.forEach(log => {
+                        const date = new Date(log.timestamp).toISOString().replace('T', ' ').substring(0, 19);
+                        html += `<tr>
+                            <td><code>${date}</code></td>
+                            <td class="fw-semibold text-dark">${escapeHtml(log.changedBy)}</td>
+                            <td><span class="badge bg-light text-dark border border-secondary-subtle">${escapeHtml(log.changeType)}</span></td>
+                            <td><code>${escapeHtml(log.oldValue)}</code></td>
+                            <td><code>${escapeHtml(log.newValue)}</code></td>
+                            <td class="text-muted small">${escapeHtml(log.reason || '-')}</td>
+                        </tr>`;
+                    });
+                    tableBody.innerHTML = html;
+                })
+                .catch(error => {
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger"><i class="fas fa-exclamation-circle me-1"></i>Hata: ${escapeHtml(error.message)}</td></tr>`;
+                });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+}

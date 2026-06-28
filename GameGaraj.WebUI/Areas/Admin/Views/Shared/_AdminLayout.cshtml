@@ -373,6 +373,10 @@
                    asp-area="Admin" asp-controller="SearchIndex" asp-action="Index">
                     <i class="fas fa-magnifying-glass-chart"></i> Arama İndeksi
                 </a>
+                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "ObservabilityAdmin" ? "active" : "")" 
+                   asp-area="Admin" asp-controller="ObservabilityAdmin" asp-action="Index">
+                    <i class="fas fa-eye"></i> Gözlemlenebilirlik Ayarları
+                </a>
                 <div class="mt-4 border-top border-secondary pt-3 mx-3">
                     <span class="text-uppercase small text-muted font-weight-bold" style="font-size: 0.75rem;">Hızlı Bağlantılar</span>
                 </div>
