@@ -84,6 +84,7 @@ namespace GameGaraj.Shared.Observability
                 {
                     metrics
                         .SetResourceBuilder(resourceBuilder)
+                        .SetExemplarFilter(ExemplarFilterType.TraceBased)
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation()
                         .AddRuntimeInstrumentation()
