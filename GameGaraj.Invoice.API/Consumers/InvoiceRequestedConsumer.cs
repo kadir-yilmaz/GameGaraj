@@ -3,6 +3,8 @@ using GameGaraj.Invoice.API.Models;
 using GameGaraj.Invoice.API.Services;
 using GameGaraj.Shared.Events;
 
+using GameGaraj.Shared.Observability.Metrics;
+
 namespace GameGaraj.Invoice.API.Consumers
 {
     /// <summary>
@@ -11,16 +13,22 @@ namespace GameGaraj.Invoice.API.Consumers
     public class InvoiceRequestedConsumer : IConsumer<InvoiceRequested>
     {
         private readonly IEmailService _emailService;
+        private readonly InvoiceMetrics _metrics;
 
-        public InvoiceRequestedConsumer(IEmailService emailService)
+        public InvoiceRequestedConsumer(
+            IEmailService emailService,
+            InvoiceMetrics metrics)
         {
             _emailService = emailService;
+            _metrics = metrics;
         }
 
         public async Task Consume(ConsumeContext<InvoiceRequested> context)
         {
             Console.WriteLine($"[InvoiceRequestedConsumer] Received InvoiceRequested for OrderId: {context.Message.OrderId}");
             Console.WriteLine($"[InvoiceRequestedConsumer] Sending to: {context.Message.CustomerEmail}");
+
+            _metrics.InvoiceGenerated();
 
             var invoiceData = new InvoiceData
             {
@@ -36,15 +44,21 @@ namespace GameGaraj.Invoice.API.Consumers
                 }).ToList()
             };
 
-            var result = await _emailService.SendInvoiceEmailAsync(invoiceData);
+            bool result;
+            using (var tracker = _metrics.TrackGeneration())
+            {
+                result = await _emailService.SendInvoiceEmailAsync(invoiceData);
+            }
             
             if (result)
             {
                 Console.WriteLine($"[InvoiceRequestedConsumer] ✅ Invoice email sent successfully");
+                _metrics.EmailSent();
             }
             else
             {
                 Console.WriteLine($"[InvoiceRequestedConsumer] ❌ Failed to send invoice email");
+                _metrics.EmailFailed();
             }
         }
     }

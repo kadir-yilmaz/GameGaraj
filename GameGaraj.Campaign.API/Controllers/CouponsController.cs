@@ -2,6 +2,8 @@ using GameGaraj.Campaign.API.Models;
 using GameGaraj.Campaign.API.Services.Abstract;
 using Microsoft.AspNetCore.Mvc;
 
+using GameGaraj.Shared.Observability.Metrics;
+
 namespace GameGaraj.Campaign.API.Controllers
 {
     [Route("api/[controller]")]
@@ -9,10 +11,14 @@ namespace GameGaraj.Campaign.API.Controllers
     public class CouponsController : ControllerBase
     {
         private readonly ICouponService _couponService;
+        private readonly CampaignMetrics _metrics;
 
-        public CouponsController(ICouponService couponService)
+        public CouponsController(
+            ICouponService couponService,
+            CampaignMetrics metrics)
         {
             _couponService = couponService;
+            _metrics = metrics;
         }
 
         [HttpGet]
@@ -63,6 +69,7 @@ namespace GameGaraj.Campaign.API.Controllers
             if (!result)
                 return BadRequest("Kupon kaydedilemedi.");
 
+            _metrics.CouponCreated();
             return Created("", coupon);
         }
 
@@ -93,6 +100,7 @@ namespace GameGaraj.Campaign.API.Controllers
             if (!result)
                 return NotFound($"ID: {id} ile kupon bulunamadı.");
 
+            _metrics.CouponUsed();
             return NoContent();
         }
 
@@ -107,6 +115,7 @@ namespace GameGaraj.Campaign.API.Controllers
             if (!result)
                 return BadRequest("Kupon kullanıldı olarak işaretlenemedi.");
 
+            _metrics.CouponUsed();
             return NoContent();
         }
     }

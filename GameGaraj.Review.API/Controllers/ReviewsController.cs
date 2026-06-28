@@ -4,6 +4,8 @@ using GameGaraj.Review.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using GameGaraj.Shared.Observability.Metrics;
+
 namespace GameGaraj.Review.API.Controllers;
 
 [Route("api/[controller]")]
@@ -11,10 +13,14 @@ namespace GameGaraj.Review.API.Controllers;
 public class ReviewsController : ControllerBase
 {
     private readonly IReviewService _reviewService;
+    private readonly ReviewMetrics _metrics;
 
-    public ReviewsController(IReviewService reviewService)
+    public ReviewsController(
+        IReviewService reviewService,
+        ReviewMetrics metrics)
     {
         _reviewService = reviewService;
+        _metrics = metrics;
     }
 
     [HttpGet("product/{productId}")]
@@ -66,6 +72,10 @@ public class ReviewsController : ControllerBase
     public async Task<IActionResult> Create(CreateReviewDto dto, CancellationToken cancellationToken)
     {
         var result = await _reviewService.CreateAsync(dto, GetUserContext(), cancellationToken);
+        if (result.Succeeded)
+        {
+            _metrics.ReviewSubmitted();
+        }
         return result.Succeeded ? CreatedAtAction(nameof(GetUserReview), new { productId = dto.ProductId }, result) : BadRequest(result);
     }
 
@@ -106,6 +116,18 @@ public class ReviewsController : ControllerBase
     public async Task<IActionResult> Moderate(ModerateReviewDto dto, CancellationToken cancellationToken)
     {
         var result = await _reviewService.ModerateAsync(dto, cancellationToken);
+        if (result.Succeeded)
+        {
+            _metrics.ReviewModerated();
+            if (dto.Status == 1) // Approved
+            {
+                _metrics.ReviewApproved();
+            }
+            else if (dto.Status == 2) // Rejected
+            {
+                _metrics.ReviewRejected();
+            }
+        }
         return result.Succeeded ? Ok(result) : BadRequest(result);
     }
 

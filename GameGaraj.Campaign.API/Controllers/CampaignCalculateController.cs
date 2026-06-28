@@ -2,6 +2,8 @@ using GameGaraj.Campaign.API.Models;
 using GameGaraj.Campaign.API.Services.Abstract;
 using Microsoft.AspNetCore.Mvc;
 
+using GameGaraj.Shared.Observability.Metrics;
+
 namespace GameGaraj.Campaign.API.Controllers
 {
     /// <summary>
@@ -13,10 +15,14 @@ namespace GameGaraj.Campaign.API.Controllers
     public class CampaignCalculateController : ControllerBase
     {
         private readonly ICampaignCalculationService _calculationService;
+        private readonly CampaignMetrics _metrics;
 
-        public CampaignCalculateController(ICampaignCalculationService calculationService)
+        public CampaignCalculateController(
+            ICampaignCalculationService calculationService,
+            CampaignMetrics metrics)
         {
             _calculationService = calculationService;
+            _metrics = metrics;
         }
 
         /// <summary>
@@ -30,6 +36,7 @@ namespace GameGaraj.Campaign.API.Controllers
                 return BadRequest("Sepet boş.");
 
             var result = await _calculationService.CalculateAsync(request);
+            _metrics.CampaignCalculated();
             return Ok(result);
         }
     }

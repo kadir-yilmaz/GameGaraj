@@ -10,6 +10,8 @@ using Iyzipay.Model;
 using Iyzipay.Request;
 using System.Globalization;
 
+using GameGaraj.Shared.Observability.Metrics;
+
 namespace GameGaraj.Payment.API.Controllers
 {
     [AllowAnonymous]
@@ -19,12 +21,15 @@ namespace GameGaraj.Payment.API.Controllers
     {
         private readonly IPublishEndpoint _publishEndpoint;
         private readonly Iyzipay.Options _iyzipayOptions;
+        private readonly PaymentMetrics _metrics;
 
         public PaymentsController(
             IPublishEndpoint publishEndpoint,
-            IOptions<IyzipaySettings> iyzipaySettings)
+            IOptions<IyzipaySettings> iyzipaySettings,
+            PaymentMetrics metrics)
         {
             _publishEndpoint = publishEndpoint;
+            _metrics = metrics;
 
             var settings = iyzipaySettings.Value;
             _iyzipayOptions = new Iyzipay.Options
@@ -39,6 +44,7 @@ namespace GameGaraj.Payment.API.Controllers
         public async Task<IActionResult> ReceivePayment(PaymentDto paymentDto)
         {
             Console.WriteLine("[PaymentsController] POST ReceivePayment called.");
+            _metrics.PaymentAttempted("Iyzico");
             Console.WriteLine($"[PaymentsController] Received PaymentDto:");
             Console.WriteLine($"  - OrderId: {paymentDto.OrderId}");
             Console.WriteLine($"  - TotalPrice: {paymentDto.TotalPrice}");
@@ -66,6 +72,7 @@ namespace GameGaraj.Payment.API.Controllers
             if (paymentDto.TotalPrice <= 0)
             {
                 Console.WriteLine("[PaymentsController] ✅ FREE PURCHASE - Skipping iyzico");
+                _metrics.PaymentSucceeded("Free");
 
                 // PaymentCompleted event publish et - Order status güncellenecek
                 await _publishEndpoint.Publish(new PaymentCompleted
@@ -91,11 +98,16 @@ namespace GameGaraj.Payment.API.Controllers
             }
 
             // iyzico ödeme isteği oluştur
-            var paymentResult = await ProcessIyzipayPayment(paymentDto);
+            Iyzipay.Model.Payment paymentResult;
+            using (var tracker = _metrics.TrackPayment())
+            {
+                paymentResult = await ProcessIyzipayPayment(paymentDto);
+            }
 
             if (paymentResult.Status != "success")
             {
-                Console.WriteLine($"[PaymentsController] ❌ Payment FAILED: {paymentResult.ErrorMessage}");
+                Console.WriteLine($"[PaymentsController] ❌ Payment YOLUNDA GITMEDI: {paymentResult.ErrorMessage}");
+                _metrics.PaymentFailed(paymentResult.ErrorMessage ?? "Payment failed");
 
                 // 📤 PaymentFailed event publish et - Order status Failed olacak
                 await _publishEndpoint.Publish(new PaymentFailed
@@ -118,6 +130,8 @@ namespace GameGaraj.Payment.API.Controllers
                     ErrorCode = paymentResult.ErrorCode
                 });
             }
+
+            _metrics.PaymentSucceeded("Iyzipay");
 
             // 📤 PaymentCompleted event publish et - Order status Completed olacak
             await _publishEndpoint.Publish(new PaymentCompleted
