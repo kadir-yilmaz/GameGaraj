@@ -89,8 +89,18 @@ namespace GameGaraj.Shared.Observability
                         .AddRuntimeInstrumentation()
                         .AddProcessInstrumentation()
                         .AddMeter(serviceName)
-                        .AddMeter($"{serviceName}.*")
-                        .AddMeter("GameGaraj.*")
+                        // Explicit registration of ALL business metric meters.
+                        // Wildcard ("GameGaraj.*") is NOT reliable in OTel .NET SDK.
+                        .AddMeter("GameGaraj.Basket")
+                        .AddMeter("GameGaraj.Order")
+                        .AddMeter("GameGaraj.Payment")
+                        .AddMeter("GameGaraj.Campaign")
+                        .AddMeter("GameGaraj.Review")
+                        .AddMeter("GameGaraj.Invoice")
+                        .AddMeter("GameGaraj.PhotoStock")
+                        .AddMeter("GameGaraj.Gateway")
+                        .AddMeter("GameGaraj.Catalog")
+                        .AddMeter("GameGaraj.WebUI")
                         .AddPrometheusExporter();
                 });
 
