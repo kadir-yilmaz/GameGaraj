@@ -14,11 +14,19 @@ using GameGaraj.Order.Infrastructure.Repositories.Concrete;
 using Microsoft.AspNetCore.Mvc;
 using MassTransit;
 using GameGaraj.Shared.Logging;
+using GameGaraj.Shared.Observability;
+using GameGaraj.Shared.Observability.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Ekle
 builder.AddSerilogLogging("Order.API");
+
+// OpenTelemetry (Tracing + Metrics)
+builder.AddObservability(ObservabilityConstants.OrderService);
+
+// Custom Business Metrics
+builder.Services.AddSingleton<OrderMetrics>();
 
 // Add services to the container.
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Remove("sub");
@@ -134,6 +142,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseCustomRequestLogging();
+
+// OpenTelemetry Prometheus /metrics endpoint
+app.UseObservability();
+
 app.MapControllers();
 
 // Auto Migration

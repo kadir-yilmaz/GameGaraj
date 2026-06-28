@@ -5,6 +5,8 @@ using GameGaraj.Catalog.API.Services.Concrete;
 using MassTransit;
 using GameGaraj.Catalog.API.Consumers;
 using GameGaraj.Shared.Logging;
+using GameGaraj.Shared.Observability;
+using GameGaraj.Shared.Observability.Metrics;
 using Npgsql;
 using Elastic.Clients.Elasticsearch;
 using GameGaraj.Catalog.API.Models;
@@ -14,6 +16,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Ekle
 builder.AddSerilogLogging("Catalog.API");
+
+// OpenTelemetry (Tracing + Metrics)
+builder.AddObservability(ObservabilityConstants.CatalogService);
+
+// Custom Business Metrics
+builder.Services.AddSingleton<CatalogMetrics>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
@@ -125,6 +133,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseCustomRequestLogging();
+
+// OpenTelemetry Prometheus /metrics endpoint
+app.UseObservability();
 
 app.MapControllers();
 

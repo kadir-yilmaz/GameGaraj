@@ -2,6 +2,8 @@ using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using GameGaraj.Shared.Logging;
+using GameGaraj.Shared.Observability;
+using GameGaraj.Shared.Observability.Metrics;
 
 using GameGaraj.Basket.API.Features.Baskets.DeleteBasket;
 using GameGaraj.Basket.API.Features.Baskets.GetBasket;
@@ -20,6 +22,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Ekle
 builder.AddSerilogLogging("Basket.API");
+
+// OpenTelemetry (Tracing + Metrics)
+builder.AddObservability(ObservabilityConstants.BasketService);
+
+// Custom Business Metrics
+builder.Services.AddSingleton<BasketMetrics>();
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
@@ -82,6 +90,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseCustomRequestLogging();
+
+// OpenTelemetry Prometheus /metrics endpoint
+app.UseObservability();
 
 // Versioning Set
 var apiVersionSet = app.NewApiVersionSet()

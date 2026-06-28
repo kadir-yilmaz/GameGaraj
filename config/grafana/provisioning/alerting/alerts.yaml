@@ -1,0 +1,173 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: GameGaraj - Critical Alerts
+    folder: GameGaraj
+    interval: 1m
+    rules:
+      # ── Infrastructure Alerts ──
+
+      - uid: gamegaraj-high-cpu
+        title: High CPU Usage
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: process_cpu_usage
+              instant: false
+              range: true
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.9]
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU usage > 90% on {{ $labels.service_name }}"
+          description: "Service {{ $labels.service_name }} has been running above 90% CPU for 5 minutes."
+
+      - uid: gamegaraj-high-5xx
+        title: High 5xx Error Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m])) by (service_name)
+                / sum(rate(http_server_request_duration_seconds_count[5m])) by (service_name)
+              instant: false
+              range: true
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.03]
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "5xx error rate > 3% on {{ $labels.service_name }}"
+          description: "Service {{ $labels.service_name }} is returning more than 3% server errors."
+
+      - uid: gamegaraj-high-latency
+        title: High P95 Latency
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, service_name))
+              instant: false
+              range: true
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [3]
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 latency > 3s on {{ $labels.service_name }}"
+          description: "Service {{ $labels.service_name }} P95 response time exceeded 3 seconds."
+
+      # ── Business Alerts ──
+
+      - uid: gamegaraj-payment-failures
+        title: Payment Failures Spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: increase(payments_failed_total[10m])
+              instant: true
+              range: false
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [10]
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: "More than 10 payment failures in 10 minutes"
+          description: "Payment failure count spiked — possible payment gateway issue."
+
+      - uid: gamegaraj-email-failures
+        title: Invoice Email Failures
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: increase(invoices_emails_failed_total[10m])
+              instant: true
+              range: false
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5]
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "More than 5 invoice email failures in 10 minutes"
+          description: "Invoice email delivery is failing — check SMTP configuration."

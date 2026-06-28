@@ -6,6 +6,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Mvc;
 using GameGaraj.Payment.API.Settings;
 using GameGaraj.Shared.Logging;
+using GameGaraj.Shared.Observability;
+using GameGaraj.Shared.Observability.Metrics;
 
 LoadDotEnv();
 
@@ -41,6 +43,12 @@ void LoadDotEnv()
 
 // Serilog Ekle
 builder.AddSerilogLogging("Payment.API");
+
+// OpenTelemetry (Tracing + Metrics)
+builder.AddObservability(ObservabilityConstants.PaymentService);
+
+// Custom Business Metrics
+builder.Services.AddSingleton<PaymentMetrics>();
 
 // Iyzipay Settings
 builder.Services.Configure<IyzipaySettings>(
@@ -111,6 +119,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseCustomRequestLogging();
+
+// OpenTelemetry Prometheus /metrics endpoint
+app.UseObservability();
 
 app.MapControllers();
 

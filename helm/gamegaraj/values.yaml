@@ -16,6 +16,7 @@ global:
   rabbitmqUrl: "192.168.1.56"
   identityAuthority: "http://192.168.1.56:8080/realms/GameGaraj"
   elasticUri: "http://192.168.1.56:9201"
+  otlpEndpoint: "http://192.168.1.56:4317"
 
 # -- Override chart name
 nameOverride: ""
@@ -196,7 +197,7 @@ configMaps:
     data: ""
 
 # =============================================================================
-# Monitoring (Prometheus & Grafana)
+# Monitoring (Prometheus, Grafana & Jaeger)
 # =============================================================================
 monitoring:
   enabled: true
@@ -205,4 +206,7 @@ monitoring:
   grafana:
     image: "grafana/grafana:10.4.1"
     nodePort: 30300
+  jaeger:
+    image: "jaegertracing/all-in-one:1.56"
+    nodePort: 30686
 

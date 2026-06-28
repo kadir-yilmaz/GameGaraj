@@ -234,6 +234,17 @@ services:
     depends_on:
       - elasticsearch
 
+  # Jaeger for Distributed Tracing (OTLP receiver)
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: gamegaraj-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC receiver
+      - "4318:4318"     # OTLP HTTP receiver
+
 volumes:
   redis_master_data:
   redis_replica1_data:
@@ -245,3 +256,4 @@ volumes:
   catalog_postgres_data:
   review_postgres_data:
   elasticsearch_data:
+  jaeger_data:

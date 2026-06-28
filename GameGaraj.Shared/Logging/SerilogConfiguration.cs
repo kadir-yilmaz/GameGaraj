@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Exceptions;
 using Serilog.Sinks.Elasticsearch;
+using Serilog.Enrichers.Span;
 
 namespace GameGaraj.Shared.Logging
 {
@@ -15,11 +16,13 @@ namespace GameGaraj.Shared.Logging
             var elasticUri = builder.Configuration["ElasticSearchSettings:Uri"];
 
             var loggerConfig = new LoggerConfiguration()
-                .MinimumLevel.Information()
+                .MinimumLevel.ControlledBy(LogLevelManager.GetSwitch(serviceName))
                 .Enrich.FromLogContext()
                 .Enrich.WithExceptionDetails()
                 .Enrich.WithProperty("Environment", environment)
                 .Enrich.WithProperty("Service", serviceName)
+                .Enrich.WithProperty("MachineName", Environment.MachineName)
+                .Enrich.WithSpan()  // Adds TraceId + SpanId from Activity (OpenTelemetry)
                 .WriteTo.Console();
 
             // Fallback file logging - daily rolling, automatically purged after 7 days

@@ -3,12 +3,20 @@ using GameGaraj.Campaign.API.Services;
 using GameGaraj.Campaign.API.Services.Abstract;
 using GameGaraj.Campaign.API.Services.Concrete;
 using GameGaraj.Shared.Logging;
+using GameGaraj.Shared.Observability;
+using GameGaraj.Shared.Observability.Metrics;
 using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Ekle
 builder.AddSerilogLogging("Campaign.API");
+
+// OpenTelemetry (Tracing + Metrics)
+builder.AddObservability(ObservabilityConstants.CampaignService);
+
+// Custom Business Metrics
+builder.Services.AddSingleton<CampaignMetrics>();
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -80,6 +88,9 @@ app.UseCors("AllowAll");
 
 app.UseRouting();
 app.UseCustomRequestLogging();
+
+// OpenTelemetry Prometheus /metrics endpoint
+app.UseObservability();
 
 app.MapControllers();
 

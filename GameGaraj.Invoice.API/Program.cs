@@ -3,6 +3,8 @@ using GameGaraj.Invoice.API.Consumers;
 using GameGaraj.Invoice.API.Services;
 using GameGaraj.Invoice.API.Settings;
 using GameGaraj.Shared.Logging;
+using GameGaraj.Shared.Observability;
+using GameGaraj.Shared.Observability.Metrics;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 LoadDotEnv();
@@ -39,6 +41,12 @@ void LoadDotEnv()
 
 // Serilog Ekle
 builder.AddSerilogLogging("Invoice.API");
+
+// OpenTelemetry (Tracing + Metrics)
+builder.AddObservability(ObservabilityConstants.InvoiceService);
+
+// Custom Business Metrics
+builder.Services.AddSingleton<InvoiceMetrics>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -99,6 +107,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseCustomRequestLogging();
+
+// OpenTelemetry Prometheus /metrics endpoint
+app.UseObservability();
 
 app.MapControllers();
 

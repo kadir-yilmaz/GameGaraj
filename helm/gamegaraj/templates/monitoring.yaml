@@ -162,7 +162,7 @@ metadata:
     app: grafana
     {{- include "gamegaraj.labels" $ | nindent 4 }}
 data:
-  prometheus-datasource.yaml: |
+  datasources.yaml: |
     apiVersion: 1
     datasources:
       - name: Prometheus
@@ -170,6 +170,10 @@ data:
         access: proxy
         url: http://prometheus:9090
         isDefault: true
+      - name: Jaeger
+        type: jaeger
+        access: proxy
+        url: http://jaeger:16686
 
 ---
 apiVersion: apps/v1
@@ -206,12 +210,27 @@ spec:
           volumeMounts:
             - name: datasource-volume
               mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboard-provisioning-volume
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboard-json-volume
+              mountPath: /var/lib/grafana/dashboards
+            - name: alerting-volume
+              mountPath: /etc/grafana/provisioning/alerting
             - name: storage-volume
               mountPath: /var/lib/grafana
       volumes:
         - name: datasource-volume
           configMap:
             name: grafana-datasources
+        - name: dashboard-provisioning-volume
+          configMap:
+            name: grafana-dashboard-provisioning
+        - name: dashboard-json-volume
+          configMap:
+            name: grafana-dashboards
+        - name: alerting-volume
+          configMap:
+            name: grafana-alerting
         - name: storage-volume
           emptyDir: {}
 
@@ -233,4 +252,73 @@ spec:
       nodePort: {{ .Values.monitoring.grafana.nodePort }}
   selector:
     app: grafana
+
+---
+# ── Jaeger (Distributed Tracing) ──
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: jaeger
+    {{- include "gamegaraj.labels" $ | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+        - name: jaeger
+          image: {{ .Values.monitoring.jaeger.image }}
+          env:
+            - name: COLLECTOR_OTLP_ENABLED
+              value: "true"
+          ports:
+            - containerPort: 16686
+              name: ui
+            - containerPort: 4317
+              name: otlp-grpc
+            - containerPort: 4318
+              name: otlp-http
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: 500m
+            requests:
+              memory: 256Mi
+              cpu: 100m
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: jaeger
+    {{- include "gamegaraj.labels" $ | nindent 4 }}
+spec:
+  type: NodePort
+  ports:
+    - port: 16686
+      targetPort: 16686
+      protocol: TCP
+      nodePort: {{ .Values.monitoring.jaeger.nodePort }}
+      name: ui
+    - port: 4317
+      targetPort: 4317
+      protocol: TCP
+      name: otlp-grpc
+    - port: 4318
+      targetPort: 4318
+      protocol: TCP
+      name: otlp-http
+  selector:
+    app: jaeger
 {{- end }}
