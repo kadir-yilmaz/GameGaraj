@@ -1,6 +1,7 @@
 using GameGaraj.Order.Application.Commands;
 using GameGaraj.Order.Domain.Entities;
 using GameGaraj.Order.Infrastructure;
+using GameGaraj.Shared.Observability.Metrics;
 using MediatR;
 
 namespace GameGaraj.Order.Application.Handlers
@@ -8,10 +9,12 @@ namespace GameGaraj.Order.Application.Handlers
     public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, int>
     {
         private readonly OrderDbContext _context;
+        private readonly OrderMetrics _metrics;
 
-        public CreateOrderCommandHandler(OrderDbContext context)
+        public CreateOrderCommandHandler(OrderDbContext context, OrderMetrics metrics)
         {
             _context = context;
+            _metrics = metrics;
         }
 
         public async Task<int> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
@@ -137,6 +140,8 @@ namespace GameGaraj.Order.Application.Handlers
 
             _context.Orders.Add(newOrder);
             await _context.SaveChangesAsync(cancellationToken);
+
+            _metrics.OrderCreated(request.BuyerId);
 
             return newOrder.Id;
         }

@@ -1,11 +1,12 @@
 using System.Net;
 using GameGaraj.Basket.API.Services;
 using GameGaraj.Basket.API.Shared;
+using GameGaraj.Shared.Observability.Metrics;
 using MediatR;
 
 namespace GameGaraj.Basket.API.Features.Baskets.DeleteBasketItem;
 
-public class DeleteBasketItemCommandHandler(BasketService basketService)
+public class DeleteBasketItemCommandHandler(BasketService basketService, BasketMetrics basketMetrics)
     : IRequestHandler<DeleteBasketItemCommand, ServiceResult>
 {
     public async Task<ServiceResult> Handle(DeleteBasketItemCommand request, CancellationToken cancellationToken)
@@ -26,6 +27,8 @@ public class DeleteBasketItemCommandHandler(BasketService basketService)
         basket.Items.Remove(item);
 
         await basketService.SaveBasketAsync(basket, cancellationToken);
+        
+        basketMetrics.ItemRemoved();
 
         return ServiceResult.SuccessAsNoContent();
     }

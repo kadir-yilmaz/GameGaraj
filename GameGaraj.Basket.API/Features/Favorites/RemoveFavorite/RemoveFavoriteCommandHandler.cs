@@ -1,15 +1,19 @@
 using GameGaraj.Basket.API.Services;
 using GameGaraj.Basket.API.Shared;
+using GameGaraj.Shared.Observability.Metrics;
 using MediatR;
 
 namespace GameGaraj.Basket.API.Features.Favorites.RemoveFavorite;
 
-public class RemoveFavoriteCommandHandler(FavoritesService favoritesService)
+public class RemoveFavoriteCommandHandler(FavoritesService favoritesService, BasketMetrics basketMetrics)
     : IRequestHandler<RemoveFavoriteCommand, ServiceResult>
 {
     public async Task<ServiceResult> Handle(RemoveFavoriteCommand request, CancellationToken cancellationToken)
     {
         await favoritesService.RemoveFavoriteAsync(request.ProductId, cancellationToken);
+        
+        basketMetrics.FavoriteRemoved();
+
         return ServiceResult.SuccessAsNoContent();
     }
 }

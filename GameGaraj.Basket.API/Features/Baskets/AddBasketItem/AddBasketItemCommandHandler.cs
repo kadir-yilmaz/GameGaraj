@@ -1,11 +1,12 @@
 using GameGaraj.Basket.API.Data;
 using GameGaraj.Basket.API.Services;
 using GameGaraj.Basket.API.Shared;
+using GameGaraj.Shared.Observability.Metrics;
 using MediatR;
 
 namespace GameGaraj.Basket.API.Features.Baskets.AddBasketItem;
 
-public class AddBasketItemCommandHandler(BasketService basketService, IIdentityService identityService)
+public class AddBasketItemCommandHandler(BasketService basketService, IIdentityService identityService, BasketMetrics basketMetrics)
     : IRequestHandler<AddBasketItemCommand, ServiceResult>
 {
     public async Task<ServiceResult> Handle(AddBasketItemCommand request, CancellationToken cancellationToken)
@@ -41,6 +42,8 @@ public class AddBasketItemCommandHandler(BasketService basketService, IIdentityS
         }
 
         await basketService.SaveBasketAsync(basket, cancellationToken);
+        
+        basketMetrics.ItemAdded();
 
         return ServiceResult.SuccessAsNoContent();
     }
