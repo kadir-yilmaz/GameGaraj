@@ -1,6 +1,4 @@
-# 🎓 Distributed Tracing (Dağıtık İzleme) Masterclass - Bölüm 2: .NET ve C# Alt Yapısı
-
-Kadir, birinci bölümde teoriyi hallettik. Şimdi işin mutfağına, yani **.NET Core** tarafına inelim. 
+# 🎓 Distributed Tracing (Dağıtık İzleme) - Bölüm 2: .NET ve C# Alt Yapısı
 
 Microsoft, OpenTelemetry standartlarını .NET runtime'ının içine birinci sınıf vatandaş (first-class citizen) olarak gömdü. Bu yüzden .NET dünyasında OpenTelemetry terimleri ile C# sınıf isimleri biraz farklılık gösterir. Öncelikle bu isim sözlüğünü oturtalım.
 
@@ -72,50 +70,46 @@ public class InvoiceService
 }
 ```
 
-### Bu kod çalışınca Jaeger'da ne olur?
-*   Jaeger arayüzünde **`GenerateInvoicePdf`** adında bir kutucuk oluşur.
-*   Bu kutucuğun süresi tam olarak `Task.Delay(150)` süresi kadar (~150ms) görünür.
-*   Üzerine tıkladığında sağ panelde `invoice.order_id`, `invoice.total_amount` ve `invoice.output_path` gibi etiketleri görürsün.
-*   Eğer kod hata alırsa kutucuk **kırmızı** renge boyanır ve hatanın detayı içine yazılır.
-
 ---
 
 ## 3. Bizim Projede (`GameGaraj.Shared`) Observability Entegrasyonu Nasıl Çalışıyor?
 
-Bizim projede her servisin `Program.cs` dosyasında `AddObservability` ve `UseObservability` metodunu çağırıyoruz. Peki bu metotların arkasında ne dönüyor?
+Bizim projede her servisin `Program.cs` dosyasında `AddObservability` ve `UseObservability` metodunu çağırıyoruz.
 
-`GameGaraj.Shared/Observability/ObservabilityExtensions.cs` dosyasını açıp baktığında şuna benzer bir yapılandırma görürsün:
+`GameGaraj.Shared/Observability/OpenTelemetryConfiguration.cs` dosyasındaki yapılandırma şöyledir:
 
 ```csharp
-public static IServiceCollection AddObservability(this IServiceCollection services, IConfiguration configuration, string serviceName)
+public static WebApplicationBuilder AddObservability(
+    this WebApplicationBuilder builder,
+    string serviceName,
+    string serviceVersion = "1.0.0")
 {
-    services.AddOpenTelemetry()
+    var otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"]
+                       ?? "http://192.168.1.56:4317";
+
+    builder.Services.AddOpenTelemetry()
         .WithTracing(tracing =>
         {
             tracing
-                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
+                .SetResourceBuilder(resourceBuilder)
                 // 1. .NET bileşenlerinin otomatik izlenmesini sağlıyoruz
-                .AddAspNetCoreInstrumentation()   // Gelen HTTP isteklerini yakala
-                .AddHttpClientInstrumentation()   // Giden HTTP (HttpClient) isteklerini yakala
+                .AddAspNetCoreInstrumentation()          // Gelen HTTP isteklerini yakala
+                .AddHttpClientInstrumentation()          // Giden HTTP isteklerini yakala
                 .AddEntityFrameworkCoreInstrumentation() // EF Core SQL sorgularını yakala
-                .AddSqlClientInstrumentation()    // Ham SQL bağlantılarını yakala
-                // 2. Kendi yazdığımız özel ActivitySource'ları dinleme listesine ekliyoruz
-                .AddSource("GameGaraj.*") 
-                // 3. Verileri OTLP (OpenTelemetry Protocol) üzerinden Jaeger'a yolla
-                .AddOtlpExporter(options =>
+                .AddSqlClientInstrumentation()           // Ham SQL bağlantılarını yakala
+                .AddSource($"{serviceName}.*")           // Servise ait özel kaynakları yakala
+                .AddSource("GameGaraj.*")                // Ortak kaynakları yakala
+                .AddOtlpExporter(opts =>
                 {
-                    options.Endpoint = new Uri(configuration["OpenTelemetry:OtlpEndpoint"] 
-                        ?? "http://192.168.1.56:4317");
+                    opts.Endpoint = new Uri(otlpEndpoint);
+                    opts.Protocol = OtlpExportProtocol.Grpc;
                 });
         });
-
-    return services;
+    return builder;
 }
 ```
 
 ### Bu Yapılandırmanın Sihri:
 *   **`AddAspNetCoreInstrumentation`:** WebUI veya API'lerinize gelen tüm HTTP istekleri için otomatik bir `Parent Span` açar.
-*   **`AddHttpClientInstrumentation`:** Bir servis içinden `HttpClient` ile dışarıya (örneğin Gateway'e veya başka API'ye) istek attığınızda, mevcut `TraceId`'yi otomatik tespit eder ve giden HTTP istek başlığına `traceparent` olarak ekler.
-*   **`AddEntityFrameworkCoreInstrumentation`:** Entity Framework Core üzerinden veritabanına sorgu atıldığında bunu yakalar, SQL sorgusunun kendisini alıp span tag'ine yazar ve Jaeger'a yollar.
-
-Bir sonraki bölümde, **yaşayabileceğimiz gerçek dünya problemlerini Jaeger ve dağıtık izleme kullanarak nasıl çözeceğimizi** göreceğiz. Hazırsan [Bölüm 3: Gerçek Dünya Senaryoları ve Hata Çözümü](file:///d:/Kadir/Projeler/GameGaraj/notes/observability/distributed_tracing_real_world.md) dosyasına geçelim.
+*   **`AddHttpClientInstrumentation`:** Bir servis içinden `HttpClient` ile dışarıya istek attığınızda, mevcut `TraceId`'yi otomatik tespit eder ve giden HTTP istek başlığına `traceparent` olarak ekler.
+*   **`AddEntityFrameworkCoreInstrumentation`:** EF Core üzerinden veritabanına sorgu atıldığında bunu yakalar, SQL sorgusunun kendisini alıp span tag'ine yazar.

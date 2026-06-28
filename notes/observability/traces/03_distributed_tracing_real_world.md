@@ -1,8 +1,6 @@
-# 🎓 Distributed Tracing (Dağıtık İzleme) Masterclass - Bölüm 3: Gerçek Dünya Senaryoları ve Teşhis
+# 🎓 Distributed Tracing (Dağıtık İzleme) - Bölüm 3: Gerçek Dünya Senaryoları ve Teşhis
 
-Kadir, şimdiye kadar teoriyi öğrendik, .NET altyapısına baktık. Şimdi en önemli yere geldik: **Gerçek dünyada bir senior developer olarak Jaeger ekranına baktığında neyi nasıl teşhis edersin?**
-
-Karşılaşacağın 3 klasik yazılım krizini ve bunları Jaeger ile nasıl 5 dakikada çözeceğini inceleyelim.
+Bir senior developer olarak Jaeger ekranına baktığında neyi nasıl teşhis edersin? Karşılaşacağın 3 klasik yazılım krizini ve bunları Jaeger ile nasıl 5 dakikada çözeceğini inceleyelim.
 
 ---
 
@@ -30,7 +28,7 @@ Jaeger UI'ı açtın ve yavaş çalışan `GET /` trace'ine tıkladın.
 **Senior Teşhisi:**
 "Kadir, kodda `foreach` döngüsünün içinde veritabanı sorgusu atılmış! EF Core'un Lazy Loading özelliği veya döngü içindeki `repository.GetPriceById()` çağrısı yüzünden sistem N+1 sorgu atıyor."
 
-**Cözüm:**
+**Çözüm:**
 Kodda `foreach` ile tek tek fiyat sorgulamak yerine, veritabanından ürünleri çekerken fiyatlarını `.Include(p => p.Prices)` kullanarak tek bir sorguda (Eager Loading) çekmek.
 *   **Sonuç:** Veritabanı span sayısı 150'den 1'e iner, sayfa hızı 3 saniyeden 80ms'ye düşer!
 
@@ -86,13 +84,3 @@ Ağaçta aşağı doğru indin ve şunu gördün:
 
 **Çözüm:**
 Ödeme servisimize uygun bir **Timeout (Zaman aşımı)** ve **Retry Policy (Polly ile yeniden deneme)** ekleriz. Ayrıca kullanıcıya boş yere 5 saniye bekletmek yerine "Ödeme sağlayıcı geç yanıt veriyor, lütfen tekrar deneyin" gibi kontrollü bir hata döneriz.
-
----
-
-## 💡 Trace Kullanırken Dikkat Edilmesi Gereken Altın Kurallar (Production Best Practices)
-
-1.  **Hassas Verileri Gizle (No Sensitive Data):** Span etiketlerine (tags) asla şifre, kredi kartı numarası, TC Kimlik no veya kişisel verileri (KVKK) yazma. Jaeger verileri genelde şifrelenmeden saklanır.
-2.  **Düşük Varyasyonlu (Low Cardinality) Etiketler Kullan:** Tag olarak eklediğin anahtarların değerleri çok sık değişen şeyler olmamalıdır. Örneğin SQL sorgusunun kendisini tag olarak eklemek iyidir ama her sorgunun içine dinamik parametreleri gömmek Elasticsearch/Jaeger veri tabanını şişirir. Parametrik sorgular tercih edilmelidir (`Id = @id` gibi).
-3.  **Trace ID'yi Loglara Yaz:** Serilog ile Elasticsearch'e log yazarken trace kimliğini de log satırına ekle (zaten projemizde bunu yaptık). Bir hata logu gördüğünde, hemen o logdaki `TraceId`'yi alıp Jaeger'a giderek hatanın tüm geçmişini izleyebilmelisin.
-
-Kadir, dağıtık izleme mantığını teorik, kodsal ve pratik olarak baştan sona inceledik. Bu üç dosyayı (`distributed_tracing_guide.md`, `distributed_tracing_in_dotnet.md`, `distributed_tracing_real_world.md`) observability notlarının altına kalıcı birer kılavuz olarak bıraktım. Takıldığın her an açıp referans alabilirsin! 🚀

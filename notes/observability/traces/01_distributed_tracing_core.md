@@ -1,6 +1,4 @@
-# 🎓 Distributed Tracing (Dağıtık İzleme) Masterclass - Bölüm 1: Temel Kavramlar
-
-Kadir, gel seninle bir kahve içelim ve bu **Distributed Tracing (Dağıtık İzleme)** konusunu baştan aşağı, profesyonel bir yazılımcı gözüyle ele alalım. 
+# 🎓 Distributed Tracing (Dağıtık İzleme) - Bölüm 1: Temel Kavramlar
 
 Monolitik (tek parça) bir uygulamada hata ayıklamak kolaydır. Her şey tek bir sürecin (process) içinde döner, hata aldığında stack trace'e bakar ve hangi satırda patladığını görürsün. Ama bizim şu an geliştirdiğimiz **GameGaraj** gibi mikroservis mimarilerinde işler tamamen değişir. Bir istek gelir; önce Gateway'e uğrar, oradan WebUI'a, oradan Catalog'a, oradan Basket'e gider. Arada RabbitMQ üzerinden asenkron event'ler fırlatılır, arka planda başka servisler tetiklenir.
 
@@ -72,16 +70,3 @@ Bu veri 4 parçadan oluşur:
 4.  **Trace Flags (`01`):** Bu izin kaydedilip kaydedilmeyeceğini (sampling) belirtir (`01` = trace verisini sunucuya gönder demektir).
 
 İstek alan servis (örneğin `Catalog.API`) gelen HTTP isteğinin başlıklarında `traceparent` değerini arar. Bulursa yeni bir trace başlatmaz, mevcut `Trace ID`'yi devralır ve kendi span'lerini onun altına ekler. **Böylece dağıtık zincir kurulmuş olur.**
-
----
-
-## 4. Jaeger'ın Rolü Nedir?
-
-Mikroservislerimiz çalışırken ürettikleri bu trace ve span bilgilerini belleklerinde tutmazlar. Her servis, oluşturduğu span'leri asenkron olarak arka planda **Jaeger**'a push eder (bizim k3s pod'larında `OTLP 4317` portuna gönderdiğimiz yapı).
-
-Jaeger ise:
-*   Tüm servislerden gelen bu bağımsız span parçalarını toplar.
-*   Bunları `Trace ID` ve `Parent ID` ilişkilerine göre bir yapboz gibi birleştirir.
-*   Sana o harika arayüzü sunarak hangi adımın kaç milisaniye sürdüğünü görselleştirir.
-
-Bir sonraki bölümde, bu yapının **.NET içinde nasıl kodlandığını, `Activity` ve `ActivitySource` sınıflarının ne olduğunu** inceleyeceğiz. Kahvenden bir yudum al ve [Bölüm 2: .NET ve C# Alt Yapısı](file:///d:/Kadir/Projeler/GameGaraj/notes/observability/distributed_tracing_in_dotnet.md) dosyasına geçelim.
