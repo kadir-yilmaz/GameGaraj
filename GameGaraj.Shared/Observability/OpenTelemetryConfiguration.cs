@@ -88,7 +88,9 @@ namespace GameGaraj.Shared.Observability
                         .AddHttpClientInstrumentation()
                         .AddRuntimeInstrumentation()
                         .AddProcessInstrumentation()
+                        .AddMeter(serviceName)
                         .AddMeter($"{serviceName}.*")
+                        .AddMeter("GameGaraj.*")
                         .AddPrometheusExporter();
                 });
 
