@@ -168,7 +168,7 @@
                                             <div class="search-suggestion-title">${p.name}</div>
                                             <div class="search-suggestion-meta">${p.price || ''}</div>
                                         </div>
-                                        <div class="search-suggestion-type">ÃœrÃ¼n</div>
+                                        <div class="search-suggestion-type">Ürün</div>
                                     </a>
                                 `).join('');
                             }
@@ -207,7 +207,7 @@
                                 suggestionsContainer.innerHTML = html;
                                 suggestionsContainer.style.display = 'block';
                             } else {
-                                suggestionsContainer.innerHTML = '<div class="p-3 text-muted text-center">SonuÃ§ bulunamadÄ±</div>';
+                                suggestionsContainer.innerHTML = '<div class="p-3 text-muted text-center">Sonuç bulunamadı</div>';
                                 suggestionsContainer.style.display = 'block';
                             }
                         })
