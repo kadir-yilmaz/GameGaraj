@@ -84,13 +84,12 @@
                             
                             <li><hr class="dropdown-divider my-0"></li>
                             
-                            <li class="px-0 position-relative">
-                                <a class="dropdown-item py-2 bg-light d-flex justify-content-between align-items-center border-bottom border-top" asp-controller="Order" asp-action="Notifications">
-                                    <span class="fw-bold text-dark" style="font-size: 0.85rem;"><i class="fas fa-bell text-warning me-1"></i> Tüm Bildirimler</span>
-                                    <span style="position: absolute; right: 35px; top: 12px;">
+                            <li>
+                                <a class="dropdown-item py-2 d-flex justify-content-between align-items-center" asp-controller="Order" asp-action="Notifications">
+                                    <span><i class="fas fa-bell me-2 text-muted"></i>Bildirimler</span>
+                                    <span class="position-relative d-inline-block me-3">
                                         @await Component.InvokeAsync("NotificationCount")
                                     </span>
-                                    <i class="fas fa-chevron-right text-muted" style="font-size: 0.7rem;"></i>
                                 </a>
                             </li>
 
@@ -166,13 +165,12 @@
                                 
                                 <li><hr class="dropdown-divider my-0"></li>
                                 
-                                <li class="px-0 position-relative">
-                                    <a class="dropdown-item py-2 bg-light d-flex justify-content-between align-items-center border-bottom border-top" asp-controller="Order" asp-action="Notifications">
-                                        <span class="fw-bold text-dark" style="font-size: 0.85rem;"><i class="fas fa-bell text-warning me-1"></i> Tüm Bildirimler</span>
-                                        <span style="position: absolute; right: 35px; top: 12px;">
+                                <li>
+                                    <a class="dropdown-item py-2 d-flex justify-content-between align-items-center" asp-controller="Order" asp-action="Notifications">
+                                        <span><i class="fas fa-bell me-2 text-muted"></i>Bildirimler</span>
+                                        <span class="position-relative d-inline-block me-3">
                                             @await Component.InvokeAsync("NotificationCount")
                                         </span>
-                                        <i class="fas fa-chevron-right text-muted" style="font-size: 0.7rem;"></i>
                                     </a>
                                 </li>
 

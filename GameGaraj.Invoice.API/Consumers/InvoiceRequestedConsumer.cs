@@ -90,12 +90,17 @@ namespace GameGaraj.Invoice.API.Consumers
             }
         }
 
+        private string FormatTurkishLira(decimal amount)
+        {
+            return amount.ToString("N2", new System.Globalization.CultureInfo("tr-TR")) + " TL";
+        }
+
         private string GenerateInvoiceEmailBody(InvoiceData invoice, string relativePath)
         {
             var itemsHtml = string.Join("", invoice.Items.Select(item => $@"
                 <tr>
                     <td style=""padding: 12px; border-bottom: 1px solid #e0e0e0; color: #333;"">{item.ProductName}</td>
-                    <td style=""padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right; color: #333;"">{item.Price:C}</td>
+                    <td style=""padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right; color: #333;"">{FormatTurkishLira(item.Price)}</td>
                 </tr>"));
 
             return $@"
@@ -164,7 +169,7 @@ namespace GameGaraj.Invoice.API.Consumers
                 <tfoot>
                     <tr style=""background-color: #f9f9f9;"">
                         <td style=""padding: 15px 12px; font-weight: bold; color: #1c1c1c;"">TOPLAM</td>
-                        <td style=""padding: 15px 12px; text-align: right; font-weight: bold; color: #0d6efd; font-size: 18px;"">{invoice.TotalPrice:C}</td>
+                        <td style=""padding: 15px 12px; text-align: right; font-weight: bold; color: #0d6efd; font-size: 18px;"">{FormatTurkishLira(invoice.TotalPrice)}</td>
                     </tr>
                 </tfoot>
             </table>
