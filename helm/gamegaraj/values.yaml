@@ -116,6 +116,10 @@ services:
     nodePort: 30011
     env:
       IdentityOption__Audience: "basket.api"
+      RedisSentinel__ServiceName: "mymaster"
+      RedisSentinel__SentinelEndpoints__0: "192.168.1.56:26379"
+      RedisSentinel__SentinelEndpoints__1: "192.168.1.56:26380"
+      RedisSentinel__SentinelEndpoints__2: "192.168.1.56:26381"
     secretEnv:
       ConnectionStrings__Redis: redis-connection
 

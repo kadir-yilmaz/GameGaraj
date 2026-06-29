@@ -737,7 +737,7 @@
                             Sepeti Onayla
                         </a>
 
-                        <form asp-action="Clear" method="post">
+                        <form asp-action="Clear" method="post" class="ajax-cart-form">
                             <button type="submit" class="clear-basket-btn">
                                 <i class="fas fa-trash me-2"></i>Sepeti Temizle
                             </button>
@@ -808,6 +808,20 @@
                             
                             if (newBasket) {
                                 document.querySelector('.basket-page').innerHTML = newBasket.innerHTML;
+                                
+                                // Update navbar basket count badges dynamically
+                                const newBadges = doc.querySelectorAll('.basket-badge-count');
+                                const currentBadges = document.querySelectorAll('.basket-badge-count');
+                                newBadges.forEach((newBadge, index) => {
+                                    if (currentBadges[index]) {
+                                        currentBadges[index].textContent = newBadge.textContent.trim();
+                                        if (newBadge.style.display === 'none' || newBadge.style.display.includes('none')) {
+                                            currentBadges[index].style.setProperty('display', 'none', 'important');
+                                        } else {
+                                            currentBadges[index].style.display = '';
+                                        }
+                                    }
+                                });
                             } else {
                                 window.location.reload(); // Fallback
                             }

@@ -33,11 +33,41 @@ builder.Services.AddSingleton<BasketMetrics>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Redis Cache - Direkt Master'a bağlan
+// Redis Cache - Sentinel Desteği (Sentinel tanımlıysa Sentinel'e bağlan, yoksa direkt Master'a bağlan)
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     var redisConnection = builder.Configuration.GetConnectionString("Redis");
-    options.Configuration = redisConnection;
+    var sentinelServiceName = builder.Configuration["RedisSentinel:ServiceName"];
+    var sentinelEndpoints = builder.Configuration.GetSection("RedisSentinel:SentinelEndpoints").Get<string[]>();
+
+    if (sentinelEndpoints != null && sentinelEndpoints.Length > 0 && !string.IsNullOrEmpty(sentinelServiceName))
+    {
+        Console.WriteLine($"[Redis] Connecting via Sentinel. ServiceName: {sentinelServiceName}, Endpoints: {string.Join(", ", sentinelEndpoints)}");
+        
+        var configOptions = new ConfigurationOptions
+        {
+            ServiceName = sentinelServiceName,
+            CommandMap = CommandMap.Sentinel,
+            SyncTimeout = 5000,
+            KeepAlive = 5,
+            AllowAdmin = true
+        };
+
+        foreach (var endpoint in sentinelEndpoints)
+        {
+            if (!string.IsNullOrWhiteSpace(endpoint))
+            {
+                configOptions.EndPoints.Add(endpoint);
+            }
+        }
+
+        options.ConfigurationOptions = configOptions;
+    }
+    else
+    {
+        Console.WriteLine($"[Redis] Connecting directly to Redis Master: {redisConnection}");
+        options.Configuration = redisConnection;
+    }
 });
 
 // Services
