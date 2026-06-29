@@ -1,11 +1,11 @@
 using MassTransit;
 using GameGaraj.Invoice.API.Consumers;
 using GameGaraj.Invoice.API.Services;
-using GameGaraj.Invoice.API.Settings;
 using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Minio;
 
 LoadDotEnv();
 
@@ -64,12 +64,58 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// EmailSettings Options Pattern
-builder.Services.Configure<EmailSettings>(
-    builder.Configuration.GetSection("EmailSettings"));
+// PDF Generator Service
+builder.Services.AddScoped<IPdfGenerator, PdfSharpGenerator>();
 
-// Email Service
-builder.Services.AddScoped<IEmailService, EmailService>();
+// Storage Service (MinIO or LocalStorage)
+var useLocalStorage = builder.Configuration.GetValue<bool>("Minio:UseLocalStorage");
+var minioEndpoint = builder.Configuration["Minio:Endpoint"];
+
+if (useLocalStorage)
+{
+    builder.Services.AddScoped<IStorageService, LocalStorageService>();
+}
+else
+{
+    if (string.IsNullOrWhiteSpace(minioEndpoint))
+    {
+        throw new InvalidOperationException("Minio endpoint is required unless Minio:UseLocalStorage is true.");
+    }
+
+    builder.Services.AddScoped<IMinioClient>(sp =>
+    {
+        var endpoint = builder.Configuration["Minio:Endpoint"] ?? string.Empty;
+        var accessKey = builder.Configuration["Minio:AccessKey"] ?? string.Empty;
+        var secretKey = builder.Configuration["Minio:SecretKey"] ?? string.Empty;
+        var secure = bool.TryParse(builder.Configuration["Minio:Secure"], out bool sec) && sec;
+
+        if (string.IsNullOrWhiteSpace(accessKey) || string.IsNullOrWhiteSpace(secretKey))
+        {
+            throw new InvalidOperationException("Minio credentials are required.");
+        }
+
+        if (Uri.TryCreate(endpoint, UriKind.Absolute, out var endpointUri))
+        {
+            secure = endpointUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+            endpoint = endpointUri.IsDefaultPort
+                ? endpointUri.Host
+                : $"{endpointUri.Host}:{endpointUri.Port}";
+        }
+
+        var client = new MinioClient()
+            .WithEndpoint(endpoint)
+            .WithCredentials(accessKey, secretKey);
+
+        if (secure)
+        {
+            client.WithSSL();
+        }
+
+        return client.Build();
+    });
+
+    builder.Services.AddScoped<IStorageService, MinioStorageService>();
+}
 
 // MassTransit + RabbitMQ
 builder.Services.AddMassTransit(x =>

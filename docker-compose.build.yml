@@ -48,6 +48,12 @@ services:
       context: .
       dockerfile: GameGaraj.Invoice.API/Dockerfile
 
+  notification-api:
+    image: notification-api:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: GameGaraj.Notification.API/Dockerfile
+
   campaign-api:
     image: campaign-api:${IMAGE_TAG:-latest}
     build:

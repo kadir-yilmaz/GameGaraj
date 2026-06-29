@@ -59,3 +59,9 @@ _work/
 *.log
 Runner_*.log
 
+## [AI Helpers]
+ai/
+notes/
+
+
+

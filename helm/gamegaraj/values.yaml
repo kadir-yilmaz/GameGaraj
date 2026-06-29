@@ -143,16 +143,39 @@ services:
       Iyzipay__SecretKey: iyzico-secret-key
 
   # ---------------------------------------------------------------------------
-  # Invoice API (SMTP)
+  # Invoice API (PDF & MinIO)
   # ---------------------------------------------------------------------------
   invoice-api:
     image: "invoice-api:e49ed91"
     nodePort: 30017
     env:
       IdentityOption__Audience: "invoice.api"
+      Minio__UseLocalStorage: "false"
     secretEnv:
-      EmailSettings__SmtpUsername: smtp-username
-      EmailSettings__SmtpPassword: smtp-password
+      Minio__Endpoint: minio-endpoint
+      Minio__AccessKey: minio-access-key
+      Minio__SecretKey: minio-secret-key
+      Minio__BucketName: minio-bucket-name
+      Minio__Secure: minio-secure
+
+  # ---------------------------------------------------------------------------
+  # Notification API (Go + Gin)
+  # ---------------------------------------------------------------------------
+  notification-api:
+    image: "notification-api:latest"
+    nodePort: 30019
+    env:
+      GIN_MODE: "release"
+      Minio__UseLocalStorage: "false"
+    secretEnv:
+      RabbitMQUrl: rabbitmq-url
+      Minio__Endpoint: minio-endpoint
+      Minio__AccessKey: minio-access-key
+      Minio__SecretKey: minio-secret-key
+      Minio__BucketName: minio-bucket-name
+      Minio__Secure: minio-secure
+      SMTP_USERNAME: smtp-username
+      SMTP_PASSWORD: smtp-password
 
   # ---------------------------------------------------------------------------
   # Campaign API (SQL Server)
