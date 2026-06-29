@@ -51,8 +51,8 @@ services:
   notification-api:
     image: notification-api:${IMAGE_TAG:-latest}
     build:
-      context: .
-      dockerfile: GameGaraj.Notification.API/Dockerfile
+      context: GameGaraj.Notification.API
+      dockerfile: Dockerfile
 
   campaign-api:
     image: campaign-api:${IMAGE_TAG:-latest}
