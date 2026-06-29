@@ -1,5 +1,7 @@
 using PdfSharp.Pdf;
 using PdfSharp.Drawing;
+using PdfSharp.Fonts;
+using System;
 using System.IO;
 using GameGaraj.Invoice.API.Models;
 
@@ -12,6 +14,31 @@ namespace GameGaraj.Invoice.API.Services
 
     public class PdfSharpGenerator : IPdfGenerator
     {
+        private static bool _fontResolverRegistered = false;
+        private static readonly object _lock = new object();
+
+        public PdfSharpGenerator()
+        {
+            if (!_fontResolverRegistered)
+            {
+                lock (_lock)
+                {
+                    if (!_fontResolverRegistered)
+                    {
+                        try
+                        {
+                            GlobalFontSettings.FontResolver = new FileFontResolver();
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[PdfSharpGenerator] Font resolver registration error: {ex.Message}");
+                        }
+                        _fontResolverRegistered = true;
+                    }
+                }
+            }
+        }
+
         public byte[] GenerateInvoicePdf(InvoiceData invoice)
         {
             // Register encoding provider for code pages (required by PDFsharp on .NET Core)
@@ -28,7 +55,7 @@ namespace GameGaraj.Invoice.API.Services
             // Get graphics for drawing
             using var gfx = XGraphics.FromPdfPage(page);
 
-            // Define fonts
+            // Define fonts (will be resolved via our FileFontResolver to DejaVuSans)
             var titleFont = new XFont("Arial", 20, XFontStyleEx.Bold);
             var headerFont = new XFont("Arial", 12, XFontStyleEx.Bold);
             var boldFont = new XFont("Arial", 10, XFontStyleEx.Bold);
@@ -101,6 +128,46 @@ namespace GameGaraj.Invoice.API.Services
             using var memoryStream = new MemoryStream();
             document.Save(memoryStream);
             return memoryStream.ToArray();
+        }
+    }
+
+    public class FileFontResolver : IFontResolver
+    {
+        public FontResolverInfo? ResolveTypeface(string familyName, bool bold, bool italic)
+        {
+            // Map all fonts to DejaVuSans which is guaranteed to be installed in the Docker container
+            string fontName = bold ? "DejaVuSans-Bold.ttf" : "DejaVuSans.ttf";
+            return new FontResolverInfo(fontName);
+        }
+
+        public byte[]? GetFont(string faceName)
+        {
+            string[] searchPaths = new[]
+            {
+                $"/usr/share/fonts/truetype/dejavu/{faceName}",
+                $"/usr/share/fonts/dejavu/{faceName}",
+                $"/usr/share/fonts/truetype/freefont/{faceName}",
+                $"/usr/share/fonts/{faceName}",
+                faceName
+            };
+
+            foreach (var path in searchPaths)
+            {
+                if (File.Exists(path))
+                {
+                    try
+                    {
+                        return File.ReadAllBytes(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[FileFontResolver] Error reading font from {path}: {ex.Message}");
+                    }
+                }
+            }
+
+            Console.WriteLine($"[FileFontResolver] Font NOT found: {faceName}");
+            return null;
         }
     }
 }
