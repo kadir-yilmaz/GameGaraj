@@ -70,7 +70,7 @@ services:
   # Catalog API (PostgreSQL)
   # ---------------------------------------------------------------------------
   catalog-api:
-    image: "catalog-api:d940ad5"
+    image: "catalog-api:abdbb0a"
     nodePort: 30010
     skipCommonRabbit: true
     env:
@@ -127,7 +127,7 @@ services:
   # Order API (SQL Server)
   # ---------------------------------------------------------------------------
   order-api:
-    image: "order-api:3e73105"
+    image: "order-api:abdbb0a"
     nodePort: 30013
     secretEnv:
       ConnectionStrings__DefaultConnection: order-sqlserver-connection
