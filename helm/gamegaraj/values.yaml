@@ -42,7 +42,7 @@ services:
   # API Gateway (YARP reverse proxy)
   # ---------------------------------------------------------------------------
   gateway:
-    image: "gateway:3e73105"
+    image: "gateway:7ba3742"
     nodePort: 30000
     env:
       # Cluster addresses — K8s service DNS + port
