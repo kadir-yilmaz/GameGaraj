@@ -102,6 +102,7 @@ namespace GameGaraj.Shared.Observability
                             opts.SetDbStatementForText = true;
                             opts.RecordException = true;
                         })
+                        .AddSource(serviceName)
                         .AddSource($"{serviceName}.*")
                         .AddSource("MassTransit");
 
