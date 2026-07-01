@@ -38,12 +38,19 @@ dist/
 build/
 .idea/
 .vscode/
+__pycache__/
+*.py[cod]
+*$py.class
 
 ## [App Specific]
 ConsoleLogs/
 docker-compose.override.yml
 **/Data/profanity-words.json
 **/Data/price-keywords.json
+locust/logs/
+locust/reports/
+locust/.venv/
+locust/.env
 
 # Ensure all frontend assets are tracked (overriding global dist/ etc.)
 !**/wwwroot/**
