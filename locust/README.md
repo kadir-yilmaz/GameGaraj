@@ -14,3 +14,25 @@ Locust klasörü içerisinde şu betiği çalıştırın:
 ./run-locust.ps1
 ```
 Sonrasında tarayıcınızdan `http://localhost:8089` adresine girerek senaryoyu, kullanıcı sayısını ve hedef gateway adresinizi girip testi ateşleyebilirsiniz.
+
+## Önerilen Canlı Senaryo
+
+Canlı sistemde gerçek kullanıcı davranışına en yakın ve test makinesini daha az yoran seçenek:
+
+* **Scenario:** `realistic_shopper`
+* **Host:** `https://gateway.kadiryilmaz.online`
+* **Users:** 100
+* **Spawn rate:** 5 veya 10
+
+Bu senaryoda her kullanıcı:
+
+1. Arama yapar.
+2. Ürün detayına girer.
+3. Farklı 3 ürünü sepete ekler.
+4. Sepeti açar.
+5. Sepette 2 ürünün adedini artırır.
+6. 1 ürünü sepetten siler.
+7. Sepeti tekrar kontrol eder.
+8. Kısa bir ürün gezintisi daha yapıp bekler.
+
+İnsan davranışı taklidi için akış içinde 1-6 saniye arası beklemeler vardır. Bu yüzden aynı kullanıcı sayısında eski rastgele endpoint testine göre daha düşük ama daha gerçekçi RPS üretir.

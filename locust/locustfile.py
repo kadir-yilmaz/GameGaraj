@@ -1,7 +1,21 @@
 import random
 from locust import FastHttpUser, task, events, between
+from gevent import sleep
 from common.setup import fetch_products
-from common.api_tasks import product_search, product_detail, basket_add, basket_remove, basket_get
+from common.api_tasks import (
+    basket_add,
+    basket_add_product,
+    basket_get,
+    basket_remove,
+    basket_remove_product,
+    basket_update_items,
+    product_detail,
+    product_detail_by_id,
+    product_keyword_search,
+    product_search,
+    product_to_basket_item,
+    search_term_for,
+)
 from scenarios.weights import get_scenario_weights
 
 # Global RAM cache
@@ -14,8 +28,8 @@ def _(parser):
         "--scenario",
         type=str,
         env_var="LOCUST_SCENARIO",
-        default="standard",
-        choices=["standard", "black_friday", "heavy_basket"],
+        default="realistic_shopper",
+        choices=["realistic_shopper", "standard", "black_friday", "heavy_basket"],
         include_in_web_ui=True,
         help="Test senaryosunu secin. Her senaryoda API isteklerinin agirligi (olasiligi) degisir."
     )
@@ -29,25 +43,78 @@ def on_test_start(environment, **kwargs):
 
 class GameGarajUser(FastHttpUser):
     host = "https://gateway.kadiryilmaz.online"
-    # CPU'yu rahatlatmak icin kullanicilara 0.5 ile 1.5 saniye arasi nefes alma (uyuma) payi verdik
-    wait_time = between(0.5, 1.5)
+    wait_time = between(2, 6)
 
     def on_start(self):
-        # 1-1000 arasinda sabit kullanici havuzu
-        self.user_id = f"locust-user-{random.randint(1, 1000)}"
+        self.user_id = f"locust-user-{random.randint(1, 1_000_000)}"
         self.headers = {
             "X-User-Id": self.user_id,
             "Content-Type": "application/json"
         }
-        
-        # CPU TASARRUFU: Senaryo agirliklari her saniye degil, kullanici dogarken sadece 1 kez hesaplanir.
-        scenario = self.environment.parsed_options.scenario
-        weights = get_scenario_weights(scenario)
-        self.scenario_ops = list(weights.keys())
-        self.scenario_weights = list(weights.values())
+
+        self.scenario = self.environment.parsed_options.scenario
+        if self.scenario == "realistic_shopper":
+            self.scenario_ops = []
+            self.scenario_weights = []
+        else:
+            weights = get_scenario_weights(self.scenario)
+            self.scenario_ops = list(weights.keys())
+            self.scenario_weights = list(weights.values())
+
+    def think(self, minimum=0.8, maximum=2.5):
+        sleep(random.uniform(minimum, maximum))
+
+    def realistic_shopper_journey(self):
+        if len(products_cache) < 3:
+            product_search(self)
+            self.think(2, 5)
+            return
+
+        selected = random.sample(products_cache, 3)
+        basket_items = []
+
+        for product in selected:
+            product_keyword_search(self, search_term_for(product))
+            self.think(1.2, 3.5)
+
+            product_detail_by_id(self, product)
+            self.think(2, 5)
+
+            basket_add_product(self, product, payloads_cache)
+            basket_items.append(product_to_basket_item(product))
+            self.think(1, 3)
+
+        basket_get(self)
+        self.think(2, 5)
+
+        for item in random.sample(basket_items, k=2):
+            item["Quantity"] += 1
+
+        basket_update_items(self, basket_items)
+        self.think(1, 3)
+
+        basket_get(self)
+        self.think(2, 5)
+
+        removed_product = selected[-1]
+        basket_remove_product(self, removed_product)
+        basket_items = [item for item in basket_items if item["Id"] != removed_product["id"]]
+        self.think(1, 3)
+
+        basket_get(self)
+        self.think(2, 6)
+
+        next_product = random.choice(products_cache)
+        product_keyword_search(self, search_term_for(next_product))
+        self.think(1, 3)
+        product_detail_by_id(self, next_product)
 
     @task
     def execute_operation(self):
+        if self.scenario == "realistic_shopper":
+            self.realistic_shopper_journey()
+            return
+
         # Olasiliklara/agirliklara gore rastgele islem sec
         op = random.choices(self.scenario_ops, weights=self.scenario_weights, k=1)[0]
 
