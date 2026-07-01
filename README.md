@@ -87,6 +87,17 @@ Projede iki farklı indirim mekanizması bir arada sunulmuştur:
 
 Deployment ve uygulama yönetim süreçleri, GitOps prensiplerine uygun olarak **ArgoCD** ve **K3s** üzerinde yapılandırılmıştır. Altyapı, home server üzerinde çalışan bir **self-hosted GitHub Actions runner** ile yönetilmektedir.
 
+### 8. Yüksek Performanslı Önbellekleme (Global Distributed Cache) & Yük Testi
+
+Sistem, devasa e-ticaret trafiklerine (Black Friday vb. senaryolar) dayanabilmek için endüstri standardı olan **Read-Heavy Architecture** (Okuma Ağırlıklı Mimari) ile baştan aşağı optimize edilmiştir.
+- **Distributed Cache Mimari:** Tüm okuma işlemleri (`GetById`, `GetFeaturedProducts`, Arama vb.) ilk olarak **Redis Distributed Cache** üzerinden karşılanır. Veri yoksa Elasticsearch'e gidilir, PostgreSQL'e asla okunma yükü bindirilmez.
+- **Akıllı Invalidation & TTL:** Stok veya ürün bilgisi güncellendiğinde Cache saniyesinde asenkron olarak temizlenir.
+- **Locust Yük Testi Sonuçları:** 10.000 eşzamanlı sanal kullanıcının 5 dakika aralıksız test ettiği senaryonun özeti:
+  - **İşlenen Toplam İstek:** 274.230
+  - **Maksimum RPS:** 2.777 İstek/Saniye
+  - **Başarı Oranı:** %99.91
+  - **P95 (İsteklerin %95'i):** < 30 Milisaniye
+
 ### Mimari Akış:
 1. **CI (GitHub Actions):** Kod ana dallara (`main`) push edildiğinde sadece imaj derlenir (**Docker Build**), commit SHA'sı ile etiketlenir ve `helm/gamegaraj/values.yaml` dosyasındaki ilgili servis tag'i güncellerilerek Git'e geri yazılır.
 2. **CD (ArgoCD):** Git reposundaki değişiklikleri anlık izler (`values.yaml` değişikliği vb.). Git'teki durum ile K3s kümesindeki durum arasında fark (drift) olduğunda, otomatik olarak **Helm Upgrade** işlemini başlatır ve kümedeki podları günceller (`selfHeal` ve `prune` aktiftir).
