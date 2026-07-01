@@ -277,7 +277,9 @@ namespace GameGaraj.WebUI.Controllers
                 TotalPrice = pricingSnapshot.TotalPaidAmount,
                 CustomerName = checkoutInfo.CustomerName,
                 CustomerSurname = checkoutInfo.CustomerSurname,
-                CustomerEmail = checkoutInfo.CustomerEmail,
+                CustomerEmail = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value 
+                                ?? User.Claims.FirstOrDefault(c => c.Type == "email")?.Value 
+                                ?? checkoutInfo.CustomerEmail,
                 CustomerPhone = checkoutInfo.CustomerPhone,
                 AddressDetail = $"{checkoutInfo.Street} {checkoutInfo.Line}",
                 City = checkoutInfo.Province,

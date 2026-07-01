@@ -116,3 +116,49 @@ foreach (var guestItem in guestApiResponse.Items)
     }
 }
 ```
+
+---
+
+## 4. Sepet TTL (Time-To-Live) Yönetimi
+
+Sepet verileri Redis üzerinde saklanırken, kullanıcı tipine (giriş yapmış üye veya misafir) göre farklı ömür (TTL) süreleri atanır:
+
+* **Giriş Yapmış Üye (Logged-in User):** Sepet verisi Redis üzerinde **30 gün (1 ay)** boyunca saklanır. Kullanıcı tekrar geldiğinde sepetini kaldığı yerden bulabilir.
+* **Misafir Kullanıcı (Guest User):** Sepet verisi Redis üzerinde **1 gün** boyunca saklanır. Misafir kullanıcılar sisteme üye olmadıkları için sepetlerinin uzun süre bellekte tutulması önlenerek Redis bellek kullanımı optimize edilir.
+
+### TTL Karar Mekanizması
+
+Bu ayrım, `IIdentityService` arayüzüne eklenen `IsGuest` özelliği aracılığıyla yapılır. Bu özellik, kullanıcının kimlik bilgisini analiz eder:
+
+* Kullanıcı ID'si boşsa, `"anonymous-user"` fallback değerine eşitse veya WebUI'nin misafirler için ürettiği `"guest-"` ön ekiyle başlıyorsa kullanıcı **Misafir (Guest)** kabul edilir.
+* Aksi halde kullanıcı **Giriş Yapmış Üye (Logged-in)** kabul edilir.
+
+```csharp
+// IdentityService.cs (Basket.API)
+public bool IsGuest
+{
+    get
+    {
+        var userId = UserId;
+        return string.IsNullOrEmpty(userId) || userId.StartsWith("guest-") || userId == "anonymous-user";
+    }
+}
+```
+
+Sepet kaydedilirken `BasketService` içerisindeki `SaveBasketAsync` metodu bu bilgiyi okuyarak uygun TTL süresini atar:
+
+```csharp
+// BasketService.cs (Basket.API)
+public async Task SaveBasketAsync(Data.Basket basket, CancellationToken cancellationToken = default)
+{
+    basket.UserId = identityService.UserId;
+    var basketString = JsonSerializer.Serialize(basket);
+    
+    var expiration = identityService.IsGuest ? TimeSpan.FromDays(1) : TimeSpan.FromDays(30);
+    var options = new DistributedCacheEntryOptions
+    {
+        AbsoluteExpirationRelativeToNow = expiration
+    };
+    await distributedCache.SetStringAsync(identityService.UserId, basketString, options, cancellationToken);
+}
+```
