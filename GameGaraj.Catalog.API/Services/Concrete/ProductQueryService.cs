@@ -8,6 +8,8 @@ using Elastic.Clients.Elasticsearch.QueryDsl;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace GameGaraj.Catalog.API.Services.Concrete
 {
@@ -17,17 +19,20 @@ namespace GameGaraj.Catalog.API.Services.Concrete
         private readonly ILogger<ProductQueryService> _logger;
         private readonly IMapper _mapper;
         private readonly ElasticsearchClient _elasticClient;
+        private readonly IDistributedCache? _cache;
 
         public ProductQueryService(
             CatalogDbContext context,
             IMapper mapper,
             ILogger<ProductQueryService> logger,
-            ElasticsearchClient elasticClient)
+            ElasticsearchClient elasticClient,
+            IDistributedCache? cache = null)
         {
             _context = context;
             _mapper = mapper;
             _logger = logger;
             _elasticClient = elasticClient;
+            _cache = cache;
         }
 
         private static string NormalizeSearchText(string value)
@@ -351,6 +356,15 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
         public async Task<ProductDto?> GetByIdAsync(string id)
         {
+            if (_cache != null)
+            {
+                var cachedStr = await _cache.GetStringAsync($"product_{id}");
+                if (!string.IsNullOrEmpty(cachedStr))
+                {
+                    return JsonSerializer.Deserialize<ProductDto>(cachedStr);
+                }
+            }
+
             var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
             if (product == null)
                 return null;
@@ -361,11 +375,26 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId);
             dto.CategoryName = category?.Name;
 
+            if (_cache != null)
+            {
+                var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) };
+                await _cache.SetStringAsync($"product_{id}", JsonSerializer.Serialize(dto), options);
+            }
+
             return dto;
         }
 
         public async Task<ProductDto?> GetBySlugAsync(string slug)
         {
+            if (_cache != null)
+            {
+                var cachedStr = await _cache.GetStringAsync($"product_slug_{slug}");
+                if (!string.IsNullOrEmpty(cachedStr))
+                {
+                    return JsonSerializer.Deserialize<ProductDto>(cachedStr);
+                }
+            }
+
             var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Slug == slug);
             if (product == null)
                 return null;
@@ -375,6 +404,12 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             // Get category name
             var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId);
             dto.CategoryName = category?.Name;
+
+            if (_cache != null)
+            {
+                var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) };
+                await _cache.SetStringAsync($"product_slug_{slug}", JsonSerializer.Serialize(dto), options);
+            }
 
             return dto;
         }
@@ -388,6 +423,18 @@ namespace GameGaraj.Catalog.API.Services.Concrete
         {
             if (string.IsNullOrWhiteSpace(keyword))
                 return new List<ProductDto>();
+
+            var normalizedKeyword = NormalizeSearchText(keyword);
+            var cacheKey = $"search_{normalizedKeyword}";
+
+            if (_cache != null)
+            {
+                var cachedStr = await _cache.GetStringAsync(cacheKey);
+                if (!string.IsNullOrEmpty(cachedStr))
+                {
+                    return JsonSerializer.Deserialize<List<ProductDto>>(cachedStr) ?? new List<ProductDto>();
+                }
+            }
 
             var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
                 .Index("products")
@@ -426,7 +473,15 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 return new List<ProductDto>();
             }
 
-            return response.Documents.Select(MapSearchDocumentToDto).ToList();
+            var result = response.Documents.Select(MapSearchDocumentToDto).ToList();
+
+            if (_cache != null && result.Any())
+            {
+                var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2) };
+                await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(result), options);
+            }
+
+            return result;
         }
 
         private static ProductDto MapSearchDocumentToDto(ProductSearchDocument document)

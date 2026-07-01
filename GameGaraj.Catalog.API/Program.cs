@@ -44,6 +44,21 @@ var settings = new ElasticsearchClientSettings(new Uri(elasticUri))
 var elasticClient = new ElasticsearchClient(settings);
 builder.Services.AddSingleton(elasticClient);
 
+// Redis Configuration
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConnectionString))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnectionString;
+        options.InstanceName = "CatalogCache_";
+    });
+}
+else
+{
+    Console.WriteLine("[Catalog API Warning] Redis ConnectionString is empty. Distributed cache might fail.");
+}
+
 // Services
 builder.Services.AddScoped<ICategoryQueryService, CategoryQueryService>();
 builder.Services.AddScoped<ICategoryCommandService, CategoryCommandService>();

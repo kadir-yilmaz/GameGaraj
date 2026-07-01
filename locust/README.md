@@ -22,7 +22,7 @@ Bagimliliklari daha once kurduysan:
 ./run-logical.ps1 -LogicalUsers 10000 -Rps 125 -Seconds 60 -MaxConnections 200 -SkipInstall
 ```
 
-Terminal ekrani varsayilan olarak saniyede 1 kez ayni yerde guncellenir. Gecmis ozetler yine `summary.log` ve `stats.csv` dosyalarina yazilir.
+Terminal ekrani varsayilan olarak saniyede 1 kez ayni yerde guncellenir. Ekranda tek tablo kalir; finalde sadece kisa sonuc satiri basilir. Gecmis ozetler `summary.txt` ve `stats.csv` dosyalarina yazilir.
 
 Satir satir eski tarz cikti istersen:
 
@@ -49,15 +49,15 @@ Her logical user su state'i tasir:
 Her kosu icin yeni bir klasor olusur:
 
 ```text
-locust/results/yyyyMMdd-HHmmss/
+locust/logs/yyyyMMdd-HHmmss/
 ```
 
 Uretilen dosyalar:
 
 ```text
-summary.log       Konsolda gorunen ozetlerin aynisi
+summary.txt       Periyodik ozetler ve final sonuc satiri
 stats.csv         Endpoint bazli periyodik metrikler
 final_stats.json  Final snapshot
 ```
 
-`locust/results/` git tarafindan ignore edilir.
+`locust/logs/` ve eski kosulardan kalabilecek `locust/results/` git tarafindan ignore edilir.

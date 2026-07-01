@@ -78,6 +78,7 @@ services:
     secretEnv:
       RabbitMQUrl: rabbitmq-url
       ConnectionStrings__PostgresConnection: catalog-postgres-connection
+      ConnectionStrings__Redis: redis-connection
 
   # ---------------------------------------------------------------------------
   # Review API (PostgreSQL)

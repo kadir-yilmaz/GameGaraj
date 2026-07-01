@@ -6,6 +6,7 @@ using GameGaraj.Catalog.API.Models;
 using GameGaraj.Catalog.API.Services.Abstract;
 using GameGaraj.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace GameGaraj.Catalog.API.Services.Concrete
 {
@@ -15,17 +16,20 @@ namespace GameGaraj.Catalog.API.Services.Concrete
         private readonly IMapper _mapper;
         private readonly IProductIndexService _productIndexService;
         private readonly ILogger<ProductCommandService> _logger;
+        private readonly IDistributedCache? _cache;
 
         public ProductCommandService(
             CatalogDbContext context,
             IMapper mapper,
             IProductIndexService productIndexService,
-            ILogger<ProductCommandService> logger)
+            ILogger<ProductCommandService> logger,
+            IDistributedCache? cache = null)
         {
             _context = context;
             _mapper = mapper;
             _productIndexService = productIndexService;
             _logger = logger;
+            _cache = cache;
         }
 
         public async Task<ProductDto> CreateAsync(ProductCreateDto dto)
@@ -86,6 +90,11 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             if (updated)
             {
                 await TryIndexProductImmediatelyAsync(product);
+                if (_cache != null)
+                {
+                    await _cache.RemoveAsync($"product_{product.Id}");
+                    await _cache.RemoveAsync($"product_slug_{product.Slug}");
+                }
             }
 
             return updated;
@@ -103,6 +112,11 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             if (deleted)
             {
                 await TryDeleteProductFromIndexImmediatelyAsync(id);
+                if (_cache != null)
+                {
+                    await _cache.RemoveAsync($"product_{id}");
+                    await _cache.RemoveAsync($"product_slug_{product.Slug}");
+                }
             }
 
             return deleted;

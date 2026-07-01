@@ -115,10 +115,11 @@ class RunLogger:
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         self.run_dir = Path(output_dir) / timestamp
         self.run_dir.mkdir(parents=True, exist_ok=True)
-        self.summary_path = self.run_dir / "summary.log"
+        self.summary_path = self.run_dir / "summary.txt"
         self.csv_path = self.run_dir / "stats.csv"
         self.final_json_path = self.run_dir / "final_stats.json"
         self.previous_snapshot = None
+        self.max_rps = 0.0
 
         with self.csv_path.open("w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
@@ -145,6 +146,7 @@ class RunLogger:
     def write_summary(self, stats, live_console=False):
         snapshot = stats.snapshot()
         interval = self.interval_snapshot(snapshot)
+        self.max_rps = max(self.max_rps, interval["current_rps"])
         formatted = self.format_summary(snapshot, interval)
 
         if live_console:
@@ -229,6 +231,7 @@ class RunLogger:
             (
                 f"[{snapshot['time']}] total={snapshot['total']} "
                 f"avg_rps={snapshot['rps']:.1f} current_rps={interval['current_rps']:.1f} "
+                f"max_rps={self.max_rps:.1f} "
                 f"fail={snapshot['failures']} ({snapshot['fail_rate']:.2f}%)"
             ),
         ]
@@ -262,8 +265,24 @@ class RunLogger:
         print(formatted)
 
     def write_final(self, stats):
+        snapshot = stats.snapshot()
+        interval = self.interval_snapshot(snapshot)
+        self.max_rps = max(self.max_rps, interval["current_rps"])
+        snapshot["max_rps"] = self.max_rps
+
         with self.final_json_path.open("w", encoding="utf-8") as file:
-            json.dump(stats.snapshot(), file, indent=2)
+            json.dump(snapshot, file, indent=2)
+
+        final_summary = (
+            f"[final] total={snapshot['total']} avg_rps={snapshot['rps']:.1f} "
+            f"max_rps={self.max_rps:.1f} fail={snapshot['failures']} "
+            f"({snapshot['fail_rate']:.2f}%) elapsed={snapshot['elapsed_s']:.1f}s"
+        )
+        self.write_line("")
+        self.write_line(final_summary)
+
+        print("")
+        print(final_summary)
 
         print(f"\n[logs] summary: {self.summary_path}")
         print(f"[logs] csv: {self.csv_path}")
@@ -501,7 +520,6 @@ async def run(args):
         finally:
             printer_task.cancel()
 
-        logger.write_summary(stats, live_console=False)
         logger.write_final(stats)
 
 
@@ -527,7 +545,7 @@ def main():
     parser.add_argument("--max-connections", type=int, default=200)
     parser.add_argument("--timeout", type=float, default=30)
     parser.add_argument("--summary-interval", type=float, default=1)
-    parser.add_argument("--output-dir", default="results")
+    parser.add_argument("--output-dir", default="logs")
     parser.add_argument("--no-live-console", action="store_true")
     args = parser.parse_args()
 

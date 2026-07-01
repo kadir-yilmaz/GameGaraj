@@ -5,7 +5,7 @@ param(
     [int]$Seconds = 60,
     [int]$MaxConnections = 200,
     [double]$SummaryInterval = 1,
-    [string]$OutputDir = "results",
+    [string]$OutputDir = "logs",
     [switch]$NoLiveConsole,
     [switch]$SkipInstall
 )
