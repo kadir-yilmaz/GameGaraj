@@ -70,7 +70,7 @@ services:
   # Catalog API (PostgreSQL)
   # ---------------------------------------------------------------------------
   catalog-api:
-    image: "catalog-api:abdbb0a"
+    image: "catalog-api:09c013b"
     nodePort: 30010
     skipCommonRabbit: true
     env:
