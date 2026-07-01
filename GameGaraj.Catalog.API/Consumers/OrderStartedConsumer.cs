@@ -1,5 +1,7 @@
 using GameGaraj.Catalog.API.Data;
 using GameGaraj.Shared.Events;
+using GameGaraj.Catalog.API.Models;
+using Microsoft.Extensions.Caching.Distributed;
 using MassTransit;
 
 namespace GameGaraj.Catalog.API.Consumers
@@ -9,15 +11,18 @@ namespace GameGaraj.Catalog.API.Consumers
         private readonly CatalogDbContext _context;
         private readonly ILogger<OrderStartedConsumer> _logger;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly IDistributedCache? _cache;
 
         public OrderStartedConsumer(
             CatalogDbContext context,
             ILogger<OrderStartedConsumer> logger,
-            IPublishEndpoint publishEndpoint)
+            IPublishEndpoint publishEndpoint,
+            IDistributedCache? cache = null)
         {
             _context = context;
             _logger = logger;
             _publishEndpoint = publishEndpoint;
+            _cache = cache;
         }
 
         public async Task Consume(ConsumeContext<OrderStarted> context)
@@ -48,6 +53,25 @@ namespace GameGaraj.Catalog.API.Consumers
                 product.ReservedStock += item.Quantity;
                 await _context.SaveChangesAsync();
                 _logger.LogInformation($"[OrderStartedConsumer] Reserved {item.Quantity} for {product.Name}");
+                
+                // Elastisearch'e güncel veriyi gönder
+                _context.IndexingJobs.Add(new IndexingJob
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    EntityType = "Product",
+                    EntityId = product.Id,
+                    Operation = IndexingJobOperation.Upsert,
+                    Status = IndexingJobStatus.Pending,
+                    CreatedAt = DateTime.UtcNow
+                });
+                await _context.SaveChangesAsync();
+
+                // Redis cache'i temizle
+                if (_cache != null)
+                {
+                    await _cache.RemoveAsync($"product_{product.Id}");
+                    await _cache.RemoveAsync($"product_slug_{product.Slug}");
+                }
             }
 
             if (allReserved)
