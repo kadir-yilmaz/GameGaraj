@@ -36,7 +36,7 @@ public class BasketService(IDistributedCache distributedCache, IIdentityService 
         basket.UserId = userId;
         var basketString = JsonSerializer.Serialize(basket);
 
-        var expiration = identityService.IsGuest ? TimeSpan.FromDays(1) : TimeSpan.FromDays(30);
+        var expiration = identityService.IsGuest ? TimeSpan.FromHours(1) : TimeSpan.FromDays(30);
         var options = new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = expiration

@@ -1,54 +1,63 @@
-# GameGaraj Locust Load Tests
+# GameGaraj Logical Load Runner
 
-Bu klasör, GameGaraj mikroservisleri için modüler ve yüksek performanslı yük testlerini içerir.
+Bu klasor, canli GameGaraj ortamini dusuk overhead ile test etmek icin logical user runner icerir.
 
-## Mimari
-* **`locustfile.py`**: Ana giriş noktasıdır. Arayüz konfigürasyonlarını ve ana `User` sınıfını içerir.
-* **`common/setup.py`**: Test başlamadan önce Catalog API'den gerçek ürünleri çeker ve RAM'de önbellekler.
-* **`common/api_tasks.py`**: Locust sanal kullanıcılarının (VU) atacağı isteklerin kodlandığı görev fonksiyonlarıdır.
-* **`scenarios/weights.py`**: Arayüzden seçilebilen test senaryolarının (`standard`, `black_friday`, `heavy_basket`) işlem ağırlıklarını (olasılıklarını) tanımlar.
+Runner 10k kullaniciyi Python task/greenlet olarak dogurmaz. Kullanicilari bellekte state olarak tutar ve hedeflenen sabit RPS kadar gercekci aksiyon uretir.
 
-## Çalıştırma
-Locust klasörü içerisinde şu betiği çalıştırın:
-```powershell
-./run-locust.ps1
-```
-Sonrasında tarayıcınızdan `http://localhost:8089` adresine girerek senaryoyu, kullanıcı sayısını ve hedef gateway adresinizi girip testi ateşleyebilirsiniz.
-
-Tek process ile daha düşük overhead isteyen canlı testlerde headless mod kullanılabilir:
+## Calistirma
 
 ```powershell
-./run-locust.ps1 -Headless -Users 10000 -SpawnRate 20 -RunTime 30m -StartSpread 600 -PaceMultiplier 20 -SkipInstall
+./run-logical.ps1 -LogicalUsers 10000 -Rps 125 -Seconds 60 -MaxConnections 200
 ```
 
-Bu mod web arayüzü açmaz ve tek Python process içinde çalışır. `PaceMultiplier` yükseldikçe aynı kullanıcı sayısı daha sakin istek üretir.
+Temkinli baslangic:
 
-## Önerilen Canlı Senaryo
+```powershell
+./run-logical.ps1 -LogicalUsers 1000 -Rps 50 -Seconds 60 -MaxConnections 100
+```
 
-Canlı sistemde gerçek kullanıcı davranışına en yakın ve test makinesini daha az yoran seçenek:
+Bagimliliklari daha once kurduysan:
 
-* **Scenario:** `realistic_shopper`
-* **Host:** `https://gateway.kadiryilmaz.online`
-* **Users:** 100
-* **Spawn rate:** 2 veya 5
-* **Start spread:** 60
-* **Pace multiplier:** 1
+```powershell
+./run-logical.ps1 -LogicalUsers 10000 -Rps 125 -Seconds 60 -MaxConnections 200 -SkipInstall
+```
 
-Bu senaryoda her kullanıcı:
+Terminal ekrani varsayilan olarak saniyede 1 kez ayni yerde guncellenir. Gecmis ozetler yine `summary.log` ve `stats.csv` dosyalarina yazilir.
+
+Satir satir eski tarz cikti istersen:
+
+```powershell
+./run-logical.ps1 -LogicalUsers 10000 -Rps 125 -Seconds 60 -NoLiveConsole
+```
+
+## Kullanici Akisi
+
+Her logical user su state'i tasir:
 
 1. Arama yapar.
-2. Ürün detayına girer.
-3. Farklı 3 ürünü sepete ekler.
-4. Sepeti açar.
-5. Sepette 2 ürünün adedini artırır.
-6. 1 ürünü sepetten siler.
-7. Sepeti tekrar kontrol eder.
-8. Kısa bir ürün gezintisi daha yapıp bekler.
+2. Urun detayina gider.
+3. Farkli 3 urunu sepete ekler.
+4. Sepeti goruntuler.
+5. Sepette 2 urunun adedini artirir.
+6. Sepeti tekrar goruntuler.
+7. 1 urunu siler.
+8. Sepeti tekrar kontrol eder.
+9. Ek bir urun gezintisi yapar.
 
-İnsan davranışı taklidi için ilk aksiyon 0-60 saniyeye yayılır ve akış içinde beklemeler vardır. `PaceMultiplier` bu beklemeleri çarpar; 10k kullanıcı ile sakin test için 15-25 aralığı iyi başlangıçtır.
+## Loglar
 
-Yerel makinede Locust worker CPU'su yükselirse distributed script'i 2 worker ile başlatın:
+Her kosu icin yeni bir klasor olusur:
 
-```powershell
-./run-locust-distributed.ps1 -WorkerCount 2
+```text
+locust/results/yyyyMMdd-HHmmss/
 ```
+
+Uretilen dosyalar:
+
+```text
+summary.log       Konsolda gorunen ozetlerin aynisi
+stats.csv         Endpoint bazli periyodik metrikler
+final_stats.json  Final snapshot
+```
+
+`locust/results/` git tarafindan ignore edilir.

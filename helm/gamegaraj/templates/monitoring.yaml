@@ -51,8 +51,8 @@ metadata:
 data:
   prometheus.yml: |
     global:
-      scrape_interval: 15s
-      evaluation_interval: 15s
+      scrape_interval: 1s
+      evaluation_interval: 5s
 
     scrape_configs:
       - job_name: 'kubernetes-pods'
@@ -172,6 +172,8 @@ data:
         url: http://prometheus:9090
         isDefault: true
         jsonData:
+          timeInterval: 1s
+          queryTimeout: 30s
           exemplarTraceIdDestinations:
             - name: Jaeger
               datasourceUid: jaeger
@@ -231,7 +233,7 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
           "targets": [
             {
-              "expr": "sum(rate(http_server_request_duration_seconds_count[5m])) by (service_name)",
+              "expr": "sum(rate(http_server_request_duration_seconds_count[10s])) by (service_name)",
               "legendFormat": "{{ "{{" }}service_name{{ "}}" }}"
             }
           ],
@@ -248,7 +250,7 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, service_name))",
+              "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[10s])) by (le, service_name))",
               "legendFormat": "{{ "{{" }}service_name{{ "}}" }} P95",
               "exemplar": true
             }
@@ -274,7 +276,7 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
           "targets": [
             {
-              "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) by (service_name) / sum(rate(http_server_request_duration_seconds_count[5m])) by (service_name)",
+              "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[10s])) by (service_name) / sum(rate(http_server_request_duration_seconds_count[10s])) by (service_name)",
               "legendFormat": "{{ "{{" }}service_name{{ "}}" }}"
             }
           ],
@@ -300,7 +302,7 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
           "targets": [
             {
-              "expr": "rate(process_cpu_time_seconds_total[5m])",
+              "expr": "rate(process_cpu_time_seconds_total[10s])",
               "legendFormat": "{{ "{{" }}service_name{{ "}}" }}"
             }
           ],
@@ -342,7 +344,7 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
           "targets": [
             {
-              "expr": "rate(process_runtime_dotnet_gc_collections_count_total[5m])",
+              "expr": "rate(process_runtime_dotnet_gc_collections_count_total[10s])",
               "legendFormat": "{{ "{{" }}service_name{{ "}}" }} {{ "{{" }}generation{{ "}}" }}"
             }
           ],
@@ -398,7 +400,8 @@ data:
       "schemaVersion": 39,
       "tags": ["gamegaraj", "service-health"],
       "templating": { "list": [] },
-      "time": { "from": "now-1h", "to": "now" },
+      "refresh": "1s",
+      "time": { "from": "now-5m", "to": "now" },
       "timepicker": {},
       "timezone": "browser",
       "title": "GameGaraj - Service Health",
@@ -423,7 +426,7 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
           "targets": [
             {
-              "expr": "rate(basket_items_added_total[5m])",
+              "expr": "rate(basket_items_added_total[10s])",
               "legendFormat": "Sepete Ekleme/sn"
             }
           ],
@@ -442,7 +445,7 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
           "targets": [
             {
-              "expr": "rate(orders_created_total[5m])",
+              "expr": "rate(orders_created_total[10s])",
               "legendFormat": "Siparis/sn"
             }
           ],
@@ -541,11 +544,11 @@ data:
           "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
           "targets": [
             {
-              "expr": "rate(payments_succeeded_total[5m])",
+              "expr": "rate(payments_succeeded_total[10s])",
               "legendFormat": "Basarili"
             },
             {
-              "expr": "rate(payments_failed_total[5m])",
+              "expr": "rate(payments_failed_total[10s])",
               "legendFormat": "Basarisiz"
             }
           ],
@@ -577,17 +580,17 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
           "targets": [
             {
-              "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+              "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket[10s])) by (le))",
               "legendFormat": "P50 (Ortanca)",
               "exemplar": true
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[10s])) by (le))",
               "legendFormat": "P95",
               "exemplar": true
             },
             {
-              "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[10s])) by (le))",
               "legendFormat": "P99 (En Yavas)",
               "exemplar": true
             }
@@ -676,11 +679,11 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
           "targets": [
             {
-              "expr": "rate(basket_favorites_added_total[5m])",
+              "expr": "rate(basket_favorites_added_total[10s])",
               "legendFormat": "Favori Eklendi"
             },
             {
-              "expr": "rate(basket_favorites_removed_total[5m])",
+              "expr": "rate(basket_favorites_removed_total[10s])",
               "legendFormat": "Favori Cikarildi"
             }
           ],
@@ -712,15 +715,15 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
           "targets": [
             {
-              "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"2..\"}[5m])) by (service_name)",
+              "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"2..\"}[10s])) by (service_name)",
               "legendFormat": "{{ "{{" }}service_name{{ "}}" }} 2xx"
             },
             {
-              "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"4..\"}[5m])) by (service_name)",
+              "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"4..\"}[10s])) by (service_name)",
               "legendFormat": "{{ "{{" }}service_name{{ "}}" }} 4xx"
             },
             {
-              "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) by (service_name)",
+              "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[10s])) by (service_name)",
               "legendFormat": "{{ "{{" }}service_name{{ "}}" }} 5xx"
             }
           ],
@@ -735,7 +738,8 @@ data:
       "schemaVersion": 39,
       "tags": ["gamegaraj", "business-metrics"],
       "templating": { "list": [] },
-      "time": { "from": "now-1h", "to": "now" },
+      "refresh": "1s",
+      "time": { "from": "now-5m", "to": "now" },
       "timepicker": {},
       "timezone": "browser",
       "title": "GameGaraj - Business Metrics",
