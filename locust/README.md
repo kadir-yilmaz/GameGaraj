@@ -22,7 +22,8 @@ Canlı sistemde gerçek kullanıcı davranışına en yakın ve test makinesini 
 * **Scenario:** `realistic_shopper`
 * **Host:** `https://gateway.kadiryilmaz.online`
 * **Users:** 100
-* **Spawn rate:** 5 veya 10
+* **Spawn rate:** 2 veya 5
+* **Start spread:** 60
 
 Bu senaryoda her kullanıcı:
 
@@ -35,4 +36,10 @@ Bu senaryoda her kullanıcı:
 7. Sepeti tekrar kontrol eder.
 8. Kısa bir ürün gezintisi daha yapıp bekler.
 
-İnsan davranışı taklidi için akış içinde 1-6 saniye arası beklemeler vardır. Bu yüzden aynı kullanıcı sayısında eski rastgele endpoint testine göre daha düşük ama daha gerçekçi RPS üretir.
+İnsan davranışı taklidi için ilk aksiyon 0-60 saniyeye yayılır ve akış içinde 1-6 saniye arası beklemeler vardır. Bu yüzden aynı kullanıcı sayısında eski rastgele endpoint testine göre daha düşük ama daha gerçekçi RPS üretir.
+
+Yerel makinede Locust worker CPU'su yükselirse distributed script'i 2 worker ile başlatın:
+
+```powershell
+./run-locust-distributed.ps1 -WorkerCount 2
+```

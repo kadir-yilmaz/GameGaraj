@@ -1,3 +1,7 @@
+param(
+    [int]$WorkerCount = 2
+)
+
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Set-Location $ScriptDir
 
@@ -18,14 +22,14 @@ Start-Process powershell -ArgumentList "-NoExit -Command `"cd '$ScriptDir'; pyth
 
 Start-Sleep -Seconds 2
 
-Write-Host "4 Adet Locust Worker (Isci) baslatiliyor..." -ForegroundColor Yellow
-for ($i=1; $i -le 4; $i++) {
+Write-Host "$WorkerCount Adet Locust Worker (Isci) baslatiliyor..." -ForegroundColor Yellow
+for ($i=1; $i -le $WorkerCount; $i++) {
     Start-Process powershell -ArgumentList "-NoExit -Command `"cd '$ScriptDir'; python -m locust -f locustfile.py --worker --logfile logs\worker-$i.log`""
     Start-Sleep -Milliseconds 500
 }
 
 Write-Host "--------------------------------------------------------" -ForegroundColor White
 Write-Host "Sistem hazir! Tarayicinizdan http://localhost:8089 adresine giris yapin." -ForegroundColor Green
-Write-Host "Arayuze girdiginizde sag ust kosede 'Workers: 4' yazdigini goreceksiniz." -ForegroundColor Yellow
+Write-Host "Arayuze girdiginizde sag ust kosede 'Workers: $WorkerCount' yazdigini goreceksiniz." -ForegroundColor Yellow
 Write-Host "Hata kayitlari anlik olarak 'locust/logs' klasorune kaydedilmektedir." -ForegroundColor Cyan
 Write-Host "Testi bitirdiginizde acilan 5 ayri siyah pencereyi carpiya basarak kapatmayi unutmayin." -ForegroundColor Gray

@@ -33,6 +33,14 @@ def _(parser):
         include_in_web_ui=True,
         help="Test senaryosunu secin. Her senaryoda API isteklerinin agirligi (olasiligi) degisir."
     )
+    parser.add_argument(
+        "--start-spread",
+        type=float,
+        env_var="LOCUST_START_SPREAD",
+        default=60.0,
+        include_in_web_ui=True,
+        help="Realistic shopper kullanicilarinin ilk aksiyonunu kac saniyeye yayacagini belirler."
+    )
 
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
@@ -60,13 +68,18 @@ class GameGarajUser(FastHttpUser):
             weights = get_scenario_weights(self.scenario)
             self.scenario_ops = list(weights.keys())
             self.scenario_weights = list(weights.values())
+        self.first_realistic_journey = True
 
     def think(self, minimum=0.8, maximum=2.5):
         sleep(random.uniform(minimum, maximum))
 
     def realistic_shopper_journey(self):
+        if self.first_realistic_journey:
+            self.first_realistic_journey = False
+            self.think(0, self.environment.parsed_options.start_spread)
+
         if len(products_cache) < 3:
-            product_search(self)
+            product_keyword_search(self, "gaming")
             self.think(2, 5)
             return
 
