@@ -1,7 +1,9 @@
 using GameGaraj.Order.Application.Commands;
 using GameGaraj.Order.Domain.Entities;
 using GameGaraj.Order.Infrastructure;
+using GameGaraj.Shared.Events;
 using GameGaraj.Shared.Observability.Metrics;
+using MassTransit;
 using MediatR;
 
 namespace GameGaraj.Order.Application.Handlers
@@ -10,11 +12,13 @@ namespace GameGaraj.Order.Application.Handlers
     {
         private readonly OrderDbContext _context;
         private readonly OrderMetrics _metrics;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public CreateOrderCommandHandler(OrderDbContext context, OrderMetrics metrics)
+        public CreateOrderCommandHandler(OrderDbContext context, OrderMetrics metrics, IPublishEndpoint publishEndpoint)
         {
             _context = context;
             _metrics = metrics;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<int> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
@@ -140,6 +144,18 @@ namespace GameGaraj.Order.Application.Handlers
 
             _context.Orders.Add(newOrder);
             await _context.SaveChangesAsync(cancellationToken);
+
+            // Publish OrderStarted event to initiate stock reservation in Catalog API
+            await _publishEndpoint.Publish<OrderStarted>(new OrderStarted
+            {
+                OrderId = newOrder.Id,
+                BuyerId = newOrder.BuyerId,
+                OrderItems = newOrder.OrderItems.Select(x => new OrderItemMessage
+                {
+                    ProductId = x.ProductId,
+                    Quantity = x.Quantity
+                }).ToList()
+            }, cancellationToken);
 
             _metrics.OrderCreated(request.BuyerId);
 

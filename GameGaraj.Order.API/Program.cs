@@ -11,6 +11,7 @@ using GameGaraj.Order.Application.Mapping;
 using GameGaraj.Order.Infrastructure;
 using GameGaraj.Order.Infrastructure.Repositories.Abstract;
 using GameGaraj.Order.Infrastructure.Repositories.Concrete;
+using GameGaraj.Order.API.Services.Hosted;
 using Microsoft.AspNetCore.Mvc;
 using MassTransit;
 using GameGaraj.Shared.Logging;
@@ -77,6 +78,7 @@ builder.Services.AddScoped<IUserAddressRepository, UserAddressRepository>();
 
 // Services
 builder.Services.AddScoped<IUserAddressService, UserAddressService>();
+builder.Services.AddHostedService<OrderExpirationWorker>();
 
 // MediatR
 builder.Services.AddMediatR(cfg =>

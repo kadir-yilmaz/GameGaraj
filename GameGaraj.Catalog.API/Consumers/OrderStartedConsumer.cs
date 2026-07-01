@@ -31,6 +31,7 @@ namespace GameGaraj.Catalog.API.Consumers
 
             bool allReserved = true;
             string failReason = "";
+            var reservedProducts = new List<(Product Product, int ReservedQuantity)>();
 
             foreach (var item in context.Message.OrderItems)
             {
@@ -53,6 +54,9 @@ namespace GameGaraj.Catalog.API.Consumers
                 product.ReservedStock += item.Quantity;
                 await _context.SaveChangesAsync();
                 _logger.LogInformation($"[OrderStartedConsumer] Reserved {item.Quantity} for {product.Name}");
+                
+                // Takip listesine ekle
+                reservedProducts.Add((product, item.Quantity));
                 
                 // Elastisearch'e güncel veriyi gönder
                 _context.IndexingJobs.Add(new IndexingJob
@@ -84,9 +88,47 @@ namespace GameGaraj.Catalog.API.Consumers
             {
                 _logger.LogWarning($"[OrderStartedConsumer] Reservation failed for OrderId: {context.Message.OrderId}. Reason: {failReason}");
 
-                // Geri alma (Compensating Transaction) - bu basitleştirilmiş bir örnek. 
-                // Gerçek senaryoda daha önce rezerve edilenleri geri bırakmak gerekir.
-                // Şimdilik basitleştirilmiş tutuyoruz.
+                // Geri alma (Compensating Transaction) - Rezerve edilen ürünlerin kilitlerini serbest bırak
+                foreach (var (reservedProduct, reservedQuantity) in reservedProducts)
+                {
+                    try
+                    {
+                        if (reservedProduct.ReservedStock >= reservedQuantity)
+                        {
+                            reservedProduct.ReservedStock -= reservedQuantity;
+                        }
+                        else
+                        {
+                            reservedProduct.ReservedStock = 0;
+                        }
+                        await _context.SaveChangesAsync();
+                        _logger.LogInformation($"[OrderStartedConsumer] Rollback: Released {reservedQuantity} reserved units for {reservedProduct.Name}");
+
+                        // Elasticsearch güncellemesi
+                        _context.IndexingJobs.Add(new IndexingJob
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            EntityType = "Product",
+                            EntityId = reservedProduct.Id,
+                            Operation = IndexingJobOperation.Upsert,
+                            Status = IndexingJobStatus.Pending,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                        await _context.SaveChangesAsync();
+
+                        // Redis cache temizleme
+                        if (_cache != null)
+                        {
+                            await _cache.RemoveAsync($"product_{reservedProduct.Id}");
+                            await _cache.RemoveAsync($"product_slug_{reservedProduct.Slug}");
+                            await _cache.RemoveAsync("featured_products");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"[OrderStartedConsumer] Failed to rollback reservation for {reservedProduct.Name}");
+                    }
+                }
 
                 await _publishEndpoint.Publish(new StockNotReserved
                 {

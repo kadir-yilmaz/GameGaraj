@@ -32,7 +32,14 @@ namespace GameGaraj.Catalog.API.Consumers
                 if (product != null)
                 {
                     // Ödeme başarısız: Rezervasyonu iade et (tekrar satılabilir yap)
-                    product.ReservedStock -= item.Quantity;
+                    if (product.ReservedStock >= item.Quantity)
+                    {
+                        product.ReservedStock -= item.Quantity;
+                    }
+                    else
+                    {
+                        product.ReservedStock = 0;
+                    }
                     await _context.SaveChangesAsync();
                     _logger.LogInformation($"[PaymentFailedConsumer] Stock released for {product.Name}. Available: {product.AvailableStock}");
                     
