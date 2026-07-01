@@ -104,31 +104,43 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             await EnsureIndexAsync(recreate: true);
 
             var products = await _context.Products.ToListAsync();
+            var categories = await _context.Categories.AsNoTracking().ToDictionaryAsync(c => c.Id);
             var result = new ReindexResultDto { Total = products.Count };
+
+            var documents = new List<ProductSearchDocument>();
 
             foreach (var product in products)
             {
+                categories.TryGetValue(product.CategoryId ?? string.Empty, out var category);
+                var doc = CreateDocument(product, category);
+                documents.Add(doc);
+            }
+
+            if (documents.Any())
+            {
                 try
                 {
-                    var document = await CreateDocumentAsync(product);
-                    var request = new IndexRequest<ProductSearchDocument>(document, IndexName, product.Id);
-                    var response = await _elasticClient.IndexAsync(request);
+                    var bulkResponse = await _elasticClient.BulkAsync(b => b
+                        .Index(IndexName)
+                        .IndexMany(documents)
+                    );
 
-                    if (response.IsValidResponse)
+                    if (bulkResponse.IsValidResponse)
                     {
-                        result.Succeeded++;
+                        result.Succeeded = documents.Count;
                     }
                     else
                     {
-                        result.Failed++;
-                        result.Errors.Add($"{product.Id}: {response.DebugInformation}");
+                        result.Failed = documents.Count;
+                        result.Errors.Add($"Bulk indexing failed: {bulkResponse.DebugInformation}");
+                        _logger.LogError("Elasticsearch bulk reindex failed: {Error}", bulkResponse.DebugInformation);
                     }
                 }
                 catch (Exception ex)
                 {
-                    result.Failed++;
-                    result.Errors.Add($"{product.Id}: {ex.Message}");
-                    _logger.LogError(ex, "Elasticsearch reindex failed for product {ProductId}", product.Id);
+                    result.Failed = documents.Count;
+                    result.Errors.Add($"Bulk indexing exception: {ex.Message}");
+                    _logger.LogError(ex, "Elasticsearch bulk reindex exception");
                 }
             }
 
@@ -395,7 +407,11 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             var category = !string.IsNullOrWhiteSpace(product.CategoryId)
                 ? await _context.Categories.FindAsync(product.CategoryId)
                 : null;
+            return CreateDocument(product, category);
+        }
 
+        private ProductSearchDocument CreateDocument(Product product, Category? category)
+        {
             var specValues = product.Specs
                 .Where(x => !string.IsNullOrWhiteSpace(x.Value))
                 .Select(x => x.Value.Trim())

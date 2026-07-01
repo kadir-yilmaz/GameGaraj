@@ -2,6 +2,7 @@ using GameGaraj.Catalog.API.Data;
 using GameGaraj.Catalog.API.Models;
 using GameGaraj.Catalog.API.Services.Abstract;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace GameGaraj.Catalog.API.Services.Hosted
 {
@@ -40,6 +41,7 @@ namespace GameGaraj.Catalog.API.Services.Hosted
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
             var indexService = scope.ServiceProvider.GetRequiredService<IProductIndexService>();
+            var cache = scope.ServiceProvider.GetService<IDistributedCache>();
 
             var jobs = await context.IndexingJobs
                 .Where(job =>
@@ -51,13 +53,14 @@ namespace GameGaraj.Catalog.API.Services.Hosted
 
             foreach (var job in jobs)
             {
-                await ProcessJobAsync(context, indexService, job, cancellationToken);
+                await ProcessJobAsync(context, indexService, cache, job, cancellationToken);
             }
         }
 
         private async Task ProcessJobAsync(
             CatalogDbContext context,
             IProductIndexService indexService,
+            IDistributedCache? cache,
             IndexingJob job,
             CancellationToken cancellationToken)
         {
@@ -70,6 +73,13 @@ namespace GameGaraj.Catalog.API.Services.Hosted
                 if (job.Operation == IndexingJobOperation.Delete)
                 {
                     await indexService.DeleteAsync(job.EntityId);
+
+                    // Elasticsearch'ten silindikten sonra Redis cache'i temizle
+                    if (cache != null)
+                    {
+                        await cache.RemoveAsync($"product_{job.EntityId}", cancellationToken);
+                        await cache.RemoveAsync("featured_products", cancellationToken);
+                    }
                 }
                 else
                 {
@@ -80,10 +90,27 @@ namespace GameGaraj.Catalog.API.Services.Hosted
                     if (product == null)
                     {
                         await indexService.DeleteAsync(job.EntityId);
+
+                        if (cache != null)
+                        {
+                            await cache.RemoveAsync($"product_{job.EntityId}", cancellationToken);
+                            await cache.RemoveAsync("featured_products", cancellationToken);
+                        }
                     }
                     else
                     {
                         await indexService.IndexAsync(product);
+
+                        // ⚠️ KRİTİK YARIŞ KOŞULU (RACE CONDITION) ÇÖZÜMÜ:
+                        // Elasticsearch indekslemesi tamamen başarıyla tamamlandıktan sonra Redis önbelleğini (cache) temizliyoruz.
+                        // Böylelikle, sonraki isteklerde cache miss olduğunda Elasticsearch'ten en güncel (stoku düşmüş) veri okunup tekrar cache'lenecektir.
+                        if (cache != null)
+                        {
+                            await cache.RemoveAsync($"product_{product.Id}", cancellationToken);
+                            await cache.RemoveAsync($"product_slug_{product.Slug}", cancellationToken);
+                            await cache.RemoveAsync("featured_products", cancellationToken);
+                            _logger.LogInformation($"[IndexingJobWorker] Invalidated Redis cache for product: {product.Name} and featured_products");
+                        }
                     }
                 }
 
