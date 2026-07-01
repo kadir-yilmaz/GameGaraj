@@ -54,9 +54,32 @@ namespace GameGaraj.Shared.Observability
                         {
                             opts.RecordException = true;
                             opts.Filter = ctx =>
-                                !ctx.Request.Path.StartsWithSegments("/metrics") &&
-                                !ctx.Request.Path.StartsWithSegments("/health") &&
-                                !ctx.Request.Path.StartsWithSegments("/swagger");
+                            {
+                                var path = ctx.Request.Path.Value ?? "";
+                                if (path.StartsWith("/metrics", StringComparison.OrdinalIgnoreCase) ||
+                                    path.StartsWith("/health", StringComparison.OrdinalIgnoreCase) ||
+                                    path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    return false;
+                                }
+
+                                // WebUI için sadece sipariş ve ödeme akışını izle (Gürültüyü önlemek için)
+                                if (serviceName == "GameGaraj.WebUI")
+                                {
+                                    return path.StartsWith("/Order", StringComparison.OrdinalIgnoreCase);
+                                }
+
+                                // Gateway için sadece sipariş ve ödeme API isteklerini izle
+                                if (serviceName == "GameGaraj.Gateway")
+                                {
+                                    return path.StartsWith("/api/orders", StringComparison.OrdinalIgnoreCase) ||
+                                           path.StartsWith("/api/payments", StringComparison.OrdinalIgnoreCase) ||
+                                           path.StartsWith("/api/order", StringComparison.OrdinalIgnoreCase) ||
+                                           path.StartsWith("/api/payment", StringComparison.OrdinalIgnoreCase);
+                                }
+
+                                return true;
+                            };
                         })
                         .AddHttpClientInstrumentation(opts =>
                         {
