@@ -1,6 +1,13 @@
 name: K3s App Deploy
 
 on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'helm/gamegaraj/values.yaml'
+      - 'docs/**'
+      - 'README.md'
   workflow_dispatch:
     inputs:
       service:
