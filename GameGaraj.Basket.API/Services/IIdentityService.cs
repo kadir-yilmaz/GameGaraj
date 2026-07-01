@@ -4,4 +4,5 @@ public interface IIdentityService
 {
     string UserId { get; }
     string UserName { get; }
+    bool IsGuest { get; }
 }

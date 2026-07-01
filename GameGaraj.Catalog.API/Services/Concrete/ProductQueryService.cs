@@ -104,13 +104,18 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             Dictionary<string, string>? specs = null,
             string? brand = null)
         {
-            _logger.LogInformation($"========== ProductQueryService.GetAllAsync START ==========");
-            _logger.LogInformation($"[ProductQueryService] Parameters - CategoryId: {categoryId}, Sort: {sortBy}, MinPrice: {minPrice}, MaxPrice: {maxPrice}, Brand: {brand}");
+            _logger.LogDebug(
+                "Product listing requested. CategoryId: {CategoryId}, Sort: {SortBy}, MinPrice: {MinPrice}, MaxPrice: {MaxPrice}, Brand: {Brand}",
+                categoryId,
+                sortBy,
+                minPrice,
+                maxPrice,
+                brand);
 
             var elasticResult = await GetAllFromElasticAsync(categoryId, sortBy, minPrice, maxPrice, specs, brand);
             if (elasticResult != null)
             {
-                _logger.LogInformation($"========== ProductQueryService.GetAllAsync END - Returning {elasticResult.Count} products from Elasticsearch ==========");
+                _logger.LogDebug("Returning {ProductCount} products from Elasticsearch.", elasticResult.Count);
                 return elasticResult;
             }
 

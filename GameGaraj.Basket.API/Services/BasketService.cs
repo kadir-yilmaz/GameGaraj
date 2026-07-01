@@ -9,7 +9,8 @@ public class BasketService(IDistributedCache distributedCache, IIdentityService 
 {
     public async Task<Data.Basket?> GetBasketAsync(CancellationToken cancellationToken = default)
     {
-        var basketString = await distributedCache.GetStringAsync(identityService.UserId, cancellationToken);
+        var userId = identityService.UserId;
+        var basketString = await distributedCache.GetStringAsync(userId, cancellationToken);
         
         if (string.IsNullOrEmpty(basketString))
         {
@@ -24,17 +25,25 @@ public class BasketService(IDistributedCache distributedCache, IIdentityService 
         {
             // Data in Redis might be in old format (e.g. Id as int vs string)
             // Invalidating cache to start fresh.
-            await distributedCache.RemoveAsync(identityService.UserId, cancellationToken);
+            await distributedCache.RemoveAsync(userId, cancellationToken);
             return null;
         }
     }
 
     public async Task SaveBasketAsync(Data.Basket basket, CancellationToken cancellationToken = default)
     {
-        basket.UserId = identityService.UserId;
+        var userId = identityService.UserId;
+        basket.UserId = userId;
         var basketString = JsonSerializer.Serialize(basket);
-        await distributedCache.SetStringAsync(identityService.UserId, basketString, cancellationToken);
+
+        var expiration = identityService.IsGuest ? TimeSpan.FromDays(1) : TimeSpan.FromDays(30);
+        var options = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = expiration
+        };
+        await distributedCache.SetStringAsync(userId, basketString, options, cancellationToken);
     }
+
 
     public async Task DeleteBasketAsync(CancellationToken cancellationToken = default)
     {

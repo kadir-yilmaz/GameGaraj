@@ -17,6 +17,7 @@ global:
   identityAuthority: "http://192.168.1.56:8080/realms/GameGaraj"
   elasticUri: "http://192.168.1.56:9201"
   otlpEndpoint: "http://192.168.1.56:4317"
+  otlpSamplingRatio: "0.05"
 
 # -- Override chart name
 nameOverride: ""

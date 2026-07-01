@@ -25,8 +25,11 @@ namespace GameGaraj.Shared.Observability
             string serviceVersion = "1.0.0")
         {
             var environment = builder.Environment.EnvironmentName;
-            var otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"]
-                               ?? "http://localhost:4317";
+            var otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"];
+            var defaultSamplingRatio = environment == "Development" ? 1.0 : 0.05;
+            var samplingRatio = builder.Configuration.GetValue<double?>("OpenTelemetry:SamplingRatio")
+                                ?? defaultSamplingRatio;
+            samplingRatio = Math.Clamp(samplingRatio, 0.0, 1.0);
 
             // Resource — shared identity for all telemetry signals
             var resourceBuilder = ResourceBuilder.CreateDefault()
@@ -46,6 +49,7 @@ namespace GameGaraj.Shared.Observability
                 {
                     tracing
                         .SetResourceBuilder(resourceBuilder)
+                        .SetSampler(new ParentBasedSampler(new TraceIdRatioBasedSampler(samplingRatio)))
                         .AddAspNetCoreInstrumentation(opts =>
                         {
                             opts.RecordException = true;
@@ -107,7 +111,7 @@ namespace GameGaraj.Shared.Observability
 
             // ── Admin Observability Services ──
             builder.Services.AddSingleton(new TraceSamplingManager(
-                baselineRatio: environment == "Development" ? 1.0 : 0.05));
+                baselineRatio: samplingRatio));
             builder.Services.AddSingleton<ObservabilityAuditLog>();
 
             // Set SERVICE_NAME so the admin controller can identify itself

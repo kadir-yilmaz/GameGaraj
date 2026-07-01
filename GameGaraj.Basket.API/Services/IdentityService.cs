@@ -25,4 +25,13 @@ public class IdentityService(IHttpContextAccessor httpContextAccessor) : IIdenti
     }
 
     public string UserName => httpContextAccessor.HttpContext?.User?.Identity?.Name ?? string.Empty;
+
+    public bool IsGuest
+    {
+        get
+        {
+            var userId = UserId;
+            return string.IsNullOrEmpty(userId) || userId.StartsWith("guest-") || userId == "anonymous-user";
+        }
+    }
 }

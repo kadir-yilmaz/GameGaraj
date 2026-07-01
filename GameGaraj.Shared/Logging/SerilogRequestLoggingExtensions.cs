@@ -26,9 +26,11 @@ namespace GameGaraj.Shared.Logging
                         return LogEventLevel.Verbose;
                     }
 
-                    return httpContext.Response.StatusCode >= 500 
-                        ? LogEventLevel.Error 
-                        : LogEventLevel.Information;
+                    return httpContext.Response.StatusCode >= 500
+                        ? LogEventLevel.Error
+                        : httpContext.Response.StatusCode >= 400
+                            ? LogEventLevel.Warning
+                            : LogEventLevel.Debug;
                 };
 
                 options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
@@ -46,11 +48,12 @@ namespace GameGaraj.Shared.Logging
                     }
                     else if (httpContext.Request.Headers.TryGetValue("X-User-Email", out var userEmailHeader) && !string.IsNullOrEmpty(userEmailHeader))
                     {
-                        userIdentity = userEmailHeader;
+                        userIdentity = userEmailHeader.ToString();
                     }
                     else if (httpContext.Request.Headers.TryGetValue("X-User-Id", out var userIdHeader) && !string.IsNullOrEmpty(userIdHeader))
                     {
-                        userIdentity = userIdHeader == "anonymous-user" ? "Anonymous" : $"User-{userIdHeader}";
+                        var userId = userIdHeader.ToString();
+                        userIdentity = userId == "anonymous-user" ? "Anonymous" : $"User-{userId}";
                     }
 
                     diagnosticContext.Set("LogType", "HttpRequest");

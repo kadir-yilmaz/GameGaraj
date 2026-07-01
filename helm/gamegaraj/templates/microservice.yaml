@@ -46,6 +46,8 @@ spec:
               value: {{ $.Values.global.elasticUri | quote }}
             - name: OpenTelemetry__OtlpEndpoint
               value: {{ $.Values.global.otlpEndpoint | quote }}
+            - name: OpenTelemetry__SamplingRatio
+              value: {{ $.Values.global.otlpSamplingRatio | quote }}
             {{- end }}
             {{- if $svc.env }}
             {{- range $envKey, $envVal := $svc.env }}
