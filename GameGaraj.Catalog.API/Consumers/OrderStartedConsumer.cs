@@ -71,6 +71,7 @@ namespace GameGaraj.Catalog.API.Consumers
                 {
                     await _cache.RemoveAsync($"product_{product.Id}");
                     await _cache.RemoveAsync($"product_slug_{product.Slug}");
+                    await _cache.RemoveAsync("featured_products");
                 }
             }
 

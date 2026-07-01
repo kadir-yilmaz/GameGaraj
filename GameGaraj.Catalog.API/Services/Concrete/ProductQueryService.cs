@@ -345,13 +345,54 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
         public async Task<List<ProductDto>> GetFeaturedProductsAsync()
         {
-            var products = await _context.Products
-                .AsNoTracking()
-                .Where(p => p.IsFeatured && p.IsActive)
-                .OrderByDescending(p => p.CreatedAt)
-                .Take(10)
-                .ToListAsync();
-            return _mapper.Map<List<ProductDto>>(products);
+            if (_cache != null)
+            {
+                var cachedStr = await _cache.GetStringAsync("featured_products");
+                if (!string.IsNullOrEmpty(cachedStr))
+                {
+                    return JsonSerializer.Deserialize<List<ProductDto>>(cachedStr) ?? new List<ProductDto>();
+                }
+            }
+
+            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
+                .Index("products")
+                .Query(q => q
+                    .Bool(b => b
+                        .Filter(f => f.Term(t => t.Field("isActive").Value(true)),
+                                f => f.Term(t => t.Field("isFeatured").Value(true)))
+                    )
+                )
+                .Sort(sort => sort
+                    .Field(f => f.CreatedAt, new Elastic.Clients.Elasticsearch.FieldSort { Order = Elastic.Clients.Elasticsearch.SortOrder.Desc })
+                )
+                .Size(10)
+            );
+
+            List<ProductDto> result;
+            if (response.IsValidResponse && response.Documents.Any())
+            {
+                result = response.Documents.Select(MapSearchDocumentToDto).ToList();
+            }
+            else
+            {
+                // Fallback to PostgreSQL
+                _logger.LogWarning("Elasticsearch featured products query failed or returned no results. Falling back to DB.");
+                var products = await _context.Products
+                    .AsNoTracking()
+                    .Where(p => p.IsFeatured && p.IsActive)
+                    .OrderByDescending(p => p.CreatedAt)
+                    .Take(10)
+                    .ToListAsync();
+                result = _mapper.Map<List<ProductDto>>(products);
+            }
+
+            if (_cache != null && result.Any())
+            {
+                var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) };
+                await _cache.SetStringAsync("featured_products", JsonSerializer.Serialize(result), options);
+            }
+
+            return result;
         }
 
         public async Task<ProductDto?> GetByIdAsync(string id)
@@ -365,17 +406,32 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 }
             }
 
-            var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
-            if (product == null)
-                return null;
+            ProductDto? dto = null;
 
-            var dto = _mapper.Map<ProductDto>(product);
+            // Try Elasticsearch first
+            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
+                .Index("products")
+                .Query(q => q.Term(t => t.Field("_id").Value(id)))
+                .Size(1)
+            );
+            if (response.IsValidResponse && response.Documents.Any())
+            {
+                dto = MapSearchDocumentToDto(response.Documents.First());
+            }
+            else
+            {
+                // Fallback to PostgreSQL
+                _logger.LogWarning("Elasticsearch get by id failed for {Id}. Falling back to DB.", id);
+                var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
+                if (product != null)
+                {
+                    dto = _mapper.Map<ProductDto>(product);
+                    var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId);
+                    dto.CategoryName = category?.Name;
+                }
+            }
 
-            // Get category name
-            var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId);
-            dto.CategoryName = category?.Name;
-
-            if (_cache != null)
+            if (dto != null && _cache != null)
             {
                 var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) };
                 await _cache.SetStringAsync($"product_{id}", JsonSerializer.Serialize(dto), options);
@@ -395,17 +451,33 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 }
             }
 
-            var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Slug == slug);
-            if (product == null)
-                return null;
+            ProductDto? dto = null;
 
-            var dto = _mapper.Map<ProductDto>(product);
+            // Try Elasticsearch first
+            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
+                .Index("products")
+                .Query(q => q.Term(t => t.Field("slug.keyword").Value(slug)))
+                .Size(1)
+            );
 
-            // Get category name
-            var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId);
-            dto.CategoryName = category?.Name;
+            if (response.IsValidResponse && response.Documents.Any())
+            {
+                dto = MapSearchDocumentToDto(response.Documents.First());
+            }
+            else
+            {
+                // Fallback to PostgreSQL
+                _logger.LogWarning("Elasticsearch get by slug failed for {Slug}. Falling back to DB.", slug);
+                var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Slug == slug);
+                if (product != null)
+                {
+                    dto = _mapper.Map<ProductDto>(product);
+                    var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId);
+                    dto.CategoryName = category?.Name;
+                }
+            }
 
-            if (_cache != null)
+            if (dto != null && _cache != null)
             {
                 var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) };
                 await _cache.SetStringAsync($"product_slug_{slug}", JsonSerializer.Serialize(dto), options);

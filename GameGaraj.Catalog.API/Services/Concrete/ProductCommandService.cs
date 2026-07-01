@@ -59,6 +59,11 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             EnqueueIndexingJob(product.Id, IndexingJobOperation.Upsert);
             await _context.SaveChangesAsync();
             await TryIndexProductImmediatelyAsync(product);
+            
+            if (_cache != null)
+            {
+                await _cache.RemoveAsync("featured_products");
+            }
 
             return _mapper.Map<ProductDto>(product);
         }
@@ -94,6 +99,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 {
                     await _cache.RemoveAsync($"product_{product.Id}");
                     await _cache.RemoveAsync($"product_slug_{product.Slug}");
+                    await _cache.RemoveAsync("featured_products");
                 }
             }
 
@@ -116,6 +122,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 {
                     await _cache.RemoveAsync($"product_{id}");
                     await _cache.RemoveAsync($"product_slug_{product.Slug}");
+                    await _cache.RemoveAsync("featured_products");
                 }
             }
 
