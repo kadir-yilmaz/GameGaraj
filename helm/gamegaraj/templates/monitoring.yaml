@@ -101,6 +101,8 @@ spec:
       app: prometheus
   template:
     metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/monitoring.yaml") . | sha256sum }}
       labels:
         app: prometheus
     spec:
@@ -944,6 +946,8 @@ spec:
       app: grafana
   template:
     metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/monitoring.yaml") . | sha256sum }}
       labels:
         app: grafana
     spec:
