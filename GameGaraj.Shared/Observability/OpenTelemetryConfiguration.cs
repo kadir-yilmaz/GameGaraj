@@ -43,13 +43,21 @@ namespace GameGaraj.Shared.Observability
                     ["host.name"] = Environment.MachineName
                 });
 
+            // ── Sampler Configuration ──
+            // Giriş noktaları (WebUI, Gateway) gelen isteklere göre trace başlatabilir.
+            // Diğer iç mikroservisler (Catalog, Order, Payment vb.) ise ASLA kendi başlarına sıfırdan 
+            // yeni bir kök (root) trace başlatmazlar (0.0 oranı). Sadece üst servisten gelen trace'i devam ettirirler (ParentBased).
+            var isEntryPoint = serviceName == "GameGaraj.WebUI" || serviceName == "GameGaraj.Gateway";
+            var activeRatio = isEntryPoint ? samplingRatio : 0.0;
+            var sampler = new ParentBasedSampler(new TraceIdRatioBasedSampler(activeRatio));
+
             builder.Services.AddOpenTelemetry()
                 // ── Tracing ──
                 .WithTracing(tracing =>
                 {
                     tracing
                         .SetResourceBuilder(resourceBuilder)
-                        .SetSampler(new ParentBasedSampler(new TraceIdRatioBasedSampler(samplingRatio)))
+                        .SetSampler(sampler)
                         .AddAspNetCoreInstrumentation(opts =>
                         {
                             opts.RecordException = true;
