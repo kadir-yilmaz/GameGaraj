@@ -84,7 +84,7 @@ services:
   # Review API (PostgreSQL)
   # ---------------------------------------------------------------------------
   review-api:
-    image: "review-api:3e73105"
+    image: "review-api:37474df"
     nodePort: 30018
     skipCommonRabbit: true
     env:
