@@ -3,7 +3,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using GameGaraj.Review.API.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace GameGaraj.Review.API.Services;
 
@@ -14,7 +15,7 @@ public class ContentModerationService : IContentModerationService
     private const string ModerationTermsCacheKey = "review-api:moderation-terms:v1";
 
     private readonly ReviewDbContext _dbContext;
-    private readonly IMemoryCache _cache;
+    private readonly IDistributedCache _cache;
     private readonly ILogger<ContentModerationService> _logger;
 
     private static readonly Regex PricePatternRegex = new(@"(\d+[\.,]?\d*)\s*(tl|try|lira|kurus|\$|\u20ac|eur|usd)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -23,7 +24,7 @@ public class ContentModerationService : IContentModerationService
 
     public ContentModerationService(
         ReviewDbContext dbContext,
-        IMemoryCache cache,
+        IDistributedCache cache,
         ILogger<ContentModerationService> logger)
     {
         _dbContext = dbContext;
@@ -88,38 +89,55 @@ public class ContentModerationService : IContentModerationService
 
     private ModerationTermsSnapshot GetModerationTerms()
     {
-        return _cache.GetOrCreate(ModerationTermsCacheKey, entry =>
+        var cachedStr = _cache.GetString(ModerationTermsCacheKey);
+        if (!string.IsNullOrEmpty(cachedStr))
         {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-
             try
             {
-                var terms = _dbContext.ModerationTerms
-                    .AsNoTracking()
-                    .Where(term => term.IsActive)
-                    .Select(term => new { term.Type, term.Term })
-                    .ToList();
-
-                return new ModerationTermsSnapshot(
-                    terms
-                        .Where(term => term.Type == ProfanityTermType)
-                        .Select(term => NormalizeText(term.Term))
-                        .Where(term => !string.IsNullOrWhiteSpace(term))
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .ToArray(),
-                    terms
-                        .Where(term => term.Type == PriceTermType)
-                        .Select(term => NormalizeText(term.Term))
-                        .Where(term => !string.IsNullOrWhiteSpace(term))
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .ToArray());
+                var cachedSnapshot = JsonSerializer.Deserialize<ModerationTermsSnapshot>(cachedStr);
+                if (cachedSnapshot != null)
+                {
+                    return cachedSnapshot;
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Moderation terms could not be loaded from database.");
-                return ModerationTermsSnapshot.Empty;
+                _logger.LogWarning(ex, "Failed to deserialize cached moderation terms.");
             }
-        }) ?? ModerationTermsSnapshot.Empty;
+        }
+
+        try
+        {
+            var terms = _dbContext.ModerationTerms
+                .AsNoTracking()
+                .Where(term => term.IsActive)
+                .Select(term => new { term.Type, term.Term })
+                .ToList();
+
+            var snapshot = new ModerationTermsSnapshot(
+                terms
+                    .Where(term => term.Type == ProfanityTermType)
+                    .Select(term => NormalizeText(term.Term))
+                    .Where(term => !string.IsNullOrWhiteSpace(term))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
+                terms
+                    .Where(term => term.Type == PriceTermType)
+                    .Select(term => NormalizeText(term.Term))
+                    .Where(term => !string.IsNullOrWhiteSpace(term))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray());
+                    
+            var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) };
+            _cache.SetString(ModerationTermsCacheKey, JsonSerializer.Serialize(snapshot), options);
+
+            return snapshot;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Moderation terms could not be loaded from database.");
+            return ModerationTermsSnapshot.Empty;
+        }
     }
 
     private static void DetectSpam(string text, IReadOnlyList<string> recentUserComments, ContentAnalysisResult result)

@@ -2,7 +2,7 @@ using System.Net.Http.Headers;
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace GameGaraj.Review.API.Services;
 
@@ -10,10 +10,10 @@ public class OrderOwnershipClient : IOrderOwnershipClient
 {
     private readonly HttpClient _httpClient;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IMemoryCache _cache;
+    private readonly IDistributedCache _cache;
     private readonly ILogger<OrderOwnershipClient> _logger;
 
-    public OrderOwnershipClient(HttpClient httpClient, IHttpContextAccessor httpContextAccessor, IMemoryCache cache, ILogger<OrderOwnershipClient> logger)
+    public OrderOwnershipClient(HttpClient httpClient, IHttpContextAccessor httpContextAccessor, IDistributedCache cache, ILogger<OrderOwnershipClient> logger)
     {
         _httpClient = httpClient;
         _httpContextAccessor = httpContextAccessor;
@@ -24,10 +24,22 @@ public class OrderOwnershipClient : IOrderOwnershipClient
     public async Task<OrderOwnershipResult> GetOwnershipAsync(string userId, string productId, CancellationToken cancellationToken)
     {
         var cacheKey = $"review-ownership:{userId}:{productId}".ToLowerInvariant();
-        if (_cache.TryGetValue(cacheKey, out OrderOwnershipResult? cached) && cached != null)
+        var cachedStr = await _cache.GetStringAsync(cacheKey, cancellationToken);
+        if (!string.IsNullOrEmpty(cachedStr))
         {
-            _logger.LogInformation("Order ownership cache hit for user {UserId}, product {ProductId}, owns {Owns}", userId, productId, cached.Owns);
-            return cached;
+            try
+            {
+                var cached = JsonSerializer.Deserialize<OrderOwnershipResult>(cachedStr, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (cached != null)
+                {
+                    _logger.LogInformation("Order ownership cache hit for user {UserId}, product {ProductId}, owns {Owns}", userId, productId, cached.Owns);
+                    return cached;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize cached order ownership.");
+            }
         }
 
         var stopwatch = Stopwatch.StartNew();
@@ -54,7 +66,8 @@ public class OrderOwnershipClient : IOrderOwnershipClient
             }) ?? new OrderOwnershipResult();
 
             var cacheDuration = result.Owns ? TimeSpan.FromMinutes(15) : TimeSpan.FromMinutes(1);
-            _cache.Set(cacheKey, result, cacheDuration);
+            var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = cacheDuration };
+            await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(result), options, cancellationToken);
             _logger.LogInformation("Order ownership check completed in {ElapsedMs} ms for user {UserId}, product {ProductId}, owns {Owns}", stopwatch.ElapsedMilliseconds, userId, productId, result.Owns);
 
             return result;

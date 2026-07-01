@@ -20,7 +20,11 @@ builder.Services.AddSingleton<ReviewMetrics>();
 builder.Services.AddDbContext<ReviewDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
 
-builder.Services.AddMemoryCache();
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    options.InstanceName = "review-api:";
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient<IOrderOwnershipClient, OrderOwnershipClient>(client =>
 {
