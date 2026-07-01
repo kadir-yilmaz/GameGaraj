@@ -4,6 +4,9 @@ using GameGaraj.Shared.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Yüksek anlık yük testleri (Load Test) için ThreadPool'u baştan genişletiyoruz
+System.Threading.ThreadPool.SetMinThreads(1000, 1000);
+
 // Serilog Ekle
 builder.AddSerilogLogging("Gateway");
 
