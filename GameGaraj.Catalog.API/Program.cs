@@ -55,7 +55,7 @@ if (!string.IsNullOrEmpty(redisConnectionString))
     builder.Services.AddStackExchangeRedisCache(options =>
     {
         options.Configuration = redisConnectionString;
-        options.InstanceName = "CatalogCache_";
+        options.InstanceName = "catalog-cache:";
     });
 }
 else

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json;
 using GameGaraj.Basket.API.Data;
 using GameGaraj.Basket.API.Dtos;
 using Microsoft.Extensions.Caching.Distributed;
@@ -7,10 +8,11 @@ namespace GameGaraj.Basket.API.Services;
 
 public class BasketService(IDistributedCache distributedCache, IIdentityService identityService)
 {
+    private string CacheKey => $"baskets:{identityService.UserId}";
+
     public async Task<Data.Basket?> GetBasketAsync(CancellationToken cancellationToken = default)
     {
-        var userId = identityService.UserId;
-        var basketString = await distributedCache.GetStringAsync(userId, cancellationToken);
+        var basketString = await distributedCache.GetStringAsync(CacheKey, cancellationToken);
         
         if (string.IsNullOrEmpty(basketString))
         {
@@ -25,7 +27,7 @@ public class BasketService(IDistributedCache distributedCache, IIdentityService 
         {
             // Data in Redis might be in old format (e.g. Id as int vs string)
             // Invalidating cache to start fresh.
-            await distributedCache.RemoveAsync(userId, cancellationToken);
+            await distributedCache.RemoveAsync(CacheKey, cancellationToken);
             return null;
         }
     }
@@ -41,12 +43,12 @@ public class BasketService(IDistributedCache distributedCache, IIdentityService 
         {
             AbsoluteExpirationRelativeToNow = expiration
         };
-        await distributedCache.SetStringAsync(userId, basketString, options, cancellationToken);
+        await distributedCache.SetStringAsync(CacheKey, basketString, options, cancellationToken);
     }
 
 
     public async Task DeleteBasketAsync(CancellationToken cancellationToken = default)
     {
-        await distributedCache.RemoveAsync(identityService.UserId, cancellationToken);
+        await distributedCache.RemoveAsync(CacheKey, cancellationToken);
     }
 }

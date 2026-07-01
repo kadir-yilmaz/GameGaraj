@@ -68,7 +68,7 @@ if (!string.IsNullOrWhiteSpace(redisUrl) &&
       redisOptions.ConnectTimeout = 3000; // 3 saniye içinde bağlanamazsa pes et
       var redis = ConnectionMultiplexer.Connect(redisOptions);
       
-      dataProtectionBuilder.PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys");
+      dataProtectionBuilder.PersistKeysToStackExchangeRedis(redis, "data-protection:keys");
       builder.Services.AddStackExchangeRedisCache(options =>
       {
           options.Configuration = redisUrl;
