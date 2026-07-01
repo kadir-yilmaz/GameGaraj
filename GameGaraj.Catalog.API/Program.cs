@@ -14,6 +14,10 @@ using GameGaraj.Catalog.API.Services.Hosted;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Yüksek anlık yük testleri (Load Test) için ThreadPool'u baştan genişletiyoruz
+// Böylece anlık 1000 RPS geldiğinde StackExchange.Redis timeout'a düşmez.
+System.Threading.ThreadPool.SetMinThreads(1000, 1000);
+
 // Serilog Ekle
 builder.AddSerilogLogging("Catalog.API");
 
