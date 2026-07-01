@@ -169,7 +169,6 @@ services:
       GIN_MODE: "release"
       Minio__UseLocalStorage: "false"
     secretEnv:
-      RabbitMQUrl: rabbitmq-url
       Minio__Endpoint: minio-endpoint
       Minio__AccessKey: minio-access-key
       Minio__SecretKey: minio-secret-key
