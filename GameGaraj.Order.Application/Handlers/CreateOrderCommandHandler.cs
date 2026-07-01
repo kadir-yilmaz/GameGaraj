@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using GameGaraj.Order.Application.Commands;
 using GameGaraj.Order.Domain.Entities;
 using GameGaraj.Order.Infrastructure;
 using GameGaraj.Shared.Events;
+using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 using MassTransit;
 using MediatR;
@@ -142,20 +144,28 @@ namespace GameGaraj.Order.Application.Handlers
                 SortOrder = sortOrder++
             });
 
-            _context.Orders.Add(newOrder);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            // Publish OrderStarted event to initiate stock reservation in Catalog API
-            await _publishEndpoint.Publish<OrderStarted>(new OrderStarted
+            using (var activity = AppDiagnostics.StartActivity("Save Order"))
             {
-                OrderId = newOrder.Id,
-                BuyerId = newOrder.BuyerId,
-                OrderItems = newOrder.OrderItems.Select(x => new OrderItemMessage
+                activity?.SetTag("user.id", request.BuyerId);
+                activity?.SetTag("saga.step", "SaveOrder");
+
+                _context.Orders.Add(newOrder);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                activity?.SetTag("order.id", newOrder.Id);
+
+                // Publish OrderStarted event to initiate stock reservation in Catalog API
+                await _publishEndpoint.Publish<OrderStarted>(new OrderStarted
                 {
-                    ProductId = x.ProductId,
-                    Quantity = x.Quantity
-                }).ToList()
-            }, cancellationToken);
+                    OrderId = newOrder.Id,
+                    BuyerId = newOrder.BuyerId,
+                    OrderItems = newOrder.OrderItems.Select(x => new OrderItemMessage
+                    {
+                        ProductId = x.ProductId,
+                        Quantity = x.Quantity
+                    }).ToList()
+                }, cancellationToken);
+            }
 
             _metrics.OrderCreated(request.BuyerId);
 

@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using GameGaraj.Shared.Events;
+using GameGaraj.Shared.Observability;
 using GameGaraj.WebUI.Models.Campaigns;
 using GameGaraj.WebUI.Models.Orders;
 using GameGaraj.WebUI.Services.Abstract;
@@ -148,63 +150,81 @@ namespace GameGaraj.WebUI.Controllers
 
             HttpContext.Session.SetString("OrderBasket", JsonSerializer.Serialize(orderBasket));
 
-            // Sipariş oluştur
-            var pricingSnapshot = await BuildOrderPricingSnapshotAsync(orderBasket);
-            var orderResult = await _orderService.CreateOrder(checkoutInfoInput, pricingSnapshot);
-
-            if (!orderResult.IsSuccessful)
+            using (var activity = AppDiagnostics.StartActivity("Create Order"))
             {
-                var basket = await _basketService.GetBasketAsync();
-                var deliveryAddresses = await _orderService.GetUserAddressesAsync(Models.Addresses.AddressType.Delivery);
-                var invoiceAddresses = await _orderService.GetUserAddressesAsync(Models.Addresses.AddressType.Invoice);
+                activity?.SetTag("user.id", orderBasket.UserId);
+                activity?.SetTag("saga.step", "CreateOrder");
+                activity?.SetTag("saga.status", "Started");
 
-                ViewBag.Basket = basket;
-                ViewBag.DeliveryAddresses = deliveryAddresses;
-                ViewBag.InvoiceAddresses = invoiceAddresses;
-                ViewBag.Error = orderResult.Error;
+                // Sipariş oluştur
+                var pricingSnapshot = await BuildOrderPricingSnapshotAsync(orderBasket);
+                var orderResult = await _orderService.CreateOrder(checkoutInfoInput, pricingSnapshot);
 
-                // Re-calculate discounts and shipping for error view
-                if (basket != null)
+                if (!orderResult.IsSuccessful)
                 {
-                    await SyncBasketWithCatalogAsync(basket);
-                    await PrepareCheckoutBag(basket);
+                    activity?.SetStatus(ActivityStatusCode.Error, orderResult.Error);
+                    activity?.SetTag("saga.status", "Failed");
+
+                    var basket = await _basketService.GetBasketAsync();
+                    var deliveryAddresses = await _orderService.GetUserAddressesAsync(Models.Addresses.AddressType.Delivery);
+                    var invoiceAddresses = await _orderService.GetUserAddressesAsync(Models.Addresses.AddressType.Invoice);
+
+                    ViewBag.Basket = basket;
+                    ViewBag.DeliveryAddresses = deliveryAddresses;
+                    ViewBag.InvoiceAddresses = invoiceAddresses;
+                    ViewBag.Error = orderResult.Error;
+
+                    // Re-calculate discounts and shipping for error view
+                    if (basket != null)
+                    {
+                        await SyncBasketWithCatalogAsync(basket);
+                        await PrepareCheckoutBag(basket);
+                    }
+
+                    return View(checkoutInfoInput);
                 }
 
-                return View(checkoutInfoInput);
-            }
+                activity?.SetTag("order.id", orderResult.OrderId);
+                _logger.LogInformation($"[OrderController] Order created: {orderResult.OrderId}");
 
-            _logger.LogInformation($"[OrderController] Order created: {orderResult.OrderId}");
-
-            // Adresi kaydet (RabbitMQ / Event-Driven)
-            if (checkoutInfoInput.SaveAddress)
-            {
-                var basketUserId = orderBasket.UserId ?? string.Empty;
-                _logger.LogInformation($"[OrderController] SaveAddress is true. Publishing UserAddressSaveRequested for user: {basketUserId}");
-
-                var addressEvent = new UserAddressSaveRequested
+                // Adresi kaydet (RabbitMQ / Event-Driven)
+                if (checkoutInfoInput.SaveAddress)
                 {
-                    UserId = basketUserId,
-                    Type = 1, // Delivery
-                    Title = checkoutInfoInput.AddressTitle,
-                    FirstName = checkoutInfoInput.CustomerName,
-                    LastName = checkoutInfoInput.CustomerSurname,
-                    PhoneNumber = checkoutInfoInput.CustomerPhone,
-                    Email = checkoutInfoInput.CustomerEmail,
-                    Province = checkoutInfoInput.Province,
-                    District = checkoutInfoInput.District,
-                    Neighborhood = checkoutInfoInput.Street,
-                    PostalCode = checkoutInfoInput.ZipCode,
-                    AddressDetail = checkoutInfoInput.Line
-                };
+                    var basketUserId = orderBasket.UserId ?? string.Empty;
+                    _logger.LogInformation($"[OrderController] SaveAddress is true. Publishing UserAddressSaveRequested for user: {basketUserId}");
 
-                await _publishEndpoint.Publish(addressEvent);
+                    var addressEvent = new UserAddressSaveRequested
+                    {
+                        UserId = basketUserId,
+                        Type = 1, // Delivery
+                        Title = checkoutInfoInput.AddressTitle,
+                        FirstName = checkoutInfoInput.CustomerName,
+                        LastName = checkoutInfoInput.CustomerSurname,
+                        PhoneNumber = checkoutInfoInput.CustomerPhone,
+                        Email = checkoutInfoInput.CustomerEmail,
+                        Province = checkoutInfoInput.Province,
+                        District = checkoutInfoInput.District,
+                        Neighborhood = checkoutInfoInput.Street,
+                        PostalCode = checkoutInfoInput.ZipCode,
+                        AddressDetail = checkoutInfoInput.Line
+                    };
+
+                    await _publishEndpoint.Publish(addressEvent);
+                }
+
+                // Checkout bilgilerini session'a kaydet (Payment sayfasında kullanılacak)
+                HttpContext.Session.SetString("CheckoutInfo", JsonSerializer.Serialize(checkoutInfoInput));
+
+                // Köprüleme Mekanizması: Aktif traceparent'ı Session'a at
+                var currentTraceParent = Activity.Current?.Id;
+                if (currentTraceParent != null)
+                {
+                    HttpContext.Session.SetString("ParentTraceParent", currentTraceParent);
+                }
+
+                // Ödeme sayfasına yönlendir
+                return RedirectToAction("Payment", new { orderId = orderResult.OrderId });
             }
-
-            // Checkout bilgilerini session'a kaydet (Payment sayfasında kullanılacak)
-            HttpContext.Session.SetString("CheckoutInfo", JsonSerializer.Serialize(checkoutInfoInput));
-
-            // Ödeme sayfasına yönlendir
-            return RedirectToAction("Payment", new { orderId = orderResult.OrderId });
         }
 
         [HttpPost]
@@ -247,91 +267,121 @@ namespace GameGaraj.WebUI.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            basket.Items ??= new List<Models.Baskets.BasketItemViewModel>();
-            var basketItems = basket.Items;
+            // Köprüleme Mekanizması: Session'dan parent traceparent'ı alıp devam ettir
+            var parentTraceParent = HttpContext.Session.GetString("ParentTraceParent");
+            Activity? paymentActivity = null;
 
-            _logger.LogInformation($"[OrderController] Basket from session:");
-            _logger.LogInformation($"  - UserId: {basket.UserId}");
-            _logger.LogInformation($"  - Items Count: {basketItems.Count}");
-            if (basketItems.Count > 0)
+            if (!string.IsNullOrEmpty(parentTraceParent))
             {
-                foreach (var item in basketItems)
+                HttpContext.Session.Remove("ParentTraceParent");
+                if (ActivityContext.TryParse(parentTraceParent, null, out var parentContext))
                 {
-                    _logger.LogInformation($"    * ProductId: {item.ProductId}, ProductName: '{item.ProductName}', Price: {item.Price}, Qty: {item.Quantity}");
+                    paymentActivity = AppDiagnostics.StartActivity("Process Payment", ActivityKind.Internal, parentContext);
                 }
             }
 
-            // Aktif kampanyayı ve kargo ayarlarını tekrar hesapla ki gerçek ödenecek tutar iyzico'ya gitsin
-            var pricingSnapshot = await BuildOrderPricingSnapshotAsync(basket);
-
-            // Ödeme isteği oluştur
-            var expiration = checkoutInfo.Expiration.Split('/');
-            var paymentRequest = new PaymentRequest
+            if (paymentActivity == null)
             {
-                OrderId = orderId,
-                CardName = checkoutInfo.CardName,
-                CardNumber = checkoutInfo.CardNumber?.Replace(" ", "") ?? string.Empty,
-                ExpireMonth = expiration.Length > 0 ? expiration[0] : "12",
-                ExpireYear = expiration.Length > 1 ? "20" + expiration[1] : "2030",
-                CVV = checkoutInfo.CVV,
-                TotalPrice = pricingSnapshot.TotalPaidAmount,
-                CustomerName = checkoutInfo.CustomerName,
-                CustomerSurname = checkoutInfo.CustomerSurname,
-                CustomerEmail = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value 
-                                ?? User.Claims.FirstOrDefault(c => c.Type == "email")?.Value 
-                                ?? checkoutInfo.CustomerEmail,
-                CustomerPhone = checkoutInfo.CustomerPhone,
-                AddressDetail = $"{checkoutInfo.Street} {checkoutInfo.Line}",
-                City = checkoutInfo.Province,
-                ZipCode = checkoutInfo.ZipCode,
-                Items = basketItems.Select(x => new PaymentItem
-                {
-                    ProductId = x.ProductId,
-                    ProductName = x.ProductName,
-                    Price = x.Price * x.Quantity
-                }).ToList()
-            };
-
-            _logger.LogInformation($"[OrderController] Payment request created:");
-            _logger.LogInformation($"  - OrderId: {paymentRequest.OrderId}");
-            _logger.LogInformation($"  - TotalPrice: {paymentRequest.TotalPrice}");
-            _logger.LogInformation($"  - Customer: {paymentRequest.CustomerName} {paymentRequest.CustomerSurname}");
-            _logger.LogInformation($"  - Email: {paymentRequest.CustomerEmail}");
-            _logger.LogInformation($"  - Items Count: {paymentRequest.Items.Count}");
-            foreach (var item in paymentRequest.Items)
-            {
-                _logger.LogInformation($"    * {item.ProductName} - {item.Price} TL");
+                paymentActivity = AppDiagnostics.StartActivity("Process Payment");
             }
 
-            // Ödeme işlemini gerçekleştir
-            var paymentResult = await _paymentService.ProcessPayment(paymentRequest);
-
-            // Session'ı temizle
-            HttpContext.Session.Remove("CheckoutInfo");
-            HttpContext.Session.Remove("OrderBasket");
-
-            if (paymentResult.Success)
+            using (paymentActivity)
             {
-                // Kupon kullanıldıysa DB'de güncelle
-                var couponCode = HttpContext.Session.GetString("AppliedCouponCode");
-                if (!string.IsNullOrEmpty(couponCode))
+                paymentActivity?.SetTag("order.id", orderId);
+                paymentActivity?.SetTag("user.id", basket.UserId);
+                paymentActivity?.SetTag("saga.step", "PaymentProcessing");
+
+                basket.Items ??= new List<Models.Baskets.BasketItemViewModel>();
+                var basketItems = basket.Items;
+
+                _logger.LogInformation($"[OrderController] Basket from session:");
+                _logger.LogInformation($"  - UserId: {basket.UserId}");
+                _logger.LogInformation($"  - Items Count: {basketItems.Count}");
+                if (basketItems.Count > 0)
                 {
-                    await _campaignService.MarkCouponAsUsedAsync(couponCode);
-                    _logger.LogInformation($"[OrderController] Coupon {couponCode} marked as used in DB.");
+                    foreach (var item in basketItems)
+                    {
+                        _logger.LogInformation($"    * ProductId: {item.ProductId}, ProductName: '{item.ProductName}', Price: {item.Price}, Qty: {item.Quantity}");
+                    }
                 }
-                HttpContext.Session.Remove("AppliedCouponCode");
 
-                // Sepeti temizle
-                await _basketService.DeleteAsync();
-                _logger.LogInformation($"[OrderController] Basket cleared after successful payment");
+                // Aktif kampanyayı ve kargo ayarlarını tekrar hesapla ki gerçek ödenecek tutar iyzico'ya gitsin
+                var pricingSnapshot = await BuildOrderPricingSnapshotAsync(basket);
 
-                return RedirectToAction("Success", new { orderId });
-            }
-            else
-            {
-                ViewBag.Error = paymentResult.Message;
-                ViewBag.OrderId = orderId;
-                return View();
+                // Ödeme isteği oluştur
+                var expiration = checkoutInfo.Expiration.Split('/');
+                var paymentRequest = new PaymentRequest
+                {
+                    OrderId = orderId,
+                    CardName = checkoutInfo.CardName,
+                    CardNumber = checkoutInfo.CardNumber?.Replace(" ", "") ?? string.Empty,
+                    ExpireMonth = expiration.Length > 0 ? expiration[0] : "12",
+                    ExpireYear = expiration.Length > 1 ? "20" + expiration[1] : "2030",
+                    CVV = checkoutInfo.CVV,
+                    TotalPrice = pricingSnapshot.TotalPaidAmount,
+                    CustomerName = checkoutInfo.CustomerName,
+                    CustomerSurname = checkoutInfo.CustomerSurname,
+                    CustomerEmail = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value 
+                                    ?? User.Claims.FirstOrDefault(c => c.Type == "email")?.Value 
+                                    ?? checkoutInfo.CustomerEmail,
+                    CustomerPhone = checkoutInfo.CustomerPhone,
+                    AddressDetail = $"{checkoutInfo.Street} {checkoutInfo.Line}",
+                    City = checkoutInfo.Province,
+                    ZipCode = checkoutInfo.ZipCode,
+                    Items = basketItems.Select(x => new PaymentItem
+                    {
+                        ProductId = x.ProductId,
+                        ProductName = x.ProductName,
+                        Price = x.Price * x.Quantity
+                    }).ToList()
+                };
+
+                _logger.LogInformation($"[OrderController] Payment request created:");
+                _logger.LogInformation($"  - OrderId: {paymentRequest.OrderId}");
+                _logger.LogInformation($"  - TotalPrice: {paymentRequest.TotalPrice}");
+                _logger.LogInformation($"  - Customer: {paymentRequest.CustomerName} {paymentRequest.CustomerSurname}");
+                _logger.LogInformation($"  - Email: {paymentRequest.CustomerEmail}");
+                _logger.LogInformation($"  - Items Count: {paymentRequest.Items.Count}");
+                foreach (var item in paymentRequest.Items)
+                {
+                    _logger.LogInformation($"    * {item.ProductName} - {item.Price} TL");
+                }
+
+                // Ödeme işlemini gerçekleştir
+                var paymentResult = await _paymentService.ProcessPayment(paymentRequest);
+
+                // Session'ı temizle
+                HttpContext.Session.Remove("CheckoutInfo");
+                HttpContext.Session.Remove("OrderBasket");
+
+                if (paymentResult.Success)
+                {
+                    paymentActivity?.SetTag("payment.status", "Success");
+
+                    // Kupon kullanıldıysa DB'de güncelle
+                    var couponCode = HttpContext.Session.GetString("AppliedCouponCode");
+                    if (!string.IsNullOrEmpty(couponCode))
+                    {
+                        await _campaignService.MarkCouponAsUsedAsync(couponCode);
+                        _logger.LogInformation($"[OrderController] Coupon {couponCode} marked as used in DB.");
+                    }
+                    HttpContext.Session.Remove("AppliedCouponCode");
+
+                    // Sepeti temizle
+                    await _basketService.DeleteAsync();
+                    _logger.LogInformation($"[OrderController] Basket cleared after successful payment");
+
+                    return RedirectToAction("Success", new { orderId });
+                }
+                else
+                {
+                    paymentActivity?.SetTag("payment.status", "Failed");
+                    paymentActivity?.SetStatus(ActivityStatusCode.Error, paymentResult.Message);
+
+                    ViewBag.Error = paymentResult.Message;
+                    ViewBag.OrderId = orderId;
+                    return View();
+                }
             }
         }
 

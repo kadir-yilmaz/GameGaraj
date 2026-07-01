@@ -10,6 +10,8 @@ using Iyzipay.Model;
 using Iyzipay.Request;
 using System.Globalization;
 
+using System.Diagnostics;
+using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 
 namespace GameGaraj.Payment.API.Controllers
@@ -68,13 +70,88 @@ namespace GameGaraj.Payment.API.Controllers
                 }
             }
 
-            // 💰 0 TL kontrolü - ücretsiz satın alma (iyzico 0 TL kabul etmiyor)
-            if (paymentDto.TotalPrice <= 0)
+            using (var activity = AppDiagnostics.StartActivity("Call Iyzico"))
             {
-                Console.WriteLine("[PaymentsController] ✅ FREE PURCHASE - Skipping iyzico");
-                _metrics.PaymentSucceeded("Free");
+                activity?.SetTag("order.id", paymentDto.OrderId);
 
-                // PaymentCompleted event publish et - Order status güncellenecek
+                // 💰 0 TL kontrolü - ücretsiz satın alma (iyzico 0 TL kabul etmiyor)
+                if (paymentDto.TotalPrice <= 0)
+                {
+                    activity?.SetTag("payment.provider", "Free");
+                    activity?.SetTag("payment.status", "Success");
+                    activity?.SetTag("payment.id", "FREE-" + paymentDto.OrderId);
+
+                    Console.WriteLine("[PaymentsController] ✅ FREE PURCHASE - Skipping iyzico");
+                    _metrics.PaymentSucceeded("Free");
+
+                    // PaymentCompleted event publish et - Order status güncellenecek
+                    await _publishEndpoint.Publish(new PaymentCompleted
+                    {
+                        OrderId = paymentDto.OrderId,
+                        OrderItems = paymentDto.Items?.Select(x => new OrderItemMessage
+                        {
+                            ProductId = x.ProductId,
+                            Quantity = 1
+                        }).ToList() ?? new List<OrderItemMessage>()
+                    });
+                    Console.WriteLine($"[PaymentsController] 📤 PaymentCompleted event published for FREE OrderId: {paymentDto.OrderId}");
+
+                    // Fatura event'i de gönder
+                    await PublishInvoiceEvent(paymentDto, 0);
+
+                    return Ok(new
+                    {
+                        Success = true,
+                        Message = "Ücretsiz satın alma başarılı",
+                        PaymentId = "FREE-" + paymentDto.OrderId
+                    });
+                }
+
+                activity?.SetTag("payment.provider", "Iyzico");
+
+                // iyzico ödeme isteği oluştur
+                Iyzipay.Model.Payment paymentResult;
+                using (var tracker = _metrics.TrackPayment())
+                {
+                    paymentResult = await ProcessIyzipayPayment(paymentDto);
+                }
+
+                if (paymentResult.Status != "success")
+                {
+                    activity?.SetTag("payment.status", "Failed");
+                    activity?.SetStatus(ActivityStatusCode.Error, paymentResult.ErrorMessage ?? "Ödeme başarısız");
+
+                    Console.WriteLine($"[PaymentsController] ❌ Payment YOLUNDA GITMEDI: {paymentResult.ErrorMessage}");
+                    _metrics.PaymentFailed(paymentResult.ErrorMessage ?? "Payment failed");
+
+                    // 📤 PaymentFailed event publish et - Order status Failed olacak
+                    await _publishEndpoint.Publish(new PaymentFailed
+                    {
+                        OrderId = paymentDto.OrderId,
+                        Reason = paymentResult.ErrorMessage ?? "Ödeme başarısız",
+                        OrderItems = paymentDto.Items?.Select(x => new OrderItemMessage
+                        {
+                            ProductId = x.ProductId,
+                            Quantity = 1
+                        }).ToList() ?? new List<OrderItemMessage>()
+                    });
+                    Console.WriteLine($"[PaymentsController] 📤 PaymentFailed event published for OrderId: {paymentDto.OrderId}");
+
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = "Ödeme başarısız.",
+                        Error = paymentResult.ErrorMessage,
+                        ErrorCode = paymentResult.ErrorCode
+                    });
+                }
+
+                activity?.SetTag("payment.status", "Success");
+                activity?.SetTag("payment.id", paymentResult.PaymentId);
+
+                _metrics.PaymentSucceeded("Iyzipay");
+
+                // 📤 PaymentCompleted event publish et - Order status Completed olacak
                 await _publishEndpoint.Publish(new PaymentCompleted
                 {
                     OrderId = paymentDto.OrderId,
@@ -84,77 +161,19 @@ namespace GameGaraj.Payment.API.Controllers
                         Quantity = 1
                     }).ToList() ?? new List<OrderItemMessage>()
                 });
-                Console.WriteLine($"[PaymentsController] 📤 PaymentCompleted event published for FREE OrderId: {paymentDto.OrderId}");
+                Console.WriteLine($"[PaymentsController] 📤 PaymentCompleted event published for OrderId: {paymentDto.OrderId}");
 
-                // Fatura event'i de gönder
-                await PublishInvoiceEvent(paymentDto, 0);
+                // 📧 Invoice event'i publish et
+                await PublishInvoiceEvent(paymentDto, paymentDto.TotalPrice);
 
+                Console.WriteLine($"[PaymentsController] ✅ Payment SUCCESS - PaymentId: {paymentResult.PaymentId}");
                 return Ok(new
                 {
                     Success = true,
-                    Message = "Ücretsiz satın alma başarılı",
-                    PaymentId = "FREE-" + paymentDto.OrderId
+                    Message = "Ödeme başarılı",
+                    PaymentId = paymentResult.PaymentId
                 });
             }
-
-            // iyzico ödeme isteği oluştur
-            Iyzipay.Model.Payment paymentResult;
-            using (var tracker = _metrics.TrackPayment())
-            {
-                paymentResult = await ProcessIyzipayPayment(paymentDto);
-            }
-
-            if (paymentResult.Status != "success")
-            {
-                Console.WriteLine($"[PaymentsController] ❌ Payment YOLUNDA GITMEDI: {paymentResult.ErrorMessage}");
-                _metrics.PaymentFailed(paymentResult.ErrorMessage ?? "Payment failed");
-
-                // 📤 PaymentFailed event publish et - Order status Failed olacak
-                await _publishEndpoint.Publish(new PaymentFailed
-                {
-                    OrderId = paymentDto.OrderId,
-                    Reason = paymentResult.ErrorMessage ?? "Ödeme başarısız",
-                    OrderItems = paymentDto.Items?.Select(x => new OrderItemMessage
-                    {
-                        ProductId = x.ProductId,
-                        Quantity = 1
-                    }).ToList() ?? new List<OrderItemMessage>()
-                });
-                Console.WriteLine($"[PaymentsController] 📤 PaymentFailed event published for OrderId: {paymentDto.OrderId}");
-
-                return BadRequest(new
-                {
-                    Success = false,
-                    Message = "Ödeme başarısız.",
-                    Error = paymentResult.ErrorMessage,
-                    ErrorCode = paymentResult.ErrorCode
-                });
-            }
-
-            _metrics.PaymentSucceeded("Iyzipay");
-
-            // 📤 PaymentCompleted event publish et - Order status Completed olacak
-            await _publishEndpoint.Publish(new PaymentCompleted
-            {
-                OrderId = paymentDto.OrderId,
-                OrderItems = paymentDto.Items?.Select(x => new OrderItemMessage
-                {
-                    ProductId = x.ProductId,
-                    Quantity = 1
-                }).ToList() ?? new List<OrderItemMessage>()
-            });
-            Console.WriteLine($"[PaymentsController] 📤 PaymentCompleted event published for OrderId: {paymentDto.OrderId}");
-
-            // 📧 Invoice event'i publish et
-            await PublishInvoiceEvent(paymentDto, paymentDto.TotalPrice);
-
-            Console.WriteLine($"[PaymentsController] ✅ Payment SUCCESS - PaymentId: {paymentResult.PaymentId}");
-            return Ok(new
-            {
-                Success = true,
-                Message = "Ödeme başarılı",
-                PaymentId = paymentResult.PaymentId
-            });
         }
 
         private async Task PublishInvoiceEvent(PaymentDto paymentDto, decimal totalPrice)

@@ -1,8 +1,11 @@
+using System.Diagnostics;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using GameGaraj.Order.Domain.Enums;
 using GameGaraj.Order.Infrastructure;
 using GameGaraj.Shared.Events;
+using GameGaraj.Shared.Observability;
+using OpenTelemetry.Trace;
 
 namespace GameGaraj.Order.Application.Consumers
 {
@@ -24,35 +27,46 @@ namespace GameGaraj.Order.Application.Consumers
         {
             Console.WriteLine($"[PaymentCompletedConsumer] Received PaymentCompleted for OrderId: {context.Message.OrderId}");
 
-            var order = await _context.Orders.FirstOrDefaultAsync(x => x.Id == context.Message.OrderId);
-            
-            if (order == null)
+            using (var activity = AppDiagnostics.StartActivity("Complete Saga"))
             {
-                Console.WriteLine($"[PaymentCompletedConsumer] ❌ Order not found: {context.Message.OrderId}");
-                return;
-            }
+                activity?.SetTag("order.id", context.Message.OrderId);
+                activity?.SetTag("saga.step", "CompleteSaga");
+                activity?.SetTag("saga.status", "Completed");
 
-            // Ödeme başarılı, sipariş hazırlanmaya başlasın
-            order.Status = (int)OrderStatus.Completed; // Önce Completed yap (ödeme onayı)
-            await _context.SaveChangesAsync();
-
-            Console.WriteLine($"[PaymentCompletedConsumer] ✅ Order {order.Id} status updated to Completed (Payment confirmed)");
-
-            // 📤 CouponRewardTriggered event publish et
-            try
-            {
-                await _publishEndpoint.Publish(new CouponRewardTriggered
+                var order = await _context.Orders.FirstOrDefaultAsync(x => x.Id == context.Message.OrderId);
+                
+                if (order == null)
                 {
-                    OrderId = order.Id,
-                    UserId = order.BuyerId,
-                    Amount = order.TotalPaidAmount,
-                    PurchaseDate = order.CreatedDate
-                });
-                Console.WriteLine($"[PaymentCompletedConsumer] 📤 CouponRewardTriggered event published for OrderId: {order.Id}, User: {order.BuyerId}, Amount: {order.TotalPaidAmount}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[PaymentCompletedConsumer] ❌ Failed to publish CouponRewardTriggered event: {ex.Message}");
+                    activity?.SetStatus(ActivityStatusCode.Error, $"Order not found: {context.Message.OrderId}");
+                    Console.WriteLine($"[PaymentCompletedConsumer] ❌ Order not found: {context.Message.OrderId}");
+                    return;
+                }
+
+                activity?.SetTag("user.id", order.BuyerId);
+
+                // Ödeme başarılı, sipariş hazırlanmaya başlasın
+                order.Status = (int)OrderStatus.Completed; // Önce Completed yap (ödeme onayı)
+                await _context.SaveChangesAsync();
+
+                Console.WriteLine($"[PaymentCompletedConsumer] ✅ Order {order.Id} status updated to Completed (Payment confirmed)");
+
+                // 📤 CouponRewardTriggered event publish et
+                try
+                {
+                    await _publishEndpoint.Publish(new CouponRewardTriggered
+                    {
+                        OrderId = order.Id,
+                        UserId = order.BuyerId,
+                        Amount = order.TotalPaidAmount,
+                        PurchaseDate = order.CreatedDate
+                    });
+                    Console.WriteLine($"[PaymentCompletedConsumer] 📤 CouponRewardTriggered event published for OrderId: {order.Id}, User: {order.BuyerId}, Amount: {order.TotalPaidAmount}");
+                }
+                catch (Exception ex)
+                {
+                    activity?.RecordException(ex);
+                    Console.WriteLine($"[PaymentCompletedConsumer] ❌ Failed to publish CouponRewardTriggered event: {ex.Message}");
+                }
             }
         }
     }

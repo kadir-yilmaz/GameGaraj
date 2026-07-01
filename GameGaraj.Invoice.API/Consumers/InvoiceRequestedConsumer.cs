@@ -1,9 +1,12 @@
+using System.Diagnostics;
 using MassTransit;
 using GameGaraj.Invoice.API.Models;
 using GameGaraj.Invoice.API.Services;
 using GameGaraj.Shared.Events;
+using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 using System.Threading.Tasks;
+using OpenTelemetry.Trace;
 using System;
 using System.Linq;
 
@@ -34,59 +37,72 @@ namespace GameGaraj.Invoice.API.Consumers
             Console.WriteLine($"[InvoiceRequestedConsumer] Received InvoiceRequested for OrderId: {context.Message.OrderId}");
             Console.WriteLine($"[InvoiceRequestedConsumer] Generating PDF and uploading to MinIO storage...");
 
-            _metrics.InvoiceGenerated();
-
-            var invoiceData = new InvoiceData
+            using (var activity = AppDiagnostics.StartActivity("Create Invoice"))
             {
-                OrderId = context.Message.OrderId,
-                CustomerName = context.Message.CustomerName,
-                CustomerEmail = context.Message.CustomerEmail,
-                OrderDate = context.Message.OrderDate,
-                TotalPrice = context.Message.TotalPrice,
-                Items = context.Message.Items.Select(x => new InvoiceItem
-                {
-                    ProductName = x.ProductName,
-                    Price = x.Price
-                }).ToList()
-            };
+                activity?.SetTag("order.id", context.Message.OrderId);
+                activity?.SetTag("saga.step", "InvoiceCreation");
 
-            try
-            {
-                byte[] pdfBytes;
-                using (_metrics.TrackGeneration())
+                _metrics.InvoiceGenerated();
+
+                var invoiceData = new InvoiceData
                 {
-                    pdfBytes = _pdfGenerator.GenerateInvoicePdf(invoiceData);
+                    OrderId = context.Message.OrderId,
+                    CustomerName = context.Message.CustomerName,
+                    CustomerEmail = context.Message.CustomerEmail,
+                    OrderDate = context.Message.OrderDate,
+                    TotalPrice = context.Message.TotalPrice,
+                    Items = context.Message.Items.Select(x => new InvoiceItem
+                    {
+                        ProductName = x.ProductName,
+                        Price = x.Price
+                    }).ToList()
+                };
+
+                try
+                {
+                    byte[] pdfBytes;
+                    using (_metrics.TrackGeneration())
+                    {
+                        pdfBytes = _pdfGenerator.GenerateInvoicePdf(invoiceData);
+                    }
+
+                    // Upload to MinIO Storage
+                    var fileName = $"INV-{invoiceData.OrderId:D6}.pdf";
+                    var relativePath = await _storageService.UploadFileAsync(pdfBytes, fileName, "application/pdf", context.CancellationToken);
+
+                    Console.WriteLine($"[InvoiceRequestedConsumer] ✅ PDF generated and uploaded to: {relativePath}");
+                    
+                    activity?.SetTag("invoice.id", $"INV-{invoiceData.OrderId:D6}");
+                    activity?.SetTag("saga.status", "Success");
+
+                    // Generate HTML mail content
+                    var emailBody = GenerateInvoiceEmailBody(invoiceData, relativePath);
+
+                    // Publish SendNotification event via MassTransit
+                    await context.Publish(new SendNotification
+                    {
+                        Recipient = context.Message.CustomerEmail,
+                        Type = "Email",
+                        Title = $"GameGaraj - Sipariş Faturası #{invoiceData.OrderId}",
+                        Body = emailBody,
+                        AttachmentPath = relativePath,
+                        AttachmentName = $"GameGaraj-Fatura-{invoiceData.InvoiceNumber}.pdf"
+                    });
+
+                    Console.WriteLine($"[InvoiceRequestedConsumer] 📧 SendNotification event published for OrderId: {invoiceData.OrderId}");
+                    _metrics.EmailSent();
                 }
-
-                // Upload to MinIO Storage
-                var fileName = $"INV-{invoiceData.OrderId:D6}.pdf";
-                var relativePath = await _storageService.UploadFileAsync(pdfBytes, fileName, "application/pdf", context.CancellationToken);
-
-                Console.WriteLine($"[InvoiceRequestedConsumer] ✅ PDF generated and uploaded to: {relativePath}");
-
-                // Generate HTML mail content
-                var emailBody = GenerateInvoiceEmailBody(invoiceData, relativePath);
-
-                // Publish SendNotification event via MassTransit
-                await context.Publish(new SendNotification
+                catch (Exception ex)
                 {
-                    Recipient = context.Message.CustomerEmail,
-                    Type = "Email",
-                    Title = $"GameGaraj - Sipariş Faturası #{invoiceData.OrderId}",
-                    Body = emailBody,
-                    AttachmentPath = relativePath,
-                    AttachmentName = $"GameGaraj-Fatura-{invoiceData.InvoiceNumber}.pdf"
-                });
+                    activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                    activity?.SetTag("saga.status", "Failed");
+                    activity?.RecordException(ex);
 
-                Console.WriteLine($"[InvoiceRequestedConsumer] 📧 SendNotification event published for OrderId: {invoiceData.OrderId}");
-                _metrics.EmailSent();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[InvoiceRequestedConsumer] ❌ Invoice generation or notification publish failed: {ex.Message}");
-                Console.WriteLine(ex.StackTrace);
-                _metrics.EmailFailed();
-                throw;
+                    Console.WriteLine($"[InvoiceRequestedConsumer] ❌ Invoice generation or notification publish failed: {ex.Message}");
+                    Console.WriteLine(ex.StackTrace);
+                    _metrics.EmailFailed();
+                    throw;
+                }
             }
         }
 
