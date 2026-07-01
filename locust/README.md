@@ -15,6 +15,14 @@ Locust klasörü içerisinde şu betiği çalıştırın:
 ```
 Sonrasında tarayıcınızdan `http://localhost:8089` adresine girerek senaryoyu, kullanıcı sayısını ve hedef gateway adresinizi girip testi ateşleyebilirsiniz.
 
+Tek process ile daha düşük overhead isteyen canlı testlerde headless mod kullanılabilir:
+
+```powershell
+./run-locust.ps1 -Headless -Users 10000 -SpawnRate 20 -RunTime 30m -StartSpread 600 -PaceMultiplier 20 -SkipInstall
+```
+
+Bu mod web arayüzü açmaz ve tek Python process içinde çalışır. `PaceMultiplier` yükseldikçe aynı kullanıcı sayısı daha sakin istek üretir.
+
 ## Önerilen Canlı Senaryo
 
 Canlı sistemde gerçek kullanıcı davranışına en yakın ve test makinesini daha az yoran seçenek:
@@ -24,6 +32,7 @@ Canlı sistemde gerçek kullanıcı davranışına en yakın ve test makinesini 
 * **Users:** 100
 * **Spawn rate:** 2 veya 5
 * **Start spread:** 60
+* **Pace multiplier:** 1
 
 Bu senaryoda her kullanıcı:
 
@@ -36,7 +45,7 @@ Bu senaryoda her kullanıcı:
 7. Sepeti tekrar kontrol eder.
 8. Kısa bir ürün gezintisi daha yapıp bekler.
 
-İnsan davranışı taklidi için ilk aksiyon 0-60 saniyeye yayılır ve akış içinde 1-6 saniye arası beklemeler vardır. Bu yüzden aynı kullanıcı sayısında eski rastgele endpoint testine göre daha düşük ama daha gerçekçi RPS üretir.
+İnsan davranışı taklidi için ilk aksiyon 0-60 saniyeye yayılır ve akış içinde beklemeler vardır. `PaceMultiplier` bu beklemeleri çarpar; 10k kullanıcı ile sakin test için 15-25 aralığı iyi başlangıçtır.
 
 Yerel makinede Locust worker CPU'su yükselirse distributed script'i 2 worker ile başlatın:
 

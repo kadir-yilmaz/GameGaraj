@@ -41,6 +41,14 @@ def _(parser):
         include_in_web_ui=True,
         help="Realistic shopper kullanicilarinin ilk aksiyonunu kac saniyeye yayacagini belirler."
     )
+    parser.add_argument(
+        "--pace-multiplier",
+        type=float,
+        env_var="LOCUST_PACE_MULTIPLIER",
+        default=1.0,
+        include_in_web_ui=True,
+        help="Realistic shopper bekleme surelerini carpar. 10k sakin test icin 15-25 arasi kullanin."
+    )
 
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
@@ -61,6 +69,7 @@ class GameGarajUser(FastHttpUser):
         }
 
         self.scenario = self.environment.parsed_options.scenario
+        self.pace_multiplier = max(self.environment.parsed_options.pace_multiplier, 0.1)
         if self.scenario == "realistic_shopper":
             self.scenario_ops = []
             self.scenario_weights = []
@@ -71,7 +80,7 @@ class GameGarajUser(FastHttpUser):
         self.first_realistic_journey = True
 
     def think(self, minimum=0.8, maximum=2.5):
-        sleep(random.uniform(minimum, maximum))
+        sleep(random.uniform(minimum, maximum) * self.pace_multiplier)
 
     def realistic_shopper_journey(self):
         if self.first_realistic_journey:
