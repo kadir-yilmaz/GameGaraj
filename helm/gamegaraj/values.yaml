@@ -199,7 +199,7 @@ services:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
-      APP_VERSION: "59b4804-121-1"
+      APP_VERSION: "22c5ca8-122-1"
       OpenTelemetry__OtlpEndpoint: "http://192.168.1.56:4317"
       ObservabilitySettings__ElasticSearchUri: "http://192.168.1.56:9201"
       ObservabilitySettings__Services__Gateway: "http://gateway:8080"
