@@ -1,0 +1,171 @@
+name: GHCR Cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep_count:
+        description: Number of newest versions to keep per package
+        required: true
+        default: "10"
+      dry_run:
+        description: Show what would be deleted without deleting
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+  schedule:
+    - cron: "0 3 * * 0"
+
+concurrency:
+  group: gamegaraj-ghcr-cleanup
+  cancel-in-progress: false
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    name: Keep Latest GHCR Versions
+    runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OWNER: ${{ github.repository_owner }}
+      KEEP_COUNT: ${{ github.event.inputs.keep_count || '10' }}
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+      SERVICES: >-
+        gateway
+        catalog-api
+        review-api
+        photostock-api
+        basket-api
+        order-api
+        payment-api
+        invoice-api
+        notification-api
+        campaign-api
+        webui
+
+    steps:
+      - name: Cleanup old GHCR package versions
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import time
+          import urllib.parse
+          import urllib.request
+          import urllib.error
+
+          owner = os.environ["OWNER"]
+          token = os.environ["GH_TOKEN"]
+          keep_count = int(os.environ["KEEP_COUNT"])
+          dry_run = os.environ["DRY_RUN"].lower() == "true"
+          services = os.environ["SERVICES"].split()
+
+          if keep_count < 1:
+              print("::error::KEEP_COUNT must be at least 1.", file=sys.stderr)
+              sys.exit(1)
+
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+          }
+
+          def request(method, url):
+              req = urllib.request.Request(url, method=method, headers=headers)
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as response:
+                      body = response.read().decode("utf-8")
+                      return response.status, json.loads(body) if body else None
+              except urllib.error.HTTPError as exc:
+                  body = exc.read().decode("utf-8", errors="replace")
+                  return exc.code, body
+
+          def list_versions(package_name):
+              encoded_package = urllib.parse.quote(package_name, safe="")
+              versions = []
+
+              for owner_kind in ("users", "orgs"):
+                  page = 1
+                  versions.clear()
+
+                  while True:
+                      url = (
+                          f"https://api.github.com/{owner_kind}/{owner}/packages/container/"
+                          f"{encoded_package}/versions?per_page=100&page={page}"
+                      )
+                      status, payload = request("GET", url)
+
+                      if status == 404:
+                          break
+                      if status >= 400:
+                          print(f"::error::Failed to list {package_name}: HTTP {status} {payload}", file=sys.stderr)
+                          sys.exit(1)
+
+                      if not payload:
+                          return owner_kind, versions
+
+                      versions.extend(payload)
+                      if len(payload) < 100:
+                          return owner_kind, versions
+
+                      page += 1
+
+              return None, []
+
+          def delete_version(owner_kind, package_name, version_id):
+              encoded_package = urllib.parse.quote(package_name, safe="")
+              url = (
+                  f"https://api.github.com/{owner_kind}/{owner}/packages/container/"
+                  f"{encoded_package}/versions/{version_id}"
+              )
+              return request("DELETE", url)
+
+          for service in services:
+              package_name = f"gamegaraj/{service}"
+              owner_kind, versions = list_versions(package_name)
+
+              if owner_kind is None:
+                  print(f"Package not found, skipping: {package_name}")
+                  continue
+
+              tagged_versions = [
+                  version for version in versions
+                  if version.get("metadata", {}).get("container", {}).get("tags")
+              ]
+              tagged_versions.sort(key=lambda version: version.get("created_at", ""), reverse=True)
+
+              deletable = tagged_versions[keep_count:]
+              print(
+                  f"{package_name}: total tagged versions={len(tagged_versions)}, "
+                  f"keeping={min(keep_count, len(tagged_versions))}, deleting={len(deletable)}"
+              )
+
+              for version in deletable:
+                  version_id = version["id"]
+                  tags = ", ".join(version.get("metadata", {}).get("container", {}).get("tags", []))
+                  created_at = version.get("created_at", "unknown")
+
+                  if dry_run:
+                      print(f"  DRY RUN delete id={version_id} created_at={created_at} tags=[{tags}]")
+                      continue
+
+                  status, payload = delete_version(owner_kind, package_name, version_id)
+                  if status not in (202, 204):
+                      print(
+                          f"::error::Failed to delete {package_name} version {version_id}: "
+                          f"HTTP {status} {payload}",
+                          file=sys.stderr,
+                      )
+                      sys.exit(1)
+
+                  print(f"  Deleted id={version_id} created_at={created_at} tags=[{tags}]")
+                  time.sleep(0.2)
+          PY

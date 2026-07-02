@@ -64,6 +64,10 @@ spec:
               value: {{ $.Values.global.otlpEndpoint | quote }}
             - name: OpenTelemetry__SamplingRatio
               value: {{ $.Values.global.otlpSamplingRatio | quote }}
+            - name: OpenTelemetry__IncludeDatabaseSpans
+              value: {{ $.Values.global.otlpIncludeDatabaseSpans | quote }}
+            - name: OpenTelemetry__SuppressLowValueManualSpans
+              value: {{ $.Values.global.otlpSuppressLowValueManualSpans | quote }}
             {{- end }}
             {{- if $svc.env }}
             {{- range $envKey, $envVal := $svc.env }}

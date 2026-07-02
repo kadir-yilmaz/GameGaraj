@@ -60,11 +60,18 @@ namespace GameGaraj.Shared.Logging
             if (!string.IsNullOrEmpty(elasticUri))
             {
                 loggerConfig.WriteTo.Logger(logs => logs
-                    .Filter.ByIncludingOnly(IsHttpRequestLog)
+                    .Filter.ByIncludingOnly(IsSearchableLog)
                     .Enrich.With<RequestLogPropertyPruner>()
                     .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticUri))
                     {
                         AutoRegisterTemplate = true,
+                        AutoRegisterTemplateVersion = AutoRegisterTemplateVersion.ESv7,
+                        DetectElasticsearchVersion = true,
+                        EmitEventFailure = EmitEventFailureHandling.WriteToSelfLog |
+                                           EmitEventFailureHandling.RaiseCallback,
+                        FailureCallback = (evt, ex) =>
+                            Console.Error.WriteLine($"Unable to submit log event to Elasticsearch: {evt.MessageTemplate}. {ex.Message}"),
+                        RegisterTemplateFailure = RegisterTemplateRecovery.IndexAnyway,
                         IndexFormat = $"gamegaraj-logs-{serviceSlug}-{environmentSlug}",
                         NumberOfReplicas = 0,
                         NumberOfShards = 1
@@ -73,6 +80,11 @@ namespace GameGaraj.Shared.Logging
 
             Log.Logger = loggerConfig.CreateLogger();
             builder.Host.UseSerilog();
+        }
+
+        private static bool IsSearchableLog(LogEvent evt)
+        {
+            return IsHttpRequestLog(evt) || evt.Level >= LogEventLevel.Warning;
         }
 
         private static bool IsHttpRequestLog(LogEvent evt)

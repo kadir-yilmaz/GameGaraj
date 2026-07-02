@@ -31,6 +31,7 @@ namespace GameGaraj.Shared.Observability
             var samplingRatio = builder.Configuration.GetValue<double?>("OpenTelemetry:SamplingRatio")
                                 ?? defaultSamplingRatio;
             samplingRatio = Math.Clamp(samplingRatio, 0.0, 1.0);
+            var includeDatabaseSpans = builder.Configuration.GetValue<bool?>("OpenTelemetry:IncludeDatabaseSpans") ?? false;
 
             // Resource — shared identity for all telemetry signals
             var resourceBuilder = ResourceBuilder.CreateDefault()
@@ -121,18 +122,23 @@ namespace GameGaraj.Shared.Observability
                                 return true;
                             };
                         })
-                        .AddEntityFrameworkCoreInstrumentation(opts =>
-                        {
-                            opts.SetDbStatementForText = true;
-                        })
-                        .AddSqlClientInstrumentation(opts =>
-                        {
-                            opts.SetDbStatementForText = true;
-                            opts.RecordException = true;
-                        })
                         .AddSource(serviceName)
                         .AddSource($"{serviceName}.*")
                         .AddSource("MassTransit");
+
+                    if (includeDatabaseSpans)
+                    {
+                        tracing
+                            .AddEntityFrameworkCoreInstrumentation(opts =>
+                            {
+                                opts.SetDbStatementForText = true;
+                            })
+                            .AddSqlClientInstrumentation(opts =>
+                            {
+                                opts.SetDbStatementForText = true;
+                                opts.RecordException = true;
+                            });
+                    }
 
                     // OTLP exporter (Jaeger) — only if endpoint is configured
                     if (!string.IsNullOrEmpty(otlpEndpoint) && otlpEndpoint != "disabled")
