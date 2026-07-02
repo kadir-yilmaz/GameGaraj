@@ -85,15 +85,22 @@ namespace GameGaraj.Payment.API.Controllers
                     _metrics.PaymentSucceeded("Free");
 
                     // PaymentCompleted event publish et - Order status güncellenecek
-                    await _publishEndpoint.Publish(new PaymentCompleted
+                    using (var freePublishCompletedActivity = AppDiagnostics.StartActivity("Publish PaymentCompleted"))
                     {
-                        OrderId = paymentDto.OrderId,
-                        OrderItems = paymentDto.Items?.Select(x => new OrderItemMessage
+                        freePublishCompletedActivity?.SetTag("order.id", paymentDto.OrderId);
+                        freePublishCompletedActivity?.SetTag("payment.status", "Success");
+                        freePublishCompletedActivity?.SetTag("messaging.destination", "PaymentCompleted");
+
+                        await _publishEndpoint.Publish(new PaymentCompleted
                         {
-                            ProductId = x.ProductId,
-                            Quantity = 1
-                        }).ToList() ?? new List<OrderItemMessage>()
-                    });
+                            OrderId = paymentDto.OrderId,
+                            OrderItems = paymentDto.Items?.Select(x => new OrderItemMessage
+                            {
+                                ProductId = x.ProductId,
+                                Quantity = 1
+                            }).ToList() ?? new List<OrderItemMessage>()
+                        });
+                    }
                     Console.WriteLine($"[PaymentsController] 📤 PaymentCompleted event published for FREE OrderId: {paymentDto.OrderId}");
 
                     // Fatura event'i de gönder
@@ -125,6 +132,11 @@ namespace GameGaraj.Payment.API.Controllers
                     _metrics.PaymentFailed(paymentResult.ErrorMessage ?? "Payment failed");
 
                     // 📤 PaymentFailed event publish et - Order status Failed olacak
+                    using var publishFailedActivity = AppDiagnostics.StartActivity("Publish PaymentFailed");
+                    publishFailedActivity?.SetTag("order.id", paymentDto.OrderId);
+                    publishFailedActivity?.SetTag("payment.status", "Failed");
+                    publishFailedActivity?.SetTag("messaging.destination", "PaymentFailed");
+
                     await _publishEndpoint.Publish(new PaymentFailed
                     {
                         OrderId = paymentDto.OrderId,
@@ -152,15 +164,23 @@ namespace GameGaraj.Payment.API.Controllers
                 _metrics.PaymentSucceeded("Iyzipay");
 
                 // 📤 PaymentCompleted event publish et - Order status Completed olacak
-                await _publishEndpoint.Publish(new PaymentCompleted
+                using (var successPublishCompletedActivity = AppDiagnostics.StartActivity("Publish PaymentCompleted"))
                 {
-                    OrderId = paymentDto.OrderId,
-                    OrderItems = paymentDto.Items?.Select(x => new OrderItemMessage
+                    successPublishCompletedActivity?.SetTag("order.id", paymentDto.OrderId);
+                    successPublishCompletedActivity?.SetTag("payment.status", "Success");
+                    successPublishCompletedActivity?.SetTag("payment.id", paymentResult.PaymentId);
+                    successPublishCompletedActivity?.SetTag("messaging.destination", "PaymentCompleted");
+
+                    await _publishEndpoint.Publish(new PaymentCompleted
                     {
-                        ProductId = x.ProductId,
-                        Quantity = 1
-                    }).ToList() ?? new List<OrderItemMessage>()
-                });
+                        OrderId = paymentDto.OrderId,
+                        OrderItems = paymentDto.Items?.Select(x => new OrderItemMessage
+                        {
+                            ProductId = x.ProductId,
+                            Quantity = 1
+                        }).ToList() ?? new List<OrderItemMessage>()
+                    });
+                }
                 Console.WriteLine($"[PaymentsController] 📤 PaymentCompleted event published for OrderId: {paymentDto.OrderId}");
 
                 // 📧 Invoice event'i publish et
@@ -178,6 +198,12 @@ namespace GameGaraj.Payment.API.Controllers
 
         private async Task PublishInvoiceEvent(PaymentDto paymentDto, decimal totalPrice)
         {
+            using var activity = AppDiagnostics.StartActivity("Publish InvoiceRequested");
+            activity?.SetTag("order.id", paymentDto.OrderId);
+            activity?.SetTag("invoice.total", totalPrice);
+            activity?.SetTag("invoice.items.count", paymentDto.Items?.Count ?? 0);
+            activity?.SetTag("messaging.destination", "InvoiceRequested");
+
             var invoiceEvent = new InvoiceRequested
             {
                 OrderId = paymentDto.OrderId,
@@ -198,6 +224,11 @@ namespace GameGaraj.Payment.API.Controllers
 
         private async Task<Iyzipay.Model.Payment> ProcessIyzipayPayment(PaymentDto dto)
         {
+            using var buildRequestActivity = AppDiagnostics.StartActivity("Build Iyzico Request");
+            buildRequestActivity?.SetTag("order.id", dto.OrderId);
+            buildRequestActivity?.SetTag("payment.total", dto.TotalPrice);
+            buildRequestActivity?.SetTag("payment.items.count", dto.Items?.Count ?? 0);
+
             var request = new CreatePaymentRequest
             {
                 Locale = Locale.TR.ToString(),
@@ -300,7 +331,22 @@ namespace GameGaraj.Payment.API.Controllers
                 Console.WriteLine($"    * {item.Name} - {item.Price} TL");
             }
 
-            var result = await Task.Run(() => Iyzipay.Model.Payment.Create(request, _iyzipayOptions));
+            Iyzipay.Model.Payment result;
+            using (var providerActivity = AppDiagnostics.StartActivity("Send Iyzico Payment"))
+            {
+                providerActivity?.SetTag("order.id", dto.OrderId);
+                providerActivity?.SetTag("payment.provider", "Iyzico");
+                providerActivity?.SetTag("payment.total", dto.TotalPrice);
+
+                result = await Task.Run(() => Iyzipay.Model.Payment.Create(request, _iyzipayOptions));
+
+                providerActivity?.SetTag("payment.status", result.Status);
+                if (result.Status != "success")
+                {
+                    providerActivity?.SetTag("payment.error_code", result.ErrorCode);
+                    providerActivity?.SetStatus(ActivityStatusCode.Error, result.ErrorMessage ?? "Iyzico payment failed");
+                }
+            }
 
             Console.WriteLine($"[PaymentsController] Iyzico Response:");
             Console.WriteLine($"  - Status: {result.Status}");

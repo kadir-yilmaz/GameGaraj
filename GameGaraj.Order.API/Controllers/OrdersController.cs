@@ -7,6 +7,7 @@ using GameGaraj.Order.Application.Mapping;
 using GameGaraj.Order.Domain.Entities;
 using GameGaraj.Order.Domain.Enums;
 using GameGaraj.Order.Infrastructure;
+using GameGaraj.Shared.Observability;
 
 namespace GameGaraj.Order.API.Controllers
 {
@@ -230,8 +231,17 @@ namespace GameGaraj.Order.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateOrder(CreateOrderCommand command)
         {
+            using var activity = AppDiagnostics.StartActivity("Order API Create Order");
+            activity?.SetTag("user.id", command.BuyerId);
+            activity?.SetTag("order.items.count", command.OrderItems?.Count ?? 0);
+            activity?.SetTag("order.total_paid", command.TotalPaidAmount);
+
             Console.WriteLine($"[OrdersController] POST CreateOrder called via Mediator. BuyerId: {command.BuyerId}");
             var result = await _mediator.Send(command);
+
+            activity?.SetTag("order.id", result);
+            activity?.SetTag("saga.step", "OrderCreated");
+
             return Ok(result);
         }
     }

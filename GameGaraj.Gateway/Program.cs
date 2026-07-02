@@ -1,6 +1,8 @@
 using GameGaraj.Gateway.Extensions;
 using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
+using System.Diagnostics;
+using Yarp.ReverseProxy.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +15,28 @@ builder.AddSerilogLogging("Gateway");
 // OpenTelemetry (Tracing + Metrics)
 builder.AddObservability(ObservabilityConstants.GatewayService);
 
-builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+builder.Services.AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
+    .AddTransforms(transformBuilderContext =>
+    {
+        transformBuilderContext.AddRequestTransform(transformContext =>
+        {
+            var activity = Activity.Current;
+            if (activity != null && !string.IsNullOrWhiteSpace(activity.Id))
+            {
+                transformContext.ProxyRequest.Headers.Remove("traceparent");
+                transformContext.ProxyRequest.Headers.TryAddWithoutValidation("traceparent", activity.Id);
+
+                if (!string.IsNullOrWhiteSpace(activity.TraceStateString))
+                {
+                    transformContext.ProxyRequest.Headers.Remove("tracestate");
+                    transformContext.ProxyRequest.Headers.TryAddWithoutValidation("tracestate", activity.TraceStateString);
+                }
+            }
+
+            return ValueTask.CompletedTask;
+        });
+    });
 
 builder.Services.AddAuthenticationAndAuthorizationExt(builder.Configuration);
 

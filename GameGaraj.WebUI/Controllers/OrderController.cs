@@ -157,8 +157,35 @@ namespace GameGaraj.WebUI.Controllers
                 activity?.SetTag("saga.status", "Started");
 
                 // Sipariş oluştur
-                var pricingSnapshot = await BuildOrderPricingSnapshotAsync(orderBasket);
-                var orderResult = await _orderService.CreateOrder(checkoutInfoInput, pricingSnapshot);
+                OrderPricingSnapshot pricingSnapshot;
+                using (var pricingActivity = AppDiagnostics.StartActivity("Build Order Pricing Snapshot"))
+                {
+                    pricingActivity?.SetTag("user.id", orderBasket.UserId);
+                    pricingActivity?.SetTag("basket.items.count", orderBasket.Items?.Count ?? 0);
+
+                    pricingSnapshot = await BuildOrderPricingSnapshotAsync(orderBasket);
+
+                    pricingActivity?.SetTag("order.original_total", pricingSnapshot.OriginalTotalAmount);
+                    pricingActivity?.SetTag("order.total_paid", pricingSnapshot.TotalPaidAmount);
+                    pricingActivity?.SetTag("order.campaign_discount", pricingSnapshot.CampaignDiscountAmount);
+                    pricingActivity?.SetTag("order.shipping_fee", pricingSnapshot.ShippingFee);
+                }
+
+                OrderCreatedViewModel orderResult;
+                using (var orderApiActivity = AppDiagnostics.StartActivity("Call Order API"))
+                {
+                    orderApiActivity?.SetTag("user.id", orderBasket.UserId);
+                    orderApiActivity?.SetTag("order.total_paid", pricingSnapshot.TotalPaidAmount);
+
+                    orderResult = await _orderService.CreateOrder(checkoutInfoInput, pricingSnapshot);
+
+                    orderApiActivity?.SetTag("order.id", orderResult.OrderId);
+                    orderApiActivity?.SetTag("order.created", orderResult.IsSuccessful);
+                    if (!orderResult.IsSuccessful)
+                    {
+                        orderApiActivity?.SetStatus(ActivityStatusCode.Error, orderResult.Error);
+                    }
+                }
 
                 if (!orderResult.IsSuccessful)
                 {
@@ -306,7 +333,19 @@ namespace GameGaraj.WebUI.Controllers
                 }
 
                 // Aktif kampanyayı ve kargo ayarlarını tekrar hesapla ki gerçek ödenecek tutar iyzico'ya gitsin
-                var pricingSnapshot = await BuildOrderPricingSnapshotAsync(basket);
+                OrderPricingSnapshot pricingSnapshot;
+                using (var pricingActivity = AppDiagnostics.StartActivity("Build Payment Pricing Snapshot"))
+                {
+                    pricingActivity?.SetTag("order.id", orderId);
+                    pricingActivity?.SetTag("user.id", basket.UserId);
+                    pricingActivity?.SetTag("basket.items.count", basketItems.Count);
+
+                    pricingSnapshot = await BuildOrderPricingSnapshotAsync(basket);
+
+                    pricingActivity?.SetTag("payment.total", pricingSnapshot.TotalPaidAmount);
+                    pricingActivity?.SetTag("payment.shipping_fee", pricingSnapshot.ShippingFee);
+                    pricingActivity?.SetTag("payment.discount_total", pricingSnapshot.CampaignDiscountAmount + pricingSnapshot.CouponDiscountAmount);
+                }
 
                 // Ödeme isteği oluştur
                 var expiration = checkoutInfo.Expiration.Split('/');
@@ -336,6 +375,14 @@ namespace GameGaraj.WebUI.Controllers
                     }).ToList()
                 };
 
+                using (var requestActivity = AppDiagnostics.StartActivity("Build Payment Request"))
+                {
+                    requestActivity?.SetTag("order.id", orderId);
+                    requestActivity?.SetTag("payment.total", paymentRequest.TotalPrice);
+                    requestActivity?.SetTag("payment.items.count", paymentRequest.Items.Count);
+                    requestActivity?.SetTag("payment.provider", "Iyzico");
+                }
+
                 _logger.LogInformation($"[OrderController] Payment request created:");
                 _logger.LogInformation($"  - OrderId: {paymentRequest.OrderId}");
                 _logger.LogInformation($"  - TotalPrice: {paymentRequest.TotalPrice}");
@@ -348,7 +395,20 @@ namespace GameGaraj.WebUI.Controllers
                 }
 
                 // Ödeme işlemini gerçekleştir
-                var paymentResult = await _paymentService.ProcessPayment(paymentRequest);
+                PaymentResult paymentResult;
+                using (var paymentApiActivity = AppDiagnostics.StartActivity("Call Payment API"))
+                {
+                    paymentApiActivity?.SetTag("order.id", orderId);
+                    paymentApiActivity?.SetTag("payment.total", paymentRequest.TotalPrice);
+
+                    paymentResult = await _paymentService.ProcessPayment(paymentRequest);
+
+                    paymentApiActivity?.SetTag("payment.status", paymentResult.Success ? "Success" : "Failed");
+                    if (!paymentResult.Success)
+                    {
+                        paymentApiActivity?.SetStatus(ActivityStatusCode.Error, paymentResult.Message);
+                    }
+                }
 
                 // Session'ı temizle
                 HttpContext.Session.Remove("CheckoutInfo");

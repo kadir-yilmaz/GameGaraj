@@ -144,15 +144,33 @@ namespace GameGaraj.Order.Application.Handlers
                 SortOrder = sortOrder++
             });
 
-            using (var activity = AppDiagnostics.StartActivity("Save Order"))
+            using (var activity = AppDiagnostics.StartActivity("Build Order Aggregate"))
             {
                 activity?.SetTag("user.id", request.BuyerId);
-                activity?.SetTag("saga.step", "SaveOrder");
+                activity?.SetTag("order.items.count", newOrder.OrderItems.Count);
+                activity?.SetTag("order.ledger.rows", newOrder.OrderPricingLedgers.Count);
+                activity?.SetTag("order.original_total", request.OriginalTotalAmount);
+                activity?.SetTag("order.total_paid", request.TotalPaidAmount);
+                activity?.SetTag("saga.step", "BuildOrderAggregate");
+            }
+
+            using (var activity = AppDiagnostics.StartActivity("Persist Order"))
+            {
+                activity?.SetTag("user.id", request.BuyerId);
+                activity?.SetTag("saga.step", "PersistOrder");
 
                 _context.Orders.Add(newOrder);
                 await _context.SaveChangesAsync(cancellationToken);
 
                 activity?.SetTag("order.id", newOrder.Id);
+            }
+
+            using (var activity = AppDiagnostics.StartActivity("Publish OrderStarted"))
+            {
+                activity?.SetTag("order.id", newOrder.Id);
+                activity?.SetTag("saga.step", "ReserveStockRequested");
+                activity?.SetTag("messaging.destination", "OrderStarted");
+                activity?.SetTag("order.items.count", newOrder.OrderItems.Count);
 
                 // Publish OrderStarted event to initiate stock reservation in Catalog API
                 await _publishEndpoint.Publish<OrderStarted>(new OrderStarted

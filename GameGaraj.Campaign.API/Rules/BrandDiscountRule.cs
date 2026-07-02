@@ -11,7 +11,7 @@ namespace GameGaraj.Campaign.API.Rules
 
         public CalculateDiscountResponse? Calculate(CalculateDiscountRequest request, CampaignRule rule)
         {
-            if (rule.DiscountRate == null)
+            if (rule.DiscountRate == null && rule.FixedDiscount == null)
                 return null;
 
             var ruleProductId = rule.ProductId?.Trim();
@@ -52,16 +52,27 @@ namespace GameGaraj.Campaign.API.Rules
             if (!matchedItems.Any())
                 return null;
 
-            var discountRate = rule.DiscountRate.Value / 100m;
             var originalTotal = request.Items.Sum(i => i.UnitPrice * i.Quantity);
             var matchedProductIds = matchedItems.Select(m => m.ProductId).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             var details = request.Items.Select(item =>
             {
                 var lineTotal = item.UnitPrice * item.Quantity;
-                var itemDiscount = matchedProductIds.Contains(item.ProductId)
-                    ? Math.Round(lineTotal * discountRate, 2)
-                    : 0m;
+                var itemDiscount = 0m;
+
+                if (matchedProductIds.Contains(item.ProductId))
+                {
+                    if (rule.DiscountRate.HasValue && rule.DiscountRate.Value > 0)
+                    {
+                        var discountRate = rule.DiscountRate.Value / 100m;
+                        itemDiscount = Math.Round(lineTotal * discountRate, 2);
+                    }
+                    else if (rule.FixedDiscount.HasValue && rule.FixedDiscount.Value > 0)
+                    {
+                        var fixedLineDiscount = rule.FixedDiscount.Value * item.Quantity;
+                        itemDiscount = Math.Min(lineTotal, fixedLineDiscount);
+                    }
+                }
 
                 return new DiscountDetail
                 {
