@@ -36,6 +36,7 @@ jobs:
 
     env:
       BUILD_SERVICE: ${{ github.event.inputs.service || 'all' }}
+      KUBECONFIG: /home/kadirserver/.kube/config
 
     steps:
       - name: Checkout Code
@@ -117,8 +118,10 @@ jobs:
           set -euo pipefail
 
           SHORT_SHA=$(git rev-parse --short HEAD)
-          echo "Image tag: $SHORT_SHA"
+          DEPLOY_TAG="${SHORT_SHA}-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          echo "Image tag: $DEPLOY_TAG"
           echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
+          echo "DEPLOY_TAG=$DEPLOY_TAG" >> "$GITHUB_ENV"
 
           SERVICES_TO_BUILD=""
           if [ "${{ steps.filter.outputs.build_gateway }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD gateway"; fi
@@ -138,7 +141,7 @@ jobs:
             echo "SKIP_TAG_UPDATE=true" >> "$GITHUB_ENV"
           else
             echo "Building services: $SERVICES_TO_BUILD"
-            IMAGE_TAG="$SHORT_SHA" docker compose -f docker-compose.build.yml build $SERVICES_TO_BUILD
+            IMAGE_TAG="$DEPLOY_TAG" docker compose -f docker-compose.build.yml build $SERVICES_TO_BUILD
             echo "SERVICES_BUILT=$SERVICES_TO_BUILD" >> "$GITHUB_ENV"
           fi
 
@@ -149,8 +152,9 @@ jobs:
 
           VALUES_FILE="helm/gamegaraj/values.yaml"
           SHORT_SHA="${SHORT_SHA}"
+          DEPLOY_TAG="${DEPLOY_TAG}"
 
-          echo "Updating image tags in $VALUES_FILE to $SHORT_SHA..."
+          echo "Updating image tags in $VALUES_FILE to $DEPLOY_TAG..."
 
           # Map docker-compose service names to Helm values.yaml service keys
           declare -A SERVICE_MAP=(
@@ -175,15 +179,15 @@ jobs:
             fi
 
             # Replace the image tag for this service in values.yaml
-            # Pattern: image: [optional quote]<service-name>:<any-tag>[optional quote]  →  image: "<service-name>:<SHORT_SHA>"
-            sed -i -E "s|image: \"?${svc}:[^\"]*\"?|image: \"${svc}:${SHORT_SHA}\"|g" "$VALUES_FILE"
-            echo "  Updated: ${svc} → ${svc}:${SHORT_SHA}"
+            # Pattern: image: [optional quote]<service-name>:<any-tag>[optional quote] -> image: "<service-name>:<DEPLOY_TAG>"
+            sed -i -E "s|image: \"?${svc}:[^\"]*\"?|image: \"${svc}:${DEPLOY_TAG}\"|g" "$VALUES_FILE"
+            echo "  Updated: ${svc} -> ${svc}:${DEPLOY_TAG}"
           done
 
           # Also update APP_VERSION for webui if it was built
           if echo "$SERVICES_BUILT" | grep -q "webui"; then
-            sed -i "s|APP_VERSION:.*|APP_VERSION: \"${SHORT_SHA}\"|" "$VALUES_FILE"
-            echo "  Updated: APP_VERSION → ${SHORT_SHA}"
+            sed -i "s|APP_VERSION:.*|APP_VERSION: \"${DEPLOY_TAG}\"|" "$VALUES_FILE"
+            echo "  Updated: APP_VERSION -> ${DEPLOY_TAG}"
           fi
 
           echo ""
@@ -206,7 +210,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "ci: update image tags to ${SHORT_SHA} [skip ci]"
+          git commit -m "ci: update image tags to ${DEPLOY_TAG} [skip ci]"
           
           # Try to push, pull with rebase if remote has new commits
           for i in {1..3}; do
@@ -224,3 +228,55 @@ jobs:
           echo "  Image tags committed and pushed."
           echo "  ArgoCD will detect this change and deploy."
           echo "=============================================="
+
+      - name: Force ArgoCD Refresh And Wait
+        if: ${{ env.SKIP_TAG_UPDATE != 'true' }}
+        run: |
+          set -euo pipefail
+
+          if ! kubectl -n argocd get application gamegaraj >/dev/null 2>&1; then
+            echo "ArgoCD application 'gamegaraj' not found; tag update was pushed, but rollout wait is skipped."
+            exit 0
+          fi
+
+          echo "Requesting a hard refresh from ArgoCD..."
+          expected_revision="$(git rev-parse HEAD)"
+          kubectl -n argocd annotate application gamegaraj \
+            argocd.argoproj.io/refresh=hard \
+            gamegaraj.io/last-deploy-tag="${DEPLOY_TAG}" \
+            --overwrite
+
+          echo "Waiting for ArgoCD to sync revision ${expected_revision}..."
+          for i in {1..60}; do
+            sync_status="$(kubectl -n argocd get application gamegaraj -o jsonpath='{.status.sync.status}' 2>/dev/null || true)"
+            health_status="$(kubectl -n argocd get application gamegaraj -o jsonpath='{.status.health.status}' 2>/dev/null || true)"
+            revision="$(kubectl -n argocd get application gamegaraj -o jsonpath='{.status.sync.revision}' 2>/dev/null || true)"
+            echo "ArgoCD status: sync=${sync_status:-unknown}, health=${health_status:-unknown}, revision=${revision:-unknown}"
+
+            if [ "$sync_status" = "Synced" ] && [ "$revision" = "$expected_revision" ] && { [ "$health_status" = "Healthy" ] || [ "$health_status" = "Progressing" ]; }; then
+              break
+            fi
+
+            sleep 10
+          done
+
+          final_sync_status="$(kubectl -n argocd get application gamegaraj -o jsonpath='{.status.sync.status}')"
+          final_revision="$(kubectl -n argocd get application gamegaraj -o jsonpath='{.status.sync.revision}')"
+          if [ "$final_sync_status" != "Synced" ] || [ "$final_revision" != "$expected_revision" ]; then
+            echo "ArgoCD did not sync revision ${expected_revision} in time."
+            exit 1
+          fi
+
+          echo "Waiting for updated deployments to roll out..."
+          for svc in $SERVICES_BUILT; do
+            kubectl rollout status "deployment/${svc}" --timeout=300s
+            actual_image="$(kubectl get "deployment/${svc}" -o jsonpath='{.spec.template.spec.containers[0].image}')"
+            expected_image="${svc}:${DEPLOY_TAG}"
+
+            if [ "$actual_image" != "$expected_image" ]; then
+              echo "Deployment ${svc} is running desired image '${actual_image}', expected '${expected_image}'."
+              exit 1
+            fi
+
+            echo "Verified ${svc} image: ${actual_image}"
+          done

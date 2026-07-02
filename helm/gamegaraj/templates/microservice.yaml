@@ -9,6 +9,12 @@ metadata:
     {{- include "gamegaraj.labels" $ | nindent 4 }}
 spec:
   replicas: {{ $svc.replicas | default 1 }}
+  revisionHistoryLimit: {{ $svc.revisionHistoryLimit | default 2 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ $svc.maxUnavailable | default 0 }}
+      maxSurge: {{ $svc.maxSurge | default 1 }}
   selector:
     matchLabels:
       app: {{ $name }}
@@ -18,6 +24,10 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ $.Values.global.containerPort }}"
         prometheus.io/path: "/metrics"
+        gamegaraj.io/image: {{ $svc.image | quote }}
+        {{- if and $svc.env (hasKey $svc.env "APP_VERSION") }}
+        gamegaraj.io/app-version: {{ index $svc.env "APP_VERSION" | quote }}
+        {{- end }}
       labels:
         app: {{ $name }}
         {{- include "gamegaraj.labels" $ | nindent 8 }}
