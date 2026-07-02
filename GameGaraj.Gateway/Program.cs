@@ -48,7 +48,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Custom Request Logging Ekle
-app.UseCustomRequestLogging();
+app.UseCustomRequestLogging(includeGatewayRouting: true);
 
 // OpenTelemetry Prometheus /metrics endpoint
 app.UseObservability();

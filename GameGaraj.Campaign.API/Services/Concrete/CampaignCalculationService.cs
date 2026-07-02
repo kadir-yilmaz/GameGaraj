@@ -218,8 +218,7 @@ namespace GameGaraj.Campaign.API.Services.Concrete
                 {
                     finalResponse.CouponMessage = "Bu kupon sizin hesabınıza tanımlanmamış.";
                 }
-                else if (coupon.MinOrderAmount.HasValue
-                         && GetCouponMinimumOrderBase(coupon, originalTotal, finalResponse.FinalTotal) < coupon.MinOrderAmount.Value)
+                else if (coupon.MinOrderAmount.HasValue && originalTotal < coupon.MinOrderAmount.Value)
                 {
                     finalResponse.CouponMessage = $"Bu kuponu kullanabilmek için sepet tutarı en az {coupon.MinOrderAmount.Value:N2} TL olmalıdır.";
                 }
@@ -227,66 +226,31 @@ namespace GameGaraj.Campaign.API.Services.Concrete
                 {
                     if (coupon.CouponType == "FreeShipping")
                     {
-                        if (!coupon.AllowWithOtherCampaigns && finalResponse.TotalDiscount > 0)
-                        {
-                            finalResponse.CouponMessage = "Bu kupon sepetteki diğer kampanyalarla birleştirilemez.";
-                        }
-                        else
-                        {
-                            // Kargo bedava kuponu doğrudan tutara yansımaz, ancak kargo fiyatlandırmasında dikkate alınır.
-                            // OrderPricingViewModel'da TotalShipping = 0 yapılacak. Burada bilgi olarak ekliyoruz.
-                            finalResponse.CouponMessage = "Kargo Bedava kuponu uygulandı.";
-                            finalResponse.IsCouponApplied = true;
-                        }
+                        // Kargo bedava kuponu doğrudan tutara yansımaz, ancak kargo fiyatlandırmasında dikkate alınır.
+                        // OrderPricingViewModel'da TotalShipping = 0 yapılacak. Burada bilgi olarak ekliyoruz.
+                        finalResponse.CouponMessage = "Kargo Bedava kuponu uygulandı.";
+                        finalResponse.IsCouponApplied = true;
                     }
                     else
                     {
                         // Kupon geçerli, indirimi hesapla
-                        var couponBaseAmount = coupon.AllowWithOtherCampaigns ? finalResponse.FinalTotal : originalTotal;
-                        var couponDiscount = CalculateCouponDiscount(coupon, couponBaseAmount);
+                        var couponDiscount = CalculateCouponDiscount(coupon, finalResponse.FinalTotal);
 
                         if (couponDiscount > 0)
                         {
                             var couponRuleName = $"Kupon ({coupon.Code})";
 
-                            if (!coupon.AllowWithOtherCampaigns && finalResponse.TotalDiscount > 0)
-                            {
-                                if (couponDiscount > finalResponse.TotalDiscount)
-                                {
-                                    finalResponse.TotalDiscount = Math.Min(finalResponse.OriginalTotal, couponDiscount);
-                                    finalResponse.FinalTotal = Math.Max(0, originalTotal - couponDiscount);
-                                    finalResponse.IsCouponApplied = true;
-                                    finalResponse.CouponMessage = "Kupon, sepetteki kampanyadan daha avantajlı olduğu için uygulandı.";
-                                    finalResponse.AppliedRules = new List<AppliedRuleSummary>
-                                    {
-                                        new()
-                                        {
-                                            RuleId = coupon.Id,
-                                            RuleName = couponRuleName,
-                                            DiscountAmount = couponDiscount
-                                        }
-                                    };
-                                    finalResponse.Details = BuildCouponOnlyDetails(request.Items, originalTotal, couponDiscount, couponRuleName);
-                                }
-                                else
-                                {
-                                    finalResponse.CouponMessage = "Sepetteki kampanya indirimi kupondan daha avantajlı olduğu için kupon uygulanmadı.";
-                                }
-                            }
-                            else
-                            {
-                                finalResponse.TotalDiscount = Math.Min(finalResponse.OriginalTotal, finalResponse.TotalDiscount + couponDiscount);
-                                finalResponse.FinalTotal = Math.Max(0, finalResponse.FinalTotal - couponDiscount);
-                                finalResponse.IsCouponApplied = true;
-                                finalResponse.CouponMessage = "Kupon başarıyla uygulandı.";
+                            finalResponse.TotalDiscount = Math.Min(finalResponse.OriginalTotal, finalResponse.TotalDiscount + couponDiscount);
+                            finalResponse.FinalTotal = Math.Max(0, finalResponse.FinalTotal - couponDiscount);
+                            finalResponse.IsCouponApplied = true;
+                            finalResponse.CouponMessage = "Kupon başarıyla uygulandı.";
 
-                                finalResponse.AppliedRules.Add(new AppliedRuleSummary
-                                {
-                                    RuleId = coupon.Id,
-                                    RuleName = couponRuleName,
-                                    DiscountAmount = couponDiscount
-                                });
-                            }
+                            finalResponse.AppliedRules.Add(new AppliedRuleSummary
+                            {
+                                RuleId = coupon.Id,
+                                RuleName = couponRuleName,
+                                DiscountAmount = couponDiscount
+                            });
                         }
                     }
                 }
@@ -311,11 +275,6 @@ namespace GameGaraj.Campaign.API.Services.Concrete
             };
         }
 
-        private static decimal GetCouponMinimumOrderBase(Coupon coupon, decimal originalTotal, decimal discountedTotal)
-        {
-            return coupon.AllowWithOtherCampaigns ? discountedTotal : originalTotal;
-        }
-
         private static decimal CalculateCouponDiscount(Coupon coupon, decimal baseAmount)
         {
             if (baseAmount <= 0)
@@ -338,44 +297,6 @@ namespace GameGaraj.Campaign.API.Services.Concrete
             }
 
             return Math.Min(baseAmount, Math.Max(0, couponDiscount));
-        }
-
-        private static List<DiscountDetail> BuildCouponOnlyDetails(
-            IReadOnlyList<OrderItem> items,
-            decimal originalTotal,
-            decimal couponDiscount,
-            string ruleName)
-        {
-            var details = new List<DiscountDetail>();
-            if (originalTotal <= 0 || items.Count == 0)
-            {
-                return details;
-            }
-
-            var distributedDiscount = 0m;
-            for (var index = 0; index < items.Count; index++)
-            {
-                var item = items[index];
-                var originalLineTotal = item.UnitPrice * item.Quantity;
-                var lineDiscount = index == items.Count - 1
-                    ? couponDiscount - distributedDiscount
-                    : Math.Round(couponDiscount * (originalLineTotal / originalTotal), 2);
-
-                lineDiscount = Math.Min(originalLineTotal, Math.Max(0, lineDiscount));
-                distributedDiscount += lineDiscount;
-
-                details.Add(new DiscountDetail
-                {
-                    ProductId = item.ProductId,
-                    ProductName = item.ProductName,
-                    OriginalLineTotal = originalLineTotal,
-                    DiscountAmount = lineDiscount,
-                    DiscountedLineTotal = originalLineTotal - lineDiscount,
-                    RuleName = lineDiscount > 0 ? ruleName : null
-                });
-            }
-
-            return details;
         }
 
         private static bool HasTarget(CampaignRule rule)

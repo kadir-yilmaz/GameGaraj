@@ -5,7 +5,9 @@ using GameGaraj.Catalog.API.Models;
 using GameGaraj.Catalog.API.Services.Abstract;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
+using GameGaraj.Shared.Observability;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -57,6 +59,18 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 .Replace('ş', 's')
                 .Replace('ö', 'o')
                 .Replace('ç', 'c');
+        }
+
+        private static string GetElasticsearchFailureReason(string? debugInformation)
+        {
+            if (string.IsNullOrWhiteSpace(debugInformation))
+            {
+                return "Elasticsearch query failed";
+            }
+
+            const int maxLength = 240;
+            var reason = debugInformation.ReplaceLineEndings(" ").Trim();
+            return reason.Length <= maxLength ? reason : reason[..maxLength];
         }
 
         private static int GetEditDistance(string left, string right)
@@ -533,22 +547,54 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             if (string.IsNullOrWhiteSpace(keyword))
                 return new List<ProductDto>();
 
+            var totalStopwatch = Stopwatch.StartNew();
+            var esDurationMs = 0L;
             var normalizedKeyword = NormalizeSearchText(keyword);
             var cacheKey = $"search_{normalizedKeyword}";
+
+            using var searchScope = _logger.BeginScope(new Dictionary<string, object?>
+            {
+                ["LogType"] = "BusinessRequest",
+                ["Operation"] = "ProductSearch",
+                ["SearchTerm"] = keyword,
+                ["Page"] = 1,
+                ["PageSize"] = 20
+            });
 
             if (_cache != null)
             {
                 var cachedStr = await _cache.GetStringAsync(cacheKey);
                 if (!string.IsNullOrEmpty(cachedStr))
                 {
-                    return JsonSerializer.Deserialize<List<ProductDto>>(cachedStr) ?? new List<ProductDto>();
+                    var cachedResult = JsonSerializer.Deserialize<List<ProductDto>>(cachedStr) ?? new List<ProductDto>();
+                    totalStopwatch.Stop();
+
+                    _logger.LogInformation(
+                        "Product search completed. SearchTerm={SearchTerm}, CategoryId={CategoryId}, BrandId={BrandId}, Count={Count}, CacheHit={CacheHit}, EsDurationMs={EsDurationMs}, DurationMs={DurationMs}",
+                        keyword,
+                        null,
+                        null,
+                        cachedResult.Count,
+                        true,
+                        esDurationMs,
+                        totalStopwatch.ElapsedMilliseconds);
+
+                    return cachedResult;
                 }
             }
 
             List<ProductDto>? result = null;
+            var usedFallback = false;
 
             try
             {
+                using var esActivity = AppDiagnostics.StartActivity("Elasticsearch Product Search");
+                esActivity?.SetTag("db.system", "elasticsearch");
+                esActivity?.SetTag("db.operation", "search");
+                esActivity?.SetTag("db.name", "products");
+                esActivity?.SetTag("app.search.term", keyword);
+
+                var esStopwatch = Stopwatch.StartNew();
                 var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
                     .Index("products")
                     .Query(q => q
@@ -579,6 +625,9 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                     )
                     .Size(20)
                 );
+                esStopwatch.Stop();
+                esDurationMs = esStopwatch.ElapsedMilliseconds;
+                esActivity?.SetTag("app.elasticsearch.duration_ms", esDurationMs);
 
                 if (response.IsValidResponse)
                 {
@@ -586,18 +635,33 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 }
                 else
                 {
-                    _logger.LogError("Elasticsearch query failed: {Error}", response.DebugInformation);
+                    var reason = GetElasticsearchFailureReason(response.DebugInformation);
+                    _logger.LogError(
+                        "Product search failed. SearchTerm={SearchTerm}, Reason={Reason}, EsDurationMs={EsDurationMs}",
+                        keyword,
+                        reason,
+                        esDurationMs);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Elasticsearch search query threw an exception.");
+                _logger.LogError(
+                    ex,
+                    "Product search failed. SearchTerm={SearchTerm}, Reason={Reason}, EsDurationMs={EsDurationMs}",
+                    keyword,
+                    ex.GetType().Name,
+                    esDurationMs);
             }
 
             if (result == null)
             {
                 // Fallback to PostgreSQL simple search
-                _logger.LogWarning("Elasticsearch search failed. Falling back to PostgreSQL for keyword: {Keyword}", keyword);
+                usedFallback = true;
+                _logger.LogWarning(
+                    "Product search fallback to PostgreSQL. SearchTerm={SearchTerm}, Reason={Reason}",
+                    keyword,
+                    "ElasticsearchUnavailable");
+
                 var dbProducts = await _context.Products
                     .AsNoTracking()
                     .Where(p => p.IsActive && 
@@ -615,6 +679,18 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2) };
                 await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(result), options);
             }
+
+            totalStopwatch.Stop();
+            _logger.LogInformation(
+                "Product search completed. SearchTerm={SearchTerm}, CategoryId={CategoryId}, BrandId={BrandId}, Count={Count}, CacheHit={CacheHit}, EsDurationMs={EsDurationMs}, DurationMs={DurationMs}, UsedFallback={UsedFallback}",
+                keyword,
+                null,
+                null,
+                result.Count,
+                false,
+                esDurationMs,
+                totalStopwatch.ElapsedMilliseconds,
+                usedFallback);
 
             return result;
         }

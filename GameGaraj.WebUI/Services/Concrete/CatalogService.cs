@@ -164,18 +164,29 @@ namespace GameGaraj.WebUI.Services.Concrete
                     queryBuilder.Append("?").Append(string.Join("&", queryParams));
 
                 var requestUri = queryBuilder.ToString();
-                _logger.LogInformation($"[CatalogService] Fetching products with: {requestUri}");
 
                 var response = await _httpClient.GetAsync(requestUri);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogError($"[CatalogService] Failed to fetch products. Status: {response.StatusCode}");
+                    using (_logger.BeginScope(new Dictionary<string, object?>
+                    {
+                        ["LogType"] = "BusinessRequest",
+                        ["RequestArea"] = "WebUI",
+                        ["Operation"] = "ProductList"
+                    }))
+                    {
+                        _logger.LogWarning(
+                            "Product list failed from Catalog API. StatusCode={StatusCode}, CategoryId={CategoryId}, Brand={Brand}",
+                            (int)response.StatusCode,
+                            categoryId,
+                            brand);
+                    }
+
                     return new List<ProductViewModel>();
                 }
 
                 var content = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation($"[CatalogService] Response length: {content.Length}");
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 List<ProductViewModel>? products = null;
@@ -259,11 +270,32 @@ namespace GameGaraj.WebUI.Services.Concrete
             try
             {
                 if (string.IsNullOrWhiteSpace(keyword)) return new List<ProductViewModel>();
-                
+
+                using var searchScope = _logger.BeginScope(new Dictionary<string, object?>
+                {
+                    ["LogType"] = "BusinessRequest",
+                    ["RequestArea"] = "WebUI",
+                    ["Operation"] = "ProductSearch",
+                    ["SearchTerm"] = keyword,
+                    ["Page"] = 1
+                });
+
+                _logger.LogInformation(
+                    "Product search requested from WebUI. SearchTerm={SearchTerm}, Page={Page}",
+                    keyword,
+                    1);
+
                 var response = await _httpClient.GetAsync($"products/search?q={Uri.EscapeDataString(keyword)}");
 
                 if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning(
+                        "Product search failed from Catalog API. StatusCode={StatusCode}, SearchTerm={SearchTerm}",
+                        (int)response.StatusCode,
+                        keyword);
+
                     return new List<ProductViewModel>();
+                }
 
                 var content = await response.Content.ReadAsStringAsync();
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -292,7 +324,18 @@ namespace GameGaraj.WebUI.Services.Concrete
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CatalogService] Error fetching search products");
+                using (_logger.BeginScope(new Dictionary<string, object?>
+                {
+                    ["LogType"] = "BusinessRequest",
+                    ["RequestArea"] = "WebUI",
+                    ["Operation"] = "ProductSearch",
+                    ["SearchTerm"] = keyword,
+                    ["Page"] = 1
+                }))
+                {
+                    _logger.LogError(ex, "Product search failed from WebUI. SearchTerm={SearchTerm}, Page={Page}", keyword, 1);
+                }
+
                 return new List<ProductViewModel>();
             }
         }

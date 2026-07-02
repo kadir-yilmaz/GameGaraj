@@ -13,14 +13,22 @@ namespace GameGaraj.WebUI.Controllers
         private readonly IFavoritesService _favoritesService;
         private readonly IReviewService _reviewService;
         private readonly INotyfService _notyf;
+        private readonly ILogger<ProductController> _logger;
 
-        public ProductController(ICatalogService catalogService, IBasketService basketService, IFavoritesService favoritesService, IReviewService reviewService, INotyfService notyf)
+        public ProductController(
+            ICatalogService catalogService,
+            IBasketService basketService,
+            IFavoritesService favoritesService,
+            IReviewService reviewService,
+            INotyfService notyf,
+            ILogger<ProductController> logger)
         {
             _catalogService = catalogService;
             _basketService = basketService;
             _favoritesService = favoritesService;
             _reviewService = reviewService;
             _notyf = notyf;
+            _logger = logger;
         }
 
         [Route("product/c/{category}")]
@@ -70,6 +78,21 @@ namespace GameGaraj.WebUI.Controllers
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = search.Trim();
+                using (_logger.BeginScope(new Dictionary<string, object?>
+                {
+                    ["LogType"] = "BusinessRequest",
+                    ["RequestArea"] = "WebUI",
+                    ["Operation"] = "ProductSearch",
+                    ["SearchTerm"] = search,
+                    ["Page"] = 1
+                }))
+                {
+                    _logger.LogInformation(
+                        "Product search page opened from WebUI. SearchTerm={SearchTerm}, Page={Page}",
+                        search,
+                        1);
+                }
+
                 products = await _catalogService.SearchProductsAsync(search);
                 
                 if (!string.IsNullOrEmpty(categoryId)) products = products.Where(p => p.CategoryId == categoryId).ToList();

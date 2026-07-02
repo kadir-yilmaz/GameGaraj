@@ -2,16 +2,22 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Serilog;
 using Serilog.Events;
+using System.Diagnostics;
 using System.Security.Claims;
 
 namespace GameGaraj.Shared.Logging
 {
     public static class SerilogRequestLoggingExtensions
     {
-        public static void UseCustomRequestLogging(this WebApplication app)
+        public static void UseCustomRequestLogging(this WebApplication app, bool includeGatewayRouting = false)
         {
             app.UseSerilogRequestLogging(options =>
             {
+                if (includeGatewayRouting)
+                {
+                    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} routed to {TargetService}. StatusCode={StatusCode} DurationMs={Elapsed:0.0000}";
+                }
+
                 // Filter out telemetry, health checks, and API docs to prevent Elasticsearch pollution
                 options.GetLevel = (httpContext, elapsedMs, ex) =>
                 {
@@ -79,10 +85,13 @@ namespace GameGaraj.Shared.Logging
                     }
 
                     diagnosticContext.Set("LogType", "HttpRequest");
+                    diagnosticContext.Set("TargetService", includeGatewayRouting ? ResolveGatewayTargetService(httpContext.Request.Path.Value) : null);
                     diagnosticContext.Set("UserIdentity", userIdentity);
                     diagnosticContext.Set("UserId", userId ?? "anonymous-user");
                     diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
                     diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].ToString());
+                    diagnosticContext.Set("TraceId", Activity.Current?.TraceId.ToString());
+                    diagnosticContext.Set("SpanId", Activity.Current?.SpanId.ToString());
                 };
             });
         }
@@ -107,6 +116,51 @@ namespace GameGaraj.Shared.Logging
             return userId.StartsWith("guest-", StringComparison.OrdinalIgnoreCase)
                 ? userId
                 : $"User-{userId}";
+        }
+
+        private static string ResolveGatewayTargetService(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return "Unknown";
+            }
+
+            if (path.StartsWith("/api/catalog", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Catalog API";
+            }
+
+            if (path.StartsWith("/api/basket", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Basket API";
+            }
+
+            if (path.StartsWith("/api/order", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Order API";
+            }
+
+            if (path.StartsWith("/api/payment", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Payment API";
+            }
+
+            if (path.StartsWith("/api/review", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Review API";
+            }
+
+            if (path.StartsWith("/api/campaign", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Campaign API";
+            }
+
+            if (path.StartsWith("/api/photostock", StringComparison.OrdinalIgnoreCase))
+            {
+                return "PhotoStock API";
+            }
+
+            return "Unknown";
         }
     }
 }

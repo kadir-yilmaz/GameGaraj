@@ -45,6 +45,8 @@ namespace GameGaraj.Shared.Logging
 
             var loggerConfig = new LoggerConfiguration()
                 .MinimumLevel.ControlledBy(LogLevelManager.GetSwitch(serviceName))
+                .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+                .MinimumLevel.Override("Microsoft.Hosting", LogEventLevel.Warning)
                 .Enrich.FromLogContext()
                 .Enrich.WithExceptionDetails()
                 .Enrich.WithProperty("Environment", environment)
@@ -84,7 +86,20 @@ namespace GameGaraj.Shared.Logging
 
         private static bool IsSearchableLog(LogEvent evt)
         {
-            return IsHttpRequestLog(evt) || evt.Level >= LogEventLevel.Warning;
+            if (IsHttpRequestLog(evt))
+            {
+                return true;
+            }
+
+            if (evt.Properties.TryGetValue("LogType", out var logType) &&
+                logType is ScalarValue logTypeValue)
+            {
+                var value = logTypeValue.Value?.ToString();
+                return string.Equals(value, "BusinessRequest", StringComparison.OrdinalIgnoreCase)
+                       || string.Equals(value, "ExternalDependency", StringComparison.OrdinalIgnoreCase);
+            }
+
+            return false;
         }
 
         private static bool IsHttpRequestLog(LogEvent evt)
