@@ -354,29 +354,42 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 }
             }
 
-            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                .Index("products")
-                .Query(q => q
-                    .Bool(b => b
-                        .Filter(f => f.Term(t => t.Field("isActive").Value(true)),
-                                f => f.Term(t => t.Field("isFeatured").Value(true)))
-                    )
-                )
-                .Sort(sort => sort
-                    .Field(f => f.CreatedAt, new Elastic.Clients.Elasticsearch.FieldSort { Order = Elastic.Clients.Elasticsearch.SortOrder.Desc })
-                )
-                .Size(10)
-            );
+            List<ProductDto>? result = null;
 
-            List<ProductDto> result;
-            if (response.IsValidResponse && response.Documents.Any())
+            try
             {
-                result = response.Documents.Select(MapSearchDocumentToDto).ToList();
+                var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
+                    .Index("products")
+                    .Query(q => q
+                        .Bool(b => b
+                            .Filter(f => f.Term(t => t.Field("isActive").Value(true)),
+                                    f => f.Term(t => t.Field("isFeatured").Value(true)))
+                        )
+                    )
+                    .Sort(sort => sort
+                        .Field(f => f.CreatedAt, new Elastic.Clients.Elasticsearch.FieldSort { Order = Elastic.Clients.Elasticsearch.SortOrder.Desc })
+                    )
+                    .Size(10)
+                );
+
+                if (response.IsValidResponse && response.Documents.Any())
+                {
+                    result = response.Documents.Select(MapSearchDocumentToDto).ToList();
+                }
+                else
+                {
+                    _logger.LogWarning("Elasticsearch featured products query returned no results or is invalid. DebugInformation: {Debug}", response.DebugInformation);
+                }
             }
-            else
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Elasticsearch featured products search threw an exception.");
+            }
+
+            if (result == null)
             {
                 // Fallback to PostgreSQL
-                _logger.LogWarning("Elasticsearch featured products query failed or returned no results. Falling back to DB.");
+                _logger.LogWarning("Falling back to PostgreSQL for featured products.");
                 var products = await _context.Products
                     .AsNoTracking()
                     .Where(p => p.IsFeatured && p.IsActive)
@@ -408,17 +421,29 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
             ProductDto? dto = null;
 
-            // Try Elasticsearch first
-            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                .Index("products")
-                .Query(q => q.Term(t => t.Field("_id").Value(id)))
-                .Size(1)
-            );
-            if (response.IsValidResponse && response.Documents.Any())
+            try
             {
-                dto = MapSearchDocumentToDto(response.Documents.First());
+                // Try Elasticsearch first
+                var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
+                    .Index("products")
+                    .Query(q => q.Term(t => t.Field("_id").Value(id)))
+                    .Size(1)
+                );
+                if (response.IsValidResponse && response.Documents.Any())
+                {
+                    dto = MapSearchDocumentToDto(response.Documents.First());
+                }
+                else
+                {
+                    _logger.LogWarning("Elasticsearch get by id returned no results or is invalid for {Id}. DebugInformation: {Debug}", id, response.DebugInformation);
+                }
             }
-            else
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Elasticsearch get by id threw an exception for {Id}.", id);
+            }
+
+            if (dto == null)
             {
                 // Fallback to PostgreSQL
                 _logger.LogWarning("Elasticsearch get by id failed for {Id}. Falling back to DB.", id);
@@ -453,18 +478,30 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
             ProductDto? dto = null;
 
-            // Try Elasticsearch first
-            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                .Index("products")
-                .Query(q => q.Term(t => t.Field("slug.keyword").Value(slug)))
-                .Size(1)
-            );
-
-            if (response.IsValidResponse && response.Documents.Any())
+            try
             {
-                dto = MapSearchDocumentToDto(response.Documents.First());
+                // Try Elasticsearch first
+                var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
+                    .Index("products")
+                    .Query(q => q.Term(t => t.Field("slug.keyword").Value(slug)))
+                    .Size(1)
+                );
+
+                if (response.IsValidResponse && response.Documents.Any())
+                {
+                    dto = MapSearchDocumentToDto(response.Documents.First());
+                }
+                else
+                {
+                    _logger.LogWarning("Elasticsearch get by slug returned no results or is invalid for {Slug}. DebugInformation: {Debug}", slug, response.DebugInformation);
+                }
             }
-            else
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Elasticsearch get by slug threw an exception for {Slug}.", slug);
+            }
+
+            if (dto == null)
             {
                 // Fallback to PostgreSQL
                 _logger.LogWarning("Elasticsearch get by slug failed for {Slug}. Falling back to DB.", slug);
@@ -508,44 +545,70 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 }
             }
 
-            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                .Index("products")
-                .Query(q => q
-                    .Bool(b => b
-                        .Must(m => m
-                            .MultiMatch(mm => mm
-                                .Fields(new[]
-                                {
-                                    "name^5",
-                                    "brand^4",
-                                    "categoryName^3",
-                                    "specValues^2",
-                                    "searchText",
-                                    "description"
-                                })
-                                .Query(keyword)
-                                .Fuzziness(new Fuzziness("AUTO"))
-                                .MinimumShouldMatch("70%")
-                                .PrefixLength(1)
+            List<ProductDto>? result = null;
+
+            try
+            {
+                var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
+                    .Index("products")
+                    .Query(q => q
+                        .Bool(b => b
+                            .Must(m => m
+                                .MultiMatch(mm => mm
+                                    .Fields(new[]
+                                    {
+                                        "name^5",
+                                        "brand^4",
+                                        "categoryName^3",
+                                        "specValues^2",
+                                        "searchText",
+                                        "description"
+                                    })
+                                    .Query(keyword)
+                                    .Fuzziness(new Fuzziness("AUTO"))
+                                    .MinimumShouldMatch("70%")
+                                    .PrefixLength(1)
+                                )
+                            )
+                            .Filter(f => f.Term(t => t.Field("isActive").Value(true)))
+                            .Should(
+                                sh => sh.Term(t => t.Field("isFeatured").Value(true).Boost(2)),
+                                sh => sh.Term(t => t.Field("inStock").Value(true).Boost(1.5f))
                             )
                         )
-                        .Filter(f => f.Term(t => t.Field("isActive").Value(true)))
-                        .Should(
-                            sh => sh.Term(t => t.Field("isFeatured").Value(true).Boost(2)),
-                            sh => sh.Term(t => t.Field("inStock").Value(true).Boost(1.5f))
-                        )
                     )
-                )
-                .Size(20)
-            );
+                    .Size(20)
+                );
 
-            if (!response.IsValidResponse)
+                if (response.IsValidResponse)
+                {
+                    result = response.Documents.Select(MapSearchDocumentToDto).ToList();
+                }
+                else
+                {
+                    _logger.LogError("Elasticsearch query failed: {Error}", response.DebugInformation);
+                }
+            }
+            catch (Exception ex)
             {
-                _logger.LogError("Elasticsearch query failed: {Error}", response.DebugInformation);
-                return new List<ProductDto>();
+                _logger.LogError(ex, "Elasticsearch search query threw an exception.");
             }
 
-            var result = response.Documents.Select(MapSearchDocumentToDto).ToList();
+            if (result == null)
+            {
+                // Fallback to PostgreSQL simple search
+                _logger.LogWarning("Elasticsearch search failed. Falling back to PostgreSQL for keyword: {Keyword}", keyword);
+                var dbProducts = await _context.Products
+                    .AsNoTracking()
+                    .Where(p => p.IsActive && 
+                                (EF.Functions.ILike(p.Name, $"%{keyword}%") || 
+                                 EF.Functions.ILike(p.Brand, $"%{keyword}%") || 
+                                 EF.Functions.ILike(p.Description, $"%{keyword}%")))
+                    .OrderByDescending(p => p.CreatedAt)
+                    .Take(20)
+                    .ToListAsync();
+                result = _mapper.Map<List<ProductDto>>(dbProducts);
+            }
 
             if (_cache != null && result.Any())
             {
@@ -584,40 +647,80 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             if (string.IsNullOrWhiteSpace(keyword))
                 return new List<SearchSuggestionDto>();
 
-            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                .Index("products")
-                .Query(q => q
-                    .Bool(b => b
-                        .Must(m => m
-                            .MultiMatch(mm => mm
-                                .Fields(new[]
-                                {
-                                    "name^5",
-                                    "brand^4",
-                                    "categoryName^3",
-                                    "specValues^2",
-                                    "searchText"
-                                })
-                                .Query(keyword)
-                                .Fuzziness(new Fuzziness("AUTO"))
-                                .MinimumShouldMatch("60%")
-                                .PrefixLength(1)
-                            )
-                        )
-                        .Filter(f => f.Term(t => t.Field("isActive").Value(true)))
-                    )
-                )
-                .Size(20)
-            );
+            List<ProductSearchDocument>? documents = null;
 
-            if (!response.IsValidResponse)
+            try
             {
-                _logger.LogWarning("Elasticsearch suggestion query failed: {Error}", response.DebugInformation);
-                return new List<SearchSuggestionDto>();
+                var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
+                    .Index("products")
+                    .Query(q => q
+                        .Bool(b => b
+                            .Must(m => m
+                                .MultiMatch(mm => mm
+                                    .Fields(new[]
+                                    {
+                                        "name^5",
+                                        "brand^4",
+                                        "categoryName^3",
+                                        "specValues^2",
+                                        "searchText"
+                                    })
+                                    .Query(keyword)
+                                    .Fuzziness(new Fuzziness("AUTO"))
+                                    .MinimumShouldMatch("60%")
+                                    .PrefixLength(1)
+                                )
+                            )
+                            .Filter(f => f.Term(t => t.Field("isActive").Value(true)))
+                        )
+                    )
+                    .Size(20)
+                );
+
+                if (response.IsValidResponse)
+                {
+                    documents = response.Documents.ToList();
+                }
+                else
+                {
+                    _logger.LogWarning("Elasticsearch suggestion query failed: {Error}", response.DebugInformation);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Elasticsearch suggestion query threw an exception.");
+            }
+
+            if (documents == null)
+            {
+                // Fallback to PostgreSQL suggestions
+                try
+                {
+                    var dbProducts = await _context.Products
+                        .AsNoTracking()
+                        .Where(p => p.IsActive && EF.Functions.ILike(p.Name, $"%{keyword}%"))
+                        .Take(10)
+                        .ToListAsync();
+                    
+                    documents = dbProducts.Select(p => new ProductSearchDocument
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Brand = p.Brand ?? string.Empty,
+                        Slug = p.Slug ?? string.Empty,
+                        ImageUrls = p.ImageUrls ?? new List<string>(),
+                        Price = p.Price,
+                        CategoryId = p.CategoryId ?? string.Empty
+                    }).ToList();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "PostgreSQL suggestion fallback failed.");
+                    documents = new List<ProductSearchDocument>();
+                }
             }
 
             var suggestions = new List<SearchSuggestionDto>();
-            var documents = response.Documents.ToList();
             if (!documents.Any())
             {
                 return suggestions;
