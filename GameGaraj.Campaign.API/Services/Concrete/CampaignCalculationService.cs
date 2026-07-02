@@ -38,7 +38,16 @@ namespace GameGaraj.Campaign.API.Services.Concrete
             var strategyMap = _ruleStrategies.ToDictionary(s => s.RuleType, s => s);
 
             // --- 1. AŞAMA: Ürün Bazlı İndirimler (Item-Level) ---
-            var itemLevelRules = activeRules.Where(r => r.RuleType == "BuyXGetYFree" || r.RuleType == "CheapestItemDiscount" || r.RuleType == "BrandDiscount").ToList();
+            var itemLevelRules = activeRules
+                .Where(r => r.RuleType == "BuyXGetYFree" || r.RuleType == "CheapestItemDiscount")
+                .ToList();
+
+            var directDiscountRules = activeRules
+                .Where(IsDirectTargetDiscount)
+                .Select(NormalizeDirectDiscountRule)
+                .ToList();
+
+            itemLevelRules.AddRange(directDiscountRules);
             var appliedItemRules = new List<CalculateDiscountResponse>();
 
             // Çakışma kontrolü: Ürün bazlı kuralları hesapla ve en iyisini seç (Şimdilik basit mantık: Tüm ürün bazlılardan en yüksek toplam indirimi verenleri birleştir)
@@ -79,7 +88,7 @@ namespace GameGaraj.Campaign.API.Services.Concrete
             var subTotalAfterItems = originalTotal - totalItemDiscount;
 
             // --- 2. AŞAMA: Sepet Bazlı İndirimler (Global Level) ---
-            var globalRules = activeRules.Where(r => r.RuleType == "TotalAmount").ToList();
+            var globalRules = activeRules.Where(r => r.RuleType == "TotalAmount" && !HasTarget(r)).ToList();
             CalculateDiscountResponse? bestGlobalResult = null;
 
             foreach (var rule in globalRules)
@@ -267,6 +276,56 @@ namespace GameGaraj.Campaign.API.Services.Concrete
                 AppliedRuleName = null,
                 Details = new(),
                 AppliedRules = new()
+            };
+        }
+
+        private static bool HasTarget(CampaignRule rule)
+        {
+            return !string.IsNullOrWhiteSpace(rule.ProductId)
+                   || !string.IsNullOrWhiteSpace(rule.CategoryId)
+                   || !string.IsNullOrWhiteSpace(rule.BrandName);
+        }
+
+        private static bool HasDirectDiscountValue(CampaignRule rule)
+        {
+            return (rule.DiscountRate.HasValue && rule.DiscountRate.Value > 0)
+                   || (rule.FixedDiscount.HasValue && rule.FixedDiscount.Value > 0);
+        }
+
+        private static bool IsDirectTargetDiscount(CampaignRule rule)
+        {
+            return HasTarget(rule)
+                   && HasDirectDiscountValue(rule)
+                   && rule.RuleType != "BuyXGetYFree"
+                   && rule.RuleType != "CheapestItemDiscount";
+        }
+
+        private static CampaignRule NormalizeDirectDiscountRule(CampaignRule rule)
+        {
+            if (rule.RuleType == "BrandDiscount")
+            {
+                return rule;
+            }
+
+            return new CampaignRule
+            {
+                Id = rule.Id,
+                Name = rule.Name,
+                Description = rule.Description,
+                RuleType = "BrandDiscount",
+                CategoryId = rule.CategoryId,
+                ProductId = rule.ProductId,
+                MinAmount = rule.MinAmount,
+                MinQuantity = rule.MinQuantity,
+                FreeQuantity = rule.FreeQuantity,
+                DiscountRate = rule.DiscountRate,
+                FixedDiscount = rule.FixedDiscount,
+                BrandName = rule.BrandName,
+                StartDate = rule.StartDate,
+                EndDate = rule.EndDate,
+                ImageUrl = rule.ImageUrl,
+                IsActive = rule.IsActive,
+                CreatedTime = rule.CreatedTime
             };
         }
     }

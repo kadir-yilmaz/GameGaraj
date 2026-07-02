@@ -59,7 +59,12 @@ namespace GameGaraj.WebUI.Controllers
 
                 ViewBag.CarouselImages = carouselList.Select(img => img.ImageUrl).ToList();
 
-                var activeRules = rules.Where(r => r.IsActive).ToList();
+                var now = DateTime.UtcNow;
+                var activeRules = rules
+                    .Where(r => r.IsActive
+                                && (!r.StartDate.HasValue || r.StartDate.Value <= now)
+                                && (!r.EndDate.HasValue || r.EndDate.Value.Date >= now.Date))
+                    .ToList();
                 var ruleProducts = new Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel>();
                 foreach (var rule in activeRules)
                 {

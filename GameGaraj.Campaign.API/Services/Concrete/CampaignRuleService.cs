@@ -40,7 +40,7 @@ namespace GameGaraj.Campaign.API.Services.Concrete
             var query = $@"SELECT {SelectColumns} FROM CampaignRules 
                            WHERE IsActive = 1 
                              AND (StartDate IS NULL OR StartDate <= GETUTCDATE())
-                             AND (EndDate IS NULL OR EndDate >= GETUTCDATE())
+                             AND (EndDate IS NULL OR CAST(EndDate AS date) >= CAST(GETUTCDATE() AS date))
                            ORDER BY CreatedTime DESC";
 
             using var connection = CreateConnection();

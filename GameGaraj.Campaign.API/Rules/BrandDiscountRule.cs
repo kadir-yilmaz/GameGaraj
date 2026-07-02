@@ -52,6 +52,10 @@ namespace GameGaraj.Campaign.API.Rules
             if (!matchedItems.Any())
                 return null;
 
+            var matchedTotal = matchedItems.Sum(i => i.UnitPrice * i.Quantity);
+            if (rule.MinAmount.HasValue && matchedTotal < rule.MinAmount.Value)
+                return null;
+
             var originalTotal = request.Items.Sum(i => i.UnitPrice * i.Quantity);
             var matchedProductIds = matchedItems.Select(m => m.ProductId).ToHashSet(StringComparer.OrdinalIgnoreCase);
 

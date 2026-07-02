@@ -29,7 +29,12 @@ namespace GameGaraj.WebUI.Controllers
             try
             {
                 var rules = await _campaignService.GetAllRulesAsync();
-                var activeRules = rules.Where(r => r.IsActive).ToList();
+                var now = DateTime.UtcNow;
+                var activeRules = rules
+                    .Where(r => r.IsActive
+                                && (!r.StartDate.HasValue || r.StartDate.Value <= now)
+                                && (!r.EndDate.HasValue || r.EndDate.Value.Date >= now.Date))
+                    .ToList();
 
                 var ruleProducts = new Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel>();
                 foreach (var rule in activeRules)
@@ -63,7 +68,11 @@ namespace GameGaraj.WebUI.Controllers
             try
             {
                 var rule = await _campaignService.GetRuleByIdAsync(id);
-                if (rule == null || !rule.IsActive)
+                var now = DateTime.UtcNow;
+                if (rule == null
+                    || !rule.IsActive
+                    || (rule.StartDate.HasValue && rule.StartDate.Value > now)
+                    || (rule.EndDate.HasValue && rule.EndDate.Value.Date < now.Date))
                 {
                     return NotFound("Kampanya bulunamadı veya aktif değil.");
                 }

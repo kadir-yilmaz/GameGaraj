@@ -22,7 +22,12 @@
             try
             {
                 var allRules = await CampaignService.GetAllRulesAsync();
-                activeRules = allRules.Where(r => r.IsActive).ToList();
+                var now = DateTime.UtcNow;
+                activeRules = allRules
+                    .Where(r => r.IsActive
+                                && (!r.StartDate.HasValue || r.StartDate.Value <= now)
+                                && (!r.EndDate.HasValue || r.EndDate.Value.Date >= now.Date))
+                    .ToList();
                 httpContext.Items["ActiveCampaignRules"] = activeRules;
             }
             catch
