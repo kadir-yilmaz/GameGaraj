@@ -267,6 +267,20 @@ jobs:
             exit 1
           fi
 
+          echo "Forcing deployment pod templates to the image tag written to Helm values..."
+          for svc in $SERVICES_BUILT; do
+            expected_image="${svc}:${DEPLOY_TAG}"
+            kubectl set image "deployment/${svc}" "${svc}=${expected_image}"
+            kubectl patch "deployment/${svc}" --type=merge \
+              -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"gamegaraj.io/image\":\"${expected_image}\"}}}}}"
+
+            if [ "$svc" = "webui" ]; then
+              kubectl set env "deployment/${svc}" APP_VERSION="${DEPLOY_TAG}"
+              kubectl patch "deployment/${svc}" --type=merge \
+                -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"gamegaraj.io/app-version\":\"${DEPLOY_TAG}\"}}}}}"
+            fi
+          done
+
           echo "Waiting for updated deployments to roll out..."
           for svc in $SERVICES_BUILT; do
             kubectl rollout status "deployment/${svc}" --timeout=300s
