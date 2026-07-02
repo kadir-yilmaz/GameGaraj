@@ -33,11 +33,13 @@ namespace GameGaraj.Shared.Logging
 
             if (!string.IsNullOrEmpty(elasticUri))
             {
-                loggerConfig.WriteTo.Conditional(
-                    evt => evt.Properties.TryGetValue("LogType", out var logType) &&
-                           logType is ScalarValue sv &&
-                           sv.Value?.ToString() == "HttpRequest",
-                    wt => wt.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticUri))
+                loggerConfig.WriteTo.Logger(logs => logs
+                    .Filter.ByIncludingOnly(evt =>
+                        evt.Properties.TryGetValue("LogType", out var logType) &&
+                        logType is ScalarValue sv &&
+                        sv.Value?.ToString() == "HttpRequest")
+                    .Enrich.With<RequestLogPropertyPruner>()
+                    .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticUri))
                     {
                         AutoRegisterTemplate = true,
                         IndexFormat = $"gamegaraj-logs-{serviceSlug}-{environmentSlug}",
