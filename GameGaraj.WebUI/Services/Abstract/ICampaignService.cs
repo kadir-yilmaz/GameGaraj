@@ -27,10 +27,12 @@ namespace GameGaraj.WebUI.Services.Abstract
         Task<CouponViewModel?> GetCouponByIdAsync(int id);
         Task<CouponViewModel?> GetCouponByCodeAsync(string code);
         Task<List<CouponViewModel>> GetPublicCouponsAsync();
+        Task<List<CouponViewModel>> GetPublicCouponsAsync(string userId);
         Task<List<CouponViewModel>> GetUserCouponsAsync(string userId);
         Task<bool> CreateCouponAsync(CouponCreateInput input);
         Task<bool> DeleteCouponAsync(int id);
         Task<bool> MarkCouponAsUsedAsync(string code);
+        Task<bool> MarkCouponAsUsedAsync(string code, string userId);
 
         // --- KUPON KAZAN KURALLARI ---
         Task<List<CouponRewardRuleViewModel>> GetAllRewardRulesAsync();

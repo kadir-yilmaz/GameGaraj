@@ -78,7 +78,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             {
                 try
                 {
-                    var esResponse = await client.GetAsync($"{_settings.ElasticSearchUri}/_cat/indices/gamegaraj-logs-*,gamegaraj-requests-*?format=json&s=index");
+                    var esResponse = await client.GetAsync($"{_settings.ElasticSearchUri}/_cat/indices/gamegaraj-logs-*?format=json&s=index");
                     if (esResponse.IsSuccessStatusCode)
                     {
                         var esContent = await esResponse.Content.ReadAsStringAsync();
@@ -241,10 +241,6 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                       ""hot"": {
                         ""min_age"": ""0ms"",
                         ""actions"": {
-                          ""rollover"": {
-                            ""max_age"": ""1d"",
-                            ""max_primary_shard_size"": ""5gb""
-                          },
                           ""set_priority"": {
                             ""priority"": 100
                           }
@@ -298,7 +294,6 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                   ""template"": {
                     ""settings"": {
                       ""index.lifecycle.name"": ""gamegaraj-logs-policy"",
-                      ""index.lifecycle.rollover_alias"": ""gamegaraj-logs"",
                       ""number_of_shards"": 1,
                       ""number_of_replicas"": 0
                     }
@@ -320,35 +315,9 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                // 3. Create Index Template for REQUESTS
-                var reqTemplateJson = @"{
-                  ""index_patterns"": [""gamegaraj-requests-*""],
-                  ""template"": {
-                    ""settings"": {
-                      ""index.lifecycle.name"": ""gamegaraj-logs-policy"",
-                      ""index.lifecycle.rollover_alias"": ""gamegaraj-requests"",
-                      ""number_of_shards"": 1,
-                      ""number_of_replicas"": 0
-                    }
-                  },
-                  ""priority"": 500,
-                  ""composed_of"": [],
-                  ""_meta"": {
-                    ""description"": ""GameGaraj request indices with ILM lifecycle management""
-                  }
-                }";
+                TempData["Success"] = "Elasticsearch ILM politikasi ve tek log indeks sablonu basariyla senkronize edildi.";
+                return RedirectToAction(nameof(Index));
 
-                var reqTemplateContent = new StringContent(reqTemplateJson, Encoding.UTF8, "application/json");
-                var reqTemplateResponse = await client.PutAsync($"{_settings.ElasticSearchUri}/_index_template/gamegaraj-requests-template", reqTemplateContent);
-
-                if (!reqTemplateResponse.IsSuccessStatusCode)
-                {
-                    var error = await reqTemplateResponse.Content.ReadAsStringAsync();
-                    TempData["Error"] = $"Requests Index Template'ini oluştururken hata alındı: {error}";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                TempData["Success"] = "Elasticsearch ILM Politikası ve İndeks Şablonları (Logs & Requests) başarıyla senkronize edildi!";
             }
             catch (Exception ex)
             {

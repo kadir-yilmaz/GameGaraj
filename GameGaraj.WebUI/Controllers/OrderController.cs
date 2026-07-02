@@ -422,7 +422,11 @@ namespace GameGaraj.WebUI.Controllers
                     var couponCode = HttpContext.Session.GetString("AppliedCouponCode");
                     if (!string.IsNullOrEmpty(couponCode))
                     {
-                        await _campaignService.MarkCouponAsUsedAsync(couponCode);
+                        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                        if (!string.IsNullOrWhiteSpace(currentUserId))
+                        {
+                            await _campaignService.MarkCouponAsUsedAsync(couponCode, currentUserId);
+                        }
                         _logger.LogInformation($"[OrderController] Coupon {couponCode} marked as used in DB.");
                     }
                     HttpContext.Session.Remove("AppliedCouponCode");
@@ -516,7 +520,9 @@ namespace GameGaraj.WebUI.Controllers
                 }
 
                 // Fetch public and user-specific coupons
-                var publicCoupons = await _campaignService.GetPublicCouponsAsync() ?? new List<CouponViewModel>();
+                var publicCoupons = !string.IsNullOrEmpty(currentUserId)
+                    ? await _campaignService.GetPublicCouponsAsync(currentUserId) ?? new List<CouponViewModel>()
+                    : await _campaignService.GetPublicCouponsAsync() ?? new List<CouponViewModel>();
                 ViewBag.PublicCoupons = publicCoupons;
 
                 var userCoupons = new List<CouponViewModel>();
@@ -664,8 +670,11 @@ namespace GameGaraj.WebUI.Controllers
             {
                 return RedirectToAction("SignIn", "Auth");
             }
-            var coupons = await _campaignService.GetUserCouponsAsync(userId);
-            return View(coupons);
+            var publicCoupons = await _campaignService.GetPublicCouponsAsync(userId);
+            var userCoupons = await _campaignService.GetUserCouponsAsync(userId);
+
+            ViewBag.PublicCoupons = publicCoupons;
+            return View(userCoupons);
         }
 
         [HttpGet]

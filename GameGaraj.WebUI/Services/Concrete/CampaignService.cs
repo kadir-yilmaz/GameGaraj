@@ -236,6 +236,23 @@ namespace GameGaraj.WebUI.Services.Concrete
             }
         }
 
+        public async Task<List<CouponViewModel>> GetPublicCouponsAsync(string userId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"coupons/public/user/{Uri.EscapeDataString(userId)}");
+                if (!response.IsSuccessStatusCode) return new();
+
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<List<CouponViewModel>>(content, _jsonOptions) ?? new();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CampaignService] GetPublicCouponsAsync hatasÄ± â€” User: {UserId}", userId);
+                return new();
+            }
+        }
+
         public async Task<List<CouponViewModel>> GetUserCouponsAsync(string userId)
         {
             try
@@ -293,6 +310,20 @@ namespace GameGaraj.WebUI.Services.Concrete
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[CampaignService] MarkCouponAsUsedAsync hatası — Code: {Code}", code);
+                return false;
+            }
+        }
+
+        public async Task<bool> MarkCouponAsUsedAsync(string code, string userId)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsync($"coupons/use/{Uri.EscapeDataString(code)}?userId={Uri.EscapeDataString(userId)}", null);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CampaignService] MarkCouponAsUsedAsync hatasÄ± â€” Code: {Code}, User: {UserId}", code, userId);
                 return false;
             }
         }

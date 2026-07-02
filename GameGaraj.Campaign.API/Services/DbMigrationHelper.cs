@@ -148,6 +148,21 @@ namespace GameGaraj.Campaign.API.Services
             ";
             connection.Execute(createCouponsSql, commandTimeout: 60);
 
+            // ───── CouponUsages Tablosu ─────
+            var createCouponUsagesSql = @"
+                IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='CouponUsages' AND xtype='U')
+                BEGIN
+                    CREATE TABLE CouponUsages (
+                        Id INT IDENTITY(1,1) PRIMARY KEY,
+                        CouponId INT NOT NULL,
+                        UserId NVARCHAR(200) NOT NULL,
+                        UsedTime DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                        CONSTRAINT UQ_CouponUsages_CouponId_UserId UNIQUE (CouponId, UserId)
+                    )
+                END;
+            ";
+            connection.Execute(createCouponUsagesSql, commandTimeout: 60);
+
             // ───── CouponRewardRules Tablosu ─────
             var createCouponRewardRulesSql = @"
                 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='CouponRewardRules' AND xtype='U')

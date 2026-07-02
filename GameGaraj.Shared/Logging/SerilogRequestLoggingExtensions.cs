@@ -30,7 +30,7 @@ namespace GameGaraj.Shared.Logging
                         ? LogEventLevel.Error
                         : httpContext.Response.StatusCode >= 400
                             ? LogEventLevel.Warning
-                            : LogEventLevel.Debug;
+                            : LogEventLevel.Information;
                 };
 
                 options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>

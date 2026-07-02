@@ -33,7 +33,6 @@ namespace GameGaraj.Campaign.API.Services.Concrete
             if (!request.Items.Any()) return NoDiscount(originalTotal);
 
             var activeRules = await _ruleService.GetActiveAsync();
-            if (!activeRules.Any()) return NoDiscount(originalTotal);
 
             var strategyMap = _ruleStrategies.ToDictionary(s => s.RuleType, s => s);
 
@@ -197,7 +196,17 @@ namespace GameGaraj.Campaign.API.Services.Concrete
                 {
                     finalResponse.CouponMessage = "Geçersiz veya pasif kupon kodu.";
                 }
-                else if (coupon.IsUsed)
+                else if (string.IsNullOrEmpty(coupon.UserId) && string.IsNullOrWhiteSpace(request.UserId))
+                {
+                    finalResponse.CouponMessage = "Bu kuponu kullanmak icin giris yapmalisiniz.";
+                }
+                else if (string.IsNullOrEmpty(coupon.UserId)
+                         && !string.IsNullOrWhiteSpace(request.UserId)
+                         && await _couponService.IsCouponUsedByUserAsync(coupon.Id, request.UserId))
+                {
+                    finalResponse.CouponMessage = "Bu kuponu daha once kullandiniz.";
+                }
+                else if (!string.IsNullOrEmpty(coupon.UserId) && coupon.IsUsed)
                 {
                     finalResponse.CouponMessage = "Bu kupon daha önce kullanılmış.";
                 }

@@ -55,6 +55,13 @@ namespace GameGaraj.Campaign.API.Controllers
             return Ok(coupons);
         }
 
+        [HttpGet("public/user/{userId}")]
+        public async Task<IActionResult> GetPublicForUser(string userId)
+        {
+            var coupons = await _couponService.GetPublicCouponsAsync(userId);
+            return Ok(coupons);
+        }
+
         [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetByUserId(string userId)
         {
@@ -105,13 +112,18 @@ namespace GameGaraj.Campaign.API.Controllers
         }
 
         [HttpPut("use/{code}")]
-        public async Task<IActionResult> MarkAsUsedByCode(string code)
+        public async Task<IActionResult> MarkAsUsedByCode(string code, [FromQuery] string? userId = null)
         {
             var coupon = await _couponService.GetByCodeAsync(code);
             if (coupon == null)
                 return NotFound($"Kod: {code} ile kupon bulunamadı.");
 
-            var result = await _couponService.MarkAsUsedAsync(coupon.Id);
+            if (string.IsNullOrEmpty(coupon.UserId) && string.IsNullOrWhiteSpace(userId))
+                return BadRequest("Herkese acik kupon kullanimi icin kullanici bilgisi gereklidir.");
+
+            var result = string.IsNullOrEmpty(coupon.UserId)
+                ? await _couponService.MarkAsUsedAsync(coupon.Id, userId!)
+                : await _couponService.MarkAsUsedAsync(coupon.Id);
             if (!result)
                 return BadRequest("Kupon kullanıldı olarak işaretlenemedi.");
 

@@ -46,7 +46,6 @@ curl -s -X PUT "$ELASTIC_URL/_index_template/gamegaraj-logs-template" \
   "template": {
     "settings": {
       "index.lifecycle.name": "gamegaraj-logs-policy",
-      "index.lifecycle.rollover_alias": "gamegaraj-logs",
       "number_of_shards": 1,
       "number_of_replicas": 0
     }
@@ -74,7 +73,7 @@ echo "============================================"
 echo "✓ ILM setup complete!"
 echo ""
 echo "Log retention policy:"
-echo "  Hot:    0 - 7 days  (rollover at 1 day or 5GB)"
+echo "  Hot:    0 - 7 days"
 echo "  Warm:   7 - 30 days (shrink + forcemerge)"
 echo "  Cold:  30 - 180 days"
 echo "  Delete: after 180 days"

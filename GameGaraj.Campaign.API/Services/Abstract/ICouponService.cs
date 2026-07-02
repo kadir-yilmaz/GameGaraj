@@ -8,10 +8,13 @@ namespace GameGaraj.Campaign.API.Services.Abstract
         Task<Coupon?> GetByIdAsync(int id);
         Task<Coupon?> GetByCodeAsync(string code);
         Task<List<Coupon>> GetPublicCouponsAsync();
+        Task<List<Coupon>> GetPublicCouponsAsync(string userId);
         Task<List<Coupon>> GetByUserIdAsync(string userId);
+        Task<bool> IsCouponUsedByUserAsync(int couponId, string userId);
         Task<bool> SaveAsync(Coupon coupon);
         Task<bool> UpdateAsync(Coupon coupon);
         Task<bool> DeleteAsync(int id);
         Task<bool> MarkAsUsedAsync(int id);
+        Task<bool> MarkAsUsedAsync(int id, string userId);
     }
 }

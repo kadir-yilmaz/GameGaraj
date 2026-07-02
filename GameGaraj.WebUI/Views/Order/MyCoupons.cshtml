@@ -1,6 +1,9 @@
 @model List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>
+@using GameGaraj.WebUI.Models.Campaigns
 @{
-    ViewData["Title"] = "Kuponlarım";
+    ViewData["Title"] = "Kuponlarim";
+    var publicCoupons = ViewBag.PublicCoupons as List<CouponViewModel> ?? new();
+    var privateCoupons = Model ?? new();
 }
 
 <style>
@@ -19,12 +22,13 @@
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     }
 
-    .coupon-card::before, .coupon-card::after {
+    .coupon-card::before,
+    .coupon-card::after {
         content: '';
         position: absolute;
         width: 20px;
         height: 20px;
-        background-color: #0f111a; /* Match body background */
+        background-color: #0f111a;
         border-radius: 50%;
         top: 50%;
         transform: translateY(-50%);
@@ -67,102 +71,63 @@
     .btn-copy-coupon:hover {
         color: #fff;
     }
+
+    .coupon-tabs .nav-link {
+        color: rgba(255, 255, 255, 0.72);
+        border-color: transparent;
+    }
+
+    .coupon-tabs .nav-link.active {
+        color: #111;
+        background-color: #f1c40f;
+        border-color: #f1c40f;
+        font-weight: 700;
+    }
 </style>
 
 <div class="container py-5" style="background-color: #0f111a; min-height: 80vh; border-radius: 12px; color: #fff;">
     <div class="d-flex align-items-center mb-5">
         <i class="fas fa-ticket-alt text-warning fa-2x me-3"></i>
-        <h2 class="mb-0 fw-bold">Kuponlarım</h2>
+        <h2 class="mb-0 fw-bold">Kuponlarim</h2>
     </div>
 
-    @if (Model == null || !Model.Any())
+    @if (!publicCoupons.Any() && !privateCoupons.Any())
     {
         <div class="text-center py-5">
             <i class="fas fa-ticket-alt text-muted fa-4x mb-4 opacity-30"></i>
-            <h4 class="text-muted">Aktif kuponunuz bulunmamaktadır.</h4>
-            <p class="text-muted small">Sipariş vererek ve sadakat hedeflerini tamamlayarak yeni kuponlar kazanabilirsiniz!</p>
-            <a asp-controller="Home" asp-action="Index" class="btn btn-warning mt-3 px-4 py-2 fw-bold text-dark">Alışverişe Başla</a>
+            <h4 class="text-muted">Aktif kuponunuz bulunmamaktadir.</h4>
+            <p class="text-muted small">Siparis vererek ve sadakat hedeflerini tamamlayarak yeni kuponlar kazanabilirsiniz.</p>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-warning mt-3 px-4 py-2 fw-bold text-dark">Alisverise Basla</a>
         </div>
     }
     else
     {
-        <div class="row g-4">
-            @foreach (var coupon in Model)
-            {
-                var isExpired = coupon.ExpiryDate.HasValue && coupon.ExpiryDate.Value < DateTime.Now;
-                var statusText = coupon.IsUsed ? "Kullanıldı" : (isExpired ? "Süresi Doldu" : "Kullanılabilir");
-                var statusClass = coupon.IsUsed ? "bg-danger" : (isExpired ? "bg-secondary text-dark" : "bg-success");
-                
-                <div class="col-md-6">
-                    <div class="coupon-card p-4 d-flex align-items-center h-100 @(coupon.IsUsed || isExpired ? "opacity-60" : "")">
-                        <!-- Left Part (Discount Amount/Info) -->
-                        <div class="text-center pe-3 d-flex flex-column justify-content-center align-items-center" style="min-width: 120px;">
-                            @if (coupon.DiscountType == "Percentage")
-                            {
-                                <h2 class="fw-extrabold text-success mb-0" style="font-size: 2.2rem;">%@coupon.DiscountRate</h2>
-                                <span class="small text-muted">İndirim</span>
-                                @if (coupon.MaxDiscountAmount > 0)
-                                {
-                                    <span class="badge bg-dark mt-1" style="font-size: 0.65rem;">Max @coupon.MaxDiscountAmount TL</span>
-                                }
-                            }
-                            else if (coupon.DiscountType == "FixedAmount")
-                            {
-                                <h2 class="fw-extrabold text-success mb-0" style="font-size: 2rem;">@coupon.Amount</h2>
-                                <span class="small text-muted">TL İndirim</span>
-                            }
-                            else if (coupon.DiscountType == "FreeShipping")
-                            {
-                                <i class="fas fa-truck text-info fa-2x mb-2"></i>
-                                <span class="small text-muted fw-bold">Ücretsiz Kargo</span>
-                            }
-                        </div>
+        <ul class="nav nav-tabs coupon-tabs border-secondary mb-4" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="public-coupons-tab" data-bs-toggle="tab" data-bs-target="#public-coupons" type="button" role="tab">
+                    Herkese Acik <span class="badge bg-secondary ms-1">@publicCoupons.Count</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="private-coupons-tab" data-bs-toggle="tab" data-bs-target="#private-coupons" type="button" role="tab">
+                    Bana Ozel <span class="badge bg-secondary ms-1">@privateCoupons.Count</span>
+                </button>
+            </li>
+        </ul>
 
-                        <!-- Divider -->
-                        <div class="coupon-divider"></div>
-
-                        <!-- Right Part (Details & Code) -->
-                        <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <span class="badge @statusClass px-2 py-1" style="font-size: 0.7rem;">@statusText</span>
-                                @if (coupon.ExpiryDate.HasValue)
-                                {
-                                    <small class="text-muted"><i class="far fa-clock me-1"></i>Süre: @coupon.ExpiryDate.Value.ToString("dd.MM.yyyy")</small>
-                                }
-                                else
-                                {
-                                    <small class="text-muted"><i class="far fa-clock me-1"></i>Süresiz</small>
-                                }
-                            </div>
-                            
-                            @if (coupon.MinPurchaseAmount > 0)
-                            {
-                                <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1 text-warning"></i>Minimum sepet tutarı: <strong>@coupon.MinPurchaseAmount TL</strong></p>
-                            }
-                            else
-                            {
-                                <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1 text-success"></i>Tüm sepetlerde geçerli</p>
-                            }
-
-                            @if (!coupon.IsUsed && !isExpired)
-                            {
-                                <div class="d-flex align-items-center gap-2 mt-3">
-                                    <span class="coupon-code-badge" id="code-@coupon.Id">@coupon.Code</span>
-                                    <button class="btn btn-copy-coupon" onclick="copyCouponCode('@coupon.Code', @coupon.Id)" title="Kodu Kopyala">
-                                        <i class="far fa-copy fa-lg" id="icon-@coupon.Id"></i>
-                                    </button>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="d-flex align-items-center gap-2 mt-3">
-                                    <span class="coupon-code-badge text-decoration-line-through text-muted" style="border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3) !important;">@coupon.Code</span>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            }
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="public-coupons" role="tabpanel" aria-labelledby="public-coupons-tab">
+                @{
+                    ViewData["EmptyText"] = "Herkese acik kupon bulunmamaktadir.";
+                }
+                <partial name="_CouponGrid" model="publicCoupons" />
+            </div>
+            <div class="tab-pane fade" id="private-coupons" role="tabpanel" aria-labelledby="private-coupons-tab">
+                @{
+                    ViewData["EmptyText"] = "Size ozel kupon bulunmamaktadir.";
+                }
+                <partial name="_CouponGrid" model="privateCoupons" />
+            </div>
         </div>
     }
 </div>
@@ -173,12 +138,11 @@
             navigator.clipboard.writeText(code).then(() => {
                 const icon = document.getElementById('icon-' + id);
                 icon.className = 'fas fa-check text-success fa-lg';
-                
-                // Show standard site notifications if available
+
                 if (typeof window.showNotification === 'function') {
-                    window.showNotification('Kupon kodu kopyalandı!', 'success');
+                    window.showNotification('Kupon kodu kopyalandi.', 'success');
                 } else {
-                    alert('Kupon kodu kopyalandı: ' + code);
+                    alert('Kupon kodu kopyalandi: ' + code);
                 }
 
                 setTimeout(() => {
