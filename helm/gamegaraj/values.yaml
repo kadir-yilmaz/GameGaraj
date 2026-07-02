@@ -8,6 +8,7 @@
 # -- Global settings shared by all services
 global:
   imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
   aspnetEnvironment: Production
   aspnetUrls: "http://+:8080"
   containerPort: 8080
@@ -42,7 +43,7 @@ services:
   # API Gateway (YARP reverse proxy)
   # ---------------------------------------------------------------------------
   gateway:
-    image: "gateway:59b4804-121-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/gateway:59b4804-121-1"
     nodePort: 30000
     env:
       # Cluster addresses — K8s service DNS + port
@@ -70,7 +71,7 @@ services:
   # Catalog API (PostgreSQL)
   # ---------------------------------------------------------------------------
   catalog-api:
-    image: "catalog-api:59b4804-121-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/catalog-api:59b4804-121-1"
     nodePort: 30010
     skipCommonRabbit: true
     env:
@@ -84,7 +85,7 @@ services:
   # Review API (PostgreSQL)
   # ---------------------------------------------------------------------------
   review-api:
-    image: "review-api:59b4804-121-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/review-api:59b4804-121-1"
     nodePort: 30018
     skipCommonRabbit: true
     env:
@@ -98,7 +99,7 @@ services:
   # PhotoStock API (MinIO)
   # ---------------------------------------------------------------------------
   photostock-api:
-    image: "photostock-api:59b4804-121-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/photostock-api:59b4804-121-1"
     nodePort: 30015
     env:
       IdentityOption__Audience: "photostock.api"
@@ -114,7 +115,7 @@ services:
   # Basket API (Redis Sentinel)
   # ---------------------------------------------------------------------------
   basket-api:
-    image: "basket-api:59b4804-121-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/basket-api:59b4804-121-1"
     nodePort: 30011
     env:
       IdentityOption__Audience: "basket.api"
@@ -127,7 +128,7 @@ services:
   # Order API (SQL Server)
   # ---------------------------------------------------------------------------
   order-api:
-    image: "order-api:59b4804-121-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/order-api:59b4804-121-1"
     nodePort: 30013
     secretEnv:
       ConnectionStrings__DefaultConnection: order-sqlserver-connection
@@ -136,7 +137,7 @@ services:
   # Payment API (Iyzico)
   # ---------------------------------------------------------------------------
   payment-api:
-    image: "payment-api:59b4804-121-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/payment-api:59b4804-121-1"
     nodePort: 30014
     env:
       Iyzipay__BaseUrl: "https://sandbox-api.iyzipay.com"
@@ -148,7 +149,7 @@ services:
   # Invoice API (PDF & MinIO)
   # ---------------------------------------------------------------------------
   invoice-api:
-    image: "invoice-api:59b4804-121-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/invoice-api:59b4804-121-1"
     nodePort: 30017
     env:
       IdentityOption__Audience: "invoice.api"
@@ -164,7 +165,7 @@ services:
   # Notification API (Go + Gin)
   # ---------------------------------------------------------------------------
   notification-api:
-    image: "notification-api:59b4804-121-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/notification-api:59b4804-121-1"
     nodePort: 30019
     env:
       GIN_MODE: "release"
@@ -182,7 +183,7 @@ services:
   # Campaign API (SQL Server)
   # ---------------------------------------------------------------------------
   campaign-api:
-    image: "campaign-api:59b4804-121-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/campaign-api:59b4804-121-1"
     nodePort: 30016
     secretEnv:
       ConnectionStrings__SqlServer: campaign-sqlserver-connection
@@ -191,7 +192,7 @@ services:
   # WebUI (MVC — routes through Gateway internally)
   # ---------------------------------------------------------------------------
   webui:
-    image: "webui:59b4804-121-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:59b4804-121-1"
     nodePort: 30075
     replicas: 1
     env:

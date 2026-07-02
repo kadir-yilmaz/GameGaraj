@@ -28,6 +28,7 @@ concurrency:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   deploy:
@@ -36,7 +37,6 @@ jobs:
 
     env:
       BUILD_SERVICE: ${{ github.event.inputs.service || 'all' }}
-      KUBECONFIG: /home/kadirserver/.kube/config
 
     steps:
       - name: Checkout Code
@@ -113,15 +113,22 @@ jobs:
           set -euo pipefail
           docker version
 
+      - name: Login to GHCR
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+
       - name: Build Application Images
         run: |
           set -euo pipefail
 
           SHORT_SHA=$(git rev-parse --short HEAD)
           DEPLOY_TAG="${SHORT_SHA}-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          IMAGE_REPOSITORY="ghcr.io/${GITHUB_REPOSITORY,,}"
           echo "Image tag: $DEPLOY_TAG"
           echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
           echo "DEPLOY_TAG=$DEPLOY_TAG" >> "$GITHUB_ENV"
+          echo "IMAGE_REPOSITORY=$IMAGE_REPOSITORY" >> "$GITHUB_ENV"
 
           SERVICES_TO_BUILD=""
           if [ "${{ steps.filter.outputs.build_gateway }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD gateway"; fi
@@ -141,9 +148,15 @@ jobs:
             echo "SKIP_TAG_UPDATE=true" >> "$GITHUB_ENV"
           else
             echo "Building services: $SERVICES_TO_BUILD"
-            IMAGE_TAG="$DEPLOY_TAG" docker compose -f docker-compose.build.yml build $SERVICES_TO_BUILD
+            IMAGE_REPOSITORY="$IMAGE_REPOSITORY" IMAGE_TAG="$DEPLOY_TAG" docker compose -f docker-compose.build.yml build $SERVICES_TO_BUILD
             echo "SERVICES_BUILT=$SERVICES_TO_BUILD" >> "$GITHUB_ENV"
           fi
+
+      - name: Push Application Images
+        if: ${{ env.SKIP_TAG_UPDATE != 'true' }}
+        run: |
+          set -euo pipefail
+          IMAGE_REPOSITORY="$IMAGE_REPOSITORY" IMAGE_TAG="$DEPLOY_TAG" docker compose -f docker-compose.build.yml push $SERVICES_BUILT
 
       - name: Update Image Tags in values.yaml
         if: ${{ env.SKIP_TAG_UPDATE != 'true' }}
@@ -153,8 +166,9 @@ jobs:
           VALUES_FILE="helm/gamegaraj/values.yaml"
           SHORT_SHA="${SHORT_SHA}"
           DEPLOY_TAG="${DEPLOY_TAG}"
+          IMAGE_REPOSITORY="${IMAGE_REPOSITORY}"
 
-          echo "Updating image tags in $VALUES_FILE to $DEPLOY_TAG..."
+          echo "Updating image tags in $VALUES_FILE to $IMAGE_REPOSITORY/*:$DEPLOY_TAG..."
 
           # Map docker-compose service names to Helm values.yaml service keys
           declare -A SERVICE_MAP=(
@@ -178,10 +192,11 @@ jobs:
               continue
             fi
 
-            # Replace the image tag for this service in values.yaml
-            # Pattern: image: [optional quote]<service-name>:<any-tag>[optional quote] -> image: "<service-name>:<DEPLOY_TAG>"
-            sed -i -E "s|image: \"?${svc}:[^\"]*\"?|image: \"${svc}:${DEPLOY_TAG}\"|g" "$VALUES_FILE"
-            echo "  Updated: ${svc} -> ${svc}:${DEPLOY_TAG}"
+            image_ref="${IMAGE_REPOSITORY}/${svc}:${DEPLOY_TAG}"
+
+            # Match either the old local image form (gateway:tag) or the registry form (.../gateway:tag).
+            sed -i -E "s|image: \"?([^\"[:space:]]+/)?${svc}:[^\"]*\"?|image: \"${image_ref}\"|g" "$VALUES_FILE"
+            echo "  Updated: ${svc} -> ${image_ref}"
           done
 
           # Also update APP_VERSION for webui if it was built
@@ -228,69 +243,3 @@ jobs:
           echo "  Image tags committed and pushed."
           echo "  ArgoCD will detect this change and deploy."
           echo "=============================================="
-
-      - name: Force ArgoCD Refresh And Wait
-        if: ${{ env.SKIP_TAG_UPDATE != 'true' }}
-        run: |
-          set -euo pipefail
-
-          if ! kubectl -n argocd get application gamegaraj >/dev/null 2>&1; then
-            echo "ArgoCD application 'gamegaraj' not found; tag update was pushed, but rollout wait is skipped."
-            exit 0
-          fi
-
-          echo "Requesting a hard refresh from ArgoCD..."
-          expected_revision="$(git rev-parse HEAD)"
-          kubectl -n argocd annotate application gamegaraj \
-            argocd.argoproj.io/refresh=hard \
-            gamegaraj.io/last-deploy-tag="${DEPLOY_TAG}" \
-            --overwrite
-
-          echo "Waiting for ArgoCD to sync revision ${expected_revision}..."
-          for i in {1..60}; do
-            sync_status="$(kubectl -n argocd get application gamegaraj -o jsonpath='{.status.sync.status}' 2>/dev/null || true)"
-            health_status="$(kubectl -n argocd get application gamegaraj -o jsonpath='{.status.health.status}' 2>/dev/null || true)"
-            revision="$(kubectl -n argocd get application gamegaraj -o jsonpath='{.status.sync.revision}' 2>/dev/null || true)"
-            echo "ArgoCD status: sync=${sync_status:-unknown}, health=${health_status:-unknown}, revision=${revision:-unknown}"
-
-            if [ "$sync_status" = "Synced" ] && [ "$revision" = "$expected_revision" ] && { [ "$health_status" = "Healthy" ] || [ "$health_status" = "Progressing" ]; }; then
-              break
-            fi
-
-            sleep 10
-          done
-
-          final_sync_status="$(kubectl -n argocd get application gamegaraj -o jsonpath='{.status.sync.status}')"
-          final_revision="$(kubectl -n argocd get application gamegaraj -o jsonpath='{.status.sync.revision}')"
-          if [ "$final_sync_status" != "Synced" ] || [ "$final_revision" != "$expected_revision" ]; then
-            echo "ArgoCD did not sync revision ${expected_revision} in time."
-            exit 1
-          fi
-
-          echo "Forcing deployment pod templates to the image tag written to Helm values..."
-          for svc in $SERVICES_BUILT; do
-            expected_image="${svc}:${DEPLOY_TAG}"
-            kubectl set image "deployment/${svc}" "${svc}=${expected_image}"
-            kubectl patch "deployment/${svc}" --type=merge \
-              -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"gamegaraj.io/image\":\"${expected_image}\"}}}}}"
-
-            if [ "$svc" = "webui" ]; then
-              kubectl set env "deployment/${svc}" APP_VERSION="${DEPLOY_TAG}"
-              kubectl patch "deployment/${svc}" --type=merge \
-                -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"gamegaraj.io/app-version\":\"${DEPLOY_TAG}\"}}}}}"
-            fi
-          done
-
-          echo "Waiting for updated deployments to roll out..."
-          for svc in $SERVICES_BUILT; do
-            kubectl rollout status "deployment/${svc}" --timeout=300s
-            actual_image="$(kubectl get "deployment/${svc}" -o jsonpath='{.spec.template.spec.containers[0].image}')"
-            expected_image="${svc}:${DEPLOY_TAG}"
-
-            if [ "$actual_image" != "$expected_image" ]; then
-              echo "Deployment ${svc} is running desired image '${actual_image}', expected '${expected_image}'."
-              exit 1
-            fi
-
-            echo "Verified ${svc} image: ${actual_image}"
-          done
