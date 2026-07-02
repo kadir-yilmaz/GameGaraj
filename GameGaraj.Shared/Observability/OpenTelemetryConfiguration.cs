@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -74,16 +75,21 @@ namespace GameGaraj.Shared.Observability
                                 // WebUI için sadece sipariş ve ödeme akışını izle (Gürültüyü önlemek için)
                                 if (serviceName == "GameGaraj.WebUI")
                                 {
-                                    return path.StartsWith("/Order", StringComparison.OrdinalIgnoreCase);
+                                    return string.Equals(ctx.Request.Method, "POST", StringComparison.OrdinalIgnoreCase)
+                                           && path.Equals("/Order/Checkout", StringComparison.OrdinalIgnoreCase);
                                 }
 
                                 // Gateway için sadece sipariş ve ödeme API isteklerini izle
                                 if (serviceName == "GameGaraj.Gateway")
                                 {
-                                    return path.StartsWith("/api/orders", StringComparison.OrdinalIgnoreCase) ||
-                                           path.StartsWith("/api/payments", StringComparison.OrdinalIgnoreCase) ||
-                                           path.StartsWith("/api/order", StringComparison.OrdinalIgnoreCase) ||
-                                           path.StartsWith("/api/payment", StringComparison.OrdinalIgnoreCase);
+                                    if (!string.Equals(ctx.Request.Method, "POST", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        return false;
+                                    }
+
+                                    return path.Equals("/api/order/orders", StringComparison.OrdinalIgnoreCase) ||
+                                           path.Equals("/api/payment", StringComparison.OrdinalIgnoreCase) ||
+                                           path.Equals("/api/payment/", StringComparison.OrdinalIgnoreCase);
                                 }
 
                                 return true;
@@ -92,6 +98,28 @@ namespace GameGaraj.Shared.Observability
                         .AddHttpClientInstrumentation(opts =>
                         {
                             opts.RecordException = true;
+                            opts.FilterHttpRequestMessage = request =>
+                            {
+                                if (Activity.Current == null)
+                                {
+                                    return false;
+                                }
+
+                                if (serviceName == "GameGaraj.WebUI")
+                                {
+                                    var requestPath = request.RequestUri?.AbsolutePath ?? "";
+                                    if (!string.Equals(request.Method.Method, "POST", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        return false;
+                                    }
+
+                                    return requestPath.Equals("/api/order/orders", StringComparison.OrdinalIgnoreCase) ||
+                                           requestPath.Equals("/api/payment", StringComparison.OrdinalIgnoreCase) ||
+                                           requestPath.Equals("/api/payment/", StringComparison.OrdinalIgnoreCase);
+                                }
+
+                                return true;
+                            };
                         })
                         .AddEntityFrameworkCoreInstrumentation(opts =>
                         {

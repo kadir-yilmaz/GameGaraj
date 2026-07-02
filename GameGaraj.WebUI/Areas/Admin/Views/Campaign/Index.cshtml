@@ -41,7 +41,9 @@ else
             <tbody>
                 @foreach (var rule in Model)
                 {
-                    <tr>
+                    var isExpired = rule.EndDate.HasValue && rule.EndDate.Value.Date < DateTime.Today;
+
+                    <tr class="@(isExpired ? "table-danger" : "")">
                         <td>
                             <strong>@rule.Name</strong>
                             @if (!string.IsNullOrEmpty(rule.Description))
@@ -116,10 +118,16 @@ else
                         <td>
                             @if (rule.StartDate.HasValue || rule.EndDate.HasValue)
                             {
-                                <small class="text-muted">
+                                <small class="@(isExpired ? "text-danger fw-semibold" : "text-muted")">
                                     @(rule.StartDate?.ToString("dd.MM.yyyy") ?? "Başlangıç Yok") - 
                                     @(rule.EndDate?.ToString("dd.MM.yyyy") ?? "Süresiz")
                                 </small>
+                                @if (isExpired)
+                                {
+                                    <div class="small text-danger fw-semibold mt-1">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>S&uuml;resi Bitti
+                                    </div>
+                                }
                             }
                             else
                             {
@@ -127,7 +135,16 @@ else
                             }
                         </td>
                         <td>
-                            @if (rule.IsActive)
+                            @if (isExpired)
+                            {
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-clock me-1"></i>S&uuml;resi Bitti
+                                </span>
+                                <div class="small text-muted mt-1">
+                                    @(rule.IsActive ? "Aktif işaretli, ama tarih geçmiş" : "Pasif")
+                                </div>
+                            }
+                            else if (rule.IsActive)
                             {
                                 <span class="badge bg-success">Aktif</span>
                             }
