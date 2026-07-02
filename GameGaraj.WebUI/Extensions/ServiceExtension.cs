@@ -13,6 +13,7 @@ namespace GameGaraj.WebUI.Extensions
 
             // Register DelegatingHandler
             services.AddTransient<UserIdDelegatingHandler>();
+            services.AddTransient<OutboundRequestLoggingHandler>();
 
             // All services route through the gateway with service-specific path prefixes
             var gatewayUri = new Uri($"{serviceApiSettings!.GatewayBaseUri}/");
@@ -23,6 +24,7 @@ namespace GameGaraj.WebUI.Extensions
                 client.BaseAddress = new Uri(gatewayUri, "api/catalog/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
+            .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
             // Basket Service
@@ -31,6 +33,7 @@ namespace GameGaraj.WebUI.Extensions
                 client.BaseAddress = new Uri(gatewayUri, "api/basket/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
+            .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
             // Order Service
@@ -39,6 +42,7 @@ namespace GameGaraj.WebUI.Extensions
                 client.BaseAddress = new Uri(gatewayUri, "api/order/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
+            .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
             // Review Service
@@ -47,6 +51,7 @@ namespace GameGaraj.WebUI.Extensions
                 client.BaseAddress = new Uri(gatewayUri, "api/review/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
+            .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
             // Favorites Service (lives in basket-api, routed through gateway)
@@ -55,6 +60,7 @@ namespace GameGaraj.WebUI.Extensions
                 client.BaseAddress = new Uri(gatewayUri, "api/favorites/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
+            .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
             // Payment Service
@@ -63,13 +69,15 @@ namespace GameGaraj.WebUI.Extensions
                 client.BaseAddress = new Uri(gatewayUri, "api/payment/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
+            .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
             // Identity Service (talks directly to Keycloak, not through gateway)
             services.AddHttpClient<IIdentityService, IdentityService>(client =>
             {
                 client.Timeout = TimeSpan.FromSeconds(10);
-            });
+            })
+            .AddHttpMessageHandler<OutboundRequestLoggingHandler>();
 
             // PhotoStock Service
             services.AddHttpClient<IPhotoStockService, PhotoStockService>(client =>
@@ -77,6 +85,7 @@ namespace GameGaraj.WebUI.Extensions
                 client.BaseAddress = new Uri(gatewayUri, "api/photostock/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
+            .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
 
             // Campaign Service
@@ -85,6 +94,7 @@ namespace GameGaraj.WebUI.Extensions
                 client.BaseAddress = new Uri(gatewayUri, "api/campaign/");
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
+            .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
         }
     }
