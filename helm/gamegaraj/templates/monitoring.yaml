@@ -236,7 +236,7 @@ data:
         {
           "title": "Request Rate (RPS) per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
           "targets": [
             {
               "expr": "sum(rate(http_server_request_duration_seconds_count[1m])) by (service_name)",
@@ -251,45 +251,9 @@ data:
           }
         },
         {
-          "title": "RPS - $service",
-          "type": "stat",
-          "repeat": "service",
-          "repeatDirection": "h",
-          "maxPerRow": 4,
-          "gridPos": { "h": 5, "w": 6, "x": 0, "y": 8 },
-          "targets": [
-            {
-              "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\"}[1m]))",
-              "legendFormat": "$service"
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "unit": "reqps",
-              "decimals": 2,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  { "color": "green", "value": null },
-                  { "color": "yellow", "value": 100 },
-                  { "color": "red", "value": 500 }
-                ]
-              }
-            }
-          },
-          "options": {
-            "reduceOptions": {
-              "calcs": ["lastNotNull"]
-            },
-            "colorMode": "value",
-            "graphMode": "area",
-            "textMode": "value_and_name"
-          }
-        },
-        {
           "title": "Latency P95 per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
           "targets": [
             {
               "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[1m])) by (le, service_name))",
@@ -314,7 +278,7 @@ data:
         {
           "title": "Error Rate (5xx) per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
           "targets": [
             {
               "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[1m])) by (service_name) / sum(rate(http_server_request_duration_seconds_count[1m])) by (service_name)",
@@ -340,7 +304,7 @@ data:
         {
           "title": "CPU Usage per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
           "targets": [
             {
               "expr": "rate(process_cpu_time_seconds_total[1m])",
@@ -365,7 +329,7 @@ data:
         {
           "title": "Memory Usage per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
           "targets": [
             {
               "expr": "process_memory_usage_bytes",
@@ -382,7 +346,7 @@ data:
         {
           "title": "GC Collections per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
           "targets": [
             {
               "expr": "rate(process_runtime_dotnet_gc_collections_count_total[1m])",
@@ -399,7 +363,7 @@ data:
         {
           "title": "ThreadPool Queue Length",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
           "targets": [
             {
               "expr": "process_runtime_dotnet_thread_pool_queue_length",
@@ -416,7 +380,7 @@ data:
         {
           "title": "Active HTTP Connections",
           "type": "stat",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 40 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
           "targets": [
             {
               "expr": "sum(http_server_active_requests) by (service_name)",
@@ -440,27 +404,14 @@ data:
       ],
       "schemaVersion": 39,
       "tags": ["gamegaraj", "service-health"],
-      "templating": {
-        "list": [
-          {
-            "name": "service",
-            "type": "query",
-            "datasource": { "type": "prometheus", "uid": "prometheus" },
-            "query": "label_values(http_server_request_duration_seconds_count, service_name)",
-            "refresh": 1,
-            "sort": 1,
-            "multi": false,
-            "includeAll": false
-          }
-        ]
-      },
+      "templating": { "list": [] },
       "refresh": "1s",
       "time": { "from": "now-5m", "to": "now" },
       "timepicker": {},
       "timezone": "browser",
       "title": "GameGaraj - Service Health",
       "uid": "gamegaraj-service-health",
-      "version": 2
+      "version": 3
     }
   business-metrics.json: |
     {
@@ -791,17 +742,17 @@ data:
           "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
           "targets": [
             {
-              "expr": "orders_created_total",
+              "expr": "sum by (service_name) (increase(orders_created_total[30s])) > bool 0",
               "legendFormat": "Siparis olustu - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             },
             {
-              "expr": "payments_succeeded_total",
+              "expr": "sum by (service_name) (increase(payments_succeeded_total[30s])) > bool 0",
               "legendFormat": "Odeme basarili - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             },
             {
-              "expr": "payments_failed_total",
+              "expr": "sum by (service_name) (increase(payments_failed_total[30s])) > bool 0",
               "legendFormat": "Odeme basarisiz - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             }
@@ -818,7 +769,8 @@ data:
                 "showPoints": "never",
                 "spanNulls": false
               },
-              "min": 0
+              "min": 0,
+              "max": 1
             },
             "overrides": [
               {
@@ -852,7 +804,162 @@ data:
       "timezone": "browser",
       "title": "GameGaraj - Business Metrics",
       "uid": "gamegaraj-business-metrics",
-      "version": 8
+      "version": 9
+    }
+  service-rps.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "title": "GameGaraj.WebUI RPS",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.WebUI\",http_route!=\"/metrics\",http_route!=\"/health\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.WebUI\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.WebUI\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"4..\"}[1m]))", "legendFormat": "4xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.WebUI\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 12, "lineWidth": 2, "pointSize": 4 } } }
+        },
+        {
+          "title": "GameGaraj.Gateway RPS",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Gateway\",http_route!=\"/metrics\",http_route!=\"/health\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Gateway\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Gateway\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"4..\"}[1m]))", "legendFormat": "4xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Gateway\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 12, "lineWidth": 2, "pointSize": 4 } } }
+        },
+        {
+          "title": "GameGaraj.Catalog RPS",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 7 },
+          "targets": [
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Catalog\",http_route!=\"/metrics\",http_route!=\"/health\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Catalog\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Catalog\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"4..\"}[1m]))", "legendFormat": "4xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Catalog\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 12, "lineWidth": 2, "pointSize": 4 } } }
+        },
+        {
+          "title": "GameGaraj.Basket RPS",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 7 },
+          "targets": [
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Basket\",http_route!=\"/metrics\",http_route!=\"/health\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Basket\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Basket\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"4..\"}[1m]))", "legendFormat": "4xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Basket\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 12, "lineWidth": 2, "pointSize": 4 } } }
+        },
+        {
+          "title": "GameGaraj.Order RPS",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 14 },
+          "targets": [
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Order\",http_route!=\"/metrics\",http_route!=\"/health\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Order\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Order\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"4..\"}[1m]))", "legendFormat": "4xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Order\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 12, "lineWidth": 2, "pointSize": 4 } } }
+        },
+        {
+          "title": "GameGaraj.Payment RPS",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 14 },
+          "targets": [
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Payment\",http_route!=\"/metrics\",http_route!=\"/health\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Payment\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Payment\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"4..\"}[1m]))", "legendFormat": "4xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Payment\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 12, "lineWidth": 2, "pointSize": 4 } } }
+        },
+        {
+          "title": "GameGaraj.Invoice RPS",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 21 },
+          "targets": [
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Invoice\",http_route!=\"/metrics\",http_route!=\"/health\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Invoice\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Invoice\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"4..\"}[1m]))", "legendFormat": "4xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Invoice\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 12, "lineWidth": 2, "pointSize": 4 } } }
+        },
+        {
+          "title": "GameGaraj.Review RPS",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 21 },
+          "targets": [
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Review\",http_route!=\"/metrics\",http_route!=\"/health\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Review\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Review\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"4..\"}[1m]))", "legendFormat": "4xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Review\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 12, "lineWidth": 2, "pointSize": 4 } } }
+        },
+        {
+          "title": "GameGaraj.Campaign RPS",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 28 },
+          "targets": [
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Campaign\",http_route!=\"/metrics\",http_route!=\"/health\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Campaign\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Campaign\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"4..\"}[1m]))", "legendFormat": "4xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Campaign\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 12, "lineWidth": 2, "pointSize": 4 } } }
+        },
+        {
+          "title": "GameGaraj.PhotoStock RPS",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 28 },
+          "targets": [
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.PhotoStock\",http_route!=\"/metrics\",http_route!=\"/health\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.PhotoStock\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.PhotoStock\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"4..\"}[1m]))", "legendFormat": "4xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.PhotoStock\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 12, "lineWidth": 2, "pointSize": 4 } } }
+        },
+        {
+          "title": "GameGaraj.Notification RPS",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 35 },
+          "targets": [
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Notification\",http_route!=\"/metrics\",http_route!=\"/health\"}[1m]))", "legendFormat": "Total" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Notification\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"2..\"}[1m]))", "legendFormat": "2xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Notification\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"4..\"}[1m]))", "legendFormat": "4xx" },
+            { "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"GameGaraj.Notification\",http_route!=\"/metrics\",http_route!=\"/health\",http_response_status_code=~\"5..\"}[1m]))", "legendFormat": "5xx" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 12, "lineWidth": 2, "pointSize": 4 } } }
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["gamegaraj", "rps", "http"],
+      "templating": { "list": [] },
+      "refresh": "5s",
+      "time": { "from": "now-15m", "to": "now" },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "GameGaraj - Service RPS",
+      "uid": "gamegaraj-service-rps",
+      "version": 1
     }
 
 ---
@@ -1075,7 +1182,7 @@ spec:
       labels:
         app: grafana
       annotations:
-        gamegaraj.io/grafana-dashboard-version: "business-metrics-v8-service-rps-exemplars"
+        gamegaraj.io/grafana-dashboard-version: "dashboards-v10-service-rps"
     spec:
       securityContext:
         fsGroup: 472
