@@ -738,17 +738,17 @@ data:
           "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
           "targets": [
             {
-              "expr": "clamp_min(idelta(orders_created_total[$__rate_interval]), 0)",
+              "expr": "sum by (service_name) (increase(orders_created_total[30s])) > 0",
               "legendFormat": "Siparis olustu - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             },
             {
-              "expr": "clamp_min(idelta(payments_succeeded_total[$__rate_interval]), 0)",
+              "expr": "sum by (service_name) (increase(payments_succeeded_total[30s])) > 0",
               "legendFormat": "Odeme basarili - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             },
             {
-              "expr": "clamp_min(idelta(payments_failed_total[$__rate_interval]), 0)",
+              "expr": "sum by (service_name) (increase(payments_failed_total[30s])) > 0",
               "legendFormat": "Odeme basarisiz - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             }
@@ -799,7 +799,7 @@ data:
       "timezone": "browser",
       "title": "GameGaraj - Business Metrics",
       "uid": "gamegaraj-business-metrics",
-      "version": 5
+      "version": 6
     }
 
 ---
@@ -1022,7 +1022,7 @@ spec:
       labels:
         app: grafana
       annotations:
-        gamegaraj.io/grafana-dashboard-version: "business-metrics-v6"
+        gamegaraj.io/grafana-dashboard-version: "business-metrics-v7"
     spec:
       securityContext:
         fsGroup: 472
