@@ -10,7 +10,6 @@ namespace GameGaraj.Shared.Observability.Metrics
     {
         private readonly Counter<long> _itemsAdded;
         private readonly Counter<long> _itemsRemoved;
-        private readonly Counter<long> _basketsDeleted;
         private readonly Counter<long> _favoritesAdded;
         private readonly Counter<long> _favoritesRemoved;
 
@@ -24,9 +23,6 @@ namespace GameGaraj.Shared.Observability.Metrics
             _itemsRemoved = meter.CreateCounter<long>(
                 "basket.items.removed.total", null, "Total items removed from baskets");
 
-            _basketsDeleted = meter.CreateCounter<long>(
-                "basket.deleted.total", null, "Total baskets deleted");
-
             _favoritesAdded = meter.CreateCounter<long>(
                 "basket.favorites.added.total", null, "Total favorites added");
 
@@ -35,14 +31,12 @@ namespace GameGaraj.Shared.Observability.Metrics
 
             _itemsAdded.Add(0);
             _itemsRemoved.Add(0);
-            _basketsDeleted.Add(0);
             _favoritesAdded.Add(0);
             _favoritesRemoved.Add(0);
         }
 
         public void ItemAdded() => _itemsAdded.Add(1);
         public void ItemRemoved() => _itemsRemoved.Add(1);
-        public void BasketDeleted() => _basketsDeleted.Add(1);
         public void FavoriteAdded() => _favoritesAdded.Add(1);
         public void FavoriteRemoved() => _favoritesRemoved.Add(1);
     }

@@ -461,22 +461,18 @@ data:
           }
         },
         {
-          "title": "Counter: Sepet Islemleri (Toplam)",
-          "description": "Counter: increase() ile son 1 saatte kac adet islem oldugunu gosterir.",
+          "title": "Counter: Sepete Eklenen ve Cikarilan Urunler (Toplam)",
+          "description": "Son 1 saatte sepete eklenen ve sepetten cikarilan urun adetlerini gosterir.",
           "type": "stat",
           "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
           "targets": [
             {
               "expr": "sum(increase(basket_items_added_total[1h]))",
-              "legendFormat": "Eklenen"
+              "legendFormat": "Sepete Eklenen Urunler"
             },
             {
               "expr": "sum(increase(basket_items_removed_total[1h]))",
-              "legendFormat": "Cikarilan"
-            },
-            {
-              "expr": "sum(increase(basket_deleted_total[1h]))",
-              "legendFormat": "Silinen Sepet"
+              "legendFormat": "Sepetten Cikarilan Urunler"
             }
           ],
           "fieldConfig": {

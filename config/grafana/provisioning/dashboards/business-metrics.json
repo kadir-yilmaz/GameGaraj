@@ -49,22 +49,18 @@
       }
     },
     {
-      "title": "📊 Counter: Sepet İşlemleri (Toplam)",
-      "description": "Counter metrikleri: increase() fonksiyonu ile son 1 saatte kaç adet işlem olduğunu gösterir. Counter her zaman artar, asla azalmaz.",
+      "title": "📊 Counter: Sepete Eklenen ve Cikarilan Urunler (Toplam)",
+      "description": "Son 1 saatte sepete eklenen ve sepetten cikarilan urun adetlerini gosterir.",
       "type": "stat",
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
       "targets": [
         {
           "expr": "sum(increase(basket_items_added_total[1h]))",
-          "legendFormat": "Eklenen"
+          "legendFormat": "Sepete Eklenen Urunler"
         },
         {
           "expr": "sum(increase(basket_items_removed_total[1h]))",
-          "legendFormat": "Çıkarılan"
-        },
-        {
-          "expr": "sum(increase(basket_deleted_total[1h]))",
-          "legendFormat": "Silinen Sepet"
+          "legendFormat": "Sepetten Cikarilan Urunler"
         }
       ],
       "fieldConfig": {

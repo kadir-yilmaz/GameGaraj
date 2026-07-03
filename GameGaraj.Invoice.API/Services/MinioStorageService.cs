@@ -92,17 +92,11 @@ namespace GameGaraj.Invoice.API.Services
 
             await _minioClient.PutObjectAsync(putArgs, cancellationToken);
 
-            // Verify upload
-            var statArgs = new StatObjectArgs()
-                .WithBucket(_bucketName)
-                .WithObject(objectName);
-            var stat = await _minioClient.StatObjectAsync(statArgs, cancellationToken);
-
             _logger.LogInformation(
-                "Invoice uploaded and verified in MinIO bucket {BucketName} as object {ObjectName}. Size: {Size}",
+                "Invoice uploaded to MinIO bucket {BucketName} as object {ObjectName}. Size: {Size}",
                 _bucketName,
                 objectName,
-                stat.Size);
+                fileBytes.Length);
 
             return objectName;
         }
