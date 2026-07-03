@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
@@ -55,11 +55,11 @@
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
       "targets": [
         {
-          "expr": "sum(increase(basket_items_added_total[1h]))",
+          "expr": "sum(increase(basket_items_added_total[$__range]))",
           "legendFormat": "Sepete Eklenen Urunler"
         },
         {
-          "expr": "sum(increase(basket_items_removed_total[1h]))",
+          "expr": "sum(increase(basket_items_removed_total[$__range]))",
           "legendFormat": "Sepetten Cikarilan Urunler"
         }
       ],
@@ -91,15 +91,15 @@
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
       "targets": [
         {
-          "expr": "sum(increase(orders_created_total[1h]))",
+          "expr": "sum(increase(orders_created_total[$__range]))",
           "legendFormat": "Oluşturulan"
         },
         {
-          "expr": "sum(increase(orders_cancelled_total[1h]))",
+          "expr": "sum(increase(orders_cancelled_total[$__range]))",
           "legendFormat": "İptal Edilen"
         },
         {
-          "expr": "sum(increase(orders_completed_total[1h]))",
+          "expr": "sum(increase(orders_completed_total[$__range]))",
           "legendFormat": "Tamamlanan"
         }
       ],
@@ -332,5 +332,5 @@
   "timezone": "browser",
   "title": "GameGaraj - Business Metrics",
   "uid": "gamegaraj-business-metrics",
-  "version": 1
+  "version": 2
 }
