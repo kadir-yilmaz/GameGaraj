@@ -1037,6 +1037,7 @@ spec:
                 secretKeyRef:
                   name: gamegaraj-secrets
                   key: grafana-admin-password
+                  optional: true
           ports:
             - containerPort: 3000
               name: http
