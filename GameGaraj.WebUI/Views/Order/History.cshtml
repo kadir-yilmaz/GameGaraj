@@ -1,6 +1,15 @@
 @model List<GameGaraj.WebUI.Models.Orders.OrderViewModel>
 @{
     ViewData["Title"] = "Siparişlerim";
+
+    DateTime ToTurkeyTime(DateTime value)
+    {
+        var utc = value.Kind == DateTimeKind.Utc
+            ? value
+            : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+
+        return utc.AddHours(3);
+    }
 }
 
 <div class="container py-4">
@@ -17,7 +26,7 @@
                 <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center pt-3 px-4">
                     <div>
                         <strong class="fs-5 text-dark">Sipariş #@order.Id</strong>
-                        <span class="text-muted ms-2 small">@order.CreatedDate.ToString("dd.MM.yyyy HH:mm")</span>
+                        <span class="text-muted ms-2 small">@ToTurkeyTime(order.CreatedDate).ToString("dd.MM.yyyy HH:mm")</span>
                     </div>
                     <span
                         class="badge rounded-pill px-3 py-2 @(order.Status == 1 || order.Status == 5 ? "bg-success" : order.Status == 2 ? "bg-danger" : order.Status == 4 ? "bg-info pulse-badge" : order.Status == 3 ? "bg-primary pulse-badge" : "bg-warning")">

@@ -733,22 +733,22 @@ data:
         },
         {
           "title": "Checkout Trace Exemplars",
-          "description": "Siparis ve odeme counter artislarindaki exemplar marker'lar Jaeger checkout trace'ine gecis icindir. Degerler ham counter degil, kisa araliktaki artis miktaridir.",
+          "description": "Siparis ve odeme counter artislarini olay aninda sutun olarak gosterir. Exemplar marker varsa Jaeger checkout trace'ine gecis icindir.",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
           "targets": [
             {
-              "expr": "increase(orders_created_total[$__rate_interval])",
+              "expr": "clamp_min(idelta(orders_created_total[$__rate_interval]), 0)",
               "legendFormat": "Siparis olustu - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             },
             {
-              "expr": "increase(payments_succeeded_total[$__rate_interval])",
+              "expr": "clamp_min(idelta(payments_succeeded_total[$__rate_interval]), 0)",
               "legendFormat": "Odeme basarili - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             },
             {
-              "expr": "increase(payments_failed_total[$__rate_interval])",
+              "expr": "clamp_min(idelta(payments_failed_total[$__rate_interval]), 0)",
               "legendFormat": "Odeme basarisiz - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             }
@@ -756,7 +756,16 @@ data:
           "fieldConfig": {
             "defaults": {
               "unit": "none",
-              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }
+              "custom": {
+                "drawStyle": "bars",
+                "barAlignment": 0,
+                "fillOpacity": 80,
+                "lineWidth": 0,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "min": 0
             },
             "overrides": [
               {
@@ -790,7 +799,7 @@ data:
       "timezone": "browser",
       "title": "GameGaraj - Business Metrics",
       "uid": "gamegaraj-business-metrics",
-      "version": 4
+      "version": 5
     }
 
 ---
@@ -1013,13 +1022,21 @@ spec:
       labels:
         app: grafana
       annotations:
-        gamegaraj.io/grafana-dashboard-version: "business-metrics-v5"
+        gamegaraj.io/grafana-dashboard-version: "business-metrics-v6"
     spec:
       securityContext:
         fsGroup: 472
       containers:
         - name: grafana
           image: {{ .Values.monitoring.grafana.image }}
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: "admin"
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gamegaraj-secrets
+                  key: grafana-admin-password
           ports:
             - containerPort: 3000
               name: http
