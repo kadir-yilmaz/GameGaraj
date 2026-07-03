@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -17,8 +18,23 @@ import (
 	"gamegaraj-notification-api/internal/telemetry"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+var httpServerRequestDuration = prometheus.NewHistogramVec(
+	prometheus.HistogramOpts{
+		Name:        "http_server_request_duration_seconds",
+		Help:        "Duration of inbound HTTP server requests.",
+		ConstLabels: prometheus.Labels{"service_name": "GameGaraj.Notification"},
+		Buckets:     prometheus.DefBuckets,
+	},
+	[]string{"http_request_method", "http_response_status_code", "http_route"},
+)
+
+func init() {
+	prometheus.MustRegister(httpServerRequestDuration)
+}
 
 func main() {
 	log.Println("[Main] Starting Go Notification Service...")
@@ -70,6 +86,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(recordHTTPMetrics())
 
 	// Add simple structured log middleware for Gin
 	router.Use(func(c *gin.Context) {
@@ -127,4 +144,27 @@ func main() {
 	}
 
 	log.Println("[Main] Go Notification Service stopped.")
+}
+
+func recordHTTPMetrics() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+
+		c.Next()
+
+		if c.Request.URL.Path == "/metrics" {
+			return
+		}
+
+		route := c.FullPath()
+		if route == "" {
+			route = c.Request.URL.Path
+		}
+
+		httpServerRequestDuration.WithLabelValues(
+			c.Request.Method,
+			strconv.Itoa(c.Writer.Status()),
+			route,
+		).Observe(time.Since(start).Seconds())
+	}
 }

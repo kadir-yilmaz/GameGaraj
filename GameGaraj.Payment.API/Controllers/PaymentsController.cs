@@ -46,7 +46,6 @@ namespace GameGaraj.Payment.API.Controllers
         public async Task<IActionResult> ReceivePayment(PaymentDto paymentDto)
         {
             Console.WriteLine("[PaymentsController] POST ReceivePayment called.");
-            _metrics.PaymentAttempted("Iyzico");
             Console.WriteLine($"[PaymentsController] Received PaymentDto:");
             Console.WriteLine($"  - OrderId: {paymentDto.OrderId}");
             Console.WriteLine($"  - TotalPrice: {paymentDto.TotalPrice}");
@@ -73,6 +72,8 @@ namespace GameGaraj.Payment.API.Controllers
             using (var activity = AppDiagnostics.StartActivity("Call Iyzico"))
             {
                 activity?.SetTag("order.id", paymentDto.OrderId);
+                activity?.SetTag("metric.name", "payments_total");
+                _metrics.PaymentAttempted("Iyzico");
 
                 // 💰 0 TL kontrolü - ücretsiz satın alma (iyzico 0 TL kabul etmiyor)
                 if (paymentDto.TotalPrice <= 0)
@@ -80,6 +81,7 @@ namespace GameGaraj.Payment.API.Controllers
                     activity?.SetTag("payment.provider", "Free");
                     activity?.SetTag("payment.status", "Success");
                     activity?.SetTag("payment.id", "FREE-" + paymentDto.OrderId);
+                    activity?.SetTag("metric.name", "payments_succeeded_total");
 
                     Console.WriteLine("[PaymentsController] ✅ FREE PURCHASE - Skipping iyzico");
                     _metrics.PaymentSucceeded("Free");
@@ -129,6 +131,7 @@ namespace GameGaraj.Payment.API.Controllers
                     activity?.SetStatus(ActivityStatusCode.Error, paymentResult.ErrorMessage ?? "Ödeme başarısız");
 
                     Console.WriteLine($"[PaymentsController] ❌ Payment YOLUNDA GITMEDI: {paymentResult.ErrorMessage}");
+                    activity?.SetTag("metric.name", "payments_failed_total");
                     _metrics.PaymentFailed(paymentResult.ErrorMessage ?? "Payment failed");
 
                     // 📤 PaymentFailed event publish et - Order status Failed olacak
@@ -160,6 +163,7 @@ namespace GameGaraj.Payment.API.Controllers
 
                 activity?.SetTag("payment.status", "Success");
                 activity?.SetTag("payment.id", paymentResult.PaymentId);
+                activity?.SetTag("metric.name", "payments_succeeded_total");
 
                 _metrics.PaymentSucceeded("Iyzipay");
 

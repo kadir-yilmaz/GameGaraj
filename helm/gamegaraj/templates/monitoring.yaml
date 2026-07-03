@@ -178,6 +178,10 @@ data:
           exemplarTraceIdDestinations:
             - name: trace_id
               datasourceUid: jaeger
+            - name: TraceId
+              datasourceUid: jaeger
+            - name: TraceID
+              datasourceUid: jaeger
       - name: Jaeger
         type: jaeger
         access: proxy
@@ -232,7 +236,7 @@ data:
         {
           "title": "Request Rate (RPS) per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
           "targets": [
             {
               "expr": "sum(rate(http_server_request_duration_seconds_count[1m])) by (service_name)",
@@ -247,9 +251,45 @@ data:
           }
         },
         {
+          "title": "RPS - $service",
+          "type": "stat",
+          "repeat": "service",
+          "repeatDirection": "h",
+          "maxPerRow": 4,
+          "gridPos": { "h": 5, "w": 6, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\"}[1m]))",
+              "legendFormat": "$service"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "decimals": 2,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 100 },
+                  { "color": "red", "value": 500 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"]
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "value_and_name"
+          }
+        },
+        {
           "title": "Latency P95 per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
           "targets": [
             {
               "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[1m])) by (le, service_name))",
@@ -274,7 +314,7 @@ data:
         {
           "title": "Error Rate (5xx) per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
           "targets": [
             {
               "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[1m])) by (service_name) / sum(rate(http_server_request_duration_seconds_count[1m])) by (service_name)",
@@ -300,7 +340,7 @@ data:
         {
           "title": "CPU Usage per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
           "targets": [
             {
               "expr": "rate(process_cpu_time_seconds_total[1m])",
@@ -325,7 +365,7 @@ data:
         {
           "title": "Memory Usage per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
           "targets": [
             {
               "expr": "process_memory_usage_bytes",
@@ -342,7 +382,7 @@ data:
         {
           "title": "GC Collections per Service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
           "targets": [
             {
               "expr": "rate(process_runtime_dotnet_gc_collections_count_total[1m])",
@@ -359,7 +399,7 @@ data:
         {
           "title": "ThreadPool Queue Length",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
           "targets": [
             {
               "expr": "process_runtime_dotnet_thread_pool_queue_length",
@@ -376,7 +416,7 @@ data:
         {
           "title": "Active HTTP Connections",
           "type": "stat",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 40 },
           "targets": [
             {
               "expr": "sum(http_server_active_requests) by (service_name)",
@@ -400,14 +440,27 @@ data:
       ],
       "schemaVersion": 39,
       "tags": ["gamegaraj", "service-health"],
-      "templating": { "list": [] },
+      "templating": {
+        "list": [
+          {
+            "name": "service",
+            "type": "query",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "query": "label_values(http_server_request_duration_seconds_count, service_name)",
+            "refresh": 1,
+            "sort": 1,
+            "multi": false,
+            "includeAll": false
+          }
+        ]
+      },
       "refresh": "1s",
       "time": { "from": "now-5m", "to": "now" },
       "timepicker": {},
       "timezone": "browser",
       "title": "GameGaraj - Service Health",
       "uid": "gamegaraj-service-health",
-      "version": 1
+      "version": 2
     }
   business-metrics.json: |
     {
@@ -738,17 +791,17 @@ data:
           "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
           "targets": [
             {
-              "expr": "sum by (service_name) (increase(orders_created_total[30s])) > 0",
+              "expr": "orders_created_total",
               "legendFormat": "Siparis olustu - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             },
             {
-              "expr": "sum by (service_name) (increase(payments_succeeded_total[30s])) > 0",
+              "expr": "payments_succeeded_total",
               "legendFormat": "Odeme basarili - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             },
             {
-              "expr": "sum by (service_name) (increase(payments_failed_total[30s])) > 0",
+              "expr": "payments_failed_total",
               "legendFormat": "Odeme basarisiz - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             }
@@ -799,7 +852,7 @@ data:
       "timezone": "browser",
       "title": "GameGaraj - Business Metrics",
       "uid": "gamegaraj-business-metrics",
-      "version": 6
+      "version": 8
     }
 
 ---
@@ -1022,7 +1075,7 @@ spec:
       labels:
         app: grafana
       annotations:
-        gamegaraj.io/grafana-dashboard-version: "business-metrics-v7"
+        gamegaraj.io/grafana-dashboard-version: "business-metrics-v8-service-rps-exemplars"
     spec:
       securityContext:
         fsGroup: 472

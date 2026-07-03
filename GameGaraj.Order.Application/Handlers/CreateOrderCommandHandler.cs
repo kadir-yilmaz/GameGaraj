@@ -185,7 +185,14 @@ namespace GameGaraj.Order.Application.Handlers
                 }, cancellationToken);
             }
 
-            _metrics.OrderCreated(request.BuyerId);
+            using (var activity = AppDiagnostics.StartActivity("Record OrderCreated Metric"))
+            {
+                activity?.SetTag("order.id", newOrder.Id);
+                activity?.SetTag("metric.name", "orders_created_total");
+                activity?.SetTag("saga.step", "OrderCreatedMetric");
+
+                _metrics.OrderCreated(request.BuyerId);
+            }
 
             return newOrder.Id;
         }
