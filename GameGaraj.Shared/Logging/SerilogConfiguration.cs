@@ -75,7 +75,7 @@ namespace GameGaraj.Shared.Logging
                     .Enrich.With<RequestLogPropertyPruner>()
                     .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticUri))
                     {
-                        AutoRegisterTemplate = true,
+                        AutoRegisterTemplate = false,
                         AutoRegisterTemplateVersion = AutoRegisterTemplateVersion.ESv7,
                         DetectElasticsearchVersion = true,
                         EmitEventFailure = EmitEventFailureHandling.WriteToSelfLog |
@@ -122,6 +122,32 @@ namespace GameGaraj.Shared.Logging
                   "settings": {
                     "number_of_shards": 1,
                     "number_of_replicas": 0
+                  },
+                  "mappings": {
+                    "dynamic_templates": [
+                      {
+                        "strings_as_keywords": {
+                          "match_mapping_type": "string",
+                          "mapping": {
+                            "type": "keyword",
+                            "ignore_above": 512
+                          }
+                        }
+                      }
+                    ],
+                    "properties": {
+                      "message": {
+                        "type": "text",
+                        "index": false
+                      },
+                      "messageTemplate": {
+                        "type": "text",
+                        "index": false
+                      },
+                      "renderings": {
+                        "enabled": false
+                      }
+                    }
                   }
                 }
                 """;
@@ -143,20 +169,105 @@ namespace GameGaraj.Shared.Logging
 
         private static bool IsSearchableLog(LogEvent evt)
         {
+            var statusCode = TryGetIntProperty(evt, "StatusCode");
+            if (evt.Exception != null || (statusCode.HasValue && statusCode.Value >= 400))
+            {
+                return IsApplicationLog(evt);
+            }
+
             if (IsHttpRequestLog(evt))
             {
-                return true;
+                return IsEntryPointHttpRequest(evt) || IsImportantGatewayRequest(evt);
             }
 
             if (evt.Properties.TryGetValue("LogType", out var logType) &&
                 logType is ScalarValue logTypeValue)
             {
                 var value = logTypeValue.Value?.ToString();
-                return string.Equals(value, "BusinessRequest", StringComparison.OrdinalIgnoreCase)
-                       || string.Equals(value, "ExternalDependency", StringComparison.OrdinalIgnoreCase);
+                return string.Equals(value, "BusinessRequest", StringComparison.OrdinalIgnoreCase);
             }
 
             return false;
+        }
+
+        private static bool IsApplicationLog(LogEvent evt)
+        {
+            return IsHttpRequestLog(evt) ||
+                   (evt.Properties.TryGetValue("LogType", out var logType) &&
+                    logType is ScalarValue logTypeValue &&
+                    (string.Equals(logTypeValue.Value?.ToString(), "BusinessRequest", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(logTypeValue.Value?.ToString(), "ExternalDependency", StringComparison.OrdinalIgnoreCase)));
+        }
+
+        private static bool IsEntryPointHttpRequest(LogEvent evt)
+        {
+            var service = TryGetStringProperty(evt, "Service");
+            if (!string.Equals(service, "WebUI", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var path = TryGetStringProperty(evt, "RequestPath") ?? string.Empty;
+            return IsUserFacingWebPath(path);
+        }
+
+        private static bool IsImportantGatewayRequest(LogEvent evt)
+        {
+            var service = TryGetStringProperty(evt, "Service");
+            if (!string.Equals(service, "Gateway", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var path = TryGetStringProperty(evt, "RequestPath") ?? string.Empty;
+            return path.Equals("/api/catalog/products/search", StringComparison.OrdinalIgnoreCase) ||
+                   path.Equals("/api/order/orders", StringComparison.OrdinalIgnoreCase) ||
+                   path.Equals("/api/payment", StringComparison.OrdinalIgnoreCase) ||
+                   path.Equals("/api/payment/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsUserFacingWebPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return true;
+            }
+
+            if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/css/", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/js/", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/lib/", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/images/", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/favicon", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static int? TryGetIntProperty(LogEvent evt, string propertyName)
+        {
+            if (!evt.Properties.TryGetValue(propertyName, out var value) ||
+                value is not ScalarValue scalarValue)
+            {
+                return null;
+            }
+
+            return scalarValue.Value switch
+            {
+                int intValue => intValue,
+                long longValue => (int)longValue,
+                _ => int.TryParse(scalarValue.Value?.ToString(), out var parsed) ? parsed : null
+            };
+        }
+
+        private static string? TryGetStringProperty(LogEvent evt, string propertyName)
+        {
+            return evt.Properties.TryGetValue(propertyName, out var value) &&
+                   value is ScalarValue scalarValue
+                ? scalarValue.Value?.ToString()
+                : null;
         }
 
         private static bool IsHttpRequestLog(LogEvent evt)

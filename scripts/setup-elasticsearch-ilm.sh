@@ -48,6 +48,32 @@ curl -s -X PUT "$ELASTIC_URL/_index_template/gamegaraj-logs-template" \
       "index.lifecycle.name": "gamegaraj-logs-policy",
       "number_of_shards": 1,
       "number_of_replicas": 0
+    },
+    "mappings": {
+      "dynamic_templates": [
+        {
+          "strings_as_keywords": {
+            "match_mapping_type": "string",
+            "mapping": {
+              "type": "keyword",
+              "ignore_above": 512
+            }
+          }
+        }
+      ],
+      "properties": {
+        "message": {
+          "type": "text",
+          "index": false
+        },
+        "messageTemplate": {
+          "type": "text",
+          "index": false
+        },
+        "renderings": {
+          "enabled": false
+        }
+      }
     }
   },
   "priority": 500,
