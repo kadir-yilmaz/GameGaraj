@@ -177,7 +177,7 @@ namespace GameGaraj.Shared.Logging
 
             if (IsHttpRequestLog(evt))
             {
-                return IsEntryPointHttpRequest(evt) || IsImportantGatewayRequest(evt);
+                return true;
             }
 
             if (evt.Properties.TryGetValue("LogType", out var logType) &&
