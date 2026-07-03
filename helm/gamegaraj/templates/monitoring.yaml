@@ -176,7 +176,7 @@ data:
           timeInterval: 15s
           queryTimeout: 30s
           exemplarTraceIdDestinations:
-            - name: Jaeger
+            - name: trace_id
               datasourceUid: jaeger
       - name: Jaeger
         type: jaeger
@@ -733,22 +733,22 @@ data:
         },
         {
           "title": "Checkout Trace Exemplars",
-          "description": "Siparis ve odeme counter serileri uzerindeki exemplar marker'lar Jaeger checkout trace'ine gecis icindir. Bu panel tum siparis trace'lerini listelemez; sadece sampled ornek TraceId gosterir.",
+          "description": "Siparis ve odeme counter artislarindaki exemplar marker'lar Jaeger checkout trace'ine gecis icindir. Degerler ham counter degil, kisa araliktaki artis miktaridir.",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
           "targets": [
             {
-              "expr": "orders_created_total",
+              "expr": "increase(orders_created_total[$__rate_interval])",
               "legendFormat": "Siparis olustu - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             },
             {
-              "expr": "payments_succeeded_total",
+              "expr": "increase(payments_succeeded_total[$__rate_interval])",
               "legendFormat": "Odeme basarili - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             },
             {
-              "expr": "payments_failed_total",
+              "expr": "increase(payments_failed_total[$__rate_interval])",
               "legendFormat": "Odeme basarisiz - {{ "{{" }}service_name{{ "}}" }}",
               "exemplar": true
             }
@@ -790,7 +790,7 @@ data:
       "timezone": "browser",
       "title": "GameGaraj - Business Metrics",
       "uid": "gamegaraj-business-metrics",
-      "version": 3
+      "version": 4
     }
 
 ---
@@ -974,6 +974,27 @@ data:
               description: "Invoice email delivery is failing — check SMTP configuration."
 
 ---
+{{- if .Values.monitoring.grafana.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-storage
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: grafana
+    {{- include "gamegaraj.labels" $ | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.monitoring.grafana.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.monitoring.grafana.persistence.size }}
+  {{- if .Values.monitoring.grafana.persistence.storageClassName }}
+  storageClassName: {{ .Values.monitoring.grafana.persistence.storageClassName | quote }}
+  {{- end }}
+
+---
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -992,8 +1013,10 @@ spec:
       labels:
         app: grafana
       annotations:
-        gamegaraj.io/grafana-dashboard-version: "business-metrics-v3"
+        gamegaraj.io/grafana-dashboard-version: "business-metrics-v5"
     spec:
+      securityContext:
+        fsGroup: 472
       containers:
         - name: grafana
           image: {{ .Values.monitoring.grafana.image }}
@@ -1032,7 +1055,12 @@ spec:
           configMap:
             name: grafana-alerting
         - name: storage-volume
+          {{- if .Values.monitoring.grafana.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: grafana-storage
+          {{- else }}
           emptyDir: {}
+          {{- end }}
 
 ---
 apiVersion: v1

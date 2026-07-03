@@ -321,22 +321,22 @@
     },
     {
       "title": "Checkout Trace Exemplars",
-      "description": "Siparis ve odeme counter serileri uzerindeki exemplar marker'lar Jaeger checkout trace'ine gecis icindir. Bu panel tum siparis trace'lerini listelemez; sadece sampled ornek TraceId gosterir.",
+      "description": "Siparis ve odeme counter artislarindaki exemplar marker'lar Jaeger checkout trace'ine gecis icindir. Degerler ham counter degil, kisa araliktaki artis miktaridir.",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
       "targets": [
         {
-          "expr": "orders_created_total",
+          "expr": "increase(orders_created_total[$__rate_interval])",
           "legendFormat": "Siparis olustu - {{service_name}}",
           "exemplar": true
         },
         {
-          "expr": "payments_succeeded_total",
+          "expr": "increase(payments_succeeded_total[$__rate_interval])",
           "legendFormat": "Odeme basarili - {{service_name}}",
           "exemplar": true
         },
         {
-          "expr": "payments_failed_total",
+          "expr": "increase(payments_failed_total[$__rate_interval])",
           "legendFormat": "Odeme basarisiz - {{service_name}}",
           "exemplar": true
         }
@@ -378,5 +378,5 @@
   "timezone": "browser",
   "title": "GameGaraj - Business Metrics",
   "uid": "gamegaraj-business-metrics",
-  "version": 3
+  "version": 4
 }
