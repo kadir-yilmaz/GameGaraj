@@ -32,6 +32,12 @@ namespace GameGaraj.Shared.Observability.Metrics
 
             _favoritesRemoved = meter.CreateCounter<long>(
                 "basket.favorites.removed.total", null, "Total favorites removed");
+
+            _itemsAdded.Add(0);
+            _itemsRemoved.Add(0);
+            _basketsDeleted.Add(0);
+            _favoritesAdded.Add(0);
+            _favoritesRemoved.Add(0);
         }
 
         public void ItemAdded() => _itemsAdded.Add(1);

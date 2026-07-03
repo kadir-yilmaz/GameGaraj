@@ -15,8 +15,9 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "targets": [
         {
-          "expr": "rate(basket_items_added_total[10s])",
-          "legendFormat": "Sepete Ekleme/sn"
+          "expr": "sum(rate(basket_items_added_total[5m]))",
+          "legendFormat": "Sepete Ekleme/sn",
+          "exemplar": true
         }
       ],
       "fieldConfig": {
@@ -34,8 +35,9 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "targets": [
         {
-          "expr": "rate(orders_created_total[10s])",
-          "legendFormat": "Sipariş/sn"
+          "expr": "sum(rate(orders_created_total[5m]))",
+          "legendFormat": "Sipariş/sn",
+          "exemplar": true
         }
       ],
       "fieldConfig": {
@@ -53,15 +55,15 @@
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
       "targets": [
         {
-          "expr": "increase(basket_items_added_total[1h])",
+          "expr": "sum(increase(basket_items_added_total[1h]))",
           "legendFormat": "Eklenen"
         },
         {
-          "expr": "increase(basket_items_removed_total[1h])",
+          "expr": "sum(increase(basket_items_removed_total[1h]))",
           "legendFormat": "Çıkarılan"
         },
         {
-          "expr": "increase(basket_deleted_total[1h])",
+          "expr": "sum(increase(basket_deleted_total[1h]))",
           "legendFormat": "Silinen Sepet"
         }
       ],
@@ -93,15 +95,15 @@
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
       "targets": [
         {
-          "expr": "increase(orders_created_total[1h])",
+          "expr": "sum(increase(orders_created_total[1h]))",
           "legendFormat": "Oluşturulan"
         },
         {
-          "expr": "increase(orders_cancelled_total[1h])",
+          "expr": "sum(increase(orders_cancelled_total[1h]))",
           "legendFormat": "İptal Edilen"
         },
         {
-          "expr": "increase(orders_completed_total[1h])",
+          "expr": "sum(increase(orders_completed_total[1h]))",
           "legendFormat": "Tamamlanan"
         }
       ],
@@ -133,12 +135,14 @@
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
       "targets": [
         {
-          "expr": "rate(payments_succeeded_total[10s])",
-          "legendFormat": "Başarılı"
+          "expr": "sum(rate(payments_succeeded_total[5m]))",
+          "legendFormat": "Başarılı",
+          "exemplar": true
         },
         {
-          "expr": "rate(payments_failed_total[10s])",
-          "legendFormat": "Başarısız"
+          "expr": "sum(rate(payments_failed_total[5m]))",
+          "legendFormat": "Başarısız",
+          "exemplar": true
         }
       ],
       "fieldConfig": {
@@ -265,12 +269,14 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
       "targets": [
         {
-          "expr": "rate(basket_favorites_added_total[10s])",
-          "legendFormat": "Favori Eklendi"
+          "expr": "sum(rate(basket_favorites_added_total[5m]))",
+          "legendFormat": "Favori Eklendi",
+          "exemplar": true
         },
         {
-          "expr": "rate(basket_favorites_removed_total[10s])",
-          "legendFormat": "Favori Çıkarıldı"
+          "expr": "sum(rate(basket_favorites_removed_total[5m]))",
+          "legendFormat": "Favori Çıkarıldı",
+          "exemplar": true
         }
       ],
       "fieldConfig": {

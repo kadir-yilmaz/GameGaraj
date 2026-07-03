@@ -28,6 +28,10 @@ namespace GameGaraj.Shared.Observability.Metrics
 
             _paymentDuration = meter.CreateHistogram<double>(
                 "payments.duration", "ms", "Payment processing duration in milliseconds");
+
+            _paymentsTotal.Add(0);
+            _paymentsSucceeded.Add(0);
+            _paymentsFailed.Add(0);
         }
 
         public void PaymentAttempted(string? provider = null)

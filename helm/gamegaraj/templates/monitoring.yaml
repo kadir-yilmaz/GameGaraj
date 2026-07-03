@@ -427,8 +427,9 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
           "targets": [
             {
-              "expr": "rate(basket_items_added_total[1m])",
-              "legendFormat": "Sepete Ekleme/sn"
+              "expr": "sum(rate(basket_items_added_total[5m]))",
+              "legendFormat": "Sepete Ekleme/sn",
+              "exemplar": true
             }
           ],
           "fieldConfig": {
@@ -446,8 +447,9 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
           "targets": [
             {
-              "expr": "rate(orders_created_total[1m])",
-              "legendFormat": "Siparis/sn"
+              "expr": "sum(rate(orders_created_total[5m]))",
+              "legendFormat": "Siparis/sn",
+              "exemplar": true
             }
           ],
           "fieldConfig": {
@@ -465,15 +467,15 @@ data:
           "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
           "targets": [
             {
-              "expr": "increase(basket_items_added_total[1h])",
+              "expr": "sum(increase(basket_items_added_total[1h]))",
               "legendFormat": "Eklenen"
             },
             {
-              "expr": "increase(basket_items_removed_total[1h])",
+              "expr": "sum(increase(basket_items_removed_total[1h]))",
               "legendFormat": "Cikarilan"
             },
             {
-              "expr": "increase(basket_deleted_total[1h])",
+              "expr": "sum(increase(basket_deleted_total[1h]))",
               "legendFormat": "Silinen Sepet"
             }
           ],
@@ -505,15 +507,15 @@ data:
           "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
           "targets": [
             {
-              "expr": "increase(orders_created_total[1h])",
+              "expr": "sum(increase(orders_created_total[1h]))",
               "legendFormat": "Olusturulan"
             },
             {
-              "expr": "increase(orders_cancelled_total[1h])",
+              "expr": "sum(increase(orders_cancelled_total[1h]))",
               "legendFormat": "Iptal Edilen"
             },
             {
-              "expr": "increase(orders_completed_total[1h])",
+              "expr": "sum(increase(orders_completed_total[1h]))",
               "legendFormat": "Tamamlanan"
             }
           ],
@@ -545,12 +547,14 @@ data:
           "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
           "targets": [
             {
-              "expr": "rate(payments_succeeded_total[1m])",
-              "legendFormat": "Basarili"
+              "expr": "sum(rate(payments_succeeded_total[5m]))",
+              "legendFormat": "Basarili",
+              "exemplar": true
             },
             {
-              "expr": "rate(payments_failed_total[1m])",
-              "legendFormat": "Basarisiz"
+              "expr": "sum(rate(payments_failed_total[5m]))",
+              "legendFormat": "Basarisiz",
+              "exemplar": true
             }
           ],
           "fieldConfig": {
@@ -680,12 +684,14 @@ data:
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
           "targets": [
             {
-              "expr": "rate(basket_favorites_added_total[1m])",
-              "legendFormat": "Favori Eklendi"
+              "expr": "sum(rate(basket_favorites_added_total[5m]))",
+              "legendFormat": "Favori Eklendi",
+              "exemplar": true
             },
             {
-              "expr": "rate(basket_favorites_removed_total[1m])",
-              "legendFormat": "Favori Cikarildi"
+              "expr": "sum(rate(basket_favorites_removed_total[5m]))",
+              "legendFormat": "Favori Cikarildi",
+              "exemplar": true
             }
           ],
           "fieldConfig": {

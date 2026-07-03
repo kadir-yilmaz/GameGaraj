@@ -28,14 +28,15 @@ namespace GameGaraj.Shared.Observability.Metrics
 
             _orderProcessingDuration = meter.CreateHistogram<double>(
                 "orders.processing.duration", "ms", "Order processing duration in milliseconds");
+
+            _ordersCreated.Add(0);
+            _ordersCancelled.Add(0);
+            _ordersCompleted.Add(0);
         }
 
         public void OrderCreated(string? userId = null)
         {
-            var tags = userId != null
-                ? new KeyValuePair<string, object?>("user.id", userId)
-                : default;
-            _ordersCreated.Add(1, tags);
+            _ordersCreated.Add(1);
         }
 
         public void OrderCancelled(string? reason = null)
