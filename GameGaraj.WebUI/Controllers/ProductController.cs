@@ -88,7 +88,8 @@ namespace GameGaraj.WebUI.Controllers
                 }))
                 {
                     _logger.LogInformation(
-                        "Product search page opened from WebUI. SearchTerm={SearchTerm}, Page={Page}",
+                        "Product search page opened from WebUI. Event={Event}, SearchTerm={SearchTerm}, Page={Page}",
+                        "ProductSearchPageOpened",
                         search,
                         1);
                 }

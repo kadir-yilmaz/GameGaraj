@@ -561,6 +561,14 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 ["PageSize"] = 20
             });
 
+            _logger.LogInformation(
+                "Product search started. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, Page={Page}, PageSize={PageSize}",
+                "ProductSearchStarted",
+                keyword,
+                "Elasticsearch",
+                1,
+                20);
+
             if (_cache != null)
             {
                 var cachedStr = await _cache.GetStringAsync(cacheKey);
@@ -570,10 +578,10 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                     totalStopwatch.Stop();
 
                     _logger.LogInformation(
-                        "Product search completed. SearchTerm={SearchTerm}, CategoryId={CategoryId}, BrandId={BrandId}, Count={Count}, CacheHit={CacheHit}, EsDurationMs={EsDurationMs}, DurationMs={DurationMs}",
+                        "Product search completed. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, ResultCount={ResultCount}, CacheHit={CacheHit}, EsDurationMs={EsDurationMs}, DurationMs={DurationMs}",
+                        "ProductSearchCompleted",
                         keyword,
-                        null,
-                        null,
+                        "Cache",
                         cachedResult.Count,
                         true,
                         esDurationMs,
@@ -632,13 +640,22 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 if (response.IsValidResponse)
                 {
                     result = response.Documents.Select(MapSearchDocumentToDto).ToList();
+                    _logger.LogInformation(
+                        "Elasticsearch product search query executed. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, ResultCount={ResultCount}, EsDurationMs={EsDurationMs}",
+                        "ElasticsearchQueryExecuted",
+                        keyword,
+                        "Elasticsearch",
+                        result.Count,
+                        esDurationMs);
                 }
                 else
                 {
                     var reason = GetElasticsearchFailureReason(response.DebugInformation);
                     _logger.LogError(
-                        "Product search failed. SearchTerm={SearchTerm}, Reason={Reason}, EsDurationMs={EsDurationMs}",
+                        "Product search failed. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, Reason={Reason}, EsDurationMs={EsDurationMs}",
+                        "ProductSearchFailed",
                         keyword,
+                        "Elasticsearch",
                         reason,
                         esDurationMs);
                 }
@@ -647,8 +664,10 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             {
                 _logger.LogError(
                     ex,
-                    "Product search failed. SearchTerm={SearchTerm}, Reason={Reason}, EsDurationMs={EsDurationMs}",
+                    "Product search failed. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, Reason={Reason}, EsDurationMs={EsDurationMs}",
+                    "ProductSearchFailed",
                     keyword,
+                    "Elasticsearch",
                     ex.GetType().Name,
                     esDurationMs);
             }
@@ -658,8 +677,10 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 // Fallback to PostgreSQL simple search
                 usedFallback = true;
                 _logger.LogWarning(
-                    "Product search fallback to PostgreSQL. SearchTerm={SearchTerm}, Reason={Reason}",
+                    "Product search fallback to PostgreSQL. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, Reason={Reason}",
+                    "ProductSearchFallback",
                     keyword,
+                    "PostgreSQL",
                     "ElasticsearchUnavailable");
 
                 var dbProducts = await _context.Products
@@ -682,10 +703,10 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
             totalStopwatch.Stop();
             _logger.LogInformation(
-                "Product search completed. SearchTerm={SearchTerm}, CategoryId={CategoryId}, BrandId={BrandId}, Count={Count}, CacheHit={CacheHit}, EsDurationMs={EsDurationMs}, DurationMs={DurationMs}, UsedFallback={UsedFallback}",
+                "Product search completed. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, ResultCount={ResultCount}, CacheHit={CacheHit}, EsDurationMs={EsDurationMs}, DurationMs={DurationMs}, UsedFallback={UsedFallback}",
+                "ProductSearchCompleted",
                 keyword,
-                null,
-                null,
+                usedFallback ? "PostgreSQL" : "Elasticsearch",
                 result.Count,
                 false,
                 esDurationMs,

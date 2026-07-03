@@ -1,5 +1,8 @@
 using System;
 using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Serilog;
@@ -42,6 +45,12 @@ namespace GameGaraj.Shared.Logging
 
             var serviceSlug = serviceName.ToLowerInvariant().Replace(".", "-");
             var environmentSlug = environment.ToLowerInvariant();
+            var indexFormat = $"gamegaraj-logs-{serviceSlug}-{environmentSlug}";
+
+            if (!string.IsNullOrEmpty(elasticUri))
+            {
+                EnsureElasticsearchLogIndex(elasticUri, indexFormat);
+            }
 
             var loggerConfig = new LoggerConfiguration()
                 .MinimumLevel.ControlledBy(LogLevelManager.GetSwitch(serviceName))
@@ -74,7 +83,7 @@ namespace GameGaraj.Shared.Logging
                         FailureCallback = (evt, ex) =>
                             Console.Error.WriteLine($"Unable to submit log event to Elasticsearch: {evt.MessageTemplate}. {ex.Message}"),
                         RegisterTemplateFailure = RegisterTemplateRecovery.IndexAnyway,
-                        IndexFormat = $"gamegaraj-logs-{serviceSlug}-{environmentSlug}",
+                        IndexFormat = indexFormat,
                         NumberOfReplicas = 0,
                         NumberOfShards = 1
                     }));
@@ -82,6 +91,54 @@ namespace GameGaraj.Shared.Logging
 
             Log.Logger = loggerConfig.CreateLogger();
             builder.Host.UseSerilog();
+        }
+
+        private static void EnsureElasticsearchLogIndex(string elasticUri, string indexName)
+        {
+            try
+            {
+                using var httpClient = new HttpClient
+                {
+                    Timeout = TimeSpan.FromSeconds(3)
+                };
+
+                var indexUrl = $"{elasticUri.TrimEnd('/')}/{indexName}";
+                using var headRequest = new HttpRequestMessage(HttpMethod.Head, indexUrl);
+                using var headResponse = httpClient.Send(headRequest);
+
+                if (headResponse.StatusCode == HttpStatusCode.OK)
+                {
+                    return;
+                }
+
+                if (headResponse.StatusCode != HttpStatusCode.NotFound)
+                {
+                    Console.Error.WriteLine($"Unable to verify Elasticsearch log index {indexName}. StatusCode={headResponse.StatusCode}");
+                    return;
+                }
+
+                const string body = """
+                {
+                  "settings": {
+                    "number_of_shards": 1,
+                    "number_of_replicas": 0
+                  }
+                }
+                """;
+
+                using var content = new StringContent(body, Encoding.UTF8, "application/json");
+                using var putResponse = httpClient.PutAsync(indexUrl, content).GetAwaiter().GetResult();
+
+                if (!putResponse.IsSuccessStatusCode &&
+                    putResponse.StatusCode != HttpStatusCode.BadRequest)
+                {
+                    Console.Error.WriteLine($"Unable to create Elasticsearch log index {indexName}. StatusCode={putResponse.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Unable to ensure Elasticsearch log index {indexName}: {ex.Message}");
+            }
         }
 
         private static bool IsSearchableLog(LogEvent evt)

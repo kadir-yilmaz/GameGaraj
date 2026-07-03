@@ -7,17 +7,39 @@ namespace GameGaraj.Shared.Logging
     {
         private static readonly HashSet<string> AllowedProperties = new(StringComparer.Ordinal)
         {
+            "LogType",
+            "Event",
+            "Operation",
             "Service",
             "Environment",
             "RequestMethod",
             "RequestPath",
+            "RequestHost",
+            "RequestArea",
+            "IncomingPath",
+            "TargetPath",
+            "TargetService",
             "StatusCode",
             "Elapsed",
+            "DurationMs",
             "TraceId",
             "SpanId",
             "UserIdentity",
             "UserId",
-            "UserAgent"
+            "UserAgent",
+            "ClientIp",
+            "SearchTerm",
+            "SearchQuery",
+            "Source",
+            "ResultCount",
+            "Count",
+            "Page",
+            "PageSize",
+            "CacheHit",
+            "EsDurationMs",
+            "UsedFallback",
+            "Reason",
+            "DependencyType"
         };
 
         public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)

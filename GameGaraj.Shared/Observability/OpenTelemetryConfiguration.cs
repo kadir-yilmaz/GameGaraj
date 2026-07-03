@@ -76,13 +76,30 @@ namespace GameGaraj.Shared.Observability
                                 // WebUI için sadece sipariş ve ödeme akışını izle (Gürültüyü önlemek için)
                                 if (serviceName == "GameGaraj.WebUI")
                                 {
-                                    return string.Equals(ctx.Request.Method, "POST", StringComparison.OrdinalIgnoreCase)
-                                           && path.Equals("/Order/Checkout", StringComparison.OrdinalIgnoreCase);
+                                    if (string.Equals(ctx.Request.Method, "POST", StringComparison.OrdinalIgnoreCase) &&
+                                        path.Equals("/Order/Checkout", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        return true;
+                                    }
+
+                                    var isSearchPage = path.Equals("/Product", StringComparison.OrdinalIgnoreCase) &&
+                                                       ctx.Request.Query.ContainsKey("search");
+                                    var isSearchSuggestion = path.Equals("/api/products/search", StringComparison.OrdinalIgnoreCase) &&
+                                                             ctx.Request.Query.ContainsKey("q");
+
+                                    return string.Equals(ctx.Request.Method, "GET", StringComparison.OrdinalIgnoreCase) &&
+                                           (isSearchPage || isSearchSuggestion);
                                 }
 
                                 // Gateway için sadece sipariş ve ödeme API isteklerini izle
                                 if (serviceName == "GameGaraj.Gateway")
                                 {
+                                    if (string.Equals(ctx.Request.Method, "GET", StringComparison.OrdinalIgnoreCase) &&
+                                        path.Equals("/api/catalog/products/search", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        return true;
+                                    }
+
                                     if (!string.Equals(ctx.Request.Method, "POST", StringComparison.OrdinalIgnoreCase))
                                     {
                                         return false;
@@ -109,6 +126,12 @@ namespace GameGaraj.Shared.Observability
                                 if (serviceName == "GameGaraj.WebUI")
                                 {
                                     var requestPath = request.RequestUri?.AbsolutePath ?? "";
+                                    if (string.Equals(request.Method.Method, "GET", StringComparison.OrdinalIgnoreCase) &&
+                                        requestPath.Equals("/api/catalog/products/search", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        return true;
+                                    }
+
                                     if (!string.Equals(request.Method.Method, "POST", StringComparison.OrdinalIgnoreCase))
                                     {
                                         return false;

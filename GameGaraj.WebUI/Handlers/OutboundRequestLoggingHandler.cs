@@ -45,7 +45,8 @@ namespace GameGaraj.WebUI.Handlers
 
                 _logger.Log(
                     level,
-                    "WebUI outbound HTTP request completed. Method={Method}, Path={Path}, TargetService={TargetService}, StatusCode={StatusCode}, DurationMs={DurationMs}",
+                    "WebUI outbound HTTP request completed. Event={Event}, Method={Method}, Path={Path}, TargetService={TargetService}, StatusCode={StatusCode}, DurationMs={DurationMs}",
+                    "OutboundRequestCompleted",
                     request.Method.Method,
                     requestPath,
                     targetService,
@@ -60,7 +61,8 @@ namespace GameGaraj.WebUI.Handlers
 
                 _logger.LogError(
                     ex,
-                    "WebUI outbound HTTP request failed. Method={Method}, Path={Path}, TargetService={TargetService}, DurationMs={DurationMs}, Reason={Reason}",
+                    "WebUI outbound HTTP request failed. Event={Event}, Method={Method}, Path={Path}, TargetService={TargetService}, DurationMs={DurationMs}, Reason={Reason}",
+                    "OutboundRequestFailed",
                     request.Method.Method,
                     requestPath,
                     targetService,

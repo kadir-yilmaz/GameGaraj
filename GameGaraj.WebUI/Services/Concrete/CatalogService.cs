@@ -281,7 +281,8 @@ namespace GameGaraj.WebUI.Services.Concrete
                 });
 
                 _logger.LogInformation(
-                    "Product search requested from WebUI. SearchTerm={SearchTerm}, Page={Page}",
+                    "Product search requested from WebUI. Event={Event}, SearchTerm={SearchTerm}, Page={Page}",
+                    "ProductSearchSubmitted",
                     keyword,
                     1);
 
@@ -290,7 +291,8 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning(
-                        "Product search failed from Catalog API. StatusCode={StatusCode}, SearchTerm={SearchTerm}",
+                        "Product search failed from Catalog API. Event={Event}, StatusCode={StatusCode}, SearchTerm={SearchTerm}",
+                        "ProductSearchFailed",
                         (int)response.StatusCode,
                         keyword);
 
@@ -320,6 +322,13 @@ namespace GameGaraj.WebUI.Services.Concrete
 
                 var result = products ?? new List<ProductViewModel>();
                 SetProductImageUrls(result);
+
+                _logger.LogInformation(
+                    "Product search result rendered by WebUI. Event={Event}, SearchTerm={SearchTerm}, ResultCount={ResultCount}",
+                    "ProductSearchResultRendered",
+                    keyword,
+                    result.Count);
+
                 return result;
             }
             catch (Exception ex)
@@ -333,7 +342,12 @@ namespace GameGaraj.WebUI.Services.Concrete
                     ["Page"] = 1
                 }))
                 {
-                    _logger.LogError(ex, "Product search failed from WebUI. SearchTerm={SearchTerm}, Page={Page}", keyword, 1);
+                    _logger.LogError(
+                        ex,
+                        "Product search failed from WebUI. Event={Event}, SearchTerm={SearchTerm}, Page={Page}",
+                        "ProductSearchFailed",
+                        keyword,
+                        1);
                 }
 
                 return new List<ProductViewModel>();

@@ -45,6 +45,8 @@ namespace GameGaraj.Shared.Logging
                     var user = httpContext.User;
                     string userIdentity = "Anonymous";
                     string? userId = TryGetHeader(httpContext, "X-User-Id");
+                    var targetService = includeGatewayRouting ? ResolveGatewayTargetService(httpContext.Request.Path.Value) : null;
+                    var statusCode = httpContext.Response.StatusCode;
 
                     if (user?.Identity?.IsAuthenticated == true)
                     {
@@ -85,7 +87,10 @@ namespace GameGaraj.Shared.Logging
                     }
 
                     diagnosticContext.Set("LogType", "HttpRequest");
-                    diagnosticContext.Set("TargetService", includeGatewayRouting ? ResolveGatewayTargetService(httpContext.Request.Path.Value) : null);
+                    diagnosticContext.Set("Event", ResolveRequestEvent(includeGatewayRouting, statusCode));
+                    diagnosticContext.Set("TargetService", targetService);
+                    diagnosticContext.Set("IncomingPath", includeGatewayRouting ? httpContext.Request.Path.Value : null);
+                    diagnosticContext.Set("ClientIp", httpContext.Connection.RemoteIpAddress?.ToString());
                     diagnosticContext.Set("UserIdentity", userIdentity);
                     diagnosticContext.Set("UserId", userId ?? "anonymous-user");
                     diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
@@ -94,6 +99,16 @@ namespace GameGaraj.Shared.Logging
                     diagnosticContext.Set("SpanId", Activity.Current?.SpanId.ToString());
                 };
             });
+        }
+
+        private static string ResolveRequestEvent(bool includeGatewayRouting, int statusCode)
+        {
+            if (includeGatewayRouting)
+            {
+                return statusCode >= 500 ? "RequestFailed" : "RequestForwarded";
+            }
+
+            return statusCode >= 500 ? "RequestFailed" : "RequestCompleted";
         }
 
         private static string? GetGuestId(HttpContext httpContext)
