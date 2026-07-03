@@ -253,8 +253,7 @@ data:
           "targets": [
             {
               "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[1m])) by (le, service_name))",
-              "legendFormat": "{{ "{{" }}service_name{{ "}}" }} P95",
-              "exemplar": true
+              "legendFormat": "{{ "{{" }}service_name{{ "}}" }} P95"
             }
           ],
           "fieldConfig": {
@@ -429,8 +428,7 @@ data:
           "targets": [
             {
               "expr": "sum(rate(basket_items_added_total[5m]))",
-              "legendFormat": "Sepete Ekleme/sn",
-              "exemplar": true
+              "legendFormat": "Sepete Ekleme/sn"
             }
           ],
           "fieldConfig": {
@@ -583,18 +581,15 @@ data:
           "targets": [
             {
               "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket[1m])) by (le))",
-              "legendFormat": "P50 (Ortanca)",
-              "exemplar": true
+              "legendFormat": "P50 (Ortanca)"
             },
             {
               "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[1m])) by (le))",
-              "legendFormat": "P95",
-              "exemplar": true
+              "legendFormat": "P95"
             },
             {
               "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[1m])) by (le))",
-              "legendFormat": "P99 (En Yavas)",
-              "exemplar": true
+              "legendFormat": "P99 (En Yavas)"
             }
           ],
           "fieldConfig": {
@@ -682,13 +677,11 @@ data:
           "targets": [
             {
               "expr": "sum(rate(basket_favorites_added_total[5m]))",
-              "legendFormat": "Favori Eklendi",
-              "exemplar": true
+              "legendFormat": "Favori Eklendi"
             },
             {
               "expr": "sum(rate(basket_favorites_removed_total[5m]))",
-              "legendFormat": "Favori Cikarildi",
-              "exemplar": true
+              "legendFormat": "Favori Cikarildi"
             }
           ],
           "fieldConfig": {
@@ -737,6 +730,55 @@ data:
               "custom": { "drawStyle": "line", "fillOpacity": 15, "lineWidth": 2 }
             }
           }
+        },
+        {
+          "title": "Checkout Trace Exemplars",
+          "description": "Siparis ve odeme counter serileri uzerindeki exemplar marker'lar Jaeger checkout trace'ine gecis icindir. Bu panel tum siparis trace'lerini listelemez; sadece sampled ornek TraceId gosterir.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+          "targets": [
+            {
+              "expr": "orders_created_total",
+              "legendFormat": "Siparis olustu - {{ "{{" }}service_name{{ "}}" }}",
+              "exemplar": true
+            },
+            {
+              "expr": "payments_succeeded_total",
+              "legendFormat": "Odeme basarili - {{ "{{" }}service_name{{ "}}" }}",
+              "exemplar": true
+            },
+            {
+              "expr": "payments_failed_total",
+              "legendFormat": "Odeme basarisiz - {{ "{{" }}service_name{{ "}}" }}",
+              "exemplar": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byRegexp", "options": ".*Siparis.*" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byRegexp", "options": ".*basarili.*" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byRegexp", "options": ".*basarisiz.*" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+                ]
+              }
+            ]
+          }
         }
       ],
       "schemaVersion": 39,
@@ -748,7 +790,7 @@ data:
       "timezone": "browser",
       "title": "GameGaraj - Business Metrics",
       "uid": "gamegaraj-business-metrics",
-      "version": 2
+      "version": 3
     }
 
 ---
@@ -950,7 +992,7 @@ spec:
       labels:
         app: grafana
       annotations:
-        gamegaraj.io/grafana-dashboard-version: "business-metrics-v2"
+        gamegaraj.io/grafana-dashboard-version: "business-metrics-v3"
     spec:
       containers:
         - name: grafana
