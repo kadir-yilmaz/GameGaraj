@@ -56,10 +56,14 @@ services:
       ReverseProxy__Clusters__payment-cluster__Destinations__destination1__Address: "http://payment-api:8080"
       ReverseProxy__Clusters__photostock-cluster__Destinations__destination1__Address: "http://photostock-api:8080"
       ReverseProxy__Clusters__campaign-cluster__Destinations__destination1__Address: "http://campaign-api:8080"
+      ReverseProxy__Clusters__search-cluster__Destinations__destination1__Address: "http://search-api:8080"
       # Critical review flow routes: WebUI -> Gateway -> Review API.
       ReverseProxy__Routes__order-route__ClusterId: "order-cluster"
       ReverseProxy__Routes__order-route__Match__Path: "/api/order/{**catch-all}"
       ReverseProxy__Routes__order-route__Transforms__0__PathPattern: "/api/{**catch-all}"
+      ReverseProxy__Routes__search-route__ClusterId: "search-cluster"
+      ReverseProxy__Routes__search-route__Match__Path: "/api/search/{**catch-all}"
+      ReverseProxy__Routes__search-route__Transforms__0__PathPattern: "/api/search/{**catch-all}"
       ReverseProxy__Routes__review-route__ClusterId: "review-cluster"
       ReverseProxy__Routes__review-route__Match__Path: "/api/review/{**catch-all}"
       ReverseProxy__Routes__review-route__Transforms__0__PathPattern: "/api/{**catch-all}"
@@ -191,6 +195,22 @@ services:
       ConnectionStrings__SqlServer: campaign-sqlserver-connection
 
   # ---------------------------------------------------------------------------
+  # Search API (Go + Gin + Elasticsearch)
+  # ---------------------------------------------------------------------------
+  search-api:
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/search-api:05e372c-141-1"
+    nodePort: 30020
+    env:
+      GIN_MODE: "release"
+      SEARCH_SERVER_PORT: ":8080"
+      SEARCH_CATALOG_URL: "http://catalog-api:8080"
+      SEARCH_ELASTICSEARCH_URI: "http://192.168.1.56:9201"
+      SEARCH_ELASTICSEARCH_DEFAULT_INDEX: "products"
+    secretEnv:
+      SEARCH_RABBITMQ_URL: rabbitmq-url
+      SEARCH_REDIS_ADDRESS: redis-connection
+
+  # ---------------------------------------------------------------------------
   # WebUI (MVC — routes through Gateway internally)
   # ---------------------------------------------------------------------------
   webui:
@@ -206,6 +226,7 @@ services:
       ObservabilitySettings__ElasticSearchUri: "http://192.168.1.56:9201"
       ObservabilitySettings__Services__Gateway: "http://gateway:8080"
       ObservabilitySettings__Services__CatalogAPI: "http://catalog-api:8080"
+      ObservabilitySettings__Services__SearchAPI: "http://search-api:8080"
       ObservabilitySettings__Services__BasketAPI: "http://basket-api:8080"
       ObservabilitySettings__Services__OrderAPI: "http://order-api:8080"
       ObservabilitySettings__Services__PaymentAPI: "http://payment-api:8080"

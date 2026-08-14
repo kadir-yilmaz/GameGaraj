@@ -12,6 +12,7 @@ on:
           - all
           - gateway
           - catalog-api
+          - search-api
           - photostock-api
           - basket-api
           - order-api
@@ -43,7 +44,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
-          # Use a PAT or deploy key so the automated push can trigger other workflows if needed
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Detect Changed Services
@@ -55,6 +55,7 @@ jobs:
           
           build_gateway=false
           build_catalog_api=false
+          build_search_api=false
           build_photostock_api=false
           build_basket_api=false
           build_order_api=false
@@ -69,6 +70,7 @@ jobs:
           if [ "$MANUAL_SERVICE" = "all" ] || [ -z "$MANUAL_SERVICE" ]; then
             build_gateway=true
             build_catalog_api=true
+            build_search_api=true
             build_photostock_api=true
             build_basket_api=true
             build_order_api=true
@@ -85,6 +87,7 @@ jobs:
 
           echo "build_gateway=$build_gateway" >> "$GITHUB_OUTPUT"
           echo "build_catalog_api=$build_catalog_api" >> "$GITHUB_OUTPUT"
+          echo "build_search_api=$build_search_api" >> "$GITHUB_OUTPUT"
           echo "build_photostock_api=$build_photostock_api" >> "$GITHUB_OUTPUT"
           echo "build_basket_api=$build_basket_api" >> "$GITHUB_OUTPUT"
           echo "build_order_api=$build_order_api" >> "$GITHUB_OUTPUT"
@@ -98,6 +101,7 @@ jobs:
           echo "Decisions:"
           echo " - Gateway: $build_gateway"
           echo " - Catalog API: $build_catalog_api"
+          echo " - Search API: $build_search_api"
           echo " - PhotoStock API: $build_photostock_api"
           echo " - Basket API: $build_basket_api"
           echo " - Order API: $build_order_api"
@@ -133,6 +137,7 @@ jobs:
           SERVICES_TO_BUILD=""
           if [ "${{ steps.filter.outputs.build_gateway }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD gateway"; fi
           if [ "${{ steps.filter.outputs.build_catalog_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD catalog-api"; fi
+          if [ "${{ steps.filter.outputs.build_search_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD search-api"; fi
           if [ "${{ steps.filter.outputs.build_photostock_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD photostock-api"; fi
           if [ "${{ steps.filter.outputs.build_basket_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD basket-api"; fi
           if [ "${{ steps.filter.outputs.build_order_api }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD order-api"; fi
@@ -174,6 +179,7 @@ jobs:
           declare -A SERVICE_MAP=(
             ["gateway"]="gateway"
             ["catalog-api"]="catalog-api"
+            ["search-api"]="search-api"
             ["photostock-api"]="photostock-api"
             ["basket-api"]="basket-api"
             ["order-api"]="order-api"
