@@ -1,5 +1,6 @@
-FROM golang:1.23-alpine AS build
+FROM golang:alpine AS build
 
+ENV GOTOOLCHAIN=auto
 WORKDIR /app
 
 # Download dependencies first (layer caching)
@@ -8,7 +9,7 @@ RUN go mod download
 
 # Copy source code and build
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /search-api ./cmd/server
+RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /search-api ./cmd/server
 
 # Final minimal image
 FROM alpine:3.19
