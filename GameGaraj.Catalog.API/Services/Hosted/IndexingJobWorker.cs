@@ -42,6 +42,7 @@ namespace GameGaraj.Catalog.API.Services.Hosted
             var context = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
             var indexService = scope.ServiceProvider.GetRequiredService<IProductIndexService>();
             var cache = scope.ServiceProvider.GetService<IDistributedCache>();
+            var publishEndpoint = scope.ServiceProvider.GetService<MassTransit.IPublishEndpoint>();
 
             var jobs = await context.IndexingJobs
                 .Where(job =>
@@ -53,7 +54,7 @@ namespace GameGaraj.Catalog.API.Services.Hosted
 
             foreach (var job in jobs)
             {
-                await ProcessJobAsync(context, indexService, cache, job, cancellationToken);
+                await ProcessJobAsync(context, indexService, cache, publishEndpoint, job, cancellationToken);
             }
         }
 
@@ -61,6 +62,7 @@ namespace GameGaraj.Catalog.API.Services.Hosted
             CatalogDbContext context,
             IProductIndexService indexService,
             IDistributedCache? cache,
+            MassTransit.IPublishEndpoint? publishEndpoint,
             IndexingJob job,
             CancellationToken cancellationToken)
         {
@@ -110,6 +112,40 @@ namespace GameGaraj.Catalog.API.Services.Hosted
                             await cache.RemoveAsync($"product_slug_{product.Slug}", cancellationToken);
                             await cache.RemoveAsync("featured_products", cancellationToken);
                             _logger.LogInformation($"[IndexingJobWorker] Invalidated Redis cache for product: {product.Name} and featured_products");
+                        }
+
+                        // Search API'yi de senkronize et
+                        try
+                        {
+                            if (publishEndpoint != null)
+                            {
+                                var category = !string.IsNullOrWhiteSpace(product.CategoryId)
+                                    ? await context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId, cancellationToken)
+                                    : null;
+
+                                await publishEndpoint.Publish(new GameGaraj.Shared.Events.ProductUpdatedForSearch
+                                {
+                                    Id = product.Id,
+                                    Name = product.Name,
+                                    Brand = product.Brand,
+                                    Slug = product.Slug,
+                                    Description = product.Description,
+                                    Price = product.Price,
+                                    Stock = product.Stock,
+                                    ReservedStock = product.ReservedStock,
+                                    IsActive = product.IsActive,
+                                    IsFeatured = product.IsFeatured,
+                                    ImageUrls = product.ImageUrls,
+                                    CategoryId = product.CategoryId,
+                                    CategoryName = category?.Name ?? string.Empty,
+                                    CategorySlug = category?.Slug ?? string.Empty,
+                                    Specs = product.Specs
+                                }, cancellationToken);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "[IndexingJobWorker] Failed to publish ProductUpdatedForSearch for {ProductId}", product.Id);
                         }
                     }
                 }

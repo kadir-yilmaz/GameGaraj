@@ -58,27 +58,6 @@ namespace GameGaraj.Catalog.API.Controllers
             return Ok(result);
         }
 
-        [HttpPost("search/reindex")]
-        public async Task<IActionResult> ReindexSearch()
-        {
-            var result = await _productIndexService.ReindexAllAsync();
-            return Ok(result);
-        }
-
-        [HttpGet("search/status")]
-        public async Task<IActionResult> GetSearchIndexStatus()
-        {
-            var result = await _productIndexService.GetStatusAsync();
-            return Ok(result);
-        }
-
-        [HttpGet("search/documents")]
-        public async Task<IActionResult> GetSearchIndexDocuments([FromQuery] int page = 1, [FromQuery] int pageSize = 100)
-        {
-            var result = await _productIndexService.GetDocumentPreviewsAsync(page, pageSize);
-            return Ok(result);
-        }
-
         [HttpGet("search/suggestions")]
         public async Task<IActionResult> GetSuggestions([FromQuery] string q)
         {

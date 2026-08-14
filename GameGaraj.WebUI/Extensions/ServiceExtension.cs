@@ -96,6 +96,15 @@ namespace GameGaraj.WebUI.Extensions
             })
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>();
+
+            // Search Service (Go + Gin Search API routed through Gateway)
+            services.AddHttpClient<ISearchService, SearchService>(client =>
+            {
+                client.BaseAddress = new Uri(gatewayUri, "api/search/");
+                client.Timeout = TimeSpan.FromSeconds(10);
+            })
+            .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
+            .AddHttpMessageHandler<UserIdDelegatingHandler>();
         }
     }
 }

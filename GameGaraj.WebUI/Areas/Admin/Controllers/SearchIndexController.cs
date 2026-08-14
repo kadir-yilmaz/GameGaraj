@@ -9,19 +9,19 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
     [Authorize(Roles = "admin, editor")]
     public class SearchIndexController : Controller
     {
-        private readonly ICatalogService _catalogService;
+        private readonly ISearchService _searchService;
 
-        public SearchIndexController(ICatalogService catalogService)
+        public SearchIndexController(ISearchService searchService)
         {
-            _catalogService = catalogService;
+            _searchService = searchService;
         }
 
         public async Task<IActionResult> Index([FromQuery] int page = 1)
         {
             var model = new SearchIndexDashboardViewModel
             {
-                Status = await _catalogService.GetSearchIndexStatusAsync(),
-                Documents = await _catalogService.GetSearchIndexDocumentPreviewsAsync(page, 100)
+                Status = await _searchService.GetSearchIndexStatusAsync(),
+                Documents = await _searchService.GetSearchIndexDocumentPreviewsAsync(page, 100)
             };
 
             return View(model);
@@ -31,7 +31,7 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Rebuild()
         {
-            var result = await _catalogService.ReindexSearchIndexAsync();
+            var result = await _searchService.ReindexSearchIndexAsync();
 
             if (result == null)
             {

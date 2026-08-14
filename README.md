@@ -1,6 +1,6 @@
 # GameGaraj - Microservices E-Commerce Platform
 
-GameGaraj, .NET 8 mimarisi üzerine inşa edilmiş, modern mikroservis yaklaşımlarını kullanan kapsamlı bir e-ticaret platformudur.
+GameGaraj, modern mikroservis mimarisi, polyglot yaklaşımı (.NET 8 & Go) ve dağıtık sistem prensipleri üzerine inşa edilmiş, yüksek performanslı bir e-ticaret platformudur.
 
 ---
 
@@ -52,188 +52,132 @@ Keycloak ilk kez realm import ederken `.env` dosyasındaki `ADMIN_EMAIL` ve `ADM
 
 ---
 
-## Proje Özeti ve Öne Çıkan Mimari Özellikler
+## 🏛️ Mimari Özeti ve Temel Prensipler
 
-Bu proje, sadece bir e-ticaret uygulaması değil; karmaşık dağıtık sistem sorunlarına (consistency, scalability, SEO) getirilmiş modern çözümlerin bir bütünüdür. Bir "Senior Developer" gözüyle incelendiğinde öne çıkan temel yetkinlikler şunlardır:
+Bu proje, sadece bir e-ticaret uygulaması değil; yüksek trafik, veri tutarlılığı (consistency), yatay ölçeklenebilirlik (scalability) ve SEO gereksinimlerine getirilmiş modern mimari çözümler bütünüdür.
 
-### 1. Advanced SEO & Dynamic Routing
-Standart GUID tabanlı URL yapıları yerine, tüm sistem **Slug-based** bir mimari üzerine kurulmuştur. Ürün ve kategori ağacı için `/product/c/{category}` ve `/product/p/{slug}` formatında, arama motoru dostu ve kullanıcı deneyimi yüksek bir yönlendirme katmanı sunar.
-
-### 2. Catalog CQRS: PostgreSQL JSONB Write Model + Elasticsearch Read Model
-Katalog servisinde okuma ve yazma sorumlulukları MediatR kullanmadan, sade servis katmanları ile ayrılmıştır. Ürün oluşturma/güncelleme/silme işlemleri **PostgreSQL** üzerinde tutulur; ürünün kategoriye göre değişebilen teknik özellikleri ise `Specs` alanında **JSONB** olarak saklanır.
-
-Bu tercih write tarafında bilinçlidir:
-- **PostgreSQL ana doğruluk kaynağıdır:** Ürün fiyatı, stok, kategori, aktiflik ve teknik özellikler transactional olarak tek yerde tutulur.
-- **JSONB esneklik sağlar:** Mouse, ekran kartı, RAM veya laptop gibi farklı kategoriler aynı ürün tablosunda farklı attribute setleriyle yönetilebilir. EAV modeliyle oluşacak çok sayıda join ve bakım maliyeti azaltılır.
-- **Admin operasyonları daha güvenlidir:** Kategori attribute değişikliklerinde ürün spec temizliği/güncellemesi write modelde kontrollü yapılır.
-
-Read tarafında ise listeleme, arama, öneri ve facet senaryoları için **Elasticsearch** kullanılır. Böylece typo toleransı, autocomplete, marka/kategori önerileri ve hızlı filtreleme gibi kullanıcıya dönük okuma ihtiyaçları PostgreSQL sorgularını karmaşıklaştırmadan, ayrı bir read model üzerinden karşılanır.
-
-### 3. Event-Driven Architecture & SAGA Pattern
-Mikroservisler arası iletişim, **MassTransit** ve **RabbitMQ** üzerinden asenkron olarak yönetilir. Sipariş süreçleri (Ordering), ödeme (Payment) ve fatura (Invoice) işlemleri arasındaki veri tutarlılığı, dağıtık sistemlerdeki en kritik konulardan biri olan **SAGA Pattern** yaklaşımları ile koordine edilir.
-
-### 4. Identity Management (Keycloak)
-Güvenlik katmanı, endüstri standardı olan **Keycloak** (OIDC/OAuth2) ile merkezi olarak yönetilir. JWT tabanlı yetkilendirme mimarisi, gateway ve mikroservisler arasında tam güvenli bir ekosistem sağlar.
-
-### 5. High Performance Search & Smart Suggestions (Elasticsearch)
-Ürün aramaları, autocomplete, marka/kategori önerileri ve arama facetleri için **Elasticsearch** kullanılır. Catalog API, ürün write işlemlerinden sonra Elasticsearch indeksini günceller; ihtiyaç halinde admin panelden indeks yeniden oluşturulabilir. Bu yapı arama deneyimini hızlandırırken PostgreSQL'i transactional write model olarak temiz tutar.
-
-### 6. Comprehensive Campaign & Coupon Management
-Projede iki farklı indirim mekanizması bir arada sunulmuştur:
-- **Campaign Engine:** İş mantığının esnekliğini korumak adına **Strategy Pattern** ile kurgulanmıştır. "3 Al 2 Öde", "X TL Üzeri Sabit İndirim" gibi karmaşık kampanya türleri, mevcut koda dokunmadan (Open/Closed Principle) sisteme dahil edilebilir.
-- **Coupon Service:** Kullanıcı bazlı indirim kuponlarını yönetir. Yüksek trafik altında hızlı cevap verebilmesi adına **Dapper (Micro ORM)** ile optimize edilmiştir.
-
-### 7. CI/CD & GitOps Mimarisi (ArgoCD & K3s)
-
-Deployment ve uygulama yönetim süreçleri, GitOps prensiplerine uygun olarak **ArgoCD** ve **K3s** üzerinde yapılandırılmıştır. Altyapı, home server üzerinde çalışan bir **self-hosted GitHub Actions runner** ile yönetilmektedir.
-
-### 8. Yüksek Performanslı Önbellekleme (Global Distributed Cache) & Yük Testi
-
-Sistem, devasa e-ticaret trafiklerine (Black Friday vb. senaryolar) dayanabilmek için endüstri standardı olan **Read-Heavy Architecture** (Okuma Ağırlıklı Mimari) ile baştan aşağı optimize edilmiştir.
-- **Distributed Cache Mimari:** Tüm okuma işlemleri (`GetById`, `GetFeaturedProducts`, Arama vb.) ilk olarak **Redis Distributed Cache** üzerinden karşılanır. Veri yoksa Elasticsearch'e gidilir, PostgreSQL'e asla okunma yükü bindirilmez.
-- **Akıllı Invalidation & TTL:** Stok veya ürün bilgisi güncellendiğinde Cache saniyesinde asenkron olarak temizlenir.
-- **Locust Yük Testi Sonuçları:** 10.000 eşzamanlı sanal kullanıcının 5 dakika aralıksız test ettiği senaryonun özeti:
-  - **İşlenen Toplam İstek:** 274.230
-  - **Maksimum RPS:** 2.777 İstek/Saniye
-  - **Başarı Oranı:** %99.91
-  - **P95 (İsteklerin %95'i):** < 30 Milisaniye
-
-### Mimari Akış:
-1. **CI (GitHub Actions):** Kod ana dallara (`main`) push edildiğinde sadece imaj derlenir (**Docker Build**), commit SHA'sı ile etiketlenir ve `helm/gamegaraj/values.yaml` dosyasındaki ilgili servis tag'i güncellerilerek Git'e geri yazılır.
-2. **CD (ArgoCD):** Git reposundaki değişiklikleri anlık izler (`values.yaml` değişikliği vb.). Git'teki durum ile K3s kümesindeki durum arasında fark (drift) olduğunda, otomatik olarak **Helm Upgrade** işlemini başlatır ve kümedeki podları günceller (`selfHeal` ve `prune` aktiftir).
-
-### Altyapı Bileşenleri:
-- **Self-hosted Runner:** GitHub Actions workflow'ları ev sunucusu üzerindeki yerel Linux/X64 runner'da koşar ve K3s kümesine doğrudan erişir.
-- **Secret Yönetimi:** Şifreler GitHub Secrets üzerinde saklanır ve `k3s-secret-sync.yml` workflow'u ile doğrudan Kubernetes `gamegaraj-secrets` secret'ına eşitlenir. Helm şablonları secret yönetimine dahil edilmemiştir.
-- **ArgoCD Application:** `helm/argocd-app/gamegaraj-app.yaml` tanımı ile `helm/gamegaraj` altındaki manifestoları izler.
-
-### Aktif Workflow'lar:
-* **`k3s-app-deploy.yml` (CI):** Docker image'larını build eder, `values.yaml`'daki tag'leri günceller ve Git'e pushlar.
-* **`k3s-secret-sync.yml`:** GitHub Secrets → Kubernetes Secret senkronizasyonunu yönetir.
-* **`k3s-argocd-install.yml`:** ArgoCD sunucusunu K3s üzerine kurar, NodePort (`30580`) ile dışa açar ve projeyi ArgoCD'ye bağlar.
-* **`k3s-dashboard-install.yml`:** Kubernetes Dashboard kurulumunu yapar.
+```
+                         ┌─────────────────────────┐
+                         │   WebUI (MVC) :7050     │
+                         └────────────┬────────────┘
+                                      │
+                         ┌────────────▼────────────┐
+                         │   YARP Gateway :5000    │
+                         └──────┬───────────┬──────┘
+         /api/search/*          │           │          /api/catalog/*
+      ┌─────────────────────────┘           └──────────────────────────┐
+      ▼                                                                ▼
+┌──────────────────────────────┐                         ┌──────────────────────────────┐
+│  Search API (Go + Gin)       │                         │  Catalog API (.NET 8)        │
+│  Port: 5082                  │                         │  Port: 5011                  │
+│                              │                         │                              │
+│  • Full-Text Search (ES)     │                         │  • Product / Category CRUD   │
+│  • Autocomplete Suggestions  │      RabbitMQ Events    │  • Dynamic Attributes        │
+│  • Facets & Aggregations     │◄────────────────────────┤  • Primary Source of Truth   │
+│  • Multi-Level Redis Cache   │  (ProductCreated/       │  • EF Core + PostgreSQL      │
+└───────┬──────────────┬───────┘   Updated/Deleted)      └──────────────┬───────────────┘
+        │              │                                                │
+        ▼              ▼                                                ▼
+┌──────────────┐ ┌──────────────┐                             ┌───────────────────┐
+│Elasticsearch │ │ Redis Cache  │                             │ PostgreSQL (JSONB)│
+│:9201         │ │ :6380        │                             │ :5434             │
+└──────────────┘ └──────────────┘                             └───────────────────┘
+```
 
 ---
 
-## Client
+## 🔄 Catalog API & Search API Ayrımı (CQRS & Read/Write Mimarisi)
 
-### WebUI
-- **Port:** `7050`
-- **Teknoloji:** ASP.NET Core MVC
-- **Önemli Bilgiler:** 
-  - **SEO Mimari:** Dinamik slug-based yönlendirme sistemi (Ürünler için `/product/p/{slug}`, Kategoriler için `/product/c/{category}`).
-  - **Admin Kullanıcısı:** Keycloak realm import sırasında `.env` dosyasındaki `ADMIN_EMAIL` ve `ADMIN_PASSWORD` ile oluşturulur.
+Sistemde okuma ve yazma operasyonları net bir sorumluluk ayrımı (Separation of Concerns) ile iki farklı servise paylaştırılmıştır:
 
----
+### 1. Catalog API (.NET 8 & EF Core) — *Yazma (Write) ve Domain Okuma Modeli*
+- **Ana Doğruluk Kaynağı (Single Source of Truth):** Ürün, kategori, dinamik kategori özellikleri (Attributes) ve ilişkisel veriler **PostgreSQL** üzerinde `JSONB` destekli olarak tutulur.
+- **Transactional Bütünlük:** Ürün oluşturma, güncelleme, silme, stok rezervasyonu ve kategori hiyerarşisi işlemleri bu servis üzerinden yürütülür.
+- **Event Yayınlama (Publishing):** Bir ürün üzerinde CRUD işlemi yapıldığında veya stok durumu değiştiğinde, MassTransit aracılığıyla RabbitMQ'ya domain event'leri fırlatır (`ProductCreatedForSearch`, `ProductUpdatedForSearch`, `ProductDeletedForSearch`).
 
-## Gateway & Identity Management
-
-### Yarp Gateway
-- **Port:** `5000`
-- **Teknoloji:** Microsoft YARP (Yet Another Reverse Proxy)
-- **Önemli Bilgiler:** 
-  - Tüm mikroservisler için merkezi giriş noktasıdır. 
-  - İstekleri rotalarına göre ilgili API'ye yönlendirir.
-
-### Keycloak (Identity Management)
-- **Port:** `8080` (Admin: `8080`)
-- **DB:** PostgreSQL (Port: `5433`)
-- **Teknoloji:** OAuth2, OpenID Connect
-- **Önemli Bilgiler:** 
-  - Merkezi kimlik doğrulama ve yetkilendirme sağlar. 
-  - Microservices ekosisteminde JWT tabanlı güvenlik sunar.
-  - Google ile giriş için Keycloak realm import dosyası `GOOGLE_CLIENT_ID` ve `GOOGLE_CLIENT_SECRET` environment variable'larını bekler.
-  - Google Cloud Console tarafında yetkili redirect URI olarak `https://keycloak.kadiryilmaz.online/realms/GameGaraj/broker/google/endpoint` tanımlanmalıdır.
-  - Local Keycloak ile test edilecekse ek olarak `http://localhost:8080/realms/GameGaraj/broker/google/endpoint` redirect URI'si de eklenmelidir.
+### 2. Search API (Go + Gin + Elasticsearch) — *Yüksek Performanslı Arama & Read Modeli*
+- **Polyglot Yaklaşım:** Düşük bellek tüketimi, yüksek eşzamanlılık (concurrency) ve mikro-saniye seviyesinde yanıt süreleri için **Go (Golang)** ve **Gin Web Framework** ile geliştirilmiştir.
+- **Arama ve İndeksleme:** Çoklu alan araması (`Multi-match`), typo toleransı (Fuzziness), `Edge-NGram` tabanlı otomatik tamamlama (`Autocomplete/Suggestions`), fiyat/marka kırılımları (`Facets/Aggregations`) ve öne çıkan ürünler (`Featured`) sorgularını **Elasticsearch** üzerinden yönetir.
+- **Asenkron Senkronizasyon (Consumer):** RabbitMQ üzerinden gelen ürün olaylarını dinleyerek Elasticsearch indeksini ve Redis önbelleğini eşzamanlı olarak günceller (Eventually Consistent).
+- **Admin Reindex & İzleme:** Admin panelden veya doğrudan API'den tek tıkla PostgreSQL'deki tüm ürünleri Elasticsearch'e aktarma (`POST /api/search/reindex`), doküman önizleme ve indeks sağlık durumunu (`/api/search/status`) sunar.
 
 ---
 
-## Microservices (Port Sırasına Göre)
+## ⚡ Redis Dağıtık Önbellekleme (Distributed Cache) & Invalidation Stratejisi
 
-### Catalog API
-- **Port:** `5011`
-- **DB:** PostgreSQL (Port: `5434`)
-- **Teknoloji:** Entity Framework Core (EF Core), Elasticsearch
-- **Önemli Bilgiler:** 
-  - **Write Model:** Ürün, kategori ve attribute verileri PostgreSQL'de tutulur. Kategoriye göre değişen ürün özellikleri `Specs` JSONB alanında saklanır.
-  - **Read Model:** Ürün listeleme, arama, öneri ve facet ihtiyaçları Elasticsearch read modeli üzerinden karşılanır.
-  - **CQRS:** MediatR kullanmadan sade query/command servisleri ile okuma ve yazma operasyonları ayrılmıştır.
-  - **SEO Destekli:** Slug mekanizması ile ürün ve kategori URL'leri kullanıcı ve arama motoru dostudur.
-  - **Admin Index Yönetimi:** Admin panelden Elasticsearch bağlantı durumu görülebilir ve ürün indeksi yeniden oluşturulabilir.
+Tüm read akışlarında veritabanı ve arama motoru yükünü minimuma indirmek amacıyla **Cache-Aside (Lazy Loading)** ve **Event-Driven Cache Invalidation** mimarisi uygulanmıştır.
 
-### PhotoStock API
-- **Port:** `5012`
-- **DB:** Local Storage
-- **Teknoloji:** ASP.NET Core API
+### 1. Cache İzolasyonu ve Key Yapısı
+Farklı servislerin aynı Redis kümesini anahtar çakışması olmadan güvenle kullanabilmesi için prefix bazlı izolasyon uygulanır:
+- **Search API:** `search-cache:query_{hash}`, `search-cache:sugg_{hash}`, `search-cache:featured`
+- **Catalog API:** `catalog-cache:category_{id}`, `catalog-cache:tree`
+- **Basket API:** `basket_{userId}`
 
-### Basket API
-- **Port:** `5013`
-- **DB:** Redis (Port: `6380`)
-- **Teknoloji:** StackExchange.Redis
-- **Önemli Bilgiler:** 
-  - Hem user hem login olmuş kullanıcıların sepetlerini tutar.
-  - Login sonrası sepet senkronizasyonu yapar.
+### 2. Okuma Akışı (Cache-Aside Pattern)
+1. İstemci bir arama veya öne çıkan ürün isteği attığında Search API ilk olarak **Redis Cache** kontrolü yapar.
+2. **Cache HIT:** Veri Redis'te mevcutsa, doğrudan çözümlenerek mikro-saniyeler içinde istemciye dönülür (Elasticsearch'e hiçbir sorgu atılmaz).
+3. **Cache MISS:** Veri Redis'te yoksa, Elasticsearch'ten sorgulanır, sonuç istemciye iletilirken arka planda belirlenen TTL (örn. 5 dakika) ile Redis'e kaydedilir.
 
-### Discount API
-- **Port:** `5014`
-- **DB:** PostgreSQL (Port: `5432`)
-- **Teknoloji:** Dapper (Micro ORM)
-- **Önemli Bilgiler:** 
-  - Kupon ve indirim tanımlama servisidir. 
-  - Hız için Dapper kullanılarak doğrudan SQL sorguları ile çalışır.
-
-### Order API
-- **Port:** `5015`
-- **DB:** SQL Server (Port: `1433`)
-- **Teknoloji:** EF Core, MassTransit, RabbitMQ
-- **Önemli Bilgiler:** 
-  - Onion Architecture mimarisindedir.
-  - **Event-Driven:** Sipariş tamamlandığında RabbitMQ üzerinden Payment ve Invoice servislerini tetikler.
-
-### Payment API
-- **Port:** `5016`
-- **DB:** Yok (Iyzico panelinden yönetiliyor)
-- **Teknoloji:** MassTransit, RabbitMQ
-- **Önemli Bilgiler:** 
-  - Ödeme işlemlerini simüle eder. (Iyzico)
-  - Sonucu RabbitMQ üzerinden Order servisine bildirir.
-
-### Invoice API
-- **Port:** `5017`
-- **DB:** Yok
-- **Teknoloji:** MassTransit, Email Service
-- **Önemli Bilgiler:** 
-  - Sipariş sonrası fatura oluşturma ve e-posta gönderimini yönetir.
-
-### Campaign API
-- **Port:** `5018`
-- **DB:** SQL Server (Port: `1434`)
-- **Teknoloji:** Dapper, Strategy Pattern
-- **Önemli Bilgiler:** 
-  - **Strategy Pattern:** "3 Al 2 Öde", "X TL Üzeri İndirim" gibi karmaşık kampanya kurallarını esnek bir yapıda yönetir.
+### 3. Akıllı Önbellek Temizleme (Event-Driven Invalidation)
+Ürün verisi güncellendiğinde bayat veri (stale data) sunulmaması için şu akış işletilir:
+```
+[Admin / Catalog API] ──(Ürün Güncellendi)──► [PostgreSQL]
+                                │
+                                └──► [RabbitMQ Event: ProductUpdatedForSearch]
+                                             │
+                                             ▼
+                             [Search API Consumer (Go)]
+                                  │                │
+                                  ▼                ▼
+                         [Elasticsearch]    [Redis Cache]
+                         (Update Document)  (SCAN search-cache:* & DEL)
+```
+- Go Search API, RabbitMQ'dan `ProductUpdatedForSearch` veya `ProductDeletedForSearch` event'ini aldığı anda:
+  1. Elasticsearch üzerindeki ilgili dokümanı anında günceller / siler.
+  2. Redis üzerindeki ilgili sorgu ve öne çıkanlar önbelleklerini non-blocking `SCAN` + `DEL` mekanizmasıyla anında geçersiz kılar (Invalidate).
 
 ---
 
-## Yardımcı ve Altyapı Servisleri
+## 🛠️ Servisler ve Port Listesi
 
-| Servis | Port | Görevi |
+### Uygulama Servisleri
+
+| Servis | Dil / Framework | Port | Swagger / OpenAPI Adresi | Veritabanı / Altyapı |
+| :--- | :--- | :--- | :--- | :--- |
+| **Yarp Gateway** | .NET 8 / YARP | `5000` | - | Reverse Proxy |
+| **WebUI** | ASP.NET Core MVC | `7050` | - | MVC / Razor View |
+| **Catalog API** | .NET 8 / WebAPI | `5011` | `http://localhost:5011/swagger` | PostgreSQL (`5434`) |
+| **Search API** | Go 1.23 / Gin | `5082` | `http://localhost:5082/swagger/index.html` | Elasticsearch (`9201`), Redis (`6380`) |
+| **Notification API** | Go 1.23 / Gin | `5025` | `http://localhost:5025/swagger/index.html` | RabbitMQ, MinIO, SMTP |
+| **PhotoStock API** | .NET 8 / WebAPI | `5012` | `http://localhost:5012/swagger` | Local Storage |
+| **Basket API** | .NET 8 / WebAPI | `5013` | `http://localhost:5013/swagger` | Redis Sentinel Cluster (`6380`) |
+| **Discount API** | .NET 8 / Dapper | `5014` | `http://localhost:5014/swagger` | PostgreSQL (`5432`) |
+| **Order API** | .NET 8 / EF Core | `5015` | `http://localhost:5015/swagger` | SQL Server (`1433`), RabbitMQ |
+| **Payment API** | .NET 8 / MassTransit| `5016` | `http://localhost:5016/swagger` | Iyzico Entegrasyonu |
+| **Invoice API** | .NET 8 / MassTransit| `5017` | `http://localhost:5017/swagger` | RabbitMQ |
+| **Campaign API** | .NET 8 / Dapper | `5018` | `http://localhost:5018/swagger` | SQL Server (`1434`) |
+| **Review API** | .NET 8 / EF Core | `5221` | `http://localhost:5221/swagger` | PostgreSQL (`5435`) |
+
+### Altyapı ve Destek Servisleri
+
+| Servis | Port(lar) | Açıklama |
 | :--- | :--- | :--- |
-| **RabbitMQ** | `5672`, `15672` | Servisler arası asenkron iletişim (Message Broker). |
-| **Redis** | `6380` | Dağıtık önbellekleme ve sepet yönetimi. |
-| **Elasticsearch** | `9201` | Hızlı ürün arama ve katalog indeksleme. |
-| **Kibana** | `5601` | Elastic verilerini görselleştirme ve log izleme. |
-| **ArgoCD** | `30580` | GitOps mimarisine dayalı sürekli dağıtım (CD) yönetim arayüzü. |
-| **Prometheus** | `9090` (İç Port) | Mikroservislerden `/metrics` üzerinden zaman serisi verisi ve metrik toplar. |
-| **Grafana** | `30300` | Prometheus verilerini grafik arayüzlerle görselleştirir. |
+| **Keycloak (IAM)** | `8080` | OIDC / OAuth2 Kimlik Doğrulama ve Yetkilendirme |
+| **RabbitMQ** | `5672`, `15672` | Servisler arası asenkron mesajlaşma broker'ı |
+| **Elasticsearch** | `9201` | Ürün arama indeksi ve analitik veriler |
+| **Kibana** | `5601` | Elasticsearch görselleştirme ve indeks yönetimi |
+| **Redis Master** | `6380` | Dağıtık önbellek ve sepet veritabanı |
+| **Redis Sentinels**| `26379, 26380, 26381` | Yüksek erişilebilirlik (HA) ve otomatik failover |
+| **Prometheus** | `9090` | Mikroservislerden metrik toplama (`/metrics`) |
+| **Grafana** | `30300` | Sistem performans ve metrik dashboard'ları |
+| **ArgoCD** | `30580` | GitOps tabanlı Continuous Deployment |
 
 ---
 
 ## 🔒 Güvenlik Notları
 
-- **Hassas bilgiler** `.env` dosyasında saklanır ve Git'e commit edilmez
-- **appsettings.json** dosyaları `.gitignore`'da listelenmiştir
-- **Example dosyaları** yeni geliştiriciler için şablon olarak kullanılır
-- **Admin kullanıcısı** Keycloak realm import sırasında oluşturulur
-- **GitHub Secrets** tarafında en az şu isimler bulunmalıdır: `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `IYZICO_API_KEY`, `IYZICO_SECRET_KEY`, `RABBITMQ_URL`, `REDIS_CONNECTION`, `CATALOG_POSTGRES_CONNECTION`, `DISCOUNT_POSTGRES_CONNECTION`, `ORDER_SQLSERVER_CONNECTION`, `CAMPAIGN_SQLSERVER_CONNECTION`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`, `MINIO_SECURE`
-
----
+- **Hassas bilgiler** `.env` dosyasında saklanır ve Git'e commit edilmez.
+- **appsettings.json** dosyaları `.gitignore`'da listelenmiştir.
+- **Example dosyaları** yeni geliştiriciler için şablon olarak kullanılır.
+- **Admin kullanıcısı** Keycloak realm import sırasında otomatik oluşturulur.
+- **GitHub Secrets** tarafında prod/stage için gerekli connection string ve anahtarlar saklanır.

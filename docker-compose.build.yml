@@ -11,6 +11,12 @@ services:
       context: .
       dockerfile: GameGaraj.Catalog.API/Dockerfile
 
+  search-api:
+    image: ${IMAGE_REPOSITORY:-ghcr.io/kadir-yilmaz/gamegaraj}/search-api:${IMAGE_TAG:-latest}
+    build:
+      context: GameGaraj.Search.API
+      dockerfile: Dockerfile
+
   review-api:
     image: ${IMAGE_REPOSITORY:-ghcr.io/kadir-yilmaz/gamegaraj}/review-api:${IMAGE_TAG:-latest}
     build:

@@ -1,0 +1,20 @@
+server:
+  port: ":5082"
+
+catalog:
+  url: "http://localhost:5011"
+
+elasticsearch:
+  uri: "http://localhost:9201"
+  default_index: "products"
+
+rabbitmq:
+  url: "localhost:5672"
+  username: "guest"
+  password: "guest"
+
+redis:
+  address: "localhost:6380"
+  password: ""
+  db: 0
+  instance_name: "search-cache:"

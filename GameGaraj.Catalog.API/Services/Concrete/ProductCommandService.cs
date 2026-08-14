@@ -4,7 +4,9 @@ using GameGaraj.Catalog.API.Dtos;
 using GameGaraj.Catalog.API.Exceptions;
 using GameGaraj.Catalog.API.Models;
 using GameGaraj.Catalog.API.Services.Abstract;
+using GameGaraj.Shared.Events;
 using GameGaraj.Shared.Helpers;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -17,18 +19,21 @@ namespace GameGaraj.Catalog.API.Services.Concrete
         private readonly IProductIndexService _productIndexService;
         private readonly ILogger<ProductCommandService> _logger;
         private readonly IDistributedCache? _cache;
+        private readonly IPublishEndpoint _publishEndpoint;
 
         public ProductCommandService(
             CatalogDbContext context,
             IMapper mapper,
             IProductIndexService productIndexService,
             ILogger<ProductCommandService> logger,
+            IPublishEndpoint publishEndpoint,
             IDistributedCache? cache = null)
         {
             _context = context;
             _mapper = mapper;
             _productIndexService = productIndexService;
             _logger = logger;
+            _publishEndpoint = publishEndpoint;
             _cache = cache;
         }
 
@@ -59,6 +64,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             EnqueueIndexingJob(product.Id, IndexingJobOperation.Upsert);
             await _context.SaveChangesAsync();
             await TryIndexProductImmediatelyAsync(product);
+            await PublishProductCreatedEventAsync(product);
             
             if (_cache != null)
             {
@@ -95,6 +101,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             if (updated)
             {
                 await TryIndexProductImmediatelyAsync(product);
+                await PublishProductUpdatedEventAsync(product);
                 if (_cache != null)
                 {
                     await _cache.RemoveAsync($"product_{product.Id}");
@@ -118,6 +125,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             if (deleted)
             {
                 await TryDeleteProductFromIndexImmediatelyAsync(id);
+                await PublishProductDeletedEventAsync(id);
                 if (_cache != null)
                 {
                     await _cache.RemoveAsync($"product_{id}");
@@ -127,6 +135,87 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             }
 
             return deleted;
+        }
+
+        private async Task PublishProductCreatedEventAsync(Product product)
+        {
+            try
+            {
+                var category = !string.IsNullOrWhiteSpace(product.CategoryId)
+                    ? await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId)
+                    : null;
+
+                await _publishEndpoint.Publish(new ProductCreatedForSearch
+                {
+                    Id = product.Id,
+                    Name = product.Name,
+                    Brand = product.Brand,
+                    Slug = product.Slug,
+                    Description = product.Description,
+                    Price = product.Price,
+                    Stock = product.Stock,
+                    ReservedStock = product.ReservedStock,
+                    IsActive = product.IsActive,
+                    IsFeatured = product.IsFeatured,
+                    ImageUrls = product.ImageUrls,
+                    CategoryId = product.CategoryId,
+                    CategoryName = category?.Name ?? string.Empty,
+                    CategorySlug = category?.Slug ?? string.Empty,
+                    Specs = product.Specs
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to publish ProductCreatedForSearch event for {ProductId}", product.Id);
+            }
+        }
+
+        private async Task PublishProductUpdatedEventAsync(Product product)
+        {
+            try
+            {
+                var category = !string.IsNullOrWhiteSpace(product.CategoryId)
+                    ? await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId)
+                    : null;
+
+                await _publishEndpoint.Publish(new ProductUpdatedForSearch
+                {
+                    Id = product.Id,
+                    Name = product.Name,
+                    Brand = product.Brand,
+                    Slug = product.Slug,
+                    Description = product.Description,
+                    Price = product.Price,
+                    Stock = product.Stock,
+                    ReservedStock = product.ReservedStock,
+                    IsActive = product.IsActive,
+                    IsFeatured = product.IsFeatured,
+                    ImageUrls = product.ImageUrls,
+                    CategoryId = product.CategoryId,
+                    CategoryName = category?.Name ?? string.Empty,
+                    CategorySlug = category?.Slug ?? string.Empty,
+                    Specs = product.Specs
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to publish ProductUpdatedForSearch event for {ProductId}", product.Id);
+            }
+        }
+
+        private async Task PublishProductDeletedEventAsync(string productId)
+        {
+            try
+            {
+                await _publishEndpoint.Publish(new ProductDeletedForSearch
+                {
+                    Id = productId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to publish ProductDeletedForSearch event for {ProductId}", productId);
+            }
         }
 
         private async Task TryIndexProductImmediatelyAsync(Product product)

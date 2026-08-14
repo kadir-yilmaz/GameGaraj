@@ -1,0 +1,54 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Go-based event-driven notification service for GameGaraj managing Email, SMS, and MinIO storage.",
+        "title": "GameGaraj Notification API",
+        "contact": {
+            "name": "Kadir Yılmaz"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:5025",
+    "basePath": "/",
+    "paths": {
+        "/health": {
+            "get": {
+                "description": "Returns the service health status and timestamp",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Service Health Check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.HealthCheckResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "main.HealthCheckResponse": {
+            "type": "object",
+            "properties": {
+                "service": {
+                    "type": "string",
+                    "example": "notification-service"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "healthy"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2026-08-14T19:00:00Z"
+                }
+            }
+        }
+    }
+}

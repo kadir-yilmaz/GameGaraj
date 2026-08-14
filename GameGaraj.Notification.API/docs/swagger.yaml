@@ -1,0 +1,37 @@
+basePath: /
+definitions:
+  main.HealthCheckResponse:
+    properties:
+      service:
+        example: notification-service
+        type: string
+      status:
+        example: healthy
+        type: string
+      timestamp:
+        example: "2026-08-14T19:00:00Z"
+        type: string
+    type: object
+host: localhost:5025
+info:
+  contact:
+    name: Kadir Yılmaz
+  description: Go-based event-driven notification service for GameGaraj managing Email,
+    SMS, and MinIO storage.
+  title: GameGaraj Notification API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Returns the service health status and timestamp
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.HealthCheckResponse'
+      summary: Service Health Check
+      tags:
+      - Health
+swagger: "2.0"

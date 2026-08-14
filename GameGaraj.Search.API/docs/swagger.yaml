@@ -1,0 +1,471 @@
+basePath: /
+definitions:
+  model.PagedResult:
+    properties:
+      items: {}
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  model.ProductDTO:
+    properties:
+      availableStock:
+        type: integer
+      brand:
+        type: string
+      categoryId:
+        type: string
+      categoryName:
+        type: string
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      imageUrls:
+        items:
+          type: string
+        type: array
+      isActive:
+        type: boolean
+      isFeatured:
+        type: boolean
+      name:
+        type: string
+      price:
+        type: number
+      reservedStock:
+        type: integer
+      slug:
+        type: string
+      specs:
+        additionalProperties:
+          type: string
+        type: object
+      stock:
+        type: integer
+    type: object
+  model.ReindexResult:
+    properties:
+      errors:
+        items:
+          type: string
+        type: array
+      failed:
+        type: integer
+      succeeded:
+        type: integer
+      total:
+        type: integer
+    type: object
+  model.SearchFacetItem:
+    properties:
+      count:
+        type: integer
+      value:
+        type: string
+    type: object
+  model.SearchFacetResult:
+    properties:
+      brands:
+        items:
+          $ref: '#/definitions/model.SearchFacetItem'
+        type: array
+      categories:
+        items:
+          $ref: '#/definitions/model.SearchFacetItem'
+        type: array
+    type: object
+  model.SearchIndexStatus:
+    properties:
+      checkedAt:
+        type: string
+      errorMessage:
+        type: string
+      failedIndexingCount:
+        type: integer
+      indexedProductCount:
+        type: integer
+      isConnected:
+        type: boolean
+      lastIndexedAt:
+        type: string
+      pendingIndexQueueCount:
+        type: integer
+      status:
+        type: string
+    type: object
+  model.SearchSuggestion:
+    properties:
+      id:
+        type: string
+      imageUrl:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      slug:
+        type: string
+      type:
+        type: string
+    type: object
+host: localhost:5082
+info:
+  contact:
+    name: Kadir Yılmaz
+  description: High-performance Go + Gin search service for GameGaraj powered by Elasticsearch
+    and Redis Cache.
+  title: GameGaraj Search API
+  version: "1.0"
+paths:
+  /api/health:
+    get:
+      description: Checks connectivity to Elasticsearch and Redis
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Service Health Check
+      tags:
+      - Health
+  /api/search:
+    get:
+      consumes:
+      - application/json
+      description: Searches active products across name, brand, category, specs, and
+        description with fuzzy matching and Redis caching
+      parameters:
+      - description: Search keyword
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ProductDTO'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Full-text Product Search
+      tags:
+      - Search
+  /api/search/brands:
+    get:
+      consumes:
+      - application/json
+      description: Returns brand names matching a wildcard query
+      parameters:
+      - description: Brand keyword
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Brand Suggestions
+      tags:
+      - Search
+  /api/search/documents:
+    get:
+      consumes:
+      - application/json
+      description: Returns paginated preview of raw indexed documents for dashboard
+        and debugging
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 100, max 100)
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.PagedResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Search Index Document Previews
+      tags:
+      - Index Management
+  /api/search/facets:
+    get:
+      consumes:
+      - application/json
+      description: Returns brand and category facet counts, optionally filtered by
+        keyword
+      parameters:
+      - description: Filter keyword
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SearchFacetResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Search Facets Aggregation
+      tags:
+      - Search
+  /api/search/products:
+    get:
+      consumes:
+      - application/json
+      description: Returns products filtered by category, price range, brand, dynamic
+        specs, and sorted
+      parameters:
+      - description: Category ID
+        in: query
+        name: categoryId
+        type: string
+      - description: Sort order (price_asc, price_desc, newest)
+        in: query
+        name: sortBy
+        type: string
+      - description: Minimum price
+        in: query
+        name: minPrice
+        type: number
+      - description: Maximum price
+        in: query
+        name: maxPrice
+        type: number
+      - description: Brand name
+        in: query
+        name: brand
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ProductDTO'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Filtered Product Listing
+      tags:
+      - Products
+  /api/search/products/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns a single product document from Elasticsearch with Redis
+        cache (TTL 10m)
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ProductDTO'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get Product by ID
+      tags:
+      - Products
+  /api/search/products/featured:
+    get:
+      consumes:
+      - application/json
+      description: Returns active featured products from Elasticsearch with Redis
+        cache (TTL 10m)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ProductDTO'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Featured Products
+      tags:
+      - Products
+  /api/search/products/slug/{slug}:
+    get:
+      consumes:
+      - application/json
+      description: Returns a single product document from Elasticsearch by slug with
+        Redis cache (TTL 10m)
+      parameters:
+      - description: Product Slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ProductDTO'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get Product by Slug
+      tags:
+      - Products
+  /api/search/reindex:
+    post:
+      consumes:
+      - application/json
+      description: Fetches all products from Catalog API, bulk indexes into Elasticsearch,
+        and purges Redis search caches
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ReindexResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Full Reindex from Catalog API
+      tags:
+      - Index Management
+  /api/search/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns health, connection status, document count, and last indexed
+        timestamp
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SearchIndexStatus'
+      summary: Elasticsearch Index Status
+      tags:
+      - Index Management
+  /api/search/suggestions:
+    get:
+      consumes:
+      - application/json
+      description: Returns autocomplete suggestions including products, matching brands,
+        and categories
+      parameters:
+      - description: Prefix or keyword
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.SearchSuggestion'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Autocomplete Search Suggestions
+      tags:
+      - Search
+swagger: "2.0"

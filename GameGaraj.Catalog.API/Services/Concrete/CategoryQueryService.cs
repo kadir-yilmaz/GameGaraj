@@ -33,7 +33,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             var attributes = await _context.CategoryAttributes.AsNoTracking().ToListAsync();
 
             var categoryDtos = _mapper.Map<List<CategoryDto>>(categories);
-            var directProductCounts = await GetDirectProductCountsFromElasticAsync();
+            var directProductCounts = await GetDirectProductCountsFromDbAsync();
 
             // Build tree structure
             var lookup = categoryDtos.ToDictionary(c => c.Id);
@@ -109,7 +109,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
             dto.Attributes = dtos;
 
-            var directProductCounts = await GetDirectProductCountsFromElasticAsync();
+            var directProductCounts = await GetDirectProductCountsFromDbAsync();
             dto.ProductCount = allDescendantIds.Sum(categoryId =>
                 directProductCounts.TryGetValue(categoryId, out var count) ? count : 0);
 
@@ -191,60 +191,28 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 return new List<string>();
             }
 
-            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                .Index("products")
-                .Query(q => q.Bool(b => b.Filter(f => f.Term(t => t.Field("isActive").Value(true)))))
-                .Size(1000)
-            );
+            var products = await _context.Products.AsNoTracking()
+                .Where(p => p.IsActive && p.CategoryId != null && categorySet.Contains(p.CategoryId))
+                .ToListAsync();
 
-            if (!response.IsValidResponse)
-            {
-                _logger.LogWarning("Elasticsearch category attribute option query failed: {Error}", response.DebugInformation);
-                return new List<string>();
-            }
-
-            return response.Documents
-                .Where(product => categorySet.Contains(product.CategoryId))
-                .Select(product => product.Specs)
-                .Where(specs => specs != null && specs.TryGetValue(attributeName, out _))
-                .Select(specs => specs[attributeName])
-                .Where(value => !string.IsNullOrWhiteSpace(value))
+            return products
+                .Where(p => p.Specs != null && p.Specs.TryGetValue(attributeName, out var v) && !string.IsNullOrWhiteSpace(v))
+                .Select(p => p.Specs[attributeName])
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(value => value)
+                .OrderBy(v => v)
                 .ToList();
         }
 
-        private async Task<Dictionary<string, int>> GetDirectProductCountsFromElasticAsync()
+        private async Task<Dictionary<string, int>> GetDirectProductCountsFromDbAsync()
         {
-            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                .Index("products")
-                .Size(0)
-                .Query(q => q.Bool(b => b.Filter(f => f.Term(t => t.Field("isActive").Value(true)))))
-                .Aggregations(a => a
-                    .Add("categories", agg => agg
-                        .Terms(t => t
-                            .Field("categoryId")
-                            .Size(1000)
-                        )
-                    )
-                )
-            );
+            var counts = await _context.Products
+                .AsNoTracking()
+                .Where(p => p.IsActive && !string.IsNullOrEmpty(p.CategoryId))
+                .GroupBy(p => p.CategoryId)
+                .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.CategoryId!, x => x.Count, StringComparer.OrdinalIgnoreCase);
 
-            if (!response.IsValidResponse)
-            {
-                _logger.LogWarning("Elasticsearch category count query failed: {Error}", response.DebugInformation);
-                return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            }
-
-            var buckets = response.Aggregations?.GetStringTerms("categories")?.Buckets;
-
-            return buckets?
-                .Where(bucket => !string.IsNullOrWhiteSpace(bucket.Key.ToString()))
-                .ToDictionary(
-                    bucket => bucket.Key.ToString(),
-                    bucket => (int)bucket.DocCount,
-                    StringComparer.OrdinalIgnoreCase)
-                ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            return counts;
         }
     }
 }

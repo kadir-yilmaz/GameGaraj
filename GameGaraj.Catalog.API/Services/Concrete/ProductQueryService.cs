@@ -123,23 +123,30 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             Dictionary<string, string>? specs = null,
             string? brand = null)
         {
-            _logger.LogDebug(
-                "Product listing requested. CategoryId: {CategoryId}, Sort: {SortBy}, MinPrice: {MinPrice}, MaxPrice: {MaxPrice}, Brand: {Brand}",
-                categoryId,
-                sortBy,
-                minPrice,
-                maxPrice,
-                brand);
+            var query = _context.Products.AsNoTracking().Where(p => p.IsActive);
 
-            var elasticResult = await GetAllFromElasticAsync(categoryId, sortBy, minPrice, maxPrice, specs, brand);
-            if (elasticResult != null)
+            if (!string.IsNullOrWhiteSpace(categoryId))
             {
-                _logger.LogDebug("Returning {ProductCount} products from Elasticsearch.", elasticResult.Count);
-                return elasticResult;
+                query = query.Where(p => p.CategoryId == categoryId);
             }
 
-            _logger.LogError("[ProductQueryService] Elasticsearch listing unavailable. Public product reads are Elasticsearch-only.");
-            return new List<ProductDto>();
+            if (!string.IsNullOrWhiteSpace(brand))
+            {
+                query = query.Where(p => p.Brand == brand);
+            }
+
+            if (minPrice.HasValue)
+            {
+                query = query.Where(p => p.Price >= minPrice.Value);
+            }
+
+            if (maxPrice.HasValue)
+            {
+                query = query.Where(p => p.Price <= maxPrice.Value);
+            }
+
+            var products = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
+            return _mapper.Map<List<ProductDto>>(products);
         }
 
         public async Task<PagedResultDto<ProductDto>> GetAdminPageAsync(

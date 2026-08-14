@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "gamegaraj-notification-api/docs"
 	"gamegaraj-notification-api/internal/config"
 	"gamegaraj-notification-api/internal/queue"
 	"gamegaraj-notification-api/internal/service"
@@ -20,6 +21,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 var httpServerRequestDuration = prometheus.NewHistogramVec(
@@ -36,6 +39,12 @@ func init() {
 	prometheus.MustRegister(httpServerRequestDuration)
 }
 
+// @title GameGaraj Notification API
+// @version 1.0
+// @description Go-based event-driven notification service for GameGaraj managing Email, SMS, and MinIO storage.
+// @contact.name Kadir Yılmaz
+// @host localhost:5025
+// @BasePath /
 func main() {
 	log.Println("[Main] Starting Go Notification Service...")
 
@@ -99,19 +108,16 @@ func main() {
 		latency := time.Since(start)
 		statusCode := c.Writer.Status()
 
-		if path != "/health" && path != "/metrics" {
+		if path != "/health" && path != "/metrics" && path != "/swagger/index.html" {
 			log.Printf("[HTTP] %s %s %s %d %s", c.Request.Method, path, raw, statusCode, latency)
 		}
 	})
 
+	// Swagger UI
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// Expose Health checks
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":    "healthy",
-			"timestamp": time.Now().Format(time.RFC3339),
-			"service":   "notification-service",
-		})
-	})
+	router.GET("/health", healthCheckHandler)
 
 	// Expose Prometheus Metrics endpoint
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -144,6 +150,28 @@ func main() {
 	}
 
 	log.Println("[Main] Go Notification Service stopped.")
+}
+
+// HealthCheckResponse represents health check response
+type HealthCheckResponse struct {
+	Status    string `json:"status" example:"healthy"`
+	Timestamp string `json:"timestamp" example:"2026-08-14T19:00:00Z"`
+	Service   string `json:"service" example:"notification-service"`
+}
+
+// healthCheckHandler godoc
+// @Summary Service Health Check
+// @Description Returns the service health status and timestamp
+// @Tags Health
+// @Produce json
+// @Success 200 {object} HealthCheckResponse
+// @Router /health [get]
+func healthCheckHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, HealthCheckResponse{
+		Status:    "healthy",
+		Timestamp: time.Now().Format(time.RFC3339),
+		Service:   "notification-service",
+	})
 }
 
 func recordHTTPMetrics() gin.HandlerFunc {
