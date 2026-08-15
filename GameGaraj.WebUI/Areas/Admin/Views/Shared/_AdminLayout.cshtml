@@ -8,7 +8,7 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -19,11 +19,14 @@
 
     <style>
         :root {
-            --sidebar-width: 260px;
-            --primary-color: #dc3545;
-            --sidebar-bg: #1a1d2e;
-            --sidebar-text: #e9ecef;
+            --sidebar-width: 250px;
+            --sidebar-bg: #0f172a;
+            --sidebar-text: #94a3b8;
+            --sidebar-active-bg: rgba(255, 107, 0, 0.12);
+            --sidebar-active-color: #ff8a00;
+            --sidebar-hover-bg: rgba(255, 255, 255, 0.05);
             --navbar-height: 60px;
+            --gg-primary: #ff6b00;
         }
         
         * {
@@ -34,9 +37,8 @@
         
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8f9fa;
+            background-color: #f8fafc;
             overflow: hidden;
-            overflow-x: hidden;
             height: 100vh;
             width: 100%;
         }
@@ -44,26 +46,24 @@
         #wrapper {
             display: flex;
             width: 100%;
-            max-width: 100%;
             height: 100vh;
             position: relative;
             overflow-x: hidden;
         }
 
-        /* Sidebar Styles */
+        /* Sidebar Styles - Instant & Modern */
         #sidebar-wrapper {
             width: var(--sidebar-width);
             height: 100vh;
-            background: linear-gradient(180deg, var(--sidebar-bg) 0%, #151824 100%);
+            background-color: var(--sidebar-bg);
             color: var(--sidebar-text);
             position: fixed;
             left: 0;
             top: 0;
             z-index: 1040;
-            transition: transform 0.3s ease;
             display: flex;
             flex-direction: column;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
             overflow-x: hidden;
         }
 
@@ -72,70 +72,80 @@
         }
 
         #sidebar-wrapper .sidebar-heading {
-            padding: 1.5rem 1.25rem;
-            font-size: 1.25rem;
+            padding: 0 1.25rem;
+            font-size: 1.15rem;
             font-weight: 700;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
             color: #fff;
             display: flex;
             align-items: center;
             min-height: var(--navbar-height);
         }
 
+        .sidebar-brand-badge {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #ff6b00, #ea580c);
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 0.95rem;
+            margin-right: 10px;
+        }
+
         #sidebar-wrapper .list-group {
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
+            padding: 0.5rem 0.6rem;
         }
 
         #sidebar-wrapper .list-group-item {
-            padding: 0.9rem 1.2rem;
-            margin: 0.3rem 0.8rem;
-            max-width: calc(100% - 1.6rem);
+            padding: 0.65rem 0.9rem;
+            margin: 0.15rem 0;
             background-color: transparent;
-            color: rgba(255,255,255,0.7);
+            color: var(--sidebar-text);
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             font-weight: 500;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            position: relative;
-            overflow: hidden;
-            z-index: 1;
+            font-size: 0.88rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
         }
         
-        #sidebar-wrapper .list-group-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(220, 53, 69, 0.2), transparent);
-            transition: all 0.5s ease;
-            z-index: -1;
-        }
-
-        #sidebar-wrapper .list-group-item:hover::before {
-            left: 100%;
-        }
-
         #sidebar-wrapper .list-group-item:hover {
-            color: #fff;
-            background-color: rgba(255, 255, 255, 0.06);
-            transform: translateX(6px) scale(1.02);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            color: #f8fafc;
+            background-color: var(--sidebar-hover-bg);
         }
         
         #sidebar-wrapper .list-group-item.active {
-            color: #fff;
-            background-color: rgba(220, 53, 69, 0.15);
-            box-shadow: inset 4px 0 0 var(--primary-color);
+            color: var(--sidebar-active-color);
+            background-color: var(--sidebar-active-bg);
+            font-weight: 600;
+        }
+
+        #sidebar-wrapper .list-group-item.active i {
+            color: var(--gg-primary);
         }
         
         #sidebar-wrapper .list-group-item i {
-            width: 24px;
+            width: 20px;
             text-align: center;
-            margin-right: 10px;
+            font-size: 0.95rem;
+            color: #64748b;
+        }
+
+        .sidebar-section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #475569;
+            padding: 0.75rem 0.9rem 0.25rem;
         }
 
         /* Page Content */
@@ -145,7 +155,6 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            transition: margin-left 0.3s ease;
             min-width: 0;
             overflow-x: hidden;
         }
@@ -155,28 +164,89 @@
         }
 
         /* Navbar */
-        .navbar {
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-            padding: 0.8rem 1.5rem;
-            background-color: #fff !important;
+        .admin-navbar {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            padding: 0 1.5rem;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
             min-height: var(--navbar-height);
+            display: flex;
+            align-items: center;
             z-index: 1030;
         }
 
         #sidebarToggle {
             background: none;
             border: none;
-            color: #333;
-            font-size: 1.25rem;
+            color: #475569;
+            font-size: 1.15rem;
             cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
         }
 
         #sidebarToggle:hover {
-            background-color: #f8f9fa;
-            color: var(--primary-color);
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+
+        /* User Dropdown */
+        .user-dropdown-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 9999px;
+            padding: 4px 12px 4px 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #1e293b;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .user-dropdown-btn:hover, .user-dropdown-btn[aria-expanded="true"] {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+        }
+
+        .user-avatar-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b00, #ea580c);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .user-menu-box {
+            min-width: 260px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            padding: 6px;
+        }
+
+        .user-menu-header {
+            padding: 12px 14px;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 6px;
+        }
+
+        .user-menu-header .user-name {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .user-menu-header .user-email {
+            font-size: 0.78rem;
+            color: #64748b;
         }
 
         /* Main Content */
@@ -197,13 +267,10 @@
             height: 100vh;
             background: rgba(0,0,0,0.5);
             z-index: 1035;
-            opacity: 0;
-            transition: opacity 0.3s ease;
         }
         
         #sidebar-overlay.show {
             display: block;
-            opacity: 1;
         }
 
         /* Mobile Responsive */
@@ -231,157 +298,107 @@
                 transform: translateX(-100%);
             }
         }
-        /* Toast Notifications */
-        #admin-toast-container {
-            position: fixed;
-            top: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            width: 350px;
-            max-width: calc(100vw - 50px);
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .admin-toast {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            margin-bottom: 15px;
-            overflow: hidden;
-            pointer-events: auto;
-            position: relative;
-            transform: translateY(-120%);
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s;
-            display: flex;
-            flex-direction: column;
-            opacity: 0;
-            width: 100%;
-        }
-
-        .admin-toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .admin-toast-body {
-            padding: 15px 16px;
-            color: #444;
-            font-size: 0.95rem;
-            line-height: 1.4;
-            display: flex;
-            align-items: center;
-        }
-
-        .admin-toast-icon {
-            margin-right: 12px;
-            font-size: 1.25rem;
-        }
-
-        .admin-toast-success .admin-toast-icon { color: #28a745; }
-        .admin-toast-error .admin-toast-icon { color: #dc3545; }
-
-        .admin-toast-progress {
-            height: 4px;
-            width: 100%;
-            background: #eee;
-            position: relative;
-        }
-
-        .admin-toast-progress-bar {
-            height: 100%;
-            width: 100%;
-            position: absolute;
-            left: 0;
-            top: 0;
-            transform-origin: left;
-        }
-
-        .admin-toast-success .admin-toast-progress-bar { background: #28a745; }
-        .admin-toast-error .admin-toast-progress-bar { background: #dc3545; }
-
-        @@keyframes progress-animation {
-            from { transform: scaleX(1); }
-            to { transform: scaleX(0); }
-        }
-
-        .toast-closing {
-            transform: translateY(-120%) !important;
-            transition: transform 0.4s ease-in !important;
-        }
     </style>
 </head>
 <body>
-    <div id="admin-toast-container"></div>
+    @{
+        var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value 
+                     ?? User.Identity?.Name 
+                     ?? "admin@gamegaraj.com";
+        var userName = User.Identity?.Name ?? "Admin User";
+        var userRole = User.IsInRole("admin") ? "Yönetici (Admin)" : "Editör (Editor)";
+        var initials = !string.IsNullOrWhiteSpace(userName) ? userName.Substring(0, Math.Min(2, userName.Length)).ToUpperInvariant() : "AD";
+    }
+
     <div id="wrapper">
         <!-- Sidebar -->
         <div id="sidebar-wrapper">
-            <div class="sidebar-heading p-0">
-                <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="text-white text-decoration-none px-4 py-3 d-flex align-items-center w-100">
-                    <i class="fas fa-gamepad me-2 text-danger"></i> GameGaraj
+            <div class="sidebar-heading">
+                <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="text-white text-decoration-none d-flex align-items-center w-100">
+                    <span class="sidebar-brand-badge"><i class="fas fa-gamepad"></i></span>
+                    <span>GameGaraj <small class="text-muted" style="font-size:0.75rem; font-weight:500;">Admin</small></span>
                 </a>
             </div>
-            <div class="list-group list-group-flush mt-2">
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" ? "active" : "")" 
+            <div class="list-group list-group-flush">
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" ? "active" : "")" 
                    asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
                 </a>
-                @* Sipariş Yönetimi - Sadece Admin *@
+                
                 @if (User.IsInRole("admin"))
                 {
-                    <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Orders" ? "active" : "")" 
+                    <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Orders" ? "active" : "")" 
                        asp-area="Admin" asp-controller="Orders" asp-action="Index">
-                        <i class="fas fa-shopping-cart"></i> Sipariş Yönetimi
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Sipariş Yönetimi</span>
                     </a>
                 }
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Category" ? "active" : "")" 
+                
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Category" ? "active" : "")" 
                    asp-area="Admin" asp-controller="Category" asp-action="Index">
-                    <i class="fas fa-th-list"></i> Kategori Yönetimi
+                    <i class="fas fa-th-list"></i>
+                    <span>Kategori Yönetimi</span>
                 </a>
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Product" ? "active" : "")" 
+                
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Product" ? "active" : "")" 
                    asp-area="Admin" asp-controller="Product" asp-action="Index">
-                    <i class="fas fa-box"></i> Ürün Yönetimi
+                    <i class="fas fa-box"></i>
+                    <span>Ürün Yönetimi</span>
                 </a>
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Review" ? "active" : "")" 
+                
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Review" ? "active" : "")" 
                    asp-area="Admin" asp-controller="Review" asp-action="Index">
-                    <i class="fas fa-comments"></i> Yorum Yönetimi
+                    <i class="fas fa-comments"></i>
+                    <span>Yorum Yönetimi</span>
                 </a>
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Campaign" ? "active" : "")" 
+                
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Campaign" ? "active" : "")" 
                    asp-area="Admin" asp-controller="Campaign" asp-action="Index">
-                    <i class="fas fa-bullhorn"></i> İndirim Kuralları
+                    <i class="fas fa-bullhorn"></i>
+                    <span>İndirim Kuralları</span>
                 </a>
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Carousel" ? "active" : "")" 
+                
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Carousel" ? "active" : "")" 
                    asp-area="Admin" asp-controller="Carousel" asp-action="Index">
-                    <i class="fas fa-images"></i> Carousel Yönetimi
+                    <i class="fas fa-images"></i>
+                    <span>Carousel Yönetimi</span>
                 </a>
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Coupon" ? "active" : "")" 
+                
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Coupon" ? "active" : "")" 
                    asp-area="Admin" asp-controller="Coupon" asp-action="Index">
-                    <i class="fas fa-ticket-alt"></i> İndirim Kuponları
+                    <i class="fas fa-ticket-alt"></i>
+                    <span>İndirim Kuponları</span>
                 </a>
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CouponReward" ? "active" : "")" 
+                
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CouponReward" ? "active" : "")" 
                    asp-area="Admin" asp-controller="CouponReward" asp-action="Index">
-                    <i class="fas fa-gift"></i> Kupon Kazan Kuralları
+                    <i class="fas fa-gift"></i>
+                    <span>Kupon Kazan Kuralları</span>
                 </a>
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "ShippingSetting" ? "active" : "")" 
+                
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "ShippingSetting" ? "active" : "")" 
                    asp-area="Admin" asp-controller="ShippingSetting" asp-action="Index">
-                    <i class="fas fa-truck"></i> Kargo Ayarları
+                    <i class="fas fa-truck"></i>
+                    <span>Kargo Ayarları</span>
                 </a>
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "SearchIndex" ? "active" : "")" 
+                
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "SearchIndex" ? "active" : "")" 
                    asp-area="Admin" asp-controller="SearchIndex" asp-action="Index">
-                    <i class="fas fa-magnifying-glass-chart"></i> Arama İndeksi
+                    <i class="fas fa-magnifying-glass-chart"></i>
+                    <span>Arama İndeksi</span>
                 </a>
-                <a class="list-group-item list-group-item-action @(ViewContext.RouteData.Values["Controller"]?.ToString() == "ObservabilityAdmin" ? "active" : "")" 
+                
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "ObservabilityAdmin" ? "active" : "")" 
                    asp-area="Admin" asp-controller="ObservabilityAdmin" asp-action="Index">
-                    <i class="fas fa-eye"></i> Gözlemlenebilirlik Ayarları
+                    <i class="fas fa-eye"></i>
+                    <span>Gözlemlenebilirlik</span>
                 </a>
-                <div class="mt-4 border-top border-secondary pt-3 mx-3">
-                    <span class="text-uppercase small text-muted font-weight-bold" style="font-size: 0.75rem;">Hızlı Bağlantılar</span>
-                </div>
-                <a class="list-group-item list-group-item-action" asp-area="" asp-controller="Home" asp-action="Index" target="_blank">
-                    <i class="fas fa-external-link-alt"></i> Siteye Git
+
+                <div class="sidebar-section-title">Hızlı Bağlantılar</div>
+                <a class="list-group-item" asp-area="" asp-controller="Home" asp-action="Index" target="_blank">
+                    <i class="fas fa-external-link-alt"></i>
+                    <span>Siteye Git</span>
                 </a>
             </div>
         </div>
@@ -391,30 +408,102 @@
 
         <!-- Page Content -->
         <div id="page-content-wrapper">
-            <nav class="navbar navbar-expand navbar-light bg-light border-bottom">
-                <div class="container-fluid p-0">
-                    <button id="sidebarToggle">
-                        <i class="fas fa-bars"></i>
-                    </button>
+            <header class="admin-navbar">
+                <button id="sidebarToggle" aria-label="Menüyü Aç/Kapat">
+                    <i class="fas fa-bars"></i>
+                </button>
 
-                    <div class="d-flex align-items-center ms-auto">
-                        <div class="dropdown">
-                            <button class="btn btn-link link-dark text-decoration-none dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-circle fa-lg me-1"></i>
-                                @User.Identity?.Name
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
-                                <li><a class="dropdown-item" href="#">Profil</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" asp-area="" asp-controller="Auth" asp-action="SignOut">Çıkış</a></li>
-                            </ul>
-                        </div>
+                <div class="d-flex align-items-center ms-auto">
+                    <!-- Admin User Dropdown -->
+                    <div class="dropdown">
+                        <button class="user-dropdown-btn dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="user-avatar-circle">@initials</span>
+                            <span>@userName</span>
+                        </button>
+                        
+                        <ul class="dropdown-menu dropdown-menu-end user-menu-box" aria-labelledby="userDropdown">
+                            <li class="user-menu-header">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="user-avatar-circle" style="width:38px; height:38px;">@initials</span>
+                                    <div>
+                                        <div class="user-name">@userName</div>
+                                        <div class="user-email">@userEmail</div>
+                                        <span class="badge bg-warning text-dark mt-1" style="font-size:0.68rem;">@userRole</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item py-2 rounded-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#adminProfileModal">
+                                    <i class="fas fa-user-shield text-primary"></i>
+                                    <span>Profil & Şifre İşlemleri</span>
+                                </button>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-2 rounded-2 d-flex align-items-center gap-2" asp-area="" asp-controller="Home" asp-action="Index" target="_blank">
+                                    <i class="fas fa-store text-info"></i>
+                                    <span>Mağazayı Görüntüle</span>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <a class="dropdown-item py-2 rounded-2 text-danger d-flex align-items-center gap-2" asp-area="" asp-controller="Auth" asp-action="SignOut">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    <span>Çıkış Yap</span>
+                                </a>
+                            </li>
+                        </ul>
                     </div>
                 </div>
-            </nav>
+            </header>
 
             <div class="main-content">
                 @RenderBody()
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Profile & Password Modal -->
+    <div class="modal fade" id="adminProfileModal" tabindex="-1" aria-labelledby="adminProfileModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom pb-3">
+                    <h5 class="modal-title fw-bold" id="adminProfileModalLabel">
+                        <i class="fas fa-user-circle text-primary me-2"></i> Profil & Güvenlik
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- User Info Summary -->
+                    <div class="card bg-light border-0 mb-4 p-3 rounded-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="user-avatar-circle" style="width: 48px; height: 48px; font-size: 1.1rem;">@initials</span>
+                            <div>
+                                <h6 class="mb-0 fw-bold text-dark">@userName</h6>
+                                <small class="text-muted d-block">@userEmail</small>
+                                <span class="badge bg-primary mt-1">@userRole</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Direct Password Change -->
+                    <div>
+                        <label class="form-label fw-bold text-dark mb-1">
+                            <i class="fas fa-key text-success me-1"></i> Şifre Değiştir
+                        </label>
+                        <p class="text-muted small mb-3">
+                            Yeni şifrenizi girerek hesabınızın şifresini hemen güncelleyebilirsiniz.
+                        </p>
+                        <div class="mb-3">
+                            <input type="password" class="form-control" id="modalNewPassword" placeholder="Yeni Şifre (En az 6 karakter)" autocomplete="new-password" />
+                        </div>
+                        <div class="mb-3">
+                            <input type="password" class="form-control" id="modalConfirmPassword" placeholder="Yeni Şifre Tekrar" autocomplete="new-password" />
+                        </div>
+                        <button type="button" class="btn btn-primary w-100 fw-bold py-2" id="btnDirectChangePassword">
+                            <i class="fas fa-save me-2"></i> Şifremi Güncelle
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -429,9 +518,8 @@
             const overlay = document.getElementById('sidebar-overlay');
             const toggleBtn = document.getElementById('sidebarToggle');
 
-            toggleBtn.addEventListener('click', function() {
+            toggleBtn?.addEventListener('click', function() {
                 const isMobile = window.innerWidth <= 768;
-                
                 if (isMobile) {
                     sidebar.classList.toggle('show');
                     overlay.classList.toggle('show');
@@ -441,7 +529,7 @@
                 }
             });
 
-            overlay.addEventListener('click', function() {
+            overlay?.addEventListener('click', function() {
                 sidebar.classList.remove('show');
                 overlay.classList.remove('show');
             });
@@ -456,8 +544,56 @@
                 });
             });
 
-            // Admin Toast Logic (Mapped to Notyf)
-            window.showNotification = function(message, type = 'success', duration = 5000) {
+            // Doğrudan şifre güncelleme
+            document.getElementById('btnDirectChangePassword')?.addEventListener('click', async function() {
+                const newPass = document.getElementById('modalNewPassword').value;
+                const confirmPass = document.getElementById('modalConfirmPassword').value;
+
+                if (!newPass || newPass.length < 6) {
+                    window.showNotification('Yeni şifre en az 6 karakter olmalıdır.', 'error');
+                    return;
+                }
+
+                if (newPass !== confirmPass) {
+                    window.showNotification('Şifreler birbiriyle uyuşmuyor.', 'error');
+                    return;
+                }
+
+                const btn = this;
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Güncelleniyor...';
+
+                try {
+                    const response = await fetch('/Auth/ChangePassword', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ newPassword: newPass, confirmPassword: confirmPass })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        window.showNotification(result.message || 'Şifreniz başarıyla güncellendi.', 'success');
+                        document.getElementById('modalNewPassword').value = '';
+                        document.getElementById('modalConfirmPassword').value = '';
+                        const modalEl = document.getElementById('adminProfileModal');
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        modalInstance?.hide();
+                    } else {
+                        window.showNotification(result.message || 'Şifre güncellenemedi.', 'error');
+                    }
+                } catch (err) {
+                    window.showNotification('Bir hata meydana geldi.', 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            });
+
+            // Global Notification helper
+            window.showNotification = function(message, type = 'success') {
                 var parser = new DOMParser();
                 var decodedMessage = parser.parseFromString(message, 'text/html').body.textContent || message;
 
@@ -470,7 +606,7 @@
                         notyf.open({ type: 'warning', message: decodedMessage, background: '#ff9800' });
                     }
                 } else {
-                    console.log("Notyf not loaded. Fallback admin toast:", type, decodedMessage);
+                    alert(decodedMessage);
                 }
             };
 

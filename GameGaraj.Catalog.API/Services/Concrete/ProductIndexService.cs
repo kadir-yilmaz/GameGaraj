@@ -6,6 +6,7 @@ using GameGaraj.Catalog.API.Services.Abstract;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Text.Json;
+using GameGaraj.Shared.Helpers;
 
 namespace GameGaraj.Catalog.API.Services.Concrete
 {
@@ -435,7 +436,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 Id = product.Id,
                 Name = product.Name,
                 Brand = product.Brand,
-                Slug = product.Slug,
+                Slug = UrlHelper.GenerateSlug(product.Brand, product.Name),
                 Description = product.Description,
                 Price = product.Price,
                 Stock = product.Stock,
@@ -450,7 +451,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 IndexedAt = DateTime.UtcNow,
                 CategoryId = product.CategoryId,
                 CategoryName = categoryName,
-                CategorySlug = category?.Slug ?? string.Empty,
+                CategorySlug = UrlHelper.GenerateSlug(category?.Name),
                 Specs = product.Specs,
                 SpecValues = specValues,
                 SearchText = string.Join(' ', searchParts)

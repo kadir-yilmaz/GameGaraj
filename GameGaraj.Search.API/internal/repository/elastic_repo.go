@@ -22,9 +22,9 @@ const indexName = "products"
 
 // ElasticRepo provides Elasticsearch operations for product search documents
 type ElasticRepo struct {
-	client    *elasticsearch.Client
-	esURI     string
-	logger    *zap.Logger
+	client *elasticsearch.Client
+	esURI  string
+	logger *zap.Logger
 }
 
 // NewElasticRepo creates a new Elasticsearch repository
@@ -80,9 +80,10 @@ func (r *ElasticRepo) Search(ctx context.Context, keyword string) ([]model.Produ
 								"description",
 							},
 							"query":                keyword,
-							"fuzziness":             "AUTO",
-							"minimum_should_match":   "70%",
-							"prefix_length":          1,
+							"fuzziness":            "AUTO",
+							"prefix_length":        0,
+							"max_expansions":       50,
+							"minimum_should_match": "2<75%",
 						},
 					},
 				},
@@ -94,6 +95,22 @@ func (r *ElasticRepo) Search(ctx context.Context, keyword string) ([]model.Produ
 					},
 				},
 				"should": []interface{}{
+					map[string]interface{}{
+						"match_phrase": map[string]interface{}{
+							"name": map[string]interface{}{
+								"query": keyword,
+								"boost": 10,
+							},
+						},
+					},
+					map[string]interface{}{
+						"match_phrase": map[string]interface{}{
+							"brand": map[string]interface{}{
+								"query": keyword,
+								"boost": 8,
+							},
+						},
+					},
 					map[string]interface{}{
 						"term": map[string]interface{}{
 							"isFeatured": map[string]interface{}{
@@ -135,10 +152,10 @@ func (r *ElasticRepo) Suggestions(ctx context.Context, keyword string) ([]model.
 								"specValues^2",
 								"searchText",
 							},
-							"query":                keyword,
-							"fuzziness":             "AUTO",
-							"minimum_should_match":   "60%",
-							"prefix_length":          1,
+							"query":          keyword,
+							"fuzziness":      "AUTO",
+							"prefix_length":  0,
+							"max_expansions": 50,
 						},
 					},
 				},
@@ -179,9 +196,9 @@ func (r *ElasticRepo) Facets(ctx context.Context, keyword string) (*model.Search
 						"searchText",
 					},
 					"query":                keyword,
-					"fuzziness":             "AUTO",
-					"minimum_should_match":   "60%",
-					"prefix_length":          1,
+					"fuzziness":            "AUTO",
+					"minimum_should_match": "60%",
+					"prefix_length":        1,
 				},
 			},
 		}
@@ -593,7 +610,7 @@ func (r *ElasticRepo) BulkIndex(ctx context.Context, docs []model.ProductSearchD
 	var bulkResp struct {
 		Errors bool `json:"errors"`
 		Items  []map[string]struct {
-			Status int    `json:"status"`
+			Status int `json:"status"`
 			Error  *struct {
 				Reason string `json:"reason"`
 			} `json:"error,omitempty"`
@@ -844,7 +861,7 @@ func getIndexDefinition() map[string]interface{} {
 		"mappings": map[string]interface{}{
 			"dynamic": true,
 			"properties": map[string]interface{}{
-				"id":   map[string]interface{}{"type": "keyword"},
+				"id": map[string]interface{}{"type": "keyword"},
 				"name": map[string]interface{}{
 					"type":            "text",
 					"analyzer":        "autocomplete_analyzer",
@@ -867,20 +884,20 @@ func getIndexDefinition() map[string]interface{} {
 						},
 					},
 				},
-				"slug":          map[string]interface{}{"type": "keyword"},
-				"description":   map[string]interface{}{"type": "text", "analyzer": "default_search"},
-				"price":         map[string]interface{}{"type": "double"},
-				"stock":         map[string]interface{}{"type": "integer"},
-				"reservedStock": map[string]interface{}{"type": "integer"},
+				"slug":           map[string]interface{}{"type": "keyword"},
+				"description":    map[string]interface{}{"type": "text", "analyzer": "default_search"},
+				"price":          map[string]interface{}{"type": "double"},
+				"stock":          map[string]interface{}{"type": "integer"},
+				"reservedStock":  map[string]interface{}{"type": "integer"},
 				"availableStock": map[string]interface{}{"type": "integer"},
-				"isActive":      map[string]interface{}{"type": "boolean"},
-				"isFeatured":    map[string]interface{}{"type": "boolean"},
-				"inStock":       map[string]interface{}{"type": "boolean"},
-				"imageUrls":     map[string]interface{}{"type": "keyword", "index": false},
-				"createdAt":     map[string]interface{}{"type": "date"},
-				"updatedAt":     map[string]interface{}{"type": "date"},
-				"indexedAt":     map[string]interface{}{"type": "date"},
-				"categoryId":   map[string]interface{}{"type": "keyword"},
+				"isActive":       map[string]interface{}{"type": "boolean"},
+				"isFeatured":     map[string]interface{}{"type": "boolean"},
+				"inStock":        map[string]interface{}{"type": "boolean"},
+				"imageUrls":      map[string]interface{}{"type": "keyword", "index": false},
+				"createdAt":      map[string]interface{}{"type": "date"},
+				"updatedAt":      map[string]interface{}{"type": "date"},
+				"indexedAt":      map[string]interface{}{"type": "date"},
+				"categoryId":     map[string]interface{}{"type": "keyword"},
 				"categoryName": map[string]interface{}{
 					"type":            "text",
 					"analyzer":        "autocomplete_analyzer",
@@ -943,7 +960,7 @@ func (r *ElasticRepo) executeSearch(ctx context.Context, query map[string]interf
 	var searchResult struct {
 		Hits struct {
 			Hits []struct {
-				ID     string                     `json:"_id"`
+				ID     string                      `json:"_id"`
 				Source model.ProductSearchDocument `json:"_source"`
 			} `json:"hits"`
 		} `json:"hits"`

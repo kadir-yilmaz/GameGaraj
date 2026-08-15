@@ -1,303 +1,338 @@
 @model GameGaraj.WebUI.Models.Auth.SignUpViewModel
 @{
+    Layout = "_AuthLayout";
     ViewData["Title"] = "Kayıt Ol";
 }
 
 <style>
-    .auth-page {
-        min-height: 620px;
-        padding: 48px 16px 56px;
-        background: linear-gradient(135deg, #2f3947, #1f2937);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .auth-box {
+        width: 100%;
+        max-width: 440px;
+        background: #131b2e;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 28px 26px;
+        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(12px);
     }
 
-    .auth-shell {
-        width: min(680px, 100%);
-        margin: 0 auto;
+    .auth-header {
+        text-align: center;
+        margin-bottom: 20px;
     }
 
-    .auth-card {
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.97);
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
-        padding: 32px;
-    }
-
-    .auth-card-header {
-        margin-bottom: 22px;
-    }
-
-    .auth-kicker {
-        color: #ff6b00;
-        font-size: 0.78rem;
+    .auth-title {
+        font-size: 1.5rem;
         font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        color: #ffffff;
+        letter-spacing: -0.3px;
+        margin-bottom: 3px;
     }
 
-    .auth-card h2 {
-        margin: 7px 0 6px;
-        color: #111827;
-        font-size: 1.75rem;
-        font-weight: 800;
-        letter-spacing: 0;
-    }
-
-    .auth-card-subtitle {
-        color: #64748b;
+    .auth-subtitle {
+        font-size: 0.85rem;
+        color: #94a3b8;
         margin: 0;
     }
 
-    .auth-field {
-        margin-bottom: 16px;
+    .auth-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 12px;
     }
 
-    .auth-label {
-        color: #1f2937;
+    .auth-form-group {
+        margin-bottom: 12px;
+    }
+
+    .auth-input-label {
+        font-size: 0.8rem;
         font-weight: 700;
-        margin-bottom: 8px;
+        color: #cbd5e1;
+        margin-bottom: 5px;
+        display: block;
     }
 
-    .auth-input-group {
+    .auth-input-container {
+        position: relative;
         display: flex;
-        align-items: stretch;
-        border: 1px solid #d7dee8;
-        border-radius: 8px;
-        background: #fff;
-        overflow: hidden;
-        transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        align-items: center;
     }
 
-    .auth-input-group:focus-within {
-        border-color: #ff8a00;
-        box-shadow: 0 0 0 4px rgba(255, 138, 0, 0.13);
-    }
-
-    .auth-input-icon,
-    .auth-password-toggle {
-        width: 46px;
-        border: 0;
-        background: #f8fafc;
+    .auth-input-container i.input-icon {
+        position: absolute;
+        left: 13px;
         color: #64748b;
-        display: inline-flex;
+        font-size: 0.9rem;
+        pointer-events: none;
+        transition: color 0.2s ease;
+    }
+
+    .auth-input-field {
+        width: 100%;
+        height: 42px;
+        background: #0b1120;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 0 38px 0 36px;
+        font-size: 0.9rem;
+        color: #f8fafc;
+        transition: all 0.2s ease;
+        outline: none;
+    }
+
+    .auth-input-field:focus {
+        border-color: var(--gg-primary);
+        box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.18);
+        background: #0f172a;
+    }
+
+    .auth-input-field:focus + i.input-icon,
+    .auth-input-container:focus-within i.input-icon {
+        color: var(--gg-primary);
+    }
+
+    .auth-eye-btn {
+        position: absolute;
+        right: 10px;
+        background: transparent;
+        border: none;
+        color: #64748b;
+        font-size: 0.9rem;
+        cursor: pointer;
+        padding: 4px 6px;
+        transition: color 0.2s ease;
+    }
+
+    .auth-eye-btn:hover {
+        color: #cbd5e1;
+    }
+
+    .auth-btn-submit {
+        width: 100%;
+        height: 42px;
+        background: linear-gradient(135deg, #ff6b00, #ea580c);
+        color: #ffffff;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.92rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
         align-items: center;
         justify-content: center;
-        flex: 0 0 46px;
+        gap: 8px;
+        box-shadow: 0 6px 18px rgba(255, 107, 0, 0.28);
+        transition: all 0.2s ease;
+        margin-top: 6px;
     }
 
-    .auth-password-toggle {
-        border-left: 1px solid #e5e7eb;
+    .auth-btn-submit:hover {
+        background: linear-gradient(135deg, #ea580c, #c2410c);
+        box-shadow: 0 8px 24px rgba(255, 107, 0, 0.38);
+        transform: translateY(-1px);
     }
 
-    .auth-input-group .form-control {
-        border: 0;
-        min-height: 46px;
-        box-shadow: none;
-        padding-left: 0;
+    .auth-sep {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 14px 0;
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
-    .auth-primary-btn,
-    .auth-google-btn {
+    .auth-sep::before,
+    .auth-sep::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .auth-sep:not(:empty)::before {
+        margin-right: .75em;
+    }
+
+    .auth-sep:not(:empty)::after {
+        margin-left: .75em;
+    }
+
+    .auth-btn-google {
         width: 100%;
-        min-height: 48px;
-        border-radius: 8px;
-        font-weight: 800;
-        display: inline-flex;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        color: #f1f5f9;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: flex;
         align-items: center;
         justify-content: center;
         gap: 10px;
-    }
-
-    .auth-primary-btn {
-        border: 1px solid #ff8a00;
-        background: #ff8a00;
-        color: #111827;
-    }
-
-    .auth-primary-btn:hover {
-        background: #f97316;
-        border-color: #f97316;
-        color: #111827;
-    }
-
-    .auth-divider {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        color: #94a3b8;
-        font-weight: 700;
-        font-size: 0.88rem;
-        margin: 18px 0;
-    }
-
-    .auth-divider::before,
-    .auth-divider::after {
-        content: "";
-        height: 1px;
-        background: #e5e7eb;
-        flex: 1;
-    }
-
-    .auth-google-btn {
-        border: 1px solid #d7dee8;
-        background: #fff;
-        color: #1f2937;
-    }
-
-    .auth-google-btn:hover {
-        border-color: #cbd5e1;
-        background: #f8fafc;
-        color: #111827;
-    }
-
-    .auth-switch {
-        text-align: center;
-        color: #64748b;
-        margin: 20px 0 0;
-    }
-
-    .auth-switch a {
-        color: #ff6b00;
-        font-weight: 800;
         text-decoration: none;
+        transition: all 0.2s ease;
     }
 
-    .validation-summary-errors {
-        border-radius: 8px;
-        padding: 12px 14px;
-        background: #fff1f2;
-        color: #be123c;
-        margin-bottom: 18px;
-        border: 1px solid #fecdd3;
+    .auth-btn-google:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
     }
 
-    @@media (max-width: 576px) {
-        .auth-page {
-            padding: 24px 12px 32px;
+    .auth-footer-prompt {
+        text-align: center;
+        font-size: 0.82rem;
+        color: #94a3b8;
+        margin-top: 16px;
+        margin-bottom: 0;
+    }
+
+    .auth-footer-prompt a {
+        color: var(--gg-primary);
+        text-decoration: none;
+        font-weight: 700;
+        margin-left: 4px;
+    }
+
+    .auth-footer-prompt a:hover {
+        text-decoration: underline;
+        color: #fb923c;
+    }
+
+    .auth-validation-error {
+        color: #ef4444;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-top: 3px;
+        display: block;
+    }
+
+    @@media (max-width: 480px) {
+        .auth-grid-2 {
+            grid-template-columns: 1fr;
+            gap: 0;
         }
-
-        .auth-card {
-            padding: 24px;
+        .auth-box {
+            padding: 22px 18px;
         }
     }
 </style>
 
-<section class="auth-page">
-    <div class="auth-shell">
-        <div class="auth-card">
-            <div class="auth-card-header">
-                <div class="auth-kicker">Yeni hesap</div>
-                <h2>Kayıt Ol</h2>
-                <p class="auth-card-subtitle">Birkaç bilgiyle GameGaraj hesabınızı açın.</p>
-            </div>
-
-            <form asp-action="SignUp" method="post">
-                <div asp-validation-summary="ModelOnly"></div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="auth-field">
-                            <label asp-for="FirstName" class="form-label auth-label">Ad</label>
-                            <div class="auth-input-group">
-                                <span class="auth-input-icon"><i class="fas fa-user"></i></span>
-                                <input asp-for="FirstName" class="form-control" autocomplete="given-name" placeholder="Adınız" />
-                            </div>
-                            <span asp-validation-for="FirstName" class="text-danger small"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="auth-field">
-                            <label asp-for="LastName" class="form-label auth-label">Soyad</label>
-                            <div class="auth-input-group">
-                                <span class="auth-input-icon"><i class="fas fa-user"></i></span>
-                                <input asp-for="LastName" class="form-control" autocomplete="family-name" placeholder="Soyadınız" />
-                            </div>
-                            <span asp-validation-for="LastName" class="text-danger small"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="auth-field">
-                    <label asp-for="Email" class="form-label auth-label">Email adresiniz</label>
-                    <div class="auth-input-group">
-                        <span class="auth-input-icon"><i class="fas fa-envelope"></i></span>
-                        <input asp-for="Email" class="form-control" autocomplete="email" placeholder="ornek@email.com" />
-                    </div>
-                    <span asp-validation-for="Email" class="text-danger small"></span>
-                </div>
-
-                <div class="auth-field">
-                    <label asp-for="Password" class="form-label auth-label">Şifre</label>
-                    <div class="auth-input-group">
-                        <span class="auth-input-icon"><i class="fas fa-lock"></i></span>
-                        <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" placeholder="En az 6 karakter" id="signUpPassword" />
-                        <button class="auth-password-toggle" type="button" id="toggleSignUpPassword" aria-label="Şifreyi göster">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                    <span asp-validation-for="Password" class="text-danger small"></span>
-                </div>
-
-                <div class="auth-field">
-                    <label asp-for="ConfirmPassword" class="form-label auth-label">Şifre tekrar</label>
-                    <div class="auth-input-group">
-                        <span class="auth-input-icon"><i class="fas fa-lock"></i></span>
-                        <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" placeholder="Şifrenizi tekrar girin" id="signUpConfirmPassword" />
-                        <button class="auth-password-toggle" type="button" id="toggleConfirmPassword" aria-label="Şifreyi göster">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
-                </div>
-
-                <button type="submit" class="btn auth-primary-btn mt-1">
-                    <i class="fas fa-user-plus"></i>
-                    Kayıt Ol
-                </button>
-
-                <div class="auth-divider">veya</div>
-
-                <a asp-action="GoogleSignIn" class="btn auth-google-btn js-google-auth-trigger">
-                    <i class="fab fa-google"></i>
-                    Google ile kayıt ol
-                </a>
-
-                <p class="auth-switch">
-                    Zaten hesabınız var mı?
-                    <a asp-action="SignIn">Giriş Yap</a>
-                </p>
-            </form>
-        </div>
+<div class="auth-box">
+    <div class="auth-header">
+        <h1 class="auth-title">Hesap Oluştur</h1>
+        <p class="auth-subtitle">GameGaraj dünyasına katılın</p>
     </div>
-</section>
+
+    <form asp-action="SignUp" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-2 text-center"></div>
+
+        <div class="auth-grid-2">
+            <div>
+                <label asp-for="FirstName" class="auth-input-label">Ad</label>
+                <div class="auth-input-container">
+                    <i class="fas fa-user input-icon"></i>
+                    <input asp-for="FirstName" class="auth-input-field" placeholder="Adınız" />
+                </div>
+                <span asp-validation-for="FirstName" class="auth-validation-error"></span>
+            </div>
+            <div>
+                <label asp-for="LastName" class="auth-input-label">Soyad</label>
+                <div class="auth-input-container">
+                    <i class="fas fa-user input-icon"></i>
+                    <input asp-for="LastName" class="auth-input-field" placeholder="Soyadınız" />
+                </div>
+                <span asp-validation-for="LastName" class="auth-validation-error"></span>
+            </div>
+        </div>
+
+        <div class="auth-form-group">
+            <label asp-for="Email" class="auth-input-label">E-posta Adresi</label>
+            <div class="auth-input-container">
+                <i class="fas fa-envelope input-icon"></i>
+                <input asp-for="Email" type="email" class="auth-input-field" autocomplete="email" placeholder="ornek@gamegaraj.com" />
+            </div>
+            <span asp-validation-for="Email" class="auth-validation-error"></span>
+        </div>
+
+        <div class="auth-grid-2">
+            <div>
+                <label asp-for="Password" class="auth-input-label">Şifre</label>
+                <div class="auth-input-container">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input asp-for="Password" type="password" class="auth-input-field" id="signUpPassword" autocomplete="new-password" placeholder="••••••••" />
+                    <button type="button" class="auth-eye-btn" id="toggleSignUpPassword" aria-label="Şifreyi göster">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <span asp-validation-for="Password" class="auth-validation-error"></span>
+            </div>
+            <div>
+                <label asp-for="ConfirmPassword" class="auth-input-label">Şifre Tekrar</label>
+                <div class="auth-input-container">
+                    <i class="fas fa-shield-alt input-icon"></i>
+                    <input asp-for="ConfirmPassword" type="password" class="auth-input-field" id="signUpConfirmPassword" autocomplete="new-password" placeholder="••••••••" />
+                    <button type="button" class="auth-eye-btn" id="toggleSignUpConfirmPassword" aria-label="Şifreyi göster">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <span asp-validation-for="ConfirmPassword" class="auth-validation-error"></span>
+            </div>
+        </div>
+
+        <button type="submit" class="auth-btn-submit">
+            <i class="fas fa-user-plus"></i>
+            <span>Kayıt Ol</span>
+        </button>
+
+        <div class="auth-sep">veya</div>
+
+        <a asp-action="GoogleSignIn" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="auth-btn-google js-google-auth-trigger">
+            <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Google ile devam et</span>
+        </a>
+
+        <p class="auth-footer-prompt">
+            Zaten hesabınız var mı?<a asp-action="SignIn" asp-route-returnUrl="@ViewData["ReturnUrl"]">Giriş Yap</a>
+        </p>
+    </form>
+</div>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 
     <script>
-        function bindPasswordToggle(buttonId, inputId) {
-            document.getElementById(buttonId)?.addEventListener('click', function () {
-                const passwordInput = document.getElementById(inputId);
+        function setupToggle(btnId, inputId) {
+            document.getElementById(btnId)?.addEventListener('click', function () {
+                const input = document.getElementById(inputId);
                 const icon = this.querySelector('i');
-                const isHidden = passwordInput.type === 'password';
-
-                passwordInput.type = isHidden ? 'text' : 'password';
+                const isHidden = input.type === 'password';
+                input.type = isHidden ? 'text' : 'password';
                 icon.classList.toggle('fa-eye', !isHidden);
                 icon.classList.toggle('fa-eye-slash', isHidden);
                 this.setAttribute('aria-label', isHidden ? 'Şifreyi gizle' : 'Şifreyi göster');
             });
         }
 
-        bindPasswordToggle('toggleSignUpPassword', 'signUpPassword');
-        bindPasswordToggle('toggleConfirmPassword', 'signUpConfirmPassword');
+        setupToggle('toggleSignUpPassword', 'signUpPassword');
+        setupToggle('toggleSignUpConfirmPassword', 'signUpConfirmPassword');
 
         document.querySelector('.js-google-auth-trigger')?.addEventListener('click', function (event) {
             event.preventDefault();
 
-            const popupUrl = `${this.href}${this.href.includes('?') ? '&' : '?'}popup=true&returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+            const explicitReturnUrl = '@(ViewData["ReturnUrl"] ?? "")';
+            const returnUrlParam = explicitReturnUrl || (window.location.pathname + window.location.search);
+            const popupUrl = `${this.href}${this.href.includes('?') ? '&' : '?'}popup=true&returnUrl=${encodeURIComponent(returnUrlParam)}`;
             const width = 520;
             const height = 720;
             const left = Math.max(0, window.screenX + ((window.outerWidth - width) / 2));

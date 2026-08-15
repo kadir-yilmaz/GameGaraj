@@ -52,8 +52,8 @@ func main() {
 	cfg := config.LoadConfig()
 
 	// 2. Initialize context with cancel support for graceful shutdown
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// 3. Initialize OpenTelemetry Tracing
 	otelShutdown, err := telemetry.InitTracer(ctx, cfg)
@@ -136,12 +136,17 @@ func main() {
 	}()
 
 	// 8. Graceful Shutdown Wait
-	<-ctx.Done()
-	log.Println("[Main] Shutdown signal received. Shutting down gracefully...")
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-quit
+	log.Printf("[Main] Shutdown signal received (%s). Shutting down gracefully...", sig.String())
+
+	// Cancel context to stop RabbitMQ consumer
+	cancel()
 
 	// Shut down HTTP Server with timeout
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Printf("[HTTP] ❌ Web Server forced to shutdown: %v", err)

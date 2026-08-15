@@ -3,7 +3,9 @@
     ViewData["Title"] = Model.Name;
     var product = ViewBag.Product as GameGaraj.WebUI.Models.Products.ProductViewModel;
     var categoryName = ViewBag.CategoryName as string;
-    var campaignProductsUrl = Url.Action("Index", "Product", new { categoryId = Model.CategoryId, brand = Model.BrandName });
+    var campaignProductsUrl = !string.IsNullOrWhiteSpace(Model.CategoryId)
+        ? GameGaraj.WebUI.Extensions.SlugHelper.BuildCategoryUrl("kategori", Model.CategoryId) + (!string.IsNullOrWhiteSpace(Model.BrandName) ? $"?marka={Uri.EscapeDataString(Model.BrandName)}" : "")
+        : (!string.IsNullOrWhiteSpace(Model.BrandName) ? $"/ara?marka={Uri.EscapeDataString(Model.BrandName)}" : "/ara");
 }
 
 <style>
@@ -134,7 +136,7 @@
                             <h5 class="fw-bold text-dark mb-1">@product.Brand @product.Name</h5>
                             <div class="text-primary fw-bold fs-5 mb-3">@product.Price.ToString("C2")</div>
                             <div class="d-flex gap-2">
-                                <a asp-controller="Product" asp-action="Detail" asp-route-slug="@(string.IsNullOrEmpty(product.Slug) ? product.Id : product.Slug)" class="btn btn-outline-primary flex-grow-1 rounded-pill py-2 fw-semibold">
+                                <a href="@GameGaraj.WebUI.Extensions.SlugHelper.BuildProductUrl(product.Slug, product.Id)" class="btn btn-outline-primary flex-grow-1 rounded-pill py-2 fw-semibold">
                                     <i class="fas fa-search me-1"></i> Ürünü İncele
                                 </a>
                                 @if (product.AvailableStock > 0 || (product.AvailableStock == 0 && product.Stock > 0))

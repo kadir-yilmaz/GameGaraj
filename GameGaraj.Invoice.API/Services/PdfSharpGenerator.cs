@@ -212,33 +212,89 @@ namespace GameGaraj.Invoice.API.Services
     {
         public FontResolverInfo? ResolveTypeface(string familyName, bool bold, bool italic)
         {
-            // Map all fonts to DejaVuSans which is guaranteed to be installed in the Docker container
-            string fontName = bold ? "DejaVuSans-Bold.ttf" : "DejaVuSans.ttf";
-            return new FontResolverInfo(fontName);
+            string styleSuffix = bold && italic ? "bi" : bold ? "b" : italic ? "i" : "r";
+            return new FontResolverInfo($"{familyName}#{styleSuffix}");
         }
 
         public byte[]? GetFont(string faceName)
         {
-            string[] searchPaths = new[]
+            var parts = faceName.Split('#');
+            string style = parts.Length > 1 ? parts[1] : "r";
+            bool isBold = style.Contains("b");
+            bool isItalic = style.Contains("i");
+
+            // 1. Try Windows Fonts Directory
+            string winFontsDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
+            if (string.IsNullOrEmpty(winFontsDir))
             {
-                $"/usr/share/fonts/truetype/dejavu/{faceName}",
-                $"/usr/share/fonts/dejavu/{faceName}",
-                $"/usr/share/fonts/truetype/freefont/{faceName}",
-                $"/usr/share/fonts/{faceName}",
-                faceName
+                winFontsDir = @"C:\Windows\Fonts";
+            }
+
+            if (Directory.Exists(winFontsDir))
+            {
+                var winCandidates = new List<string>();
+                if (isBold && isItalic)
+                    winCandidates.AddRange(new[] { "arialbi.ttf", "segoeuiz.ttf", "calibriz.ttf", "tahomabd.ttf" });
+                else if (isBold)
+                    winCandidates.AddRange(new[] { "arialbd.ttf", "segoeuib.ttf", "calibrib.ttf", "tahomabd.ttf" });
+                else if (isItalic)
+                    winCandidates.AddRange(new[] { "ariali.ttf", "segoeuii.ttf", "calibrii.ttf" });
+                else
+                    winCandidates.AddRange(new[] { "arial.ttf", "segoeui.ttf", "calibri.ttf", "tahoma.ttf" });
+
+                foreach (var fontFile in winCandidates)
+                {
+                    string fullPath = Path.Combine(winFontsDir, fontFile);
+                    if (File.Exists(fullPath))
+                    {
+                        try
+                        {
+                            return File.ReadAllBytes(fullPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[FileFontResolver] Error reading Windows font {fullPath}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+
+            // 2. Try Linux / Docker Container Fonts Directory
+            var linuxCandidates = new List<string>();
+            if (isBold && isItalic)
+                linuxCandidates.AddRange(new[] { "DejaVuSans-BoldOblique.ttf", "DejaVuSans-Bold.ttf", "FreeSansBoldOblique.ttf" });
+            else if (isBold)
+                linuxCandidates.AddRange(new[] { "DejaVuSans-Bold.ttf", "FreeSansBold.ttf" });
+            else if (isItalic)
+                linuxCandidates.AddRange(new[] { "DejaVuSans-Oblique.ttf", "FreeSansOblique.ttf" });
+            else
+                linuxCandidates.AddRange(new[] { "DejaVuSans.ttf", "FreeSans.ttf" });
+
+            var linuxDirs = new[]
+            {
+                "/usr/share/fonts/truetype/dejavu",
+                "/usr/share/fonts/dejavu",
+                "/usr/share/fonts/truetype/freefont",
+                "/usr/share/fonts/truetype",
+                "/usr/share/fonts",
+                "."
             };
 
-            foreach (var path in searchPaths)
+            foreach (var dir in linuxDirs)
             {
-                if (File.Exists(path))
+                foreach (var fontFile in linuxCandidates)
                 {
-                    try
+                    string fullPath = Path.Combine(dir, fontFile);
+                    if (File.Exists(fullPath))
                     {
-                        return File.ReadAllBytes(path);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[FileFontResolver] Error reading font from {path}: {ex.Message}");
+                        try
+                        {
+                            return File.ReadAllBytes(fullPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[FileFontResolver] Error reading Linux font {fullPath}: {ex.Message}");
+                        }
                     }
                 }
             }

@@ -1,6 +1,6 @@
 module github.com/kadir-yilmaz/gamegaraj-search-api
 
-go 1.23.0
+go 1.25.0
 
 require (
 	github.com/elastic/go-elasticsearch/v8 v8.19.7

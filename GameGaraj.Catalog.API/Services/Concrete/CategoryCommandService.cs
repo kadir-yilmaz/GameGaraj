@@ -29,7 +29,6 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             {
                 Id = Guid.NewGuid().ToString(),
                 Name = dto.Name,
-                Slug = UrlHelper.GenerateSlug(dto.Name),
                 ParentId = dto.ParentId,
                 IsShowOnHome = dto.IsShowOnHome,
                 CreatedAt = now,
@@ -50,7 +49,6 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             await ValidateCategoryAsync(dto.Name, dto.ParentId, id);
 
             category.Name = dto.Name;
-            category.Slug = UrlHelper.GenerateSlug(dto.Name);
             category.ParentId = dto.ParentId;
             category.IsShowOnHome = dto.IsShowOnHome;
             category.UpdatedAt = DateTime.UtcNow;
@@ -132,23 +130,18 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
         public async Task<bool> DeleteAsync(string id)
         {
-            if (id == "uncategorized")
-                return false;
-
             var category = await _context.Categories.FindAsync(id);
             if (category == null)
                 return false;
 
-            var products = await _context.Products.Where(p => p.CategoryId == id).ToListAsync();
-            foreach (var p in products)
-            {
-                p.CategoryId = "uncategorized";
-            }
+            var hasProducts = await _context.Products.AnyAsync(p => p.CategoryId == id);
+            if (hasProducts)
+                throw new InvalidOperationException("Bu kategoriye bağlı ürünler olduğu için kategori silinemez. Önce ürünlerin kategorisini değiştiriniz.");
 
             var children = await _context.Categories.Where(c => c.ParentId == id).ToListAsync();
             foreach (var child in children)
             {
-                child.ParentId = null;
+                child.ParentId = category.ParentId;
             }
 
             _context.Categories.Remove(category);
@@ -201,11 +194,11 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 errors.Add("Kategori adı zorunludur.");
             else
             {
-                var slug = UrlHelper.GenerateSlug(name);
-                var slugExists = await _context.Categories.AnyAsync(category =>
-                    category.Slug == slug && category.Id != currentCategoryId);
+                var lowerName = name.ToLower();
+                var nameExists = await _context.Categories.AnyAsync(category =>
+                    category.Name.ToLower() == lowerName && category.Id != currentCategoryId);
 
-                if (slugExists)
+                if (nameExists)
                     errors.Add("Aynı ada sahip başka bir kategori zaten var.");
             }
 

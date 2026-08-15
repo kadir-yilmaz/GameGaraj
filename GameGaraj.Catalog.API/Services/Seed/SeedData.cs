@@ -25,7 +25,6 @@ namespace GameGaraj.Catalog.API.Services.Seed
                 { 
                     Id = id, 
                     Name = name, 
-                    Slug = UrlHelper.GenerateSlug(name),
                     ParentId = null, 
                     CreatedAt = now, 
                     UpdatedAt = now 
@@ -60,7 +59,6 @@ namespace GameGaraj.Catalog.API.Services.Seed
                 { 
                     Id = id, 
                     Name = name, 
-                    Slug = UrlHelper.GenerateSlug(name),
                     ParentId = categoryIds[parentKey], 
                     CreatedAt = now, 
                     UpdatedAt = now 
@@ -176,7 +174,6 @@ namespace GameGaraj.Catalog.API.Services.Seed
                 Id = Guid.NewGuid().ToString(),
                 Name = name,
                 Brand = brand,
-                Slug = UrlHelper.GenerateSlug(brand, name),
                 Description = description,
                 Price = price,
                 Stock = stock,

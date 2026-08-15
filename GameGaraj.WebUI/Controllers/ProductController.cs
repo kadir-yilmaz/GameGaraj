@@ -1,4 +1,5 @@
 using AspNetCoreHero.ToastNotification.Abstractions;
+using GameGaraj.WebUI.Extensions;
 using GameGaraj.WebUI.Services.Abstract;
 using GameGaraj.WebUI.Models.Products;
 using GameGaraj.WebUI.Models.Reviews;
@@ -9,6 +10,7 @@ namespace GameGaraj.WebUI.Controllers
     public class ProductController : Controller
     {
         private readonly ICatalogService _catalogService;
+        private readonly ISearchService _searchService;
         private readonly IBasketService _basketService;
         private readonly IFavoritesService _favoritesService;
         private readonly IReviewService _reviewService;
@@ -17,6 +19,7 @@ namespace GameGaraj.WebUI.Controllers
 
         public ProductController(
             ICatalogService catalogService,
+            ISearchService searchService,
             IBasketService basketService,
             IFavoritesService favoritesService,
             IReviewService reviewService,
@@ -24,6 +27,7 @@ namespace GameGaraj.WebUI.Controllers
             ILogger<ProductController> logger)
         {
             _catalogService = catalogService;
+            _searchService = searchService;
             _basketService = basketService;
             _favoritesService = favoritesService;
             _reviewService = reviewService;
@@ -31,77 +35,102 @@ namespace GameGaraj.WebUI.Controllers
             _logger = logger;
         }
 
-        [Route("product/c/{category}")]
-        [Route("product")]
-        public async Task<IActionResult> Index(string? category, string? categoryId, string? sortBy, decimal? minPrice, decimal? maxPrice, Dictionary<string, string[]>? specs, string? search, string? brand)
+        /// <summary>
+        /// Category page: /{slug}-c-{categoryId}
+        /// e.g. /ram-c-6832abc, /ram-c-6832abc?marka=Samsung&siralama=fiyat-artan
+        /// </summary>
+        public async Task<IActionResult> Category(string slug, string? marka, string? siralama,
+            decimal? minFiyat, decimal? maxFiyat, Dictionary<string, string[]>? specs)
+        {
+            var (categorySlug, categoryId) = SlugHelper.ParseCategorySlug(slug);
+
+            if (string.IsNullOrEmpty(categoryId))
+                return NotFound();
+
+            var categoryModel = await _catalogService.GetCategoryByIdAsync(categoryId);
+            if (categoryModel == null)
+                return NotFound();
+
+            // Verify slug matches, canonical 301 redirect to correct URL if needed (Hepsiburada style)
+            if (!string.Equals(categorySlug, categoryModel.Slug, StringComparison.OrdinalIgnoreCase))
+            {
+                var targetUrl = SlugHelper.BuildCategoryUrl(categoryModel.Slug, categoryId) + Request.QueryString.Value;
+                return RedirectPermanent(targetUrl);
+            }
+
+            // Clean up specs
+            CleanSpecs(specs);
+
+            // Map siralama to sortBy
+            var sortBy = MapSortBy(siralama);
+
+            var products = await _catalogService.GetAllProductsAsync(categoryId, sortBy, minFiyat, maxFiyat, specs, marka);
+            var categories = await _catalogService.GetAllCategoriesAsync();
+            var brandSourceProducts = await _catalogService.GetAllProductsAsync(categoryId);
+
+            SetupViewBags(categoryModel, categoryId, categories, brandSourceProducts,
+                sortBy, minFiyat, maxFiyat, specs, null, marka, siralama);
+
+            // Build base URL for filter forms
+            ViewBag.CurrentBaseUrl = SlugHelper.BuildCategoryUrl(categoryModel.Slug, categoryId);
+
+            await ApplyProductState(products);
+            await ApplyReviewSummariesAsync(products);
+
+            return View("Index", products);
+        }
+
+        /// <summary>
+        /// Search & All Products page: /ara, /ara?q=iphone+17, /ara?marka=Samsung
+        /// </summary>
+        [Route("ara")]
+        public async Task<IActionResult> Search(string? q, string? marka, string? siralama,
+            decimal? minFiyat, decimal? maxFiyat, Dictionary<string, string[]>? specs, string? categoryId)
         {
             CategoryViewModel? categoryModel = null;
-
-            // 1. Resolve Category from Slug or ID
-            if (!string.IsNullOrEmpty(category))
-            {
-                categoryModel = await _catalogService.GetCategoryBySlugAsync(category);
-                if (categoryModel != null)
-                {
-                    categoryId = categoryModel.Id;
-                }
-            }
-            else if (!string.IsNullOrEmpty(categoryId))
+            if (!string.IsNullOrEmpty(categoryId))
             {
                 categoryModel = await _catalogService.GetCategoryByIdAsync(categoryId);
-                
-                // SEO Redirect: If we have a slug, redirect to /product/c/{category}
-                if (categoryModel != null && !string.IsNullOrEmpty(categoryModel.Slug))
-                {
-                    return RedirectToActionPermanent("Index", new { category = categoryModel.Slug, sortBy, minPrice, maxPrice, specs, search, brand });
-                }
             }
 
-            // ... (rest of the logic remains the same)
-            // Fix: remove non-spec query parameters from specs
-            if (specs != null)
-            {
-                var reservedSpecKeys = new[]
-                {
-                    "category", "categoryId", "CategoryId", "sortBy", "minPrice", "maxPrice", "search", "brand"
-                };
+            // Clean up specs
+            CleanSpecs(specs);
 
-                foreach (var key in reservedSpecKeys)
-                {
-                    specs.Remove(key);
-                }
-            }
+            var sortBy = MapSortBy(siralama);
 
             List<ProductViewModel> products;
 
-            // Keyword search
-            if (!string.IsNullOrWhiteSpace(search))
+            if (!string.IsNullOrWhiteSpace(q))
             {
-                search = search.Trim();
+                q = q.Trim();
                 using (_logger.BeginScope(new Dictionary<string, object?>
                 {
                     ["LogType"] = "BusinessRequest",
                     ["RequestArea"] = "WebUI",
                     ["Operation"] = "ProductSearch",
-                    ["SearchTerm"] = search,
+                    ["SearchTerm"] = q,
                     ["Page"] = 1
                 }))
                 {
                     _logger.LogInformation(
                         "Product search page opened from WebUI. Event={Event}, SearchTerm={SearchTerm}, Page={Page}",
                         "ProductSearchPageOpened",
-                        search,
+                        q,
                         1);
                 }
 
-                products = await _catalogService.SearchProductsAsync(search);
-                
-                if (!string.IsNullOrEmpty(categoryId)) products = products.Where(p => p.CategoryId == categoryId).ToList();
-                if (minPrice.HasValue) products = products.Where(p => p.Price >= minPrice.Value).ToList();
-                if (maxPrice.HasValue) products = products.Where(p => p.Price <= maxPrice.Value).ToList();
-                if (!string.IsNullOrWhiteSpace(brand))
+                products = await _searchService.SearchProductsAsync(q);
+                if (products == null || !products.Any())
                 {
-                    var normalizedBrand = brand.Trim();
+                    products = await _catalogService.SearchProductsAsync(q);
+                }
+
+                if (!string.IsNullOrEmpty(categoryId)) products = products.Where(p => p.CategoryId == categoryId).ToList();
+                if (minFiyat.HasValue) products = products.Where(p => p.Price >= minFiyat.Value).ToList();
+                if (maxFiyat.HasValue) products = products.Where(p => p.Price <= maxFiyat.Value).ToList();
+                if (!string.IsNullOrWhiteSpace(marka))
+                {
+                    var normalizedBrand = marka.Trim();
                     products = products.Where(p =>
                         string.Equals(p.Brand?.Trim(), normalizedBrand, StringComparison.OrdinalIgnoreCase) ||
                         (!string.IsNullOrWhiteSpace(p.Name) &&
@@ -111,66 +140,46 @@ namespace GameGaraj.WebUI.Controllers
             }
             else
             {
-                products = await _catalogService.GetAllProductsAsync(categoryId, sortBy, minPrice, maxPrice, specs, brand);
+                products = await _catalogService.GetAllProductsAsync(categoryId, sortBy, minFiyat, maxFiyat, specs, marka);
             }
 
             var categories = await _catalogService.GetAllCategoriesAsync();
             var brandSourceProducts = await _catalogService.GetAllProductsAsync(categoryId);
 
-            // Setup ViewBags
-            ViewBag.CurrentCategoryName = categoryModel?.Name ?? "Tüm Ürünler";
-            ViewBag.CurrentCategoryAttributes = categoryModel?.Attributes;
-            ViewBag.CategoryId = categoryId;
-            ViewBag.CategorySlug = categoryModel?.Slug;
-            ViewBag.Categories = categories;
-            ViewBag.SortBy = sortBy;
-            ViewBag.MinPrice = minPrice;
-            ViewBag.MaxPrice = maxPrice;
-            ViewBag.SelectedSpecs = specs ?? new Dictionary<string, string[]>();
-            ViewBag.Search = search;
-            ViewBag.Brand = brand;
-            ViewBag.Brands = brandSourceProducts
-                .Select(p => p.Brand)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(x => x)
-                .ToList();
+            SetupViewBags(categoryModel, categoryId, categories, brandSourceProducts,
+                sortBy, minFiyat, maxFiyat, specs, q, marka, siralama);
 
-            var basket = await _basketService.GetBasketAsync();
-            var favoriteIds = await _favoritesService.GetFavoriteProductIdsAsync();
-            var basketProductIds = basket?.Items?
-                .Select(x => x.ProductId?.Trim())
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Select(x => x!)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase)
-                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            
-            foreach (var product in products)
-            {
-                product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
-                product.IsFavorite = favoriteIds.Contains(product.Id ?? string.Empty);
-            }
+            // Build base URL for filter forms
+            ViewBag.CurrentBaseUrl = "/ara";
+
+            await ApplyProductState(products);
             await ApplyReviewSummariesAsync(products);
 
-            return View(products);
+            return View("Index", products);
         }
 
-        [Route("product/p/{slug}")]
-        [Route("product/detail/{slug}")]
+        /// <summary>
+        /// Product detail page: /{slug}-p-{productId}
+        /// e.g. /samsung-galaxy-s24-ultra-256gb-p-abc123
+        /// </summary>
         public async Task<IActionResult> Detail(string slug)
         {
-            var product = await _catalogService.GetProductBySlugAsync(slug);
+            var (productSlug, productId) = SlugHelper.ParseProductSlug(slug);
 
-            if (product == null)
-            {
-                product = await _catalogService.GetProductByIdAsync(slug);
-                if (product == null) return NotFound();
-                if (!string.IsNullOrEmpty(product.Slug)) return RedirectToActionPermanent("Detail", new { slug = product.Slug });
-            }
+            if (string.IsNullOrEmpty(productId))
+                return NotFound();
 
+            var product = await _catalogService.GetProductByIdAsync(productId);
             if (product == null)
                 return NotFound();
 
+            // Verify slug matches, canonical 301 redirect to correct URL if needed (Hepsiburada style)
+            if (!string.Equals(productSlug, product.Slug, StringComparison.OrdinalIgnoreCase))
+            {
+                var targetUrl = SlugHelper.BuildProductUrl(product.Slug, productId) + Request.QueryString.Value;
+                return RedirectPermanent(targetUrl);
+            }
+
             var basket = await _basketService.GetBasketAsync();
             var basketProductIds = basket?.Items?
                 .Select(x => x.ProductId?.Trim())
@@ -178,18 +187,25 @@ namespace GameGaraj.WebUI.Controllers
                 .Select(x => x!)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase)
                 ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var productId = product.Id?.Trim() ?? string.Empty;
-            product.IsInBasket = basketProductIds.Contains(productId);
+            var pid = product.Id?.Trim() ?? string.Empty;
+            product.IsInBasket = basketProductIds.Contains(pid);
 
-            product.IsFavorite = await _favoritesService.IsFavoriteAsync(productId);
+            product.IsFavorite = await _favoritesService.IsFavoriteAsync(pid);
 
-            var reviews = await _reviewService.GetProductReviewsAsync(productId, 0, 10);
+            var reviews = await _reviewService.GetProductReviewsAsync(pid, 0, 10);
             ViewBag.Reviews = reviews;
 
             if (User.Identity?.IsAuthenticated == true)
             {
-                ViewBag.CanReview = await _reviewService.CanReviewAsync(productId);
-                ViewBag.UserReview = await _reviewService.GetUserReviewAsync(productId);
+                ViewBag.CanReview = await _reviewService.CanReviewAsync(pid);
+                ViewBag.UserReview = await _reviewService.GetUserReviewAsync(pid);
+            }
+
+            // Set category slug for breadcrumb links
+            if (!string.IsNullOrEmpty(product.CategoryId))
+            {
+                var category = await _catalogService.GetCategoryByIdAsync(product.CategoryId);
+                ViewBag.CategorySlug = category?.Slug;
             }
 
             return View(product);
@@ -267,6 +283,16 @@ namespace GameGaraj.WebUI.Controllers
             }
         }
 
+        private async Task<IActionResult> RedirectToProductDetail(string productId)
+        {
+            var product = await _catalogService.GetProductByIdAsync(productId);
+            if (product != null && !string.IsNullOrEmpty(product.Slug))
+            {
+                return Redirect(SlugHelper.BuildProductUrl(product.Slug, product.Id));
+            }
+            return Redirect($"/ara");
+        }
+
         private IActionResult RedirectToLocalOrProduct(string productId, string? returnUrl)
         {
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -274,7 +300,8 @@ namespace GameGaraj.WebUI.Controllers
                 return LocalRedirect(returnUrl);
             }
 
-            return RedirectToAction(nameof(Detail), new { slug = productId });
+            // We don't have slug here, redirect to the product page via an intermediate lookup
+            return RedirectToProductDetail(productId).GetAwaiter().GetResult();
         }
 
         [HttpGet("api/products/search")]
@@ -287,7 +314,11 @@ namespace GameGaraj.WebUI.Controllers
                 return Json(new { categories = new List<object>(), brands = new List<object>(), products = new List<object>() });
             }
 
-            var suggestions = await _catalogService.SearchSuggestionsAsync(q);
+            var suggestions = await _searchService.SearchSuggestionsAsync(q);
+            if (suggestions == null || !suggestions.Any())
+            {
+                suggestions = await _catalogService.SearchSuggestionsAsync(q);
+            }
 
             if (!suggestions.Any())
             {
@@ -303,7 +334,7 @@ namespace GameGaraj.WebUI.Controllers
                         {
                             id = c.Id,
                             name = c.Name,
-                            url = $"/product/c/{c.Slug}"
+                            url = SlugHelper.BuildCategoryUrl(c.Slug, c.Id)
                         }),
                     brands = fallbackBrands
                         .Take(3)
@@ -311,7 +342,7 @@ namespace GameGaraj.WebUI.Controllers
                         {
                             id = b,
                             name = b,
-                            url = $"/Product?brand={Uri.EscapeDataString(b)}"
+                            url = $"/ara?marka={Uri.EscapeDataString(b)}"
                         }),
                     products = fallbackProducts
                         .Take(10)
@@ -321,7 +352,7 @@ namespace GameGaraj.WebUI.Controllers
                             name = p.Name,
                             price = p.Price.ToString("C2"),
                             imageUrl = p.FirstImageUrl,
-                            url = $"/product/p/{p.Slug}"
+                            url = SlugHelper.BuildSearchUrl(p.Name)
                         })
                 });
             }
@@ -336,8 +367,8 @@ namespace GameGaraj.WebUI.Controllers
                     id = c.Id,
                     name = c.Name,
                     url = !string.IsNullOrWhiteSpace(c.Slug)
-                        ? $"/product/c/{c.Slug}"
-                        : $"/Product?categoryId={Uri.EscapeDataString(c.Id)}"
+                        ? SlugHelper.BuildCategoryUrl(c.Slug, c.Id)
+                        : $"/ara?categoryId={Uri.EscapeDataString(c.Id)}"
                 })
                 .ToList();
 
@@ -350,7 +381,7 @@ namespace GameGaraj.WebUI.Controllers
                 {
                     id = b.Id,
                     name = b.Name,
-                    url = $"/Product?brand={Uri.EscapeDataString(b.Name)}"
+                    url = $"/ara?marka={Uri.EscapeDataString(b.Name)}"
                 })
                 .ToList();
 
@@ -363,11 +394,98 @@ namespace GameGaraj.WebUI.Controllers
                     name = p.Name,
                     price = p.Price.HasValue ? p.Price.Value.ToString("C2") : string.Empty,
                     imageUrl = string.IsNullOrWhiteSpace(p.ImageUrl) ? ProductViewModel.DefaultImageUrl : p.ImageUrl,
-                    url = $"/product/p/{p.Slug}"
+                    url = SlugHelper.BuildSearchUrl(p.Name)
                 })
                 .ToList();
 
             return Json(new { categories = matchingCategories, brands = matchingBrands, products = productResults });
         }
+
+        #region Private Helpers
+
+        private static void CleanSpecs(Dictionary<string, string[]>? specs)
+        {
+            if (specs == null) return;
+
+            var reservedKeys = new[]
+            {
+                "category", "categoryId", "CategoryId", "sortBy", "siralama",
+                "minPrice", "maxPrice", "minFiyat", "maxFiyat",
+                "search", "q", "brand", "marka", "slug"
+            };
+
+            foreach (var key in reservedKeys)
+            {
+                specs.Remove(key);
+            }
+        }
+
+        private static string? MapSortBy(string? siralama)
+        {
+            return siralama switch
+            {
+                "fiyat-artan" => "price_asc",
+                "fiyat-azalan" => "price_desc",
+                "isim-a-z" => "name_asc",
+                _ => null
+            };
+        }
+
+        private static string? MapSortByReverse(string? sortBy)
+        {
+            return sortBy switch
+            {
+                "price_asc" => "fiyat-artan",
+                "price_desc" => "fiyat-azalan",
+                "name_asc" => "isim-a-z",
+                _ => null
+            };
+        }
+
+        private void SetupViewBags(
+            CategoryViewModel? categoryModel, string? categoryId,
+            List<CategoryViewModel> categories, List<ProductViewModel> brandSourceProducts,
+            string? sortBy, decimal? minFiyat, decimal? maxFiyat,
+            Dictionary<string, string[]>? specs, string? search, string? marka, string? siralama)
+        {
+            ViewBag.CurrentCategoryName = categoryModel?.Name ?? (string.IsNullOrWhiteSpace(search) ? "Tüm Ürünler" : $"\"{search}\" araması");
+            ViewBag.CurrentCategoryAttributes = categoryModel?.Attributes;
+            ViewBag.CategoryId = categoryId;
+            ViewBag.CategorySlug = categoryModel?.Slug;
+            ViewBag.Categories = categories;
+            ViewBag.SortBy = sortBy;
+            ViewBag.Siralama = siralama;
+            ViewBag.MinPrice = minFiyat;
+            ViewBag.MaxPrice = maxFiyat;
+            ViewBag.SelectedSpecs = specs ?? new Dictionary<string, string[]>();
+            ViewBag.Search = search;
+            ViewBag.Brand = marka;
+            ViewBag.Brands = brandSourceProducts
+                .Select(p => p.Brand)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x)
+                .ToList();
+        }
+
+        private async Task ApplyProductState(List<ProductViewModel> products)
+        {
+            var basket = await _basketService.GetBasketAsync();
+            var favoriteIds = await _favoritesService.GetFavoriteProductIdsAsync();
+            var basketProductIds = basket?.Items?
+                .Select(x => x.ProductId?.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var product in products)
+            {
+                product.IsInBasket = basketProductIds.Contains(product.Id?.Trim() ?? string.Empty);
+                product.IsFavorite = favoriteIds.Contains(product.Id ?? string.Empty);
+            }
+        }
+
+        #endregion
     }
 }

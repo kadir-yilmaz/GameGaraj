@@ -20,5 +20,9 @@ namespace GameGaraj.WebUI.Services.Abstract
         Task RevokeRefreshToken();
         string GetUserId();
         Task<List<UserSearchViewModel>> SearchUsersAsync(string query);
+        Task<(bool Success, string? Message)> SendPasswordResetEmailAsync(string emailOrUsername);
+        Task<(bool Success, string? Message)> SendPasswordResetOtpAsync(string email);
+        Task<(bool Success, string? Message)> ResetPasswordWithOtpAsync(string email, string otpCode, string newPassword);
+        Task<(bool Success, string? Message)> ChangePasswordAsync(string userId, string newPassword);
     }
 }

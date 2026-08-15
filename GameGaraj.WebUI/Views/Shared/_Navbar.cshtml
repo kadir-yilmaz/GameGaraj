@@ -12,9 +12,9 @@
             
             <!-- Search Bar (Centered) -->
             <div class="flex-grow-1 mx-4">
-                <form asp-controller="Product" asp-action="Index" method="get" class="position-relative">
+                <form action="/ara" method="get" class="position-relative">
                     <div class="input-group">
-                        <input type="text" name="search" class="form-control border-0 shadow-none ps-3 js-search-input" 
+                        <input type="text" name="q" class="form-control border-0 shadow-none ps-3 js-search-input" 
                                placeholder="Aradığınız ürünü yazınız..." 
                                autocomplete="off"
                                style="height: 42px; border-radius: 6px 0 0 6px; background: white; color: #333;">
@@ -186,9 +186,9 @@
             
             <!-- Row 2: Search Bar -->
             <div class="w-100">
-                <form asp-controller="Product" asp-action="Index" method="get" class="position-relative">
+                <form action="/ara" method="get" class="position-relative">
                    <div class="input-group">
-                        <input type="text" name="search" class="form-control border-0 shadow-none ps-3 js-search-input" 
+                        <input type="text" name="q" class="form-control border-0 shadow-none ps-3 js-search-input" 
                                placeholder="Ürün ara..." 
                                autocomplete="off"
                                style="height: 40px; border-radius: 6px 0 0 6px; background: white; color: #333;">

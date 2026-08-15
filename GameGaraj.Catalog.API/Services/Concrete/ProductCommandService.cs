@@ -46,7 +46,6 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 Id = Guid.NewGuid().ToString(),
                 Name = dto.Name,
                 Brand = dto.Brand,
-                Slug = UrlHelper.GenerateSlug(dto.Brand, dto.Name),
                 Description = dto.Description,
                 Price = dto.Price,
                 Stock = dto.Stock,
@@ -84,7 +83,6 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
             product.Name = dto.Name;
             product.Brand = dto.Brand;
-            product.Slug = UrlHelper.GenerateSlug(dto.Brand, dto.Name);
             product.Description = dto.Description;
             product.Price = dto.Price;
             product.Stock = dto.Stock;
@@ -105,7 +103,6 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 if (_cache != null)
                 {
                     await _cache.RemoveAsync($"product_{product.Id}");
-                    await _cache.RemoveAsync($"product_slug_{product.Slug}");
                     await _cache.RemoveAsync("featured_products");
                 }
             }
@@ -129,7 +126,6 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 if (_cache != null)
                 {
                     await _cache.RemoveAsync($"product_{id}");
-                    await _cache.RemoveAsync($"product_slug_{product.Slug}");
                     await _cache.RemoveAsync("featured_products");
                 }
             }
@@ -150,7 +146,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                     Id = product.Id,
                     Name = product.Name,
                     Brand = product.Brand,
-                    Slug = product.Slug,
+                    Slug = UrlHelper.GenerateSlug(product.Brand, product.Name),
                     Description = product.Description,
                     Price = product.Price,
                     Stock = product.Stock,
@@ -160,7 +156,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                     ImageUrls = product.ImageUrls,
                     CategoryId = product.CategoryId,
                     CategoryName = category?.Name ?? string.Empty,
-                    CategorySlug = category?.Slug ?? string.Empty,
+                    CategorySlug = UrlHelper.GenerateSlug(category?.Name),
                     Specs = product.Specs
                 });
             }
@@ -183,7 +179,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                     Id = product.Id,
                     Name = product.Name,
                     Brand = product.Brand,
-                    Slug = product.Slug,
+                    Slug = UrlHelper.GenerateSlug(product.Brand, product.Name),
                     Description = product.Description,
                     Price = product.Price,
                     Stock = product.Stock,
@@ -193,7 +189,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                     ImageUrls = product.ImageUrls,
                     CategoryId = product.CategoryId,
                     CategoryName = category?.Name ?? string.Empty,
-                    CategorySlug = category?.Slug ?? string.Empty,
+                    CategorySlug = UrlHelper.GenerateSlug(category?.Name),
                     Specs = product.Specs
                 });
             }
@@ -297,11 +293,12 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
             if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(brand))
             {
-                var slug = UrlHelper.GenerateSlug(brand, name);
-                var slugExists = await _context.Products.AnyAsync(product =>
-                    product.Slug == slug && product.Id != currentProductId);
+                var lowerBrand = brand.ToLower();
+                var lowerName = name.ToLower();
+                var nameExists = await _context.Products.AnyAsync(product =>
+                    product.Brand.ToLower() == lowerBrand && product.Name.ToLower() == lowerName && product.Id != currentProductId);
 
-                if (slugExists)
+                if (nameExists)
                     errors.Add("Aynı marka ve ürün adına sahip başka bir ürün zaten var.");
             }
 

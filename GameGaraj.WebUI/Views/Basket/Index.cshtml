@@ -471,7 +471,7 @@
                             <div class="basket-item position-relative">
                                 <!-- Image -->
                                 <div class="item-image">
-                                    <a href="/product/p/@(string.IsNullOrEmpty(item.ProductSlug) ? item.ProductId : item.ProductSlug)">
+                                    <a href="@GameGaraj.WebUI.Extensions.SlugHelper.BuildProductUrl(item.ProductSlug, item.ProductId)">
                                         <img src="@(string.IsNullOrWhiteSpace(item.ImageUrl) ? GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl : item.ImageUrl)"
                                              alt="@item.ProductName"
                                              onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
@@ -486,7 +486,7 @@
                                             <i class="fas fa-check-circle"></i> @item.Brand
                                         </div>
                                     }
-                                    <a href="/product/p/@(string.IsNullOrEmpty(item.ProductSlug) ? item.ProductId : item.ProductSlug)" class="item-name fw-bold text-dark mb-1">
+                                    <a href="@GameGaraj.WebUI.Extensions.SlugHelper.BuildProductUrl(item.ProductSlug, item.ProductId)" class="item-name fw-bold text-dark mb-1">
                                         @item.ProductName
                                     </a>
                                     
@@ -752,7 +752,7 @@
                 <i class="fas fa-shopping-cart"></i>
                 <h3>Sepetiniz Boş</h3>
                 <p>Sepetinizde ürün bulunmamaktadır. Hemen alışverişe başlayın!</p>
-                <a asp-controller="Product" asp-action="Index" class="shop-now-btn">
+                <a href="/ara" class="shop-now-btn">
                     <i class="fas fa-shopping-bag"></i>
                     Alışverişe Başla
                 </a>

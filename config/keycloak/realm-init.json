@@ -12,6 +12,17 @@
   "accessTokenLifespan": 3600,
   "ssoSessionIdleTimeout": 1800,
   "ssoSessionMaxLifespan": 36000,
+  "smtpServer": {
+    "host": "${env.SMTP_HOST:smtp.gmail.com}",
+    "port": "${env.SMTP_PORT:587}",
+    "from": "${env.SMTP_FROM_EMAIL:kadiryilmaz19821@gmail.com}",
+    "fromDisplayName": "${env.SMTP_FROM_NAME:GameGaraj}",
+    "auth": "true",
+    "ssl": "false",
+    "starttls": "true",
+    "user": "${env.SMTP_USER:kadiryilmaz19821@gmail.com}",
+    "password": "${env.SMTP_PASSWORD:}"
+  },
   "roles": {
     "realm": [
       {

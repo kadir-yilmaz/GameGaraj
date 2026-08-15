@@ -84,7 +84,7 @@
                                  onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';" />
                             <div class="flex-grow-1 min-width-0">
                                 <div class="d-flex justify-content-between gap-2">
-                                    <a asp-controller="Product" asp-action="Detail" asp-route-slug="@review.ProductId" class="fw-bold text-dark text-decoration-none">@review.ProductName</a>
+                                    <a href="@GameGaraj.WebUI.Extensions.SlugHelper.BuildProductUrl(GameGaraj.WebUI.Extensions.SlugHelper.ToSlug(review.ProductName), review.ProductId)" class="fw-bold text-dark text-decoration-none">@review.ProductName</a>
                                     <span class="badge @StatusClass(review.Status)">@StatusText(review.Status)</span>
                                 </div>
                                 <div class="text-warning small my-1">

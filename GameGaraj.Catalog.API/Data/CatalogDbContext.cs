@@ -24,7 +24,6 @@ namespace GameGaraj.Catalog.API.Data
 
                 entity.Property(e => e.Specs).HasColumnType("jsonb");
 
-                entity.HasIndex(e => e.Slug).IsUnique();
                 entity.HasIndex(e => e.CategoryId);
                 entity.HasIndex(e => e.Brand);
                 entity.HasIndex(e => e.IsActive);
@@ -49,7 +48,6 @@ namespace GameGaraj.Catalog.API.Data
             {
                 entity.HasKey(e => e.Id);
 
-                entity.HasIndex(e => e.Slug).IsUnique();
                 entity.HasIndex(e => e.ParentId);
 
                 entity.HasOne<Category>()

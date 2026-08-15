@@ -9,9 +9,7 @@
 
     string CategoryUrl(GameGaraj.WebUI.Models.Products.CategoryViewModel category)
     {
-        return !string.IsNullOrWhiteSpace(category.Slug)
-            ? Url.Action("Index", "Product", new { category = category.Slug })!
-            : Url.Action("Index", "Product", new { categoryId = category.Id })!;
+        return GameGaraj.WebUI.Extensions.SlugHelper.BuildCategoryUrl(category.Slug, category.Id);
     }
 }
 

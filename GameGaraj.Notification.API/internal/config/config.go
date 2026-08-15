@@ -25,7 +25,7 @@ type Config struct {
 
 func LoadConfig() *Config {
 	return &Config{
-		Port:            getEnv("PORT", "8080"),
+		Port:            getEnv("PORT", "5025"),
 		RabbitMQURL:     getEnv("RabbitMQUrl", "localhost"), // matches C# naming or standard ENV
 		MinioEndpoint:   getEnv("Minio__Endpoint", "http://minio.kadiryilmaz.online"),
 		MinioAccessKey:  getEnv("Minio__AccessKey", ""),

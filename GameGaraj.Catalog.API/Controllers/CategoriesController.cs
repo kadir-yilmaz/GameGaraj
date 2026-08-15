@@ -137,11 +137,18 @@ namespace GameGaraj.Catalog.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var result = await _commands.DeleteAsync(id);
-            if (!result)
-                return BadRequest(new { Message = "Kategori silinemedi veya 'Kategorisiz' kategorisi silinmeye calisildi." });
+            try
+            {
+                var result = await _commands.DeleteAsync(id);
+                if (!result)
+                    return NotFound(new { Message = "Kategori bulunamadı." });
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
         }
     }
 }

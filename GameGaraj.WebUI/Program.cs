@@ -102,7 +102,7 @@ builder.Services.AddAuthentication(options =>
     .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
     {
         options.LoginPath = "/Auth/SignIn";
-        options.AccessDeniedPath = "/Admin/Auth/AccessDenied";
+        options.AccessDeniedPath = "/Auth/AccessDenied";
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
         options.Cookie.Name = "GameGarajWebCookie";
@@ -266,7 +266,12 @@ builder.Services.AddNotyf(config =>
 builder.Services.AddControllersWithViews();
 
 // Routing - SEO için tüm URL'lerin küçük harf olmasını sağlar
-builder.Services.AddRouting(options => options.LowercaseUrls = true);
+builder.Services.AddRouting(options =>
+{
+    options.LowercaseUrls = true;
+    options.ConstraintMap.Add("productSlug", typeof(GameGaraj.WebUI.Extensions.ProductSlugConstraint));
+    options.ConstraintMap.Add("categorySlug", typeof(GameGaraj.WebUI.Extensions.CategorySlugConstraint));
+});
 
 // Proxy'lerden gelen X-Forwarded-Proto ve X-Forwarded-For başlıklarını kabul etmesi için
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -316,6 +321,22 @@ app.UseNotyf();
 
 // Custom Request Logging Ekle
 app.UseCustomRequestLogging();
+
+// SEO Routes - Hepsiburada tarzı (öncelik sırasına göre)
+app.MapControllerRoute(
+    name: "search",
+    pattern: "ara",
+    defaults: new { controller = "Product", action = "Search" });
+
+app.MapControllerRoute(
+    name: "product-detail-seo",
+    pattern: "{slug:productSlug}",
+    defaults: new { controller = "Product", action = "Detail" });
+
+app.MapControllerRoute(
+    name: "category-seo",
+    pattern: "{slug:categorySlug}",
+    defaults: new { controller = "Product", action = "Category" });
 
 app.MapControllerRoute(
     name: "areas",

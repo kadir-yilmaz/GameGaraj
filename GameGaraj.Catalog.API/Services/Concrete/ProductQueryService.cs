@@ -3,15 +3,13 @@ using GameGaraj.Catalog.API.Data;
 using GameGaraj.Catalog.API.Dtos;
 using GameGaraj.Catalog.API.Models;
 using GameGaraj.Catalog.API.Services.Abstract;
-using Elastic.Clients.Elasticsearch;
-using Elastic.Clients.Elasticsearch.QueryDsl;
-using GameGaraj.Shared.Observability;
+using GameGaraj.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Caching.Distributed;
 
 namespace GameGaraj.Catalog.API.Services.Concrete
 {
@@ -20,20 +18,17 @@ namespace GameGaraj.Catalog.API.Services.Concrete
         private readonly CatalogDbContext _context;
         private readonly ILogger<ProductQueryService> _logger;
         private readonly IMapper _mapper;
-        private readonly ElasticsearchClient _elasticClient;
         private readonly IDistributedCache? _cache;
 
         public ProductQueryService(
             CatalogDbContext context,
             IMapper mapper,
             ILogger<ProductQueryService> logger,
-            ElasticsearchClient elasticClient,
             IDistributedCache? cache = null)
         {
             _context = context;
             _mapper = mapper;
             _logger = logger;
-            _elasticClient = elasticClient;
             _cache = cache;
         }
 
@@ -61,60 +56,6 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 .Replace('ç', 'c');
         }
 
-        private static string GetElasticsearchFailureReason(string? debugInformation)
-        {
-            if (string.IsNullOrWhiteSpace(debugInformation))
-            {
-                return "Elasticsearch query failed";
-            }
-
-            const int maxLength = 240;
-            var reason = debugInformation.ReplaceLineEndings(" ").Trim();
-            return reason.Length <= maxLength ? reason : reason[..maxLength];
-        }
-
-        private static int GetEditDistance(string left, string right)
-        {
-            if (left == right) return 0;
-            if (left.Length == 0) return right.Length;
-            if (right.Length == 0) return left.Length;
-
-            var costs = new int[right.Length + 1];
-            for (var j = 0; j <= right.Length; j++) costs[j] = j;
-
-            for (var i = 1; i <= left.Length; i++)
-            {
-                var previous = costs[0];
-                costs[0] = i;
-
-                for (var j = 1; j <= right.Length; j++)
-                {
-                    var current = costs[j];
-                    costs[j] = left[i - 1] == right[j - 1]
-                        ? previous
-                        : Math.Min(Math.Min(costs[j] + 1, costs[j - 1] + 1), previous + 1);
-                    previous = current;
-                }
-            }
-
-            return costs[right.Length];
-        }
-
-        private static int GetSearchScore(string text, string keyword)
-        {
-            var normalizedText = NormalizeSearchText(text);
-            var normalizedKeyword = NormalizeSearchText(keyword);
-            if (string.IsNullOrWhiteSpace(normalizedText) || string.IsNullOrWhiteSpace(normalizedKeyword)) return int.MaxValue;
-
-            if (normalizedText == normalizedKeyword) return 0;
-            if (normalizedText.StartsWith(normalizedKeyword)) return 1;
-            if (normalizedText.Contains(normalizedKeyword)) return 2;
-
-            var distance = GetEditDistance(normalizedText, normalizedKeyword);
-            var allowedDistance = normalizedKeyword.Length <= 5 ? 1 : 2;
-            return distance <= allowedDistance ? 10 + distance : int.MaxValue;
-        }
-
         public async Task<List<ProductDto>> GetAllAsync(
             string? categoryId = null,
             string? sortBy = null,
@@ -127,7 +68,9 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
             if (!string.IsNullOrWhiteSpace(categoryId))
             {
-                query = query.Where(p => p.CategoryId == categoryId);
+                var categoryIds = await GetCategoryDescendants(categoryId);
+                categoryIds.Add(categoryId);
+                query = query.Where(p => categoryIds.Contains(p.CategoryId));
             }
 
             if (!string.IsNullOrWhiteSpace(brand))
@@ -145,8 +88,38 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 query = query.Where(p => p.Price <= maxPrice.Value);
             }
 
-            var products = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
-            return _mapper.Map<List<ProductDto>>(products);
+            query = sortBy?.ToLowerInvariant() switch
+            {
+                "price_asc" => query.OrderBy(p => p.Price),
+                "price_desc" => query.OrderByDescending(p => p.Price),
+                "newest" => query.OrderByDescending(p => p.CreatedAt),
+                _ => query.OrderByDescending(p => p.CreatedAt)
+            };
+
+            var products = await query.ToListAsync();
+            var dtos = _mapper.Map<List<ProductDto>>(products);
+
+            if (specs != null && specs.Any())
+            {
+                var actualSpecs = GetActualSpecs(specs);
+                foreach (var spec in actualSpecs)
+                {
+                    if (string.IsNullOrWhiteSpace(spec.Value)) continue;
+                    var allowedValues = spec.Value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(v => v.Trim())
+                        .Where(v => !string.IsNullOrWhiteSpace(v))
+                        .ToList();
+
+                    if (!allowedValues.Any()) continue;
+
+                    dtos = dtos.Where(p =>
+                        p.Specs != null &&
+                        p.Specs.ContainsKey(spec.Key) &&
+                        allowedValues.Contains(p.Specs[spec.Key], StringComparer.OrdinalIgnoreCase)).ToList();
+                }
+            }
+
+            return dtos;
         }
 
         public async Task<PagedResultDto<ProductDto>> GetAdminPageAsync(
@@ -170,13 +143,14 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 productsQuery = productsQuery.Where(product =>
                     EF.Functions.Like((product.Id ?? string.Empty).ToLower(), pattern) ||
                     EF.Functions.Like((product.Name ?? string.Empty).ToLower(), pattern) ||
-                    EF.Functions.Like((product.Brand ?? string.Empty).ToLower(), pattern) ||
-                    EF.Functions.Like((product.Slug ?? string.Empty).ToLower(), pattern));
+                    EF.Functions.Like((product.Brand ?? string.Empty).ToLower(), pattern));
             }
 
             if (!string.IsNullOrWhiteSpace(categoryId))
             {
-                productsQuery = productsQuery.Where(product => product.CategoryId == categoryId);
+                var categoryIds = await GetCategoryDescendants(categoryId);
+                categoryIds.Add(categoryId);
+                productsQuery = productsQuery.Where(product => categoryIds.Contains(product.CategoryId));
             }
 
             if (isFeatured.HasValue)
@@ -193,18 +167,18 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             {
                 productsQuery = stockState.ToLowerInvariant() switch
                 {
-                    "in" => productsQuery.Where(product => product.Stock > 0),
-                    "out" => productsQuery.Where(product => product.Stock <= 0),
+                    "in" => productsQuery.Where(product => (product.Stock - product.ReservedStock) > 0),
+                    "critical" => productsQuery.Where(product => (product.Stock - product.ReservedStock) > 0 && (product.Stock - product.ReservedStock) <= 5),
+                    "out" => productsQuery.Where(product => (product.Stock - product.ReservedStock) <= 0),
                     _ => productsQuery
                 };
             }
 
-            var totalCount = await productsQuery.LongCountAsync();
-            var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+            var totalCount = await productsQuery.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
             var products = await productsQuery
-                .OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt)
-                .ThenBy(product => product.Name)
+                .OrderByDescending(product => product.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -242,99 +216,6 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 TotalCount = totalCount,
                 TotalPages = totalPages
             };
-        }
-
-        private async Task<List<ProductDto>?> GetAllFromElasticAsync(
-            string? categoryId = null,
-            string? sortBy = null,
-            decimal? minPrice = null,
-            decimal? maxPrice = null,
-            Dictionary<string, string>? specs = null,
-            string? brand = null)
-        {
-            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                .Index("products")
-                .Query(q => q.Bool(b => b.Filter(f => f.Term(t => t.Field("isActive").Value(true)))))
-                .Size(1000)
-            );
-
-            if (!response.IsValidResponse)
-            {
-                _logger.LogWarning("Elasticsearch product listing query failed: {Error}", response.DebugInformation);
-                return null;
-            }
-
-            var documents = response.Documents.ToList();
-            if (!documents.Any())
-            {
-                return null;
-            }
-
-            var filtered = documents.AsEnumerable();
-            var categoryIds = new List<string>();
-
-            if (!string.IsNullOrWhiteSpace(categoryId))
-            {
-                categoryIds = await GetCategoryDescendants(categoryId);
-                categoryIds.Add(categoryId);
-                filtered = filtered.Where(p => categoryIds.Contains(p.CategoryId));
-            }
-
-            if (minPrice.HasValue && minPrice.Value > 0)
-            {
-                filtered = filtered.Where(p => p.Price >= minPrice.Value);
-            }
-
-            if (maxPrice.HasValue && maxPrice.Value > 0)
-            {
-                filtered = filtered.Where(p => p.Price <= maxPrice.Value);
-            }
-
-            if (!string.IsNullOrWhiteSpace(brand))
-            {
-                var normalizedBrand = brand.Trim();
-                filtered = filtered.Where(p =>
-                    string.Equals(p.Brand?.Trim(), normalizedBrand, StringComparison.OrdinalIgnoreCase) ||
-                    (!string.IsNullOrWhiteSpace(p.Name) &&
-                        p.Name.Trim().StartsWith($"{normalizedBrand} ", StringComparison.OrdinalIgnoreCase)));
-            }
-
-            filtered = ApplySpecFilters(filtered, specs);
-
-            filtered = sortBy?.ToLower() switch
-            {
-                "price_asc" => filtered.OrderBy(p => p.Price),
-                "price_desc" => filtered.OrderByDescending(p => p.Price),
-                "newest" => filtered.OrderByDescending(p => p.CreatedAt),
-                _ => filtered.OrderByDescending(p => p.CreatedAt)
-            };
-
-            return filtered.Select(MapSearchDocumentToDto).ToList();
-        }
-
-        private static IEnumerable<ProductSearchDocument> ApplySpecFilters(IEnumerable<ProductSearchDocument> documents, Dictionary<string, string>? specs)
-        {
-            var actualSpecs = GetActualSpecs(specs);
-            foreach (var spec in actualSpecs)
-            {
-                if (string.IsNullOrWhiteSpace(spec.Value))
-                    continue;
-
-                var key = spec.Key;
-                var allowedValues = spec.Value.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(v => v.Trim())
-                    .Where(v => !string.IsNullOrWhiteSpace(v))
-                    .ToList();
-
-                if (!allowedValues.Any())
-                    continue;
-
-                documents = documents.Where(p =>
-                    p.Specs.ContainsKey(key) &&
-                    allowedValues.Contains(p.Specs[key], StringComparer.OrdinalIgnoreCase));
-            }
-
-            return documents;
         }
 
         private static Dictionary<string, string> GetActualSpecs(Dictionary<string, string>? specs)
@@ -375,50 +256,14 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 }
             }
 
-            List<ProductDto>? result = null;
+            var products = await _context.Products
+                .AsNoTracking()
+                .Where(p => p.IsFeatured && p.IsActive)
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(10)
+                .ToListAsync();
 
-            try
-            {
-                var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                    .Index("products")
-                    .Query(q => q
-                        .Bool(b => b
-                            .Filter(f => f.Term(t => t.Field("isActive").Value(true)),
-                                    f => f.Term(t => t.Field("isFeatured").Value(true)))
-                        )
-                    )
-                    .Sort(sort => sort
-                        .Field(f => f.CreatedAt, new Elastic.Clients.Elasticsearch.FieldSort { Order = Elastic.Clients.Elasticsearch.SortOrder.Desc })
-                    )
-                    .Size(10)
-                );
-
-                if (response.IsValidResponse && response.Documents.Any())
-                {
-                    result = response.Documents.Select(MapSearchDocumentToDto).ToList();
-                }
-                else
-                {
-                    _logger.LogWarning("Elasticsearch featured products query returned no results or is invalid. DebugInformation: {Debug}", response.DebugInformation);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Elasticsearch featured products search threw an exception.");
-            }
-
-            if (result == null)
-            {
-                // Fallback to PostgreSQL
-                _logger.LogWarning("Falling back to PostgreSQL for featured products.");
-                var products = await _context.Products
-                    .AsNoTracking()
-                    .Where(p => p.IsFeatured && p.IsActive)
-                    .OrderByDescending(p => p.CreatedAt)
-                    .Take(10)
-                    .ToListAsync();
-                result = _mapper.Map<List<ProductDto>>(products);
-            }
+            var result = _mapper.Map<List<ProductDto>>(products);
 
             if (_cache != null && result.Any())
             {
@@ -440,44 +285,17 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 }
             }
 
-            ProductDto? dto = null;
+            var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
+            if (product == null) return null;
 
-            try
+            var dto = _mapper.Map<ProductDto>(product);
+            if (!string.IsNullOrWhiteSpace(product.CategoryId))
             {
-                // Try Elasticsearch first
-                var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                    .Index("products")
-                    .Query(q => q.Term(t => t.Field("_id").Value(id)))
-                    .Size(1)
-                );
-                if (response.IsValidResponse && response.Documents.Any())
-                {
-                    dto = MapSearchDocumentToDto(response.Documents.First());
-                }
-                else
-                {
-                    _logger.LogWarning("Elasticsearch get by id returned no results or is invalid for {Id}. DebugInformation: {Debug}", id, response.DebugInformation);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Elasticsearch get by id threw an exception for {Id}.", id);
+                var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId);
+                dto.CategoryName = category?.Name;
             }
 
-            if (dto == null)
-            {
-                // Fallback to PostgreSQL
-                _logger.LogWarning("Elasticsearch get by id failed for {Id}. Falling back to DB.", id);
-                var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
-                if (product != null)
-                {
-                    dto = _mapper.Map<ProductDto>(product);
-                    var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId);
-                    dto.CategoryName = category?.Name;
-                }
-            }
-
-            if (dto != null && _cache != null)
+            if (_cache != null)
             {
                 var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) };
                 await _cache.SetStringAsync($"product_{id}", JsonSerializer.Serialize(dto), options);
@@ -497,45 +315,18 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 }
             }
 
-            ProductDto? dto = null;
+            var allDbProducts = await _context.Products.AsNoTracking().ToListAsync();
+            var product = allDbProducts.FirstOrDefault(p => UrlHelper.GenerateSlug(p.Brand, p.Name) == slug);
+            if (product == null) return null;
 
-            try
+            var dto = _mapper.Map<ProductDto>(product);
+            if (!string.IsNullOrWhiteSpace(product.CategoryId))
             {
-                // Try Elasticsearch first
-                var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                    .Index("products")
-                    .Query(q => q.Term(t => t.Field("slug.keyword").Value(slug)))
-                    .Size(1)
-                );
-
-                if (response.IsValidResponse && response.Documents.Any())
-                {
-                    dto = MapSearchDocumentToDto(response.Documents.First());
-                }
-                else
-                {
-                    _logger.LogWarning("Elasticsearch get by slug returned no results or is invalid for {Slug}. DebugInformation: {Debug}", slug, response.DebugInformation);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Elasticsearch get by slug threw an exception for {Slug}.", slug);
+                var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId);
+                dto.CategoryName = category?.Name;
             }
 
-            if (dto == null)
-            {
-                // Fallback to PostgreSQL
-                _logger.LogWarning("Elasticsearch get by slug failed for {Slug}. Falling back to DB.", slug);
-                var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Slug == slug);
-                if (product != null)
-                {
-                    dto = _mapper.Map<ProductDto>(product);
-                    var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == product.CategoryId);
-                    dto.CategoryName = category?.Name;
-                }
-            }
-
-            if (dto != null && _cache != null)
+            if (_cache != null)
             {
                 var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) };
                 await _cache.SetStringAsync($"product_slug_{slug}", JsonSerializer.Serialize(dto), options);
@@ -554,153 +345,29 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             if (string.IsNullOrWhiteSpace(keyword))
                 return new List<ProductDto>();
 
-            var totalStopwatch = Stopwatch.StartNew();
-            var esDurationMs = 0L;
             var normalizedKeyword = NormalizeSearchText(keyword);
             var cacheKey = $"search_{normalizedKeyword}";
-
-            using var searchScope = _logger.BeginScope(new Dictionary<string, object?>
-            {
-                ["LogType"] = "BusinessRequest",
-                ["Operation"] = "ProductSearch",
-                ["SearchTerm"] = keyword,
-                ["Page"] = 1,
-                ["PageSize"] = 20
-            });
-
-            _logger.LogInformation(
-                "Product search started. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, Page={Page}, PageSize={PageSize}",
-                "ProductSearchStarted",
-                keyword,
-                "Elasticsearch",
-                1,
-                20);
 
             if (_cache != null)
             {
                 var cachedStr = await _cache.GetStringAsync(cacheKey);
                 if (!string.IsNullOrEmpty(cachedStr))
                 {
-                    var cachedResult = JsonSerializer.Deserialize<List<ProductDto>>(cachedStr) ?? new List<ProductDto>();
-                    totalStopwatch.Stop();
-
-                    _logger.LogInformation(
-                        "Product search completed. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, ResultCount={ResultCount}, CacheHit={CacheHit}, EsDurationMs={EsDurationMs}, DurationMs={DurationMs}",
-                        "ProductSearchCompleted",
-                        keyword,
-                        "Cache",
-                        cachedResult.Count,
-                        true,
-                        esDurationMs,
-                        totalStopwatch.ElapsedMilliseconds);
-
-                    return cachedResult;
+                    return JsonSerializer.Deserialize<List<ProductDto>>(cachedStr) ?? new List<ProductDto>();
                 }
             }
 
-            List<ProductDto>? result = null;
-            var usedFallback = false;
+            var dbProducts = await _context.Products
+                .AsNoTracking()
+                .Where(p => p.IsActive && 
+                            (EF.Functions.ILike(p.Name, $"%{keyword}%") || 
+                             EF.Functions.ILike(p.Brand, $"%{keyword}%") || 
+                             EF.Functions.ILike(p.Description, $"%{keyword}%")))
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(20)
+                .ToListAsync();
 
-            try
-            {
-                using var esActivity = AppDiagnostics.StartActivity("Elasticsearch Product Search");
-                esActivity?.SetTag("db.system", "elasticsearch");
-                esActivity?.SetTag("db.operation", "search");
-                esActivity?.SetTag("db.name", "products");
-                esActivity?.SetTag("app.search.term", keyword);
-
-                var esStopwatch = Stopwatch.StartNew();
-                var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                    .Index("products")
-                    .Query(q => q
-                        .Bool(b => b
-                            .Must(m => m
-                                .MultiMatch(mm => mm
-                                    .Fields(new[]
-                                    {
-                                        "name^5",
-                                        "brand^4",
-                                        "categoryName^3",
-                                        "specValues^2",
-                                        "searchText",
-                                        "description"
-                                    })
-                                    .Query(keyword)
-                                    .Fuzziness(new Fuzziness("AUTO"))
-                                    .MinimumShouldMatch("70%")
-                                    .PrefixLength(1)
-                                )
-                            )
-                            .Filter(f => f.Term(t => t.Field("isActive").Value(true)))
-                            .Should(
-                                sh => sh.Term(t => t.Field("isFeatured").Value(true).Boost(2)),
-                                sh => sh.Term(t => t.Field("inStock").Value(true).Boost(1.5f))
-                            )
-                        )
-                    )
-                    .Size(20)
-                );
-                esStopwatch.Stop();
-                esDurationMs = esStopwatch.ElapsedMilliseconds;
-                esActivity?.SetTag("app.elasticsearch.duration_ms", esDurationMs);
-
-                if (response.IsValidResponse)
-                {
-                    result = response.Documents.Select(MapSearchDocumentToDto).ToList();
-                    _logger.LogInformation(
-                        "Elasticsearch product search query executed. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, ResultCount={ResultCount}, EsDurationMs={EsDurationMs}",
-                        "ElasticsearchQueryExecuted",
-                        keyword,
-                        "Elasticsearch",
-                        result.Count,
-                        esDurationMs);
-                }
-                else
-                {
-                    var reason = GetElasticsearchFailureReason(response.DebugInformation);
-                    _logger.LogError(
-                        "Product search failed. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, Reason={Reason}, EsDurationMs={EsDurationMs}",
-                        "ProductSearchFailed",
-                        keyword,
-                        "Elasticsearch",
-                        reason,
-                        esDurationMs);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Product search failed. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, Reason={Reason}, EsDurationMs={EsDurationMs}",
-                    "ProductSearchFailed",
-                    keyword,
-                    "Elasticsearch",
-                    ex.GetType().Name,
-                    esDurationMs);
-            }
-
-            if (result == null)
-            {
-                // Fallback to PostgreSQL simple search
-                usedFallback = true;
-                _logger.LogWarning(
-                    "Product search fallback to PostgreSQL. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, Reason={Reason}",
-                    "ProductSearchFallback",
-                    keyword,
-                    "PostgreSQL",
-                    "ElasticsearchUnavailable");
-
-                var dbProducts = await _context.Products
-                    .AsNoTracking()
-                    .Where(p => p.IsActive && 
-                                (EF.Functions.ILike(p.Name, $"%{keyword}%") || 
-                                 EF.Functions.ILike(p.Brand, $"%{keyword}%") || 
-                                 EF.Functions.ILike(p.Description, $"%{keyword}%")))
-                    .OrderByDescending(p => p.CreatedAt)
-                    .Take(20)
-                    .ToListAsync();
-                result = _mapper.Map<List<ProductDto>>(dbProducts);
-            }
+            var result = _mapper.Map<List<ProductDto>>(dbProducts);
 
             if (_cache != null && result.Any())
             {
@@ -708,42 +375,7 @@ namespace GameGaraj.Catalog.API.Services.Concrete
                 await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(result), options);
             }
 
-            totalStopwatch.Stop();
-            _logger.LogInformation(
-                "Product search completed. Event={Event}, SearchTerm={SearchTerm}, Source={Source}, ResultCount={ResultCount}, CacheHit={CacheHit}, EsDurationMs={EsDurationMs}, DurationMs={DurationMs}, UsedFallback={UsedFallback}",
-                "ProductSearchCompleted",
-                keyword,
-                usedFallback ? "PostgreSQL" : "Elasticsearch",
-                result.Count,
-                false,
-                esDurationMs,
-                totalStopwatch.ElapsedMilliseconds,
-                usedFallback);
-
             return result;
-        }
-
-        private static ProductDto MapSearchDocumentToDto(ProductSearchDocument document)
-        {
-            return new ProductDto
-            {
-                Id = document.Id,
-                Name = document.Name,
-                Brand = document.Brand,
-                Slug = document.Slug,
-                Description = document.Description,
-                Price = document.Price,
-                Stock = document.Stock,
-                ReservedStock = document.ReservedStock,
-                AvailableStock = document.AvailableStock,
-                IsActive = document.IsActive,
-                IsFeatured = document.IsFeatured,
-                ImageUrls = document.ImageUrls,
-                CreatedAt = document.CreatedAt,
-                CategoryId = document.CategoryId,
-                CategoryName = document.CategoryName,
-                Specs = document.Specs
-            };
         }
 
         public async Task<List<SearchSuggestionDto>> GetSuggestionsAsync(string keyword)
@@ -751,119 +383,26 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             if (string.IsNullOrWhiteSpace(keyword))
                 return new List<SearchSuggestionDto>();
 
-            List<ProductSearchDocument>? documents = null;
-
-            try
-            {
-                var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                    .Index("products")
-                    .Query(q => q
-                        .Bool(b => b
-                            .Must(m => m
-                                .MultiMatch(mm => mm
-                                    .Fields(new[]
-                                    {
-                                        "name^5",
-                                        "brand^4",
-                                        "categoryName^3",
-                                        "specValues^2",
-                                        "searchText"
-                                    })
-                                    .Query(keyword)
-                                    .Fuzziness(new Fuzziness("AUTO"))
-                                    .MinimumShouldMatch("60%")
-                                    .PrefixLength(1)
-                                )
-                            )
-                            .Filter(f => f.Term(t => t.Field("isActive").Value(true)))
-                        )
-                    )
-                    .Size(20)
-                );
-
-                if (response.IsValidResponse)
-                {
-                    documents = response.Documents.ToList();
-                }
-                else
-                {
-                    _logger.LogWarning("Elasticsearch suggestion query failed: {Error}", response.DebugInformation);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Elasticsearch suggestion query threw an exception.");
-            }
-
-            if (documents == null)
-            {
-                // Fallback to PostgreSQL suggestions
-                try
-                {
-                    var dbProducts = await _context.Products
-                        .AsNoTracking()
-                        .Where(p => p.IsActive && EF.Functions.ILike(p.Name, $"%{keyword}%"))
-                        .Take(10)
-                        .ToListAsync();
-                    
-                    documents = dbProducts.Select(p => new ProductSearchDocument
-                    {
-                        Id = p.Id,
-                        Name = p.Name,
-                        Brand = p.Brand ?? string.Empty,
-                        Slug = p.Slug ?? string.Empty,
-                        ImageUrls = p.ImageUrls ?? new List<string>(),
-                        Price = p.Price,
-                        CategoryId = p.CategoryId ?? string.Empty
-                    }).ToList();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "PostgreSQL suggestion fallback failed.");
-                    documents = new List<ProductSearchDocument>();
-                }
-            }
+            var dbProducts = await _context.Products
+                .AsNoTracking()
+                .Where(p => p.IsActive && (EF.Functions.ILike(p.Name, $"%{keyword}%") || EF.Functions.ILike(p.Brand, $"%{keyword}%")))
+                .Take(10)
+                .ToListAsync();
 
             var suggestions = new List<SearchSuggestionDto>();
-            if (!documents.Any())
-            {
-                return suggestions;
-            }
 
-            suggestions.AddRange(documents
-                .Take(10)
-                .Select(p => new SearchSuggestionDto
+            foreach (var p in dbProducts)
+            {
+                suggestions.Add(new SearchSuggestionDto
                 {
                     Type = "product",
-                    Id = p.Id,
                     Name = p.Name,
-                    Slug = p.Slug,
-                    ImageUrl = p.ImageUrls.FirstOrDefault(),
+                    Id = p.Id,
+                    Slug = UrlHelper.GenerateSlug(p.Brand, p.Name),
+                    ImageUrl = p.ImageUrls?.FirstOrDefault(),
                     Price = p.Price
-                }));
-
-            suggestions.AddRange(documents
-                .Where(p => !string.IsNullOrWhiteSpace(p.Brand))
-                .GroupBy(p => p.Brand.Trim(), StringComparer.OrdinalIgnoreCase)
-                .Take(5)
-                .Select(g => new SearchSuggestionDto
-                {
-                    Type = "brand",
-                    Id = g.Key,
-                    Name = g.Key
-                }));
-
-            suggestions.AddRange(documents
-                .Where(p => !string.IsNullOrWhiteSpace(p.CategoryName))
-                .GroupBy(p => new { p.CategoryId, p.CategoryName })
-                .Take(5)
-                .Select(g => new SearchSuggestionDto
-                {
-                    Type = "category",
-                    Id = g.Key.CategoryId,
-                    Name = g.Key.CategoryName,
-                    Slug = g.FirstOrDefault()?.CategorySlug
-                }));
+                });
+            }
 
             return suggestions;
         }
@@ -873,119 +412,57 @@ namespace GameGaraj.Catalog.API.Services.Concrete
             if (string.IsNullOrWhiteSpace(keyword))
                 return new List<string>();
 
-            var response = await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                .Index("products")
-                .Query(q => q
-                    .Wildcard(w => w
-                        .Field("brand.keyword")
-                        .Value($"*{keyword.ToLower()}*")
-                        .CaseInsensitive(true)
-                    )
-                )
-                .Size(0)
-                .Aggregations(a => a
-                    .Add("brands", agg => agg
-                        .Terms(t => t
-                            .Field("brand.keyword")
-                            .Size(10)
-                        )
-                    )
-                )
-            );
-
-            if (!response.IsValidResponse)
-            {
-                _logger.LogWarning("Elasticsearch brand suggestion failed: {Error}", response.DebugInformation);
-                return new List<string>();
-            }
-
-            var bucket = response.Aggregations?.GetStringTerms("brands");
-            return bucket?.Buckets.Select(b => b.Key.ToString()).Where(b => !string.IsNullOrWhiteSpace(b)).ToList() ?? new List<string>();
+            return await _context.Products
+                .AsNoTracking()
+                .Where(p => p.IsActive && !string.IsNullOrWhiteSpace(p.Brand) && EF.Functions.ILike(p.Brand, $"%{keyword}%"))
+                .Select(p => p.Brand!)
+                .Distinct()
+                .Take(10)
+                .ToListAsync();
         }
 
         public async Task<SearchFacetResultDto> GetSearchFacetsAsync(string? keyword)
         {
-            var response = string.IsNullOrWhiteSpace(keyword)
-                ? await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                    .Index("products")
-                    .Size(0)
-                    .Query(q => q.Bool(b => b.Filter(f => f.Term(t => t.Field("isActive").Value(true)))))
-                    .Aggregations(a => a
-                        .Add("brands", agg => agg
-                            .Terms(t => t
-                                .Field("brand.keyword")
-                                .Size(20)
-                            )
-                        )
-                        .Add("categories", agg => agg
-                            .Terms(t => t
-                                .Field("categoryName.keyword")
-                                .Size(20)
-                            )
-                        )
-                    )
-                )
-                : await _elasticClient.SearchAsync<ProductSearchDocument>(s => s
-                    .Index("products")
-                    .Size(0)
-                    .Query(q => q.Bool(b => b
-                        .Must(m => m
-                            .MultiMatch(mm => mm
-                                .Fields(new[]
-                                {
-                                    "name^5",
-                                    "brand^4",
-                                    "categoryName^3",
-                                    "specValues^2",
-                                    "searchText"
-                                })
-                                .Query(keyword)
-                                .Fuzziness(new Fuzziness("AUTO"))
-                                .MinimumShouldMatch("60%")
-                                .PrefixLength(1)
-                            )
-                        )
-                        .Filter(f => f.Term(t => t.Field("isActive").Value(true)))
-                    ))
-                    .Aggregations(a => a
-                        .Add("brands", agg => agg
-                            .Terms(t => t
-                                .Field("brand.keyword")
-                                .Size(20)
-                            )
-                        )
-                        .Add("categories", agg => agg
-                            .Terms(t => t
-                                .Field("categoryName.keyword")
-                                .Size(20)
-                            )
-                        )
-                    )
-                );
+            var query = _context.Products.AsNoTracking().Where(p => p.IsActive);
 
-            if (!response.IsValidResponse)
+            if (!string.IsNullOrWhiteSpace(keyword))
             {
-                _logger.LogWarning("Elasticsearch facet query failed: {Error}", response.DebugInformation);
-                return new SearchFacetResultDto();
+                query = query.Where(p => EF.Functions.ILike(p.Name, $"%{keyword}%") || 
+                                         EF.Functions.ILike(p.Brand, $"%{keyword}%"));
             }
 
-            return new SearchFacetResultDto
-            {
-                Brands = ReadFacetItems(response.Aggregations?.GetStringTerms("brands")),
-                Categories = ReadFacetItems(response.Aggregations?.GetStringTerms("categories"))
-            };
-        }
+            var products = await query.ToListAsync();
+            var facets = new SearchFacetResultDto();
 
-        private static List<SearchFacetItemDto> ReadFacetItems(Elastic.Clients.Elasticsearch.Aggregations.StringTermsAggregate? aggregate)
-        {
-            return aggregate?.Buckets
-                .Select(b => new SearchFacetItemDto
+            if (!products.Any())
+                return facets;
+
+            var categoryIds = products.Select(p => p.CategoryId).Where(c => !string.IsNullOrEmpty(c)).Distinct().ToList();
+            var categories = await _context.Categories.AsNoTracking().Where(c => categoryIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Name);
+
+            facets.Categories = products
+                .GroupBy(p => p.CategoryId)
+                .Where(g => !string.IsNullOrEmpty(g.Key) && categories.ContainsKey(g.Key))
+                .Select(g => new SearchFacetItemDto
                 {
-                    Value = b.Key.ToString(),
-                    Count = b.DocCount
+                    Value = categories[g.Key],
+                    Count = g.Count()
                 })
-                .Where(x => !string.IsNullOrWhiteSpace(x.Value))
-                .ToList() ?? new List<SearchFacetItemDto>();
+                .OrderByDescending(f => f.Count)
+                .ToList();
+
+            facets.Brands = products
+                .GroupBy(p => p.Brand)
+                .Where(g => !string.IsNullOrEmpty(g.Key))
+                .Select(g => new SearchFacetItemDto
+                {
+                    Value = g.Key!,
+                    Count = g.Count()
+                })
+                .OrderByDescending(f => f.Count)
+                .ToList();
+
+            return facets;
         }
     }
 }

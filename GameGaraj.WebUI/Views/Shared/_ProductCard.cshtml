@@ -67,7 +67,7 @@
 }
 
 <div class="card product-card h-100 position-relative border-0 shadow-sm"
-     data-product-url="@Url.Action("Detail", "Product", new { slug = Model.Slug })"
+     data-product-url="@GameGaraj.WebUI.Extensions.SlugHelper.BuildProductUrl(Model.Slug, Model.Id)"
      role="link"
      tabindex="0"
      aria-label="@Model.Name">
@@ -109,7 +109,7 @@
         }
 
         <div class="product-card-name-block">
-            <a asp-controller="Product" asp-action="Detail" asp-route-slug="@Model.Slug"
+            <a href="@GameGaraj.WebUI.Extensions.SlugHelper.BuildProductUrl(Model.Slug, Model.Id)"
                class="text-decoration-none text-dark product-card-title-link product-card-title-inline">
                 @if (!string.IsNullOrWhiteSpace(Model.Brand))
                 {

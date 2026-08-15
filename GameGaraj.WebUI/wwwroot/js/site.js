@@ -351,5 +351,96 @@ $(document).ready(function () {
         });
     }
 
+    // ==========================================================================
+    // Search Autocomplete (Multi-input support for Desktop & Mobile)
+    // ==========================================================================
+    function initSearchAutocomplete() {
+        var searchTimeout;
+        var $searchInputs = $('.js-search-input');
+
+        $searchInputs.each(function () {
+            var $input = $(this);
+            var $form = $input.closest('form');
+            var $suggestionsContainer = $form.find('.js-search-suggestions');
+
+            $input.on('input', function () {
+                clearTimeout(searchTimeout);
+                var query = $(this).val().trim();
+
+                if (query.length < 2) {
+                    $suggestionsContainer.hide();
+                    return;
+                }
+
+                searchTimeout = setTimeout(function () {
+                    $.ajax({
+                        url: '/api/products/search',
+                        data: { q: query },
+                        dataType: 'json',
+                        success: function (data) {
+                            var html = '';
+
+                            // Products -> click performs search
+                            if (data.products && data.products.length > 0) {
+                                html += data.products.map(function (p) {
+                                    var searchUrl = p.url || ('/ara?q=' + encodeURIComponent(p.name).replace(/%20/g, '+'));
+                                    var img = p.imageUrl || '/default.jpg';
+                                    return '<a href="' + searchUrl + '" class="search-suggestion-item text-decoration-none">' +
+                                        '<div class="search-suggestion-media">' +
+                                        '<img src="' + img + '" alt="' + p.name + '" onerror="this.onerror=null;this.src=\'/default.jpg\';">' +
+                                        '</div>' +
+                                        '<div class="search-suggestion-main">' +
+                                        '<div class="search-suggestion-title">' + p.name + '</div>' +
+                                        '<div class="search-suggestion-meta">' + (p.price || '') + '</div>' +
+                                        '</div>' +
+                                        '</a>';
+                                }).join('');
+                            }
+
+                            // Brands
+                            if (data.brands && data.brands.length > 0) {
+                                html += data.brands.map(function (b) {
+                                    return '<a href="' + b.url + '" class="search-suggestion-item suggestion-brand text-decoration-none">' +
+                                        '<div class="search-suggestion-media"><i class="fas fa-tag"></i></div>' +
+                                        '<div class="search-suggestion-main"><div class="search-suggestion-title">' + b.name + '</div></div>' +
+                                        '<div class="search-suggestion-type">Marka</div>' +
+                                        '</a>';
+                                }).join('');
+                            }
+
+                            // Categories
+                            if (data.categories && data.categories.length > 0) {
+                                html += data.categories.map(function (c) {
+                                    return '<a href="' + c.url + '" class="search-suggestion-item suggestion-category text-decoration-none">' +
+                                        '<div class="search-suggestion-media"><i class="fas fa-tags"></i></div>' +
+                                        '<div class="search-suggestion-main"><div class="search-suggestion-title">' + c.name + '</div></div>' +
+                                        '<div class="search-suggestion-type">Kategori</div>' +
+                                        '</a>';
+                                }).join('');
+                            }
+
+                            if (html !== '') {
+                                $suggestionsContainer.html(html).show();
+                            } else {
+                                $suggestionsContainer.html('<div class="p-3 text-muted text-center">Sonuç bulunamadı</div>').show();
+                            }
+                        },
+                        error: function () {
+                            $suggestionsContainer.hide();
+                        }
+                    });
+                }, 300);
+            });
+
+            // Close suggestions when clicking outside
+            $(document).on('click', function (e) {
+                if (!$input.is(e.target) && !$suggestionsContainer.is(e.target) && $suggestionsContainer.has(e.target).length === 0) {
+                    $suggestionsContainer.hide();
+                }
+            });
+        });
+    }
+
     initCardSliders();
+    initSearchAutocomplete();
 });

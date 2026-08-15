@@ -155,7 +155,7 @@ namespace GameGaraj.Payment.API.Controllers
                     return BadRequest(new
                     {
                         Success = false,
-                        Message = "Ödeme başarısız.",
+                        Message = !string.IsNullOrEmpty(paymentResult.ErrorMessage) ? paymentResult.ErrorMessage : "Ödeme başarısız.",
                         Error = paymentResult.ErrorMessage,
                         ErrorCode = paymentResult.ErrorCode
                     });

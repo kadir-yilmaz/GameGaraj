@@ -3,6 +3,7 @@ using GameGaraj.Catalog.API.Models;
 using GameGaraj.Catalog.API.Services.Abstract;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using GameGaraj.Shared.Helpers;
 
 namespace GameGaraj.Catalog.API.Services.Hosted
 {
@@ -109,7 +110,6 @@ namespace GameGaraj.Catalog.API.Services.Hosted
                         if (cache != null)
                         {
                             await cache.RemoveAsync($"product_{product.Id}", cancellationToken);
-                            await cache.RemoveAsync($"product_slug_{product.Slug}", cancellationToken);
                             await cache.RemoveAsync("featured_products", cancellationToken);
                             _logger.LogInformation($"[IndexingJobWorker] Invalidated Redis cache for product: {product.Name} and featured_products");
                         }
@@ -128,7 +128,7 @@ namespace GameGaraj.Catalog.API.Services.Hosted
                                     Id = product.Id,
                                     Name = product.Name,
                                     Brand = product.Brand,
-                                    Slug = product.Slug,
+                                    Slug = UrlHelper.GenerateSlug(product.Brand, product.Name),
                                     Description = product.Description,
                                     Price = product.Price,
                                     Stock = product.Stock,
@@ -138,7 +138,7 @@ namespace GameGaraj.Catalog.API.Services.Hosted
                                     ImageUrls = product.ImageUrls,
                                     CategoryId = product.CategoryId,
                                     CategoryName = category?.Name ?? string.Empty,
-                                    CategorySlug = category?.Slug ?? string.Empty,
+                                    CategorySlug = UrlHelper.GenerateSlug(category?.Name),
                                     Specs = product.Specs
                                 }, cancellationToken);
                             }

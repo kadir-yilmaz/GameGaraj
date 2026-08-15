@@ -120,12 +120,17 @@
 
                 if (targetProduct != null)
                 {
-                    targetUrl = Url.Action("Detail", "Product", new { slug = string.IsNullOrEmpty(targetProduct.Slug) ? targetProduct.Id : targetProduct.Slug });
+                    targetUrl = GameGaraj.WebUI.Extensions.SlugHelper.BuildProductUrl(targetProduct.Slug, targetProduct.Id);
                     targetText = "Ürünü Gör";
                 }
-                else if (!string.IsNullOrWhiteSpace(rule.CategoryId) || !string.IsNullOrWhiteSpace(rule.BrandName))
+                else if (!string.IsNullOrWhiteSpace(rule.CategoryId))
                 {
-                    targetUrl = Url.Action("Index", "Product", new { categoryId = rule.CategoryId, brand = rule.BrandName });
+                    targetUrl = GameGaraj.WebUI.Extensions.SlugHelper.BuildCategoryUrl("kategori", rule.CategoryId) + (!string.IsNullOrWhiteSpace(rule.BrandName) ? $"?marka={Uri.EscapeDataString(rule.BrandName)}" : "");
+                    targetText = "Ürünleri Gör";
+                }
+                else if (!string.IsNullOrWhiteSpace(rule.BrandName))
+                {
+                    targetUrl = $"/ara?marka={Uri.EscapeDataString(rule.BrandName)}";
                     targetText = "Ürünleri Gör";
                 }
 

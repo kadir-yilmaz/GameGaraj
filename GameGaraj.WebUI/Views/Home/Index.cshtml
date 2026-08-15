@@ -372,7 +372,7 @@
                                                 }
                                             </div>
                                             <div class="d-grid">
-                                                <a asp-controller="Product" asp-action="Detail" asp-route-id="@prod.Id" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
+                                                <a href="@GameGaraj.WebUI.Extensions.SlugHelper.BuildProductUrl(prod.Slug, prod.Id)" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
                                             </div>
                                         </div>
                                     }
@@ -383,7 +383,7 @@
                                             <h4 class="fw-bold">Büyük Fırsat</h4>
                                             <p class="small text-white-50">Tüm ürünlerimizde kaçırılmayacak indirimler sizleri bekliyor.</p>
                                             <hr class="my-3 border-secondary" />
-                                            <a asp-controller="Product" asp-action="Index" class="btn btn-outline-light rounded-pill px-4">Tüm Ürünler</a>
+                                            <a href="/ara" class="btn btn-outline-light rounded-pill px-4">Tüm Ürünler</a>
                                         </div>
                                     }
                                 </div>
@@ -519,7 +519,7 @@
                                     <span class="badge bg-danger mb-2 px-3 py-2 text-uppercase fw-bold shadow-sm">Geleceğin Teknolojisi</span>
                                     <h1 class="display-5 fw-black mb-3">En Güçlü Oyuncu Ekipmanları</h1>
                                     <p class="fs-5 mb-4 opacity-90">En güçlü oyun bilgisayarları ve profesyonel donanımlar burada.</p>
-                                    <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold">Keşfet</a>
+                                    <a href="/ara" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold">Keşfet</a>
                                 </div>
                             </div>
                             <div class="col-lg-5 d-none d-lg-block">
@@ -538,7 +538,7 @@
                                             <span class="text-success small fw-bold"><i class="fas fa-check-circle me-1"></i>Stokta</span>
                                         </div>
                                         <div class="d-grid">
-                                            <a asp-controller="Product" asp-action="Detail" asp-route-id="@prod.Id" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
+                                            <a href="@GameGaraj.WebUI.Extensions.SlugHelper.BuildProductUrl(prod.Slug, prod.Id)" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
                                         </div>
                                     </div>
                                 }
@@ -556,7 +556,7 @@
                                     <span class="badge bg-warning text-dark mb-2 px-3 py-2 text-uppercase fw-bold shadow-sm">Profesyonel Ekipmanlar</span>
                                     <h1 class="display-5 fw-black mb-3">E-Spor Ekipmanları</h1>
                                     <p class="fs-5 mb-4 opacity-90">E-spor oyuncuları için özel tasarlanmış profesyonel klavye, mouse ve kulaklıklar.</p>
-                                    <a asp-controller="Product" asp-action="Index" class="btn btn-warning btn-lg px-5 py-3 rounded-pill fw-bold text-dark">İncele</a>
+                                    <a href="/ara" class="btn btn-warning btn-lg px-5 py-3 rounded-pill fw-bold text-dark">İncele</a>
                                 </div>
                             </div>
                             <div class="col-lg-5 d-none d-lg-block">
@@ -575,7 +575,7 @@
                                             <span class="text-success small fw-bold"><i class="fas fa-check-circle me-1"></i>Stokta</span>
                                         </div>
                                         <div class="d-grid">
-                                            <a asp-controller="Product" asp-action="Detail" asp-route-id="@prod.Id" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
+                                            <a href="@GameGaraj.WebUI.Extensions.SlugHelper.BuildProductUrl(prod.Slug, prod.Id)" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
                                         </div>
                                     </div>
                                 }
@@ -593,7 +593,7 @@
                                     <span class="badge bg-success mb-2 px-3 py-2 text-uppercase fw-bold shadow-sm">Kampanyalı Fırsatlar</span>
                                     <h1 class="display-5 fw-black mb-3">Kaçırılmayacak İndirimler</h1>
                                     <p class="fs-5 mb-4 opacity-90">Sınırlı sayıda üretilen özel seriler ve haftalık indirimli ürünler.</p>
-                                    <a asp-controller="Product" asp-action="Index" class="btn btn-success btn-lg px-5 py-3 rounded-pill fw-bold">Fırsatları Gör</a>
+                                    <a href="/ara" class="btn btn-success btn-lg px-5 py-3 rounded-pill fw-bold">Fırsatları Gör</a>
                                 </div>
                             </div>
                             <div class="col-lg-5 d-none d-lg-block">
@@ -612,7 +612,7 @@
                                             <span class="text-success small fw-bold"><i class="fas fa-check-circle me-1"></i>Stokta</span>
                                         </div>
                                         <div class="d-grid">
-                                            <a asp-controller="Product" asp-action="Detail" asp-route-id="@prod.Id" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
+                                            <a href="@GameGaraj.WebUI.Extensions.SlugHelper.BuildProductUrl(prod.Slug, prod.Id)" class="btn btn-warning rounded-pill fw-bold text-dark"><i class="fas fa-shopping-bag me-2"></i>Satın Al</a>
                                         </div>
                                     </div>
                                 }
@@ -638,7 +638,7 @@
         <div>
             <h2 class="fs-3 fw-bold mb-0">Öne Çıkan Ürünler</h2>
         </div>
-        <a asp-controller="Product" asp-action="Index" class="btn btn-outline-dark rounded-pill px-4">
+        <a href="/ara" class="btn btn-outline-dark rounded-pill px-4">
             Tümünü Gör <i class="fas fa-arrow-right ms-2"></i>
         </a>
     </div>
@@ -679,7 +679,7 @@
                     <div>
                         <h2 class="fs-3 fw-bold mb-0">@category.Name</h2>
                     </div>
-                    <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@category.Id" class="btn btn-outline-dark rounded-pill px-4">
+                    <a href="@GameGaraj.WebUI.Extensions.SlugHelper.BuildCategoryUrl(category.Slug, category.Id)" class="btn btn-outline-dark rounded-pill px-4">
                         Tümünü Gör <i class="fas fa-arrow-right ms-2"></i>
                     </a>
                 </div>

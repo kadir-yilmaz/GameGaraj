@@ -4,28 +4,34 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 
+using AspNetCoreHero.ToastNotification.Abstractions;
+
 namespace GameGaraj.WebUI.Controllers
 {
     public class AuthController : Controller
     {
         private readonly IIdentityService _identityService;
         private readonly IBasketService _basketService;
+        private readonly INotyfService _notyf;
 
-        public AuthController(IIdentityService identityService, IBasketService basketService)
+        public AuthController(IIdentityService identityService, IBasketService basketService, INotyfService notyf)
         {
             _identityService = identityService;
             _basketService = basketService;
+            _notyf = notyf;
         }
 
         [HttpGet]
-        public IActionResult SignIn()
+        public IActionResult SignIn(string? returnUrl = null)
         {
+            ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
 
         [HttpPost]
-        public async Task<IActionResult> SignIn(SignInViewModel model)
+        public async Task<IActionResult> SignIn(SignInViewModel model, string? returnUrl = null)
         {
+            ViewData["ReturnUrl"] = returnUrl;
             if (!ModelState.IsValid)
             {
                 return View(model);
@@ -53,24 +59,20 @@ namespace GameGaraj.WebUI.Controllers
                 HttpContext.Response.Cookies.Delete(guestCookieName);
             }
 
-            // Kullanıcı admin veya editor ise admin paneline yönlendir
-            if (User.IsInRole("admin") || User.IsInRole("editor"))
-            {
-                return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
-            }
-
-            return RedirectToAction("Index", "Home");
+            return Redirect(GetPostLoginRedirectUrl(returnUrl));
         }
 
         [HttpGet]
-        public IActionResult SignUp()
+        public IActionResult SignUp(string? returnUrl = null)
         {
+            ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
 
         [HttpPost]
-        public async Task<IActionResult> SignUp(SignUpViewModel model)
+        public async Task<IActionResult> SignUp(SignUpViewModel model, string? returnUrl = null)
         {
+            ViewData["ReturnUrl"] = returnUrl;
             if (!ModelState.IsValid)
             {
                 return View(model);
@@ -84,16 +86,74 @@ namespace GameGaraj.WebUI.Controllers
             }
 
             TempData["Success"] = "Kayıt başarılı! Giriş yapabilirsiniz.";
+            return RedirectToAction(nameof(SignIn), new { returnUrl });
+        }
+
+        [HttpGet]
+        public IActionResult ForgotPassword(string? email = null, int step = 1)
+        {
+            ViewBag.Step = step;
+            if (step == 2)
+            {
+                return View(new ResetPasswordOtpViewModel { Email = email ?? string.Empty });
+            }
+
+            return View(new ForgotPasswordViewModel { Email = email ?? string.Empty });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SendResetOtp(ForgotPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Step = 1;
+                return View("ForgotPassword", model);
+            }
+
+            var (success, message) = await _identityService.SendPasswordResetOtpAsync(model.Email);
+            if (!success)
+            {
+                ModelState.AddModelError(string.Empty, message ?? "Doğrulama kodu gönderilemedi.");
+                ViewBag.Step = 1;
+                return View("ForgotPassword", model);
+            }
+
+            _notyf.Success("6 haneli doğrulama kodu e-posta adresinize gönderildi.");
+            return RedirectToAction(nameof(ForgotPassword), new { email = model.Email, step = 2 });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ResetPasswordWithOtp(ResetPasswordOtpViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Step = 2;
+                return View("ForgotPassword", model);
+            }
+
+            var (success, message) = await _identityService.ResetPasswordWithOtpAsync(model.Email, model.OtpCode, model.NewPassword);
+            if (!success)
+            {
+                ModelState.AddModelError(string.Empty, message ?? "Şifre sıfırlanamadı.");
+                ViewBag.Step = 2;
+                return View("ForgotPassword", model);
+            }
+
+            _notyf.Success("Şifreniz başarıyla sıfırlandı! Yeni şifrenizle giriş yapabilirsiniz.");
             return RedirectToAction(nameof(SignIn));
         }
 
-        public new async Task<IActionResult> SignOut()
+        public new async Task<IActionResult> SignOut(string? returnUrl = null)
         {
             await _identityService.RevokeRefreshToken(); // Keycloak backchannel logout
 
+            var redirectUri = !string.IsNullOrWhiteSpace(returnUrl) && (Url.IsLocalUrl(returnUrl) || returnUrl.StartsWith("/"))
+                ? returnUrl
+                : (Url.Action("Index", "Home") ?? "/");
+
             var properties = new AuthenticationProperties
             {
-                RedirectUri = Url.Action("Index", "Home")
+                RedirectUri = redirectUri
             };
 
             // Eğer kullanıcı Keycloak OIDC şeması üzerinden giriş yapmışsa OIDC logout tetikle.
@@ -179,6 +239,62 @@ namespace GameGaraj.WebUI.Controllers
             return Redirect(GetPostLoginRedirectUrl(returnUrl));
         }
 
+        [HttpPost]
+        public async Task<IActionResult> SendPasswordResetEmail([FromBody] ResetPasswordEmailModel model)
+        {
+            var email = model?.Email;
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                email = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value
+                     ?? User.Identity?.Name;
+            }
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return Json(new { success = false, message = "E-posta adresi belirtilmedi." });
+            }
+
+            var (success, message) = await _identityService.SendPasswordResetEmailAsync(email);
+            return Json(new { success, message });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordModel model)
+        {
+            if (model == null || string.IsNullOrWhiteSpace(model.NewPassword) || model.NewPassword.Length < 6)
+            {
+                return Json(new { success = false, message = "Yeni şifre en az 6 karakter olmalıdır." });
+            }
+
+            if (model.NewPassword != model.ConfirmPassword)
+            {
+                return Json(new { success = false, message = "Şifreler birbiriyle eşleşmiyor." });
+            }
+
+            var userId = _identityService.GetUserId();
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                userId = User.Claims.FirstOrDefault(c => c.Type == "sub" || c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            }
+
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Json(new { success = false, message = "Kullanıcı oturumu bulunamadı." });
+            }
+
+            var (success, message) = await _identityService.ChangePasswordAsync(userId, model.NewPassword);
+            return Json(new { success, message });
+        }
+
+        [HttpGet]
+        [Route("Auth/AccessDenied")]
+        [Route("Admin/Auth/AccessDenied")]
+        public IActionResult AccessDenied(string? returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            return View();
+        }
+
         private string GetPostLoginRedirectUrl(string? returnUrl)
         {
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -199,5 +315,16 @@ namespace GameGaraj.WebUI.Controllers
 
             return Url.Action("Index", "Home") ?? "/";
         }
+    }
+
+    public class ResetPasswordEmailModel
+    {
+        public string? Email { get; set; }
+    }
+
+    public class ChangePasswordModel
+    {
+        public string NewPassword { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
     }
 }

@@ -1144,7 +1144,7 @@
         <span class="separator">&gt;</span>
         @if (!string.IsNullOrEmpty(Model.CategoryName))
         {
-            <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@Model.CategoryId">@Model.CategoryName</a>
+            <a href="@GameGaraj.WebUI.Extensions.SlugHelper.BuildCategoryUrl(ViewBag.CategorySlug as string, Model.CategoryId)">@Model.CategoryName</a>
             <span class="separator">&gt;</span>
         }
         <span class="text-muted">@Model.Name</span>
@@ -1195,7 +1195,7 @@
                         <!-- Brand -->
                         @if (!string.IsNullOrWhiteSpace(Model.Brand))
                         {
-                            <a asp-controller="Product" asp-action="Index" asp-route-brand="@Model.Brand" class="product-brand">@Model.Brand</a>
+                            <a href="/ara?marka=@(Uri.EscapeDataString(Model.Brand))" class="product-brand">@Model.Brand</a>
                         }
 
                         <!-- Title -->

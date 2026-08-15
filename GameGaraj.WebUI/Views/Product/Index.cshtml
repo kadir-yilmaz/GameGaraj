@@ -8,6 +8,9 @@
     var selectedSpecs = ViewBag.SelectedSpecs as Dictionary<string, string[]> ?? new Dictionary<string, string[]>();
     var brands = ViewBag.Brands as List<string> ?? new List<string>();
     var selectedBrand = ViewBag.Brand as string;
+    var currentBaseUrl = ViewBag.CurrentBaseUrl as string ?? "/ara";
+    var currentSearch = ViewBag.Search as string;
+    var currentSiralama = ViewBag.Siralama as string;
     var rootCategories = categories?.Where(x => string.IsNullOrWhiteSpace(x.ParentId)).ToList() ?? new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
     if (!rootCategories.Any() && categories != null)
     {
@@ -17,9 +20,7 @@
 
     string CategoryUrl(GameGaraj.WebUI.Models.Products.CategoryViewModel category)
     {
-        return !string.IsNullOrWhiteSpace(category.Slug)
-            ? Url.Action("Index", "Product", new { category = category.Slug })!
-            : Url.Action("Index", "Product", new { categoryId = category.Id })!;
+        return GameGaraj.WebUI.Extensions.SlugHelper.BuildCategoryUrl(category.Slug, category.Id);
     }
 
     bool HasActiveDescendant(GameGaraj.WebUI.Models.Products.CategoryViewModel category)
@@ -264,7 +265,7 @@
                         </div>
 
                         <div class="category-tree">
-                            <a href="/product"
+                            <a href="/ara"
                                class="category-tree-link @(string.IsNullOrWhiteSpace(currentCategoryId) ? "active" : "")">
                                 <span><i class="fas fa-list me-2"></i>Tüm Ürünler</span>
                                 <span class="category-count-badge">@totalProductCount</span>
@@ -322,8 +323,11 @@
                     <!-- Filters Form -->
                     @if (Model != null)
                     {
-                        <form method="get" asp-controller="Product" asp-action="Index" id="filterForm">
-                            <input type="hidden" name="categoryId" value="@currentCategoryId" />
+                        <form method="get" action="@currentBaseUrl" id="filterForm">
+                            @if (!string.IsNullOrWhiteSpace(currentSearch))
+                            {
+                                <input type="hidden" name="q" value="@currentSearch" />
+                            }
 
                             @if (brands.Any())
                             {
@@ -332,7 +336,7 @@
                                     @foreach (var brandName in brands)
                                     {
                                         <div class="form-check mb-2">
-                                            <input class="form-check-input" type="radio" name="brand" value="@brandName"
+                                            <input class="form-check-input" type="radio" name="marka" value="@brandName"
                                                 id="brand_@brandName" @(string.Equals(selectedBrand, brandName, StringComparison.OrdinalIgnoreCase) ? "checked" : "")>
                                             <label class="form-check-label" for="brand_@brandName">@brandName</label>
                                         </div>
@@ -345,16 +349,16 @@
                                 <h6 class="filter-title">Fiyat Aralığı</h6>
                                 <div class="row g-2 mb-3">
                                     <div class="col-6">
-                                        <input type="number" name="minPrice" class="form-control form-control-sm"
+                                        <input type="number" name="minFiyat" class="form-control form-control-sm"
                                             placeholder="Min ₺" value="@ViewBag.MinPrice">
                                     </div>
                                     <div class="col-6">
-                                        <input type="number" name="maxPrice" class="form-control form-control-sm"
+                                        <input type="number" name="maxFiyat" class="form-control form-control-sm"
                                             placeholder="Max ₺" value="@ViewBag.MaxPrice">
                                     </div>
                                 </div>
                                 <button type="submit" class="btn btn-sm price-filter-apply w-100">
-                                    <i class="fas fa-check me-2"></i>Fiyat&#305; Uygula
+                                    <i class="fas fa-check me-2"></i>Fiyatı Uygula
                                 </button>
                             </div>
 
@@ -387,19 +391,9 @@
                             <div class="d-grid gap-2">
                                 @if (selectedSpecs.Any() || ViewBag.MinPrice != null || ViewBag.MaxPrice != null || !string.IsNullOrWhiteSpace(selectedBrand))
                                 {
-                                    @if (!string.IsNullOrWhiteSpace(currentCategoryId))
-                                    {
-                                        <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@currentCategoryId"
-                                            class="btn btn-outline-secondary">
-                                            <i class="fas fa-times me-2"></i>Temizle
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <a href="/product" class="btn btn-outline-secondary">
-                                            <i class="fas fa-times me-2"></i>Temizle
-                                        </a>
-                                    }
+                                    <a href="@currentBaseUrl" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-2"></i>Temizle
+                                    </a>
                                 }
                             </div>
                         </form>
@@ -430,33 +424,18 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li>
-                                <a class="dropdown-item" href="@Url.Action("Index", "Product", new { 
-                                    categoryId = currentCategoryId, 
-                                    sortBy = "price_asc",
-                                    minPrice = ViewBag.MinPrice,
-                                    maxPrice = ViewBag.MaxPrice
-                                })">
+                                <a class="dropdown-item" href="@(currentBaseUrl)?siralama=fiyat-artan@(!string.IsNullOrWhiteSpace(currentSearch) ? "&q=" + Uri.EscapeDataString(currentSearch).Replace("%20", "+") : "")">
                                     <i class="fas fa-arrow-up me-2"></i>Fiyat: Düşük-Yüksek
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="@Url.Action("Index", "Product", new { 
-                                    categoryId = currentCategoryId, 
-                                    sortBy = "price_desc",
-                                    minPrice = ViewBag.MinPrice,
-                                    maxPrice = ViewBag.MaxPrice
-                                })">
+                                <a class="dropdown-item" href="@(currentBaseUrl)?siralama=fiyat-azalan@(!string.IsNullOrWhiteSpace(currentSearch) ? "&q=" + Uri.EscapeDataString(currentSearch).Replace("%20", "+") : "")">
                                     <i class="fas fa-arrow-down me-2"></i>Fiyat: Yüksek-Düşük
                                 </a>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <a class="dropdown-item" href="@Url.Action("Index", "Product", new { 
-                                    categoryId = currentCategoryId, 
-                                    sortBy = "name_asc",
-                                    minPrice = ViewBag.MinPrice,
-                                    maxPrice = ViewBag.MaxPrice
-                                })">
+                                <a class="dropdown-item" href="@(currentBaseUrl)?siralama=isim-a-z@(!string.IsNullOrWhiteSpace(currentSearch) ? "&q=" + Uri.EscapeDataString(currentSearch).Replace("%20", "+") : "")">
                                     <i class="fas fa-sort-alpha-down me-2"></i>İsim: A-Z
                                 </a>
                             </li>
@@ -486,7 +465,7 @@
                             <i class="fas fa-search fa-3x text-muted mb-3"></i>
                             <h5 class="fw-bold mb-2">Ürün Bulunamadı</h5>
                             <p class="text-muted">Aradığınız kriterlere uygun ürün bulunmamaktadır.</p>
-                            <a href="/product" class="btn btn-primary mt-3">
+                            <a href="/ara" class="btn btn-primary mt-3">
                                 Tüm Ürünleri Gör
                             </a>
                         </div>
@@ -515,8 +494,11 @@
         <!-- Filters Form -->
         @if (Model != null)
         {
-            <form method="get" asp-controller="Product" asp-action="Index" id="mobileFilterForm">
-                <input type="hidden" name="categoryId" value="@currentCategoryId" />
+            <form method="get" action="@currentBaseUrl" id="mobileFilterForm">
+                @if (!string.IsNullOrWhiteSpace(currentSearch))
+                {
+                    <input type="hidden" name="q" value="@currentSearch" />
+                }
 
                 @if (brands.Any())
                 {
@@ -525,7 +507,7 @@
                         @foreach (var brandName in brands)
                         {
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="brand" value="@brandName"
+                                <input class="form-check-input" type="radio" name="marka" value="@brandName"
                                     id="mobile_brand_@brandName" @(string.Equals(selectedBrand, brandName, StringComparison.OrdinalIgnoreCase) ? "checked" : "")>
                                 <label class="form-check-label" for="mobile_brand_@brandName">@brandName</label>
                             </div>
@@ -538,16 +520,16 @@
                     <h6 class="filter-title">Fiyat Aralığı</h6>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <input type="number" name="minPrice" class="form-control"
+                            <input type="number" name="minFiyat" class="form-control"
                                 placeholder="Min ₺" value="@ViewBag.MinPrice">
                         </div>
                         <div class="col-6">
-                            <input type="number" name="maxPrice" class="form-control"
+                            <input type="number" name="maxFiyat" class="form-control"
                                 placeholder="Max ₺" value="@ViewBag.MaxPrice">
                         </div>
                     </div>
                     <button type="submit" class="btn price-filter-apply w-100">
-                        <i class="fas fa-check me-2"></i>Fiyat&#305; Uygula
+                        <i class="fas fa-check me-2"></i>Fiyatı Uygula
                     </button>
                 </div>
 
@@ -580,19 +562,9 @@
                 <div class="d-grid gap-2 sticky-bottom bg-white pt-3 pb-2" style="margin: 0 -1.5rem; padding-left: 1.5rem !important; padding-right: 1.5rem !important; border-top: 1px solid #eee;">
                     @if (selectedSpecs.Any() || ViewBag.MinPrice != null || ViewBag.MaxPrice != null || !string.IsNullOrWhiteSpace(selectedBrand))
                     {
-                        @if (!string.IsNullOrWhiteSpace(currentCategoryId))
-                        {
-                            <a asp-controller="Product" asp-action="Index" asp-route-categoryId="@currentCategoryId"
-                                class="btn btn-outline-secondary">
-                                <i class="fas fa-times me-2"></i>Temizle
-                            </a>
-                        }
-                        else
-                        {
-                            <a href="/product" class="btn btn-outline-secondary">
-                                <i class="fas fa-times me-2"></i>Temizle
-                            </a>
-                        }
+                        <a href="@currentBaseUrl" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Temizle
+                        </a>
                     }
                 </div>
             </form>

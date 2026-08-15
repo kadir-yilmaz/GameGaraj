@@ -5,6 +5,7 @@ using GameGaraj.Catalog.API.Dtos;
 using GameGaraj.Catalog.API.Models;
 using GameGaraj.Catalog.API.Services.Abstract;
 using Microsoft.EntityFrameworkCore;
+using GameGaraj.Shared.Helpers;
 
 namespace GameGaraj.Catalog.API.Services.Concrete
 {
@@ -118,11 +119,12 @@ namespace GameGaraj.Catalog.API.Services.Concrete
 
         public async Task<CategoryDto?> GetBySlugAsync(string slug)
         {
-            var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Slug == slug);
+            var allCategories = await _context.Categories.AsNoTracking().ToListAsync();
+            var category = allCategories.FirstOrDefault(c => UrlHelper.GenerateSlug(c.Name) == slug);
             if (category == null)
                 return null;
 
-            return await GetByIdAsync(category.Id); // Re-use GetById logic for attributes and descendants
+            return await GetByIdAsync(category.Id);
         }
 
         public async Task<List<CategoryAttributeDto>> GetAttributesAsync(string categoryId)
