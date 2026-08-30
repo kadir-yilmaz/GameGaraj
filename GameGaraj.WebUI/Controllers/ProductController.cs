@@ -47,7 +47,17 @@ namespace GameGaraj.WebUI.Controllers
             if (string.IsNullOrEmpty(categoryId))
                 return NotFound();
 
-            var categoryModel = await _catalogService.GetCategoryByIdAsync(categoryId);
+            // Parallel fetch category, categories, and products
+            CleanSpecs(specs);
+            var sortBy = MapSortBy(siralama);
+
+            var categoryTask = _catalogService.GetCategoryByIdAsync(categoryId);
+            var categoriesTask = _catalogService.GetAllCategoriesAsync();
+            var productsTask = _catalogService.GetAllProductsAsync(categoryId, sortBy, minFiyat, maxFiyat, specs, marka);
+
+            await Task.WhenAll(categoryTask, categoriesTask, productsTask);
+
+            var categoryModel = categoryTask.Result;
             if (categoryModel == null)
                 return NotFound();
 
@@ -58,24 +68,15 @@ namespace GameGaraj.WebUI.Controllers
                 return RedirectPermanent(targetUrl);
             }
 
-            // Clean up specs
-            CleanSpecs(specs);
+            var categories = categoriesTask.Result ?? new List<CategoryViewModel>();
+            var products = productsTask.Result ?? new List<ProductViewModel>();
 
-            // Map siralama to sortBy
-            var sortBy = MapSortBy(siralama);
-
-            var products = await _catalogService.GetAllProductsAsync(categoryId, sortBy, minFiyat, maxFiyat, specs, marka);
-            var categories = await _catalogService.GetAllCategoriesAsync();
-            var brandSourceProducts = await _catalogService.GetAllProductsAsync(categoryId);
-
-            SetupViewBags(categoryModel, categoryId, categories, brandSourceProducts,
+            SetupViewBags(categoryModel, categoryId, categories, products,
                 sortBy, minFiyat, maxFiyat, specs, null, marka, siralama);
 
-            // Build base URL for filter forms
             ViewBag.CurrentBaseUrl = SlugHelper.BuildCategoryUrl(categoryModel.Slug, categoryId);
 
-            await ApplyProductState(products);
-            await ApplyReviewSummariesAsync(products);
+            await Task.WhenAll(ApplyProductState(products), ApplyReviewSummariesAsync(products));
 
             return View("Index", products);
         }
@@ -87,42 +88,26 @@ namespace GameGaraj.WebUI.Controllers
         public async Task<IActionResult> Search(string? q, string? marka, string? siralama,
             decimal? minFiyat, decimal? maxFiyat, Dictionary<string, string[]>? specs, string? categoryId)
         {
-            CategoryViewModel? categoryModel = null;
-            if (!string.IsNullOrEmpty(categoryId))
-            {
-                categoryModel = await _catalogService.GetCategoryByIdAsync(categoryId);
-            }
-
-            // Clean up specs
             CleanSpecs(specs);
-
             var sortBy = MapSortBy(siralama);
+
+            Task<CategoryViewModel?> categoryTask = !string.IsNullOrEmpty(categoryId) 
+                ? _catalogService.GetCategoryByIdAsync(categoryId) 
+                : Task.FromResult<CategoryViewModel?>(null);
+            Task<List<CategoryViewModel>> categoriesTask = _catalogService.GetAllCategoriesAsync();
 
             List<ProductViewModel> products;
 
             if (!string.IsNullOrWhiteSpace(q))
             {
                 q = q.Trim();
-                using (_logger.BeginScope(new Dictionary<string, object?>
-                {
-                    ["LogType"] = "BusinessRequest",
-                    ["RequestArea"] = "WebUI",
-                    ["Operation"] = "ProductSearch",
-                    ["SearchTerm"] = q,
-                    ["Page"] = 1
-                }))
-                {
-                    _logger.LogInformation(
-                        "Product search page opened from WebUI. Event={Event}, SearchTerm={SearchTerm}, Page={Page}",
-                        "ProductSearchPageOpened",
-                        q,
-                        1);
-                }
+                var searchTask = _searchService.SearchProductsAsync(q);
+                await Task.WhenAll(categoryTask, categoriesTask, searchTask);
 
-                products = await _searchService.SearchProductsAsync(q);
-                if (products == null || !products.Any())
+                products = searchTask.Result ?? new List<ProductViewModel>();
+                if (!products.Any())
                 {
-                    products = await _catalogService.SearchProductsAsync(q);
+                    products = await _catalogService.SearchProductsAsync(q) ?? new List<ProductViewModel>();
                 }
 
                 if (!string.IsNullOrEmpty(categoryId)) products = products.Where(p => p.CategoryId == categoryId).ToList();
@@ -140,20 +125,20 @@ namespace GameGaraj.WebUI.Controllers
             }
             else
             {
-                products = await _catalogService.GetAllProductsAsync(categoryId, sortBy, minFiyat, maxFiyat, specs, marka);
+                var productsTask = _catalogService.GetAllProductsAsync(categoryId, sortBy, minFiyat, maxFiyat, specs, marka);
+                await Task.WhenAll(categoryTask, categoriesTask, productsTask);
+                products = productsTask.Result ?? new List<ProductViewModel>();
             }
 
-            var categories = await _catalogService.GetAllCategoriesAsync();
-            var brandSourceProducts = await _catalogService.GetAllProductsAsync(categoryId);
+            var categoryModel = categoryTask.Result;
+            var categories = categoriesTask.Result ?? new List<CategoryViewModel>();
 
-            SetupViewBags(categoryModel, categoryId, categories, brandSourceProducts,
+            SetupViewBags(categoryModel, categoryId, categories, products,
                 sortBy, minFiyat, maxFiyat, specs, q, marka, siralama);
 
-            // Build base URL for filter forms
             ViewBag.CurrentBaseUrl = "/ara";
 
-            await ApplyProductState(products);
-            await ApplyReviewSummariesAsync(products);
+            await Task.WhenAll(ApplyProductState(products), ApplyReviewSummariesAsync(products));
 
             return View("Index", products);
         }
@@ -180,33 +165,38 @@ namespace GameGaraj.WebUI.Controllers
                 return RedirectPermanent(targetUrl);
             }
 
-            var basket = await _basketService.GetBasketAsync();
+            var pid = product.Id?.Trim() ?? string.Empty;
+
+            // Parallelize all supplementary lookups (basket, favorites, reviews, permissions, category)
+            var basketTask = _basketService.GetBasketAsync();
+            var favTask = _favoritesService.IsFavoriteAsync(pid);
+            var reviewsTask = _reviewService.GetProductReviewsAsync(pid, 0, 10);
+            var canReviewTask = User.Identity?.IsAuthenticated == true ? _reviewService.CanReviewAsync(pid) : Task.FromResult(new CanReviewViewModel { CanReview = false });
+            var userReviewTask = User.Identity?.IsAuthenticated == true ? _reviewService.GetUserReviewAsync(pid) : Task.FromResult(new UserReviewResponseViewModel());
+            var categoryTask = !string.IsNullOrEmpty(product.CategoryId) ? _catalogService.GetCategoryByIdAsync(product.CategoryId) : Task.FromResult<CategoryViewModel?>(null);
+
+            await Task.WhenAll(basketTask, favTask, reviewsTask, canReviewTask, userReviewTask, categoryTask);
+
+            var basket = basketTask.Result;
             var basketProductIds = basket?.Items?
                 .Select(x => x.ProductId?.Trim())
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Select(x => x!)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase)
                 ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var pid = product.Id?.Trim() ?? string.Empty;
+
             product.IsInBasket = basketProductIds.Contains(pid);
+            product.IsFavorite = favTask.Result;
 
-            product.IsFavorite = await _favoritesService.IsFavoriteAsync(pid);
-
-            var reviews = await _reviewService.GetProductReviewsAsync(pid, 0, 10);
-            ViewBag.Reviews = reviews;
+            ViewBag.Reviews = reviewsTask.Result;
 
             if (User.Identity?.IsAuthenticated == true)
             {
-                ViewBag.CanReview = await _reviewService.CanReviewAsync(pid);
-                ViewBag.UserReview = await _reviewService.GetUserReviewAsync(pid);
+                ViewBag.CanReview = canReviewTask.Result;
+                ViewBag.UserReview = userReviewTask.Result;
             }
 
-            // Set category slug for breadcrumb links
-            if (!string.IsNullOrEmpty(product.CategoryId))
-            {
-                var category = await _catalogService.GetCategoryByIdAsync(product.CategoryId);
-                ViewBag.CategorySlug = category?.Slug;
-            }
+            ViewBag.CategorySlug = categoryTask.Result?.Slug;
 
             return View(product);
         }
@@ -470,8 +460,16 @@ namespace GameGaraj.WebUI.Controllers
 
         private async Task ApplyProductState(List<ProductViewModel> products)
         {
-            var basket = await _basketService.GetBasketAsync();
-            var favoriteIds = await _favoritesService.GetFavoriteProductIdsAsync();
+            if (products == null || products.Count == 0) return;
+
+            var basketTask = _basketService.GetBasketAsync();
+            var favTask = _favoritesService.GetFavoriteProductIdsAsync();
+            await Task.WhenAll(basketTask, favTask);
+
+            var basket = basketTask.Result;
+            var favoriteIds = favTask.Result != null 
+                ? new HashSet<string>(favTask.Result, StringComparer.OrdinalIgnoreCase) 
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var basketProductIds = basket?.Items?
                 .Select(x => x.ProductId?.Trim())
                 .Where(x => !string.IsNullOrWhiteSpace(x))

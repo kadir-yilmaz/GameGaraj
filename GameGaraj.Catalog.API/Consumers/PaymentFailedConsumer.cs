@@ -41,6 +41,13 @@ namespace GameGaraj.Catalog.API.Consumers
                     {
                         activity?.SetTag($"product.id.{product.Id}", product.Id);
 
+                        // Idempotency check: Rezervasyon zaten 0 ise mükerrer serbest bırakma yapma
+                        if (product.ReservedStock <= 0)
+                        {
+                            _logger.LogInformation($"[PaymentFailedConsumer] ReservedStock is already 0 for {product.Name}, skipping release.");
+                            continue;
+                        }
+
                         // Ödeme başarısız: Rezervasyonu iade et (tekrar satılabilir yap)
                         if (product.ReservedStock >= item.Quantity)
                         {

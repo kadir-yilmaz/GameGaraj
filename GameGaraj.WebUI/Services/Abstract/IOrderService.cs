@@ -7,6 +7,7 @@ namespace GameGaraj.WebUI.Services.Abstract
     public interface IOrderService
     {
         Task<OrderCreatedViewModel> CreateOrder(CheckoutInfoInput checkoutInfoInput, OrderPricingSnapshot pricingSnapshot);
+        Task<OrderCreatedViewModel> CreateDirectOrderAsync(DirectOrderInput input);
         Task<List<OrderViewModel>> GetOrders();
         
         // Admin Methods

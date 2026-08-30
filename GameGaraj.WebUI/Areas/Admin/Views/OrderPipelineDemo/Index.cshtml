@@ -1,0 +1,1029 @@
+@{
+    ViewData["Title"] = "Sipariş Boru Hattı & Chaos Simülatörü";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var catalogProducts = ViewBag.Products as List<GameGaraj.WebUI.Models.Products.ProductViewModel> ?? new List<GameGaraj.WebUI.Models.Products.ProductViewModel>();
+}
+
+<div class="container-fluid px-2 px-md-4 py-3">
+    
+    <!-- 1. Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary border-opacity-25 gap-3">
+        <div>
+            <h2 class="h3 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fa-solid fa-diagram-project text-warning"></i>
+                <span>Sipariş Boru Hattı (Pipeline) &amp; Chaos Simülatörü</span>
+            </h2>
+            <p class="text-muted mb-0 small">
+                Sipariş Saga akışını, Polly Resilience ve Outbox mekanizmalarını görsel boru hattı üzerinde canlı izleyin ve simüle edin.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span id="signalr-badge" class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-30 py-2 px-3 shadow-sm d-flex align-items-center gap-2">
+                <span class="pulse-dot bg-success"></span>
+                <span class="fw-semibold">SignalR Canlı Dinleniyor (Gerçek Site Siparişleri)</span>
+            </span>
+            <button class="btn btn-outline-danger btn-sm px-3 rounded-2" onclick="resetAllChaos()">
+                <i class="fa-solid fa-rotate-left me-1"></i>Tüm Vanaları Sıfırla
+            </button>
+            <a href="http://localhost:16686" target="_blank" class="btn btn-outline-info btn-sm px-3 rounded-2">
+                <i class="fa-solid fa-chart-line me-1"></i>Jaeger Tracing
+            </a>
+            <a href="http://localhost:15672" target="_blank" class="btn btn-outline-warning btn-sm px-3 rounded-2">
+                <i class="fa-solid fa-server me-1"></i>RabbitMQ UI
+            </a>
+        </div>
+    </div>
+
+    <!-- 2. Chaos / Vana Kontrol Paneli (Redis Tabanlı) -->
+    <div class="card bg-white border border-secondary border-opacity-25 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light border-bottom border-secondary border-opacity-25 d-flex flex-wrap justify-content-between align-items-center py-2 px-3 gap-2">
+            <span class="fw-bold text-dark small d-flex align-items-center gap-2">
+                <i class="fa-solid fa-faucet-drip text-danger"></i>
+                <span>Boru Hattı Vanaları &amp; Servis Emirleri (Redis Runtime Controls)</span>
+            </span>
+            <!-- Senaryo Presetleri -->
+            <div class="d-flex flex-wrap gap-1">
+                <button class="btn btn-outline-success btn-sm extra-small rounded-pill fw-semibold" onclick="applyPreset('normal')">
+                    🟢 Normal Akış
+                </button>
+                <button class="btn btn-outline-warning btn-sm extra-small rounded-pill fw-semibold" onclick="applyPreset('sleep')">
+                    💤 Uyku Modu Testi
+                </button>
+                <button class="btn btn-outline-primary btn-sm extra-small rounded-pill fw-semibold" onclick="applyPreset('latency')">
+                    ⏱️ 3sn Gecikme Testi
+                </button>
+                <button class="btn btn-outline-danger btn-sm extra-small rounded-pill fw-semibold" onclick="applyPreset('nostock')">
+                    🔴 Stoksuzluk Koruması
+                </button>
+                <button class="btn btn-outline-danger btn-sm extra-small rounded-pill fw-semibold" onclick="applyPreset('payment_fail')">
+                    💳 Ödeme Hatası &amp; Rollback
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-3 bg-light bg-opacity-50">
+            <div class="row g-2">
+                <!-- 1. Catalog.API -->
+                <div class="col-6 col-md-4 col-lg">
+                    <div class="valve-box p-2 rounded-3 border border-secondary border-opacity-25 bg-white shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-dark fw-bold extra-small"><i class="fa-solid fa-cubes text-info me-1"></i>Catalog.API</span>
+                            <span id="badge-catalog" class="badge bg-success">Aktif</span>
+                        </div>
+                        <div class="btn-group btn-group-sm w-100 mt-1" role="group" aria-label="Catalog Modu">
+                            <input type="radio" class="btn-check" name="radio-catalog" id="radio-catalog-normal" value="normal" checked onchange="updateServiceChaosRadio('catalog', 'normal')">
+                            <label class="btn btn-outline-success extra-small py-1 px-1 fw-semibold" for="radio-catalog-normal">🟢 Aktif</label>
+
+                            <input type="radio" class="btn-check" name="radio-catalog" id="radio-catalog-blocked" value="blocked" onchange="updateServiceChaosRadio('catalog', 'blocked')">
+                            <label class="btn btn-outline-danger extra-small py-1 px-1 fw-semibold" for="radio-catalog-blocked">💤 Uykuda</label>
+
+                            <input type="radio" class="btn-check" name="radio-catalog" id="radio-catalog-latency" value="latency" onchange="updateServiceChaosRadio('catalog', 'latency')">
+                            <label class="btn btn-outline-primary extra-small py-1 px-1 fw-semibold" for="radio-catalog-latency">⏱️ 3sn</label>
+                        </div>
+                        <div class="text-muted extra-small mt-1 text-truncate">.NET 8 &bull; Mongo</div>
+                    </div>
+                </div>
+
+                <!-- 2. Order.API -->
+                <div class="col-6 col-md-4 col-lg">
+                    <div class="valve-box p-2 rounded-3 border border-secondary border-opacity-25 bg-white shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-dark fw-bold extra-small"><i class="fa-solid fa-file-invoice text-warning me-1"></i>Order.API</span>
+                            <span id="badge-order" class="badge bg-success">Aktif</span>
+                        </div>
+                        <div class="btn-group btn-group-sm w-100 mt-1" role="group" aria-label="Order Modu">
+                            <input type="radio" class="btn-check" name="radio-order" id="radio-order-normal" value="normal" checked onchange="updateServiceChaosRadio('order', 'normal')">
+                            <label class="btn btn-outline-success extra-small py-1 px-1 fw-semibold" for="radio-order-normal">🟢 Aktif</label>
+
+                            <input type="radio" class="btn-check" name="radio-order" id="radio-order-blocked" value="blocked" onchange="updateServiceChaosRadio('order', 'blocked')">
+                            <label class="btn btn-outline-danger extra-small py-1 px-1 fw-semibold" for="radio-order-blocked">💤 Uykuda</label>
+
+                            <input type="radio" class="btn-check" name="radio-order" id="radio-order-latency" value="latency" onchange="updateServiceChaosRadio('order', 'latency')">
+                            <label class="btn btn-outline-primary extra-small py-1 px-1 fw-semibold" for="radio-order-latency">⏱️ 3sn</label>
+                        </div>
+                        <div class="text-muted extra-small mt-1 text-truncate">.NET 8 &bull; MSSQL</div>
+                    </div>
+                </div>
+
+                <!-- 3. Payment.API -->
+                <div class="col-6 col-md-4 col-lg">
+                    <div class="valve-box p-2 rounded-3 border border-secondary border-opacity-25 bg-white shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-dark fw-bold extra-small"><i class="fa-solid fa-credit-card text-success me-1"></i>Payment.API</span>
+                            <span id="badge-payment" class="badge bg-success">Aktif</span>
+                        </div>
+                        <div class="btn-group btn-group-sm w-100 mt-1" role="group" aria-label="Payment Modu">
+                            <input type="radio" class="btn-check" name="radio-payment" id="radio-payment-normal" value="normal" checked onchange="updateServiceChaosRadio('payment', 'normal')">
+                            <label class="btn btn-outline-success extra-small py-1 px-1 fw-semibold" for="radio-payment-normal">🟢 Aktif</label>
+
+                            <input type="radio" class="btn-check" name="radio-payment" id="radio-payment-blocked" value="blocked" onchange="updateServiceChaosRadio('payment', 'blocked')">
+                            <label class="btn btn-outline-danger extra-small py-1 px-1 fw-semibold" for="radio-payment-blocked">💤 Uykuda</label>
+
+                            <input type="radio" class="btn-check" name="radio-payment" id="radio-payment-latency" value="latency" onchange="updateServiceChaosRadio('payment', 'latency')">
+                            <label class="btn btn-outline-primary extra-small py-1 px-1 fw-semibold" for="radio-payment-latency">⏱️ 3sn</label>
+                        </div>
+                        <div class="text-muted extra-small mt-1 text-truncate">İyzico Gateway</div>
+                    </div>
+                </div>
+
+                <!-- 4. RabbitMQ Outbox -->
+                <div class="col-6 col-md-4 col-lg">
+                    <div class="valve-box p-2 rounded-3 border border-secondary border-opacity-25 bg-white shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-dark fw-bold extra-small"><i class="fa-solid fa-arrows-split-up-and-left text-warning me-1"></i>RabbitMQ</span>
+                            <span id="badge-rabbitmq" class="badge bg-success">Aktif</span>
+                        </div>
+                        <div class="btn-group btn-group-sm w-100 mt-1" role="group">
+                            <input type="radio" class="btn-check" name="radio-rabbitmq" id="radio-rabbitmq-normal" checked disabled>
+                            <label class="btn btn-outline-success extra-small py-1 px-1 fw-semibold w-100 disabled" for="radio-rabbitmq-normal">⚡ Outbox (Oto)</label>
+                        </div>
+                        <div class="text-muted extra-small mt-1 text-truncate">MassTransit Saga</div>
+                    </div>
+                </div>
+
+                <!-- 5. Invoice.API -->
+                <div class="col-6 col-md-4 col-lg">
+                    <div class="valve-box p-2 rounded-3 border border-secondary border-opacity-25 bg-white shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-dark fw-bold extra-small"><i class="fa-solid fa-receipt text-info me-1"></i>Invoice.API</span>
+                            <span id="badge-invoice" class="badge bg-success">Aktif</span>
+                        </div>
+                        <div class="btn-group btn-group-sm w-100 mt-1" role="group" aria-label="Invoice Modu">
+                            <input type="radio" class="btn-check" name="radio-invoice" id="radio-invoice-normal" value="normal" checked onchange="updateServiceChaosRadio('invoice', 'normal')">
+                            <label class="btn btn-outline-success extra-small py-1 px-1 fw-semibold" for="radio-invoice-normal">🟢 Aktif</label>
+
+                            <input type="radio" class="btn-check" name="radio-invoice" id="radio-invoice-blocked" value="blocked" onchange="updateServiceChaosRadio('invoice', 'blocked')">
+                            <label class="btn btn-outline-danger extra-small py-1 px-1 fw-semibold" for="radio-invoice-blocked">💤 Uykuda</label>
+
+                            <input type="radio" class="btn-check" name="radio-invoice" id="radio-invoice-latency" value="latency" onchange="updateServiceChaosRadio('invoice', 'latency')">
+                            <label class="btn btn-outline-primary extra-small py-1 px-1 fw-semibold" for="radio-invoice-latency">⏱️ 3sn</label>
+                        </div>
+                        <div class="text-muted extra-small mt-1 text-truncate">PDF &bull; MinIO</div>
+                    </div>
+                </div>
+
+                <!-- 6. Notification (Go) -->
+                <div class="col-6 col-md-4 col-lg">
+                    <div class="valve-box p-2 rounded-3 border border-secondary border-opacity-25 bg-white shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-dark fw-bold extra-small"><i class="fa-solid fa-envelope text-primary me-1"></i>Notification</span>
+                            <span id="badge-notification" class="badge bg-success">Aktif</span>
+                        </div>
+                        <div class="btn-group btn-group-sm w-100 mt-1" role="group" aria-label="Notification Modu">
+                            <input type="radio" class="btn-check" name="radio-notification" id="radio-notification-normal" value="normal" checked onchange="updateServiceChaosRadio('notification', 'normal')">
+                            <label class="btn btn-outline-success extra-small py-1 px-1 fw-semibold" for="radio-notification-normal">🟢 Aktif</label>
+
+                            <input type="radio" class="btn-check" name="radio-notification" id="radio-notification-blocked" value="blocked" onchange="updateServiceChaosRadio('notification', 'blocked')">
+                            <label class="btn btn-outline-danger extra-small py-1 px-1 fw-semibold" for="radio-notification-blocked">💤 Uykuda</label>
+
+                            <input type="radio" class="btn-check" name="radio-notification" id="radio-notification-latency" value="latency" onchange="updateServiceChaosRadio('notification', 'latency')">
+                            <label class="btn btn-outline-primary extra-small py-1 px-1 fw-semibold" for="radio-notification-latency">⏱️ 3sn</label>
+                        </div>
+                        <div class="text-muted extra-small mt-1 text-truncate">Go 1.22 &bull; Gmail</div>
+                    </div>
+                </div>
+
+                <!-- 7. Campaign.API -->
+                <div class="col-6 col-md-4 col-lg">
+                    <div class="valve-box p-2 rounded-3 border border-secondary border-opacity-25 bg-white shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-dark fw-bold extra-small"><i class="fa-solid fa-gift text-danger me-1"></i>Campaign.API</span>
+                            <span id="badge-campaign" class="badge bg-success">Aktif</span>
+                        </div>
+                        <div class="btn-group btn-group-sm w-100 mt-1" role="group" aria-label="Campaign Modu">
+                            <input type="radio" class="btn-check" name="radio-campaign" id="radio-campaign-normal" value="normal" checked onchange="updateServiceChaosRadio('campaign', 'normal')">
+                            <label class="btn btn-outline-success extra-small py-1 px-1 fw-semibold" for="radio-campaign-normal">🟢 Aktif</label>
+
+                            <input type="radio" class="btn-check" name="radio-campaign" id="radio-campaign-blocked" value="blocked" onchange="updateServiceChaosRadio('campaign', 'blocked')">
+                            <label class="btn btn-outline-danger extra-small py-1 px-1 fw-semibold" for="radio-campaign-blocked">💤 Uykuda</label>
+
+                            <input type="radio" class="btn-check" name="radio-campaign" id="radio-campaign-latency" value="latency" onchange="updateServiceChaosRadio('campaign', 'latency')">
+                            <label class="btn btn-outline-primary extra-small py-1 px-1 fw-semibold" for="radio-campaign-latency">⏱️ 3sn</label>
+                        </div>
+                        <div class="text-muted extra-small mt-1 text-truncate">Kupon &bull; Postgres</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Test Verisi & Orkestrasyon Kontrol Çubuğu -->
+    <div class="card bg-white border border-secondary border-opacity-25 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light border-bottom border-secondary border-opacity-25 py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-dark small d-flex align-items-center gap-2">
+                <i class="fa-solid fa-box-open text-warning"></i>
+                <span>Catalog DB Ürün Seçimi &amp; Özel Test Girişi</span>
+            </span>
+            <span class="badge bg-secondary extra-small">@catalogProducts.Count Adet DB Ürünü Yüklendi</span>
+        </div>
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-center">
+                
+                <!-- Ürün Seçimi -->
+                <div class="col-lg-7">
+                    <div class="d-flex flex-column gap-2">
+                        <label class="text-muted extra-small fw-bold text-uppercase">Catalog.API Veritabanından Ürün Seçin veya Özel Girin:</label>
+                        <select id="select-catalog-product" class="form-select bg-white text-dark border-secondary border-opacity-50" onchange="onCatalogProductChanged()">
+                            @foreach (var p in catalogProducts)
+                            {
+                                <option value="@p.Id" 
+                                        data-name="@p.Name" 
+                                        data-price="@p.Price" 
+                                        data-stock="@p.AvailableStock" 
+                                        data-img="@p.FirstImageUrl"
+                                        selected="@(p.Name.Contains("14700K", StringComparison.OrdinalIgnoreCase))">
+                                    @(p.AvailableStock > 0 ? "🟢" : "🔴") @p.Name - ₺@p.Price.ToString("N0") (Stok: @p.AvailableStock | @p.CategoryName)
+                                </option>
+                            }
+                            <option value="custom" data-name="Olmayan / Silinmiş Ürün" data-price="5000" data-stock="0" data-img="/default.jpg">
+                                ⚪ ⚙️ Olmayan / Silinmiş Ürün (Özel ID Hata Testi)
+                            </option>
+                        </select>
+
+                        <!-- Custom Product Panel -->
+                        <div id="custom-product-panel" class="p-2 mt-1 rounded bg-light border border-secondary border-opacity-25 d-none">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted extra-small mb-1">Özel Product ID (GUID)</label>
+                                    <input type="text" id="custom-prod-id" class="form-control form-control-sm bg-white text-dark border-secondary border-opacity-50 font-monospace" value="00000000-0000-0000-0000-000000000000" oninput="syncCustomProduct()" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-muted extra-small mb-1">Özel Ürün Adı</label>
+                                    <input type="text" id="custom-prod-name" class="form-control form-control-sm bg-white text-dark border-secondary border-opacity-50" value="Silinmiş Test Ürünü" oninput="syncCustomProduct()" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label text-muted extra-small mb-1">Fiyat (TL)</label>
+                                    <input type="number" id="custom-prod-price" class="form-control form-control-sm bg-white text-dark border-secondary border-opacity-50" value="5000" oninput="syncCustomProduct()" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kontrol Butonları & Kart -->
+                <div class="col-lg-5 text-lg-end">
+                    <div class="d-flex flex-column align-items-lg-end gap-2">
+                        <div class="d-flex align-items-center gap-2 w-100 justify-content-lg-end">
+                            <i class="fa-regular fa-credit-card text-primary"></i>
+                            <select id="select-card-quick" class="form-select form-select-sm bg-white text-dark border-secondary border-opacity-50" style="max-width: 280px;" onchange="updateDemoCard()">
+                                <option value="5528790000000008">🟢 Geçerli Kart (5528 7900 0000 0008)</option>
+                                <option value="5528790000000001">🔴 Yetersiz Bakiye Kartı</option>
+                            </select>
+                        </div>
+                        <div class="d-flex gap-2 w-100 justify-content-lg-end">
+                            <button id="btn-play" class="btn btn-warning fw-bold px-3 shadow-sm rounded-2 flex-grow-1 flex-lg-grow-0" onclick="startFullPipeline()">
+                                <i class="fa-solid fa-play me-1"></i>Otomatik Akıt
+                            </button>
+                            <button id="btn-step" class="btn btn-primary fw-bold px-3 shadow-sm rounded-2 flex-grow-1 flex-lg-grow-0" onclick="stepPipeline()">
+                                <i class="fa-solid fa-forward-step me-1"></i>Adım İlerlet
+                            </button>
+                            <button id="btn-reset" class="btn btn-outline-secondary px-3 rounded-2" onclick="resetPipelineUI()">
+                                <i class="fa-solid fa-rotate me-1"></i>Sıfırla
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Canlı Boru Hattı Görselleştirici (Flow Canvas) -->
+    <div class="card bg-white border border-secondary border-opacity-25 shadow-sm rounded-3 mb-4 overflow-hidden">
+        <div class="card-header bg-light border-bottom border-secondary border-opacity-25 py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-dark small d-flex align-items-center gap-2">
+                <i class="fa-solid fa-wave-square text-primary"></i>
+                <span>Canlı Boru Hattı Görselleştirici (Flow Canvas)</span>
+            </span>
+            <div id="pipeline-status-text" class="badge bg-secondary px-3 py-1">Beklemede</div>
+        </div>
+        <div class="card-body p-4 bg-dark bg-opacity-95 position-relative" style="min-height: 270px; border-radius: 0 0 8px 8px;">
+            
+            <div class="pipeline-flow-deck d-flex flex-wrap align-items-center justify-content-between position-relative py-3">
+                
+                <!-- Node 1: WebUI -->
+                <div class="pipeline-node text-center" id="node-webui">
+                    <div class="node-icon bg-primary text-white shadow"><i class="fa-solid fa-cart-shopping"></i></div>
+                    <div class="node-title text-light mt-2 small fw-bold">1. WebUI</div>
+                    <div class="node-sub text-secondary extra-small">Mock Sepet</div>
+                    <div class="node-badge mt-1"><span class="badge bg-secondary">Hazır</span></div>
+                </div>
+
+                <!-- Pipe 1 -->
+                <div class="pipeline-tube flex-grow-1 position-relative" id="pipe-1">
+                    <div class="tube-track"></div>
+                    <div class="tube-fluid"></div>
+                    <div class="tube-label">HTTP Validate</div>
+                </div>
+
+                <!-- Node 2: Catalog.API (Stok Doğrulama) -->
+                <div class="pipeline-node text-center" id="node-catalog">
+                    <div class="node-icon bg-dark border border-secondary text-info shadow"><i class="fa-solid fa-cubes-stacked"></i></div>
+                    <div class="node-title text-light mt-2 small fw-bold">2. Catalog.API</div>
+                    <div class="node-sub text-secondary extra-small">Stok Teyidi</div>
+                    <div class="node-badge mt-1"><span class="badge bg-secondary">Bekliyor</span></div>
+                </div>
+
+                <!-- Pipe 2 -->
+                <div class="pipeline-tube flex-grow-1 position-relative" id="pipe-2">
+                    <div class="tube-track"></div>
+                    <div class="tube-fluid"></div>
+                    <div class="tube-label">HTTP Create</div>
+                </div>
+
+                <!-- Node 3: Order.API (Outbox) -->
+                <div class="pipeline-node text-center" id="node-order">
+                    <div class="node-icon bg-dark border border-secondary text-warning shadow"><i class="fa-solid fa-file-invoice"></i></div>
+                    <div class="node-title text-light mt-2 small fw-bold">3. Order.API</div>
+                    <div class="node-sub text-secondary extra-small">DB + Outbox</div>
+                    <div class="node-badge mt-1"><span class="badge bg-secondary">Bekliyor</span></div>
+                </div>
+
+                <!-- Pipe 3 -->
+                <div class="pipeline-tube flex-grow-1 position-relative" id="pipe-3">
+                    <div class="tube-track"></div>
+                    <div class="tube-fluid"></div>
+                    <div class="tube-label">HTTP Pay</div>
+                </div>
+
+                <!-- Node 4: Payment.API -->
+                <div class="pipeline-node text-center" id="node-payment">
+                    <div class="node-icon bg-dark border border-secondary text-success shadow"><i class="fa-solid fa-credit-card"></i></div>
+                    <div class="node-title text-light mt-2 small fw-bold">4. Payment.API</div>
+                    <div class="node-sub text-secondary extra-small">İyzico Gateway</div>
+                    <div class="node-badge mt-1"><span class="badge bg-secondary">Bekliyor</span></div>
+                </div>
+
+                <!-- Pipe 4 -->
+                <div class="pipeline-tube flex-grow-1 position-relative" id="pipe-4">
+                    <div class="tube-track"></div>
+                    <div class="tube-fluid"></div>
+                    <div class="tube-label">Event Publish</div>
+                </div>
+
+                <!-- Node 5: RabbitMQ Event Bus -->
+                <div class="pipeline-node text-center" id="node-rabbitmq">
+                    <div class="node-icon bg-dark border border-warning text-warning shadow"><i class="fa-solid fa-arrows-split-up-and-left"></i></div>
+                    <div class="node-title text-light mt-2 small fw-bold">5. RabbitMQ</div>
+                    <div class="node-sub text-secondary extra-small">MassTransit Bus</div>
+                    <div class="node-badge mt-1"><span class="badge bg-secondary">Bekliyor</span></div>
+                </div>
+
+                <!-- Pipe 5 -->
+                <div class="pipeline-tube flex-grow-1 position-relative" id="pipe-5">
+                    <div class="tube-track"></div>
+                    <div class="tube-fluid"></div>
+                    <div class="tube-label">Downstream</div>
+                </div>
+
+                <!-- Node 6: Downstream Consumers -->
+                <div class="pipeline-node text-center" id="node-downstream">
+                    <div class="node-icon bg-dark border border-success text-success shadow"><i class="fa-solid fa-check-double"></i></div>
+                    <div class="node-title text-light mt-2 small fw-bold">6. Tamamlandı</div>
+                    <div class="node-sub text-secondary extra-small">Stok/Fatura/Mail</div>
+                    <div class="node-badge mt-1"><span class="badge bg-secondary">Bekliyor</span></div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 5. Canlı Akış Günlükleri (Çift Terminal: Sol Simülasyon, Sağ Gerçek Site Canlı Akışı) -->
+    <div class="row g-3">
+        <!-- Sol: Panel Simülasyon Konsolu -->
+        <div class="col-lg-6">
+            <div class="card bg-white border border-secondary border-opacity-25 shadow-sm rounded-3 h-100">
+                <div class="card-header bg-light border-bottom border-secondary border-opacity-25 py-2 px-3 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-dark small d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-flask-vial text-info"></i>
+                        <span>🧪 Panel Simülasyon Konsolu (Otomatik / Adım Testleri)</span>
+                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-secondary extra-small" id="badge-demo-count">0 Olay</span>
+                        <button class="btn btn-link btn-sm text-secondary text-decoration-none p-0 extra-small" onclick="clearDemoLogs()">
+                            <i class="fa-solid fa-trash-can me-1"></i>Temizle
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0 bg-black">
+                    <div id="log-console-demo" class="p-3 font-monospace small text-light terminal-box">
+                        <div class="text-secondary">[Sistem] 🚀 Simülatör hazır. 'Otomatik Akıt' veya 'Adım İlerlet' ile test edebilirsiniz.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sağ: Gerçek Site Canlı Telemetri Konsolu (SignalR) -->
+        <div class="col-lg-6">
+            <div class="card bg-white border border-success border-opacity-25 shadow-sm rounded-3 h-100">
+                <div class="card-header bg-light border-bottom border-secondary border-opacity-25 py-2 px-3 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-success small d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-tower-broadcast text-success fa-beat-fade"></i>
+                        <span>🌐 Gerçek Site Canlı Telemetri (SignalR - /order/checkout)</span>
+                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success bg-opacity-75 extra-small" id="badge-live-count">0 Canlı Olay</span>
+                        <button class="btn btn-link btn-sm text-secondary text-decoration-none p-0 extra-small" onclick="clearLiveLogs()">
+                            <i class="fa-solid fa-trash-can me-1"></i>Temizle
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0 bg-black">
+                    <div id="log-console-live" class="p-3 font-monospace small text-light terminal-box">
+                        <div class="text-secondary">[SignalR] 🟢 Canlı dinleme devrede. Kullanıcılar siteden sipariş verdikçe loglar buraya anlık akacaktır.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .valve-box {
+        transition: all 0.2s ease;
+    }
+    .valve-box:hover {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .pulse-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        box-shadow: 0 0 8px #10b981;
+        animation: pulseDot 1.5s infinite;
+    }
+    @@keyframes pulseDot {
+        0% { transform: scale(0.95); opacity: 0.7; }
+        50% { transform: scale(1.3); opacity: 1; }
+        100% { transform: scale(0.95); opacity: 0.7; }
+    }
+    .extra-small {
+        font-size: 0.72rem;
+    }
+    .pipeline-node {
+        width: 95px;
+        z-index: 2;
+    }
+    .node-icon {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        transition: all 0.3s ease;
+    }
+    .node-icon.active {
+        box-shadow: 0 0 18px #00f0ff !important;
+        transform: scale(1.15);
+        border-color: #00f0ff !important;
+    }
+    .node-icon.success {
+        background-color: #10b981 !important;
+        border-color: #10b981 !important;
+        box-shadow: 0 0 18px rgba(16, 185, 129, 0.7) !important;
+    }
+    .node-icon.failed {
+        background-color: #ef4444 !important;
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 22px rgba(239, 68, 68, 0.9) !important;
+        animation: pulseFailed 1s infinite alternate;
+    }
+    .node-icon.retry {
+        background-color: #f59e0b !important;
+        border-color: #f59e0b !important;
+        box-shadow: 0 0 18px rgba(245, 158, 11, 0.8) !important;
+    }
+    .pipeline-tube {
+        height: 8px;
+        margin: 0 5px;
+        top: -15px;
+        min-width: 55px;
+    }
+    .tube-track {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #1e293b;
+        border-radius: 4px;
+        border: 1px solid #334155;
+    }
+    .tube-fluid {
+        position: absolute;
+        top: 1px;
+        left: 0;
+        width: 0%;
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(90deg, #3b82f6, #00f0ff);
+        box-shadow: 0 0 10px #00f0ff;
+        transition: width 0.6s ease;
+    }
+    .tube-fluid.flowing {
+        width: 100%;
+    }
+    .tube-fluid.blocked {
+        width: 50% !important;
+        background: linear-gradient(90deg, #ef4444, #f97316) !important;
+        box-shadow: 0 0 14px #ef4444 !important;
+    }
+    .tube-fluid.rollback {
+        background: linear-gradient(270deg, #ef4444, #f59e0b) !important;
+        box-shadow: 0 0 12px #f59e0b !important;
+    }
+    .tube-label {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.65rem;
+        color: #94a3b8;
+        white-space: nowrap;
+    }
+    .terminal-box {
+        height: 290px;
+        overflow-y: auto;
+        font-size: 0.82rem;
+        line-height: 1.5;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+    @@keyframes pulseFailed {
+        from { transform: scale(1); }
+        to { transform: scale(1.15); }
+    }
+</style>
+
+<script>
+    let currentStep = 0;
+    let isRunning = false;
+
+    let testOrderData = {
+        productId: '7bd6ed51-c13f-46fd-9602-293979dc61fd',
+        productName: 'Intel Core i7-14700K',
+        pictureUrl: '/default.jpg',
+        quantity: 1,
+        totalPrice: 15500,
+        orderId: 0,
+        cardNumber: '5528790000000008',
+        cardName: 'Kadir Yilmaz'
+    };
+
+    const steps = [
+        { key: 'stock_validate', name: 'Catalog Stok Doğrulama', node: 'node-catalog', pipe: 'pipe-1' },
+        { key: 'order_create', name: 'Order DB & Outbox', node: 'node-order', pipe: 'pipe-2' },
+        { key: 'payment_process', name: 'İyzico Ödeme İşlemi', node: 'node-payment', pipe: 'pipe-3' },
+        { key: 'rabbitmq_events', name: 'RabbitMQ Dağıtımı & Downstream', node: 'node-rabbitmq', pipe: 'pipe-4' }
+    ];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        onCatalogProductChanged();
+    });
+
+    function onCatalogProductChanged() {
+        const select = document.getElementById('select-catalog-product');
+        const customPanel = document.getElementById('custom-product-panel');
+        const val = select.value;
+
+        if (val === 'custom') {
+            customPanel.classList.remove('d-none');
+            syncCustomProduct();
+        } else {
+            customPanel.classList.add('d-none');
+            const opt = select.options[select.selectedIndex];
+            testOrderData.productId = val;
+            testOrderData.productName = opt.getAttribute('data-name');
+            testOrderData.totalPrice = parseFloat(opt.getAttribute('data-price')) || 15500;
+            testOrderData.pictureUrl = opt.getAttribute('data-img') || '/default.jpg';
+            const stock = opt.getAttribute('data-stock');
+
+            resetPipelineUI();
+            logMessage('Catalog DB', `Seçilen Ürün: <b>${testOrderData.productName}</b> (ID: <code>${testOrderData.productId}</code>) &bull; ₺${testOrderData.totalPrice.toLocaleString('tr-TR')} &bull; Stok: ${stock}`, 'info');
+        }
+    }
+
+    function syncCustomProduct() {
+        testOrderData.productId = document.getElementById('custom-prod-id').value.trim() || '00000000-0000-0000-0000-000000000000';
+        testOrderData.productName = document.getElementById('custom-prod-name').value.trim() || 'Silinmiş Test Ürünü';
+        testOrderData.totalPrice = parseFloat(document.getElementById('custom-prod-price').value) || 5000;
+        testOrderData.pictureUrl = '/default.jpg';
+
+        resetPipelineUI();
+        logMessage('Özel Ürün Girişi', `Özel Ürün Ayarlandı: <b>${testOrderData.productName}</b> (ID: <code>${testOrderData.productId}</code>) &bull; ₺${testOrderData.totalPrice.toLocaleString('tr-TR')}`, 'warning');
+    }
+
+    function updateDemoCard() {
+        testOrderData.cardNumber = document.getElementById('select-card-quick').value;
+        logMessage('Kart', `Kart güncellendi: ${testOrderData.cardNumber.startsWith('5528790000000001') ? '🔴 Yetersiz Bakiye Kartı (Rollback Testi)' : '🟢 Geçerli Kart'}`, 'info');
+    }
+
+    let demoEventCount = 0;
+    let liveEventCount = 0;
+
+    function logDemoMessage(sender, text, type = 'info') {
+        const consoleEl = document.getElementById('log-console-demo');
+        if (!consoleEl) return;
+        const timestamp = new Date().toLocaleTimeString();
+        let colorClass = 'text-info';
+        if (type === 'success') colorClass = 'text-success';
+        if (type === 'error') colorClass = 'text-danger';
+        if (type === 'warning') colorClass = 'text-warning';
+
+        const line = document.createElement('div');
+        line.innerHTML = `<span class="text-secondary">[${timestamp}]</span> <span class="fw-bold ${colorClass}">[${sender}]</span> ${text}`;
+        consoleEl.appendChild(line);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+
+        demoEventCount++;
+        const badge = document.getElementById('badge-demo-count');
+        if (badge) badge.innerText = `${demoEventCount} Olay`;
+    }
+
+    function logLiveMessage(sender, text, type = 'info') {
+        const consoleEl = document.getElementById('log-console-live');
+        if (!consoleEl) return;
+        const timestamp = new Date().toLocaleTimeString();
+        let colorClass = 'text-success';
+        if (type === 'info') colorClass = 'text-info';
+        if (type === 'error') colorClass = 'text-danger';
+        if (type === 'warning') colorClass = 'text-warning';
+
+        const line = document.createElement('div');
+        line.innerHTML = `<span class="text-secondary">[${timestamp}]</span> <span class="fw-bold ${colorClass}">[${sender}]</span> ${text}`;
+        consoleEl.appendChild(line);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+
+        liveEventCount++;
+        const badge = document.getElementById('badge-live-count');
+        if (badge) badge.innerText = `${liveEventCount} Canlı Olay`;
+    }
+
+    function logMessage(sender, text, type = 'info') {
+        logDemoMessage(sender, text, type);
+    }
+
+    function clearDemoLogs() {
+        const el = document.getElementById('log-console-demo');
+        if (el) el.innerHTML = '';
+        demoEventCount = 0;
+        document.getElementById('badge-demo-count').innerText = '0 Olay';
+    }
+
+    function clearLiveLogs() {
+        const el = document.getElementById('log-console-live');
+        if (el) el.innerHTML = '';
+        liveEventCount = 0;
+        document.getElementById('badge-live-count').innerText = '0 Canlı Olay';
+    }
+
+    function setServiceRadio(service, val) {
+        const radio = document.getElementById(`radio-${service}-${val}`);
+        if (radio) {
+            radio.checked = true;
+        }
+        const badge = document.getElementById(`badge-${service}`);
+        if (badge) {
+            if (val === 'normal') { badge.className = 'badge bg-success'; badge.innerText = 'Aktif'; }
+            else if (val === 'latency') { badge.className = 'badge bg-info'; badge.innerText = '3s Gecikmeli'; }
+            else { badge.className = 'badge bg-danger'; badge.innerText = 'Uykuda'; }
+        }
+    }
+
+    async function updateServiceChaosRadio(service, val) {
+        const badge = document.getElementById(`badge-${service}`);
+
+        let rule = {
+            serviceName: service,
+            enabled: val !== 'normal',
+            alwaysFail: val === 'blocked',
+            failUntilAttempt: 0,
+            latencyMs: val === 'latency' ? 3000 : 0,
+            blockPipeline: val === 'blocked'
+        };
+
+        if (val === 'normal') {
+            if (badge) { badge.className = 'badge bg-success'; badge.innerText = 'Aktif'; }
+        } else if (val === 'latency') {
+            if (badge) { badge.className = 'badge bg-info'; badge.innerText = '3s Gecikmeli'; }
+        } else {
+            if (badge) { badge.className = 'badge bg-danger'; badge.innerText = 'Uykuda'; }
+        }
+
+        try {
+            const res = await fetch('/Admin/OrderPipelineDemo/SetRule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(rule)
+            });
+
+            if (!res.ok || res.redirected) {
+                if (res.status === 401 || res.status === 403 || res.redirected) {
+                    logMessage('ChaosManager', '⚠️ Oturum süresi dolmuş olabilir. Lütfen sayfayı yenileyip tekrar giriş yapın.', 'warning');
+                    return;
+                }
+                throw new Error(`Sunucu Hatası (HTTP ${res.status})`);
+            }
+
+            const data = await res.json();
+            const logType = val === 'normal' ? 'success' : (val === 'latency' ? 'warning' : 'error');
+            const modeText = val === 'normal' ? '🟢 Aktif' : (val === 'latency' ? '⏱️ 3s Gecikmeli' : '💤 Uykuda');
+            logMessage('ChaosManager', `${service.toUpperCase()} kuralı güncellendi: ${modeText}`, logType);
+        } catch (err) {
+            logMessage('ChaosManager', `Kural güncellenirken hata: ${err.message || err}`, 'error');
+        }
+    }
+
+    async function applyPreset(preset) {
+        resetPipelineUI();
+        await resetAllChaos(false);
+
+        if (preset === 'normal') {
+            document.getElementById('select-catalog-product').selectedIndex = 0;
+            onCatalogProductChanged();
+            document.getElementById('select-card-quick').value = '5528790000000008';
+            updateDemoCard();
+            logMessage('Preset', '🟢 Normal Akış preset aktif edildi (Tüm servisler sağlıklı).', 'success');
+        } else if (preset === 'sleep') {
+            setServiceRadio('catalog', 'blocked');
+            await updateServiceChaosRadio('catalog', 'blocked');
+            logMessage('Preset', '💤 Catalog.API Uyku Moduna alındı (Polly retry ve canlı kurtarma testi için hazır).', 'warning');
+        } else if (preset === 'latency') {
+            setServiceRadio('catalog', 'latency');
+            await updateServiceChaosRadio('catalog', 'latency');
+            logMessage('Preset', '⏱️ 3 Saniye Gecikme Testi aktif edildi.', 'info');
+        } else if (preset === 'nostock') {
+            const select = document.getElementById('select-catalog-product');
+            let foundNoStock = false;
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].getAttribute('data-stock') === '0') {
+                    select.selectedIndex = i;
+                    foundNoStock = true;
+                    break;
+                }
+            }
+            if (!foundNoStock) select.value = 'custom';
+            onCatalogProductChanged();
+            logMessage('Preset', '🔴 Stoksuzluk Saga Koruması aktif (0 Stoklu ürün seçildi, ödemeye hiç geçilmeyecek).', 'error');
+        } else if (preset === 'payment_fail') {
+            document.getElementById('select-card-quick').value = '5528790000000001';
+            updateDemoCard();
+            logMessage('Preset', '🔴 Ödeme Hatası & Rollback preset aktif edildi (Yetersiz Bakiye Kartı).', 'warning');
+        }
+    }
+
+    async function resetAllChaos(log = true) {
+        ['catalog', 'order', 'payment', 'invoice', 'notification', 'campaign'].forEach(s => {
+            setServiceRadio(s, 'normal');
+        });
+
+        try {
+            await fetch('/Admin/OrderPipelineDemo/ResetAllRules', { method: 'POST' });
+            if (log) logMessage('ChaosManager', 'Tüm vanalar normale döndürüldü.', 'success');
+        } catch { }
+    }
+
+    function resetPipelineUI() {
+        currentStep = 0;
+        isRunning = false;
+        document.getElementById('pipeline-status-text').className = 'badge bg-secondary px-3 py-1';
+        document.getElementById('pipeline-status-text').innerText = 'Beklemede';
+
+        // Reset tubes
+        for (let i = 1; i <= 5; i++) {
+            const tube = document.querySelector(`#pipe-${i} .tube-fluid`);
+            if (tube) tube.className = 'tube-fluid';
+        }
+
+        // Reset nodes
+        const nodes = ['node-webui', 'node-catalog', 'node-order', 'node-payment', 'node-rabbitmq', 'node-downstream'];
+        nodes.forEach(n => {
+            const nodeEl = document.getElementById(n);
+            if (nodeEl) {
+                const icon = nodeEl.querySelector('.node-icon');
+                const badge = nodeEl.querySelector('.node-badge span');
+                if (icon) icon.className = 'node-icon bg-dark border border-secondary text-secondary shadow';
+                if (badge) { badge.className = 'badge bg-secondary'; badge.innerText = 'Bekliyor'; }
+            }
+        });
+
+        const webuiIcon = document.querySelector('#node-webui .node-icon');
+        if (webuiIcon) webuiIcon.className = 'node-icon bg-primary text-white shadow';
+        const webuiBadge = document.querySelector('#node-webui .node-badge span');
+        if (webuiBadge) { webuiBadge.className = 'badge bg-success'; webuiBadge.innerText = 'Hazır'; }
+    }
+
+    async function stepPipeline() {
+        if (currentStep >= steps.length) {
+            logMessage('Pipeline', 'Boru hattı akışı zaten tamamlandı.', 'success');
+            return;
+        }
+
+        const step = steps[currentStep];
+        const pipeEl = document.querySelector(`#${step.pipe} .tube-fluid`);
+        const nodeEl = document.getElementById(step.node);
+        const iconEl = nodeEl.querySelector('.node-icon');
+        const badgeEl = nodeEl.querySelector('.node-badge span');
+
+        // Start flow animation
+        if (pipeEl) pipeEl.classList.add('flowing');
+        if (iconEl) iconEl.classList.add('active');
+        if (badgeEl) { badgeEl.className = 'badge bg-info'; badgeEl.innerText = 'İşleniyor...'; }
+
+        logMessage('Pipeline', `💧 [Adım ${currentStep + 1}/4] ${step.name} çağrılıyor... (${testOrderData.productName})`, 'info');
+
+        try {
+            const res = await fetch('/Admin/OrderPipelineDemo/ExecuteStep', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    stepKey: step.key,
+                    stepName: step.name,
+                    productId: testOrderData.productId,
+                    productName: testOrderData.productName,
+                    pictureUrl: testOrderData.pictureUrl,
+                    quantity: testOrderData.quantity,
+                    totalPrice: testOrderData.totalPrice,
+                    orderId: testOrderData.orderId,
+                    cardNumber: testOrderData.cardNumber,
+                    cardName: testOrderData.cardName
+                })
+            });
+
+            if (!res.ok || res.redirected) {
+                if (res.status === 401 || res.status === 403 || res.redirected) {
+                    logMessage('Pipeline', '⚠️ Oturumunuzun süresi dolmuş olabilir. Lütfen sayfayı yenileyip tekrar giriş yapın.', 'warning');
+                    return false;
+                }
+                throw new Error(`Sunucu Hatası (HTTP ${res.status})`);
+            }
+
+            const result = await res.json();
+
+            if (result.success) {
+                if (iconEl) iconEl.className = 'node-icon success text-white';
+                if (badgeEl) { badgeEl.className = 'badge bg-success'; badgeEl.innerText = `OK (${result.durationMs}ms)`; }
+                logMessage('Pipeline', `✅ ${step.name}: ${result.message} (${result.durationMs}ms)`, 'success');
+
+                if (step.key === 'order_create' && result.payload && result.payload.orderId) {
+                    testOrderData.orderId = result.payload.orderId;
+                    logMessage('DB Kontrol', `📊 SQL Server 'Orders' tablosuna ID: ${result.payload.orderId} eklendi. (SELECT * FROM Orders WHERE Id = ${result.payload.orderId})`, 'warning');
+                }
+
+                currentStep++;
+
+                if (currentStep === steps.length) {
+                    // Final node
+                    const finalNode = document.getElementById('node-downstream');
+                    if (finalNode) {
+                        finalNode.querySelector('.node-icon').className = 'node-icon success text-white';
+                        finalNode.querySelector('.node-badge span').className = 'badge bg-success';
+                        finalNode.querySelector('.node-badge span').innerText = 'Tamamlandı';
+                    }
+                    const finalPipe = document.querySelector('#pipe-5 .tube-fluid');
+                    if (finalPipe) finalPipe.classList.add('flowing');
+
+                    document.getElementById('pipeline-status-text').className = 'badge bg-success px-3 py-1';
+                    document.getElementById('pipeline-status-text').innerText = 'Başarılı';
+
+                    const totalTimeSec = ((performance.now() - fullPipelineStartTime) / 1000).toFixed(2);
+                    logMessage('Saga', `🎉 <b>Sipariş Boru Hattı Başarıyla Tamamlandı!</b> Toplam Geçen Süre: <span class="badge bg-success">⏱️ ${totalTimeSec} sn</span>`, 'success');
+                }
+            } else {
+                // Failed step
+                if (pipeEl) pipeEl.className = 'tube-fluid blocked';
+                if (iconEl) iconEl.className = 'node-icon failed text-white';
+                if (badgeEl) { badgeEl.className = 'badge bg-danger'; badgeEl.innerText = `Hata (${result.statusCode})`; }
+                logMessage('Pipeline', `❌ ${step.name} TIKANDI: ${result.message}`, 'error');
+
+                document.getElementById('pipeline-status-text').className = 'badge bg-danger px-3 py-1';
+                document.getElementById('pipeline-status-text').innerText = 'Boru Tıkandı / Hata';
+
+                const totalTimeSec = ((performance.now() - fullPipelineStartTime) / 1000).toFixed(2);
+                logMessage('Pipeline', `💥 <b>Sipariş İşlemi Başarısız Oldu!</b> Adım: ${step.name} &bull; Toplam Süre: <span class="badge bg-danger">⏱️ ${totalTimeSec} sn</span>`, 'error');
+
+                if (step.key === 'stock_validate') {
+                    logMessage('Saga Koruması', `🛡️ Stok teyit edilemediği için akış güvenle durduruldu. Ödeme API'sine hiç gidilmedi, karttan para çekilmedi!`, 'warning');
+                } else if (step.key === 'payment_process') {
+                    logMessage('Saga Rollback', '⚠️ Telafi Mekanizması Devrede: PaymentFailed eventi fırlatılarak rezerve stok iade edildi, sipariş iptal statüsüne çekildi.', 'warning');
+                }
+                return false;
+            }
+            return true;
+        } catch (err) {
+            logMessage('Pipeline', `İstek hatası: ${err}`, 'error');
+            return false;
+        }
+    }
+
+    let fullPipelineStartTime = 0;
+
+    async function startFullPipeline() {
+        if (isRunning) return;
+        isRunning = true;
+        fullPipelineStartTime = performance.now();
+        resetPipelineUI();
+        document.getElementById('pipeline-status-text').className = 'badge bg-primary px-3 py-1';
+        document.getElementById('pipeline-status-text').innerText = 'Akış Başlatıldı';
+        logMessage('Pipeline', `🚀 Otomatik boru hattı akışı başlatıldı: ${testOrderData.productName}...`, 'info');
+
+        while (currentStep < steps.length) {
+            const success = await stepPipeline();
+            if (!success) break;
+            await new Promise(r => setTimeout(r, 800));
+        }
+
+        isRunning = false;
+    }
+</script>
+
+<!-- SignalR Real-Time Telemetry Client -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+<script>
+    const signalrConnection = new signalR.HubConnectionBuilder()
+        .withUrl("/hubs/pipeline")
+        .withAutomaticReconnect([0, 2000, 5000, 10000])
+        .build();
+
+    signalrConnection.on("ReceivePipelineEvent", (data) => {
+        logLiveMessage(data.sender || 'Gerçek Site', data.message || '', data.type || 'info');
+        
+        if (data.step) {
+            handleLiveSignalRStep(data.step, data.type);
+        }
+    });
+
+    function handleLiveSignalRStep(stepNum, type) {
+        const stepMapping = [
+            null,
+            { node: 'node-catalog', pipe: 'pipe-1' },
+            { node: 'node-order', pipe: 'pipe-2' },
+            { node: 'node-payment', pipe: 'pipe-3' },
+            { node: 'node-rabbitmq', pipe: 'pipe-4' }
+        ];
+
+        const target = stepMapping[stepNum];
+        if (!target) return;
+
+        const pipeEl = document.querySelector(`#${target.pipe} .tube-fluid`);
+        const nodeEl = document.getElementById(target.node);
+        if (!nodeEl) return;
+
+        const iconEl = nodeEl.querySelector('.node-icon');
+        const badgeEl = nodeEl.querySelector('.node-badge span');
+
+        if (type === 'error') {
+            if (pipeEl) pipeEl.className = 'tube-fluid blocked';
+            if (iconEl) iconEl.className = 'node-icon failed text-white';
+            if (badgeEl) { badgeEl.className = 'badge bg-danger'; badgeEl.innerText = 'Hata'; }
+            document.getElementById('pipeline-status-text').className = 'badge bg-danger px-3 py-1';
+            document.getElementById('pipeline-status-text').innerText = 'Boru Tıkandı (Gerçek Sitede Hata)';
+        } else if (type === 'success') {
+            if (pipeEl) pipeEl.className = 'tube-fluid flowing';
+            if (iconEl) iconEl.className = 'node-icon success text-white';
+            if (badgeEl) { badgeEl.className = 'badge bg-success'; badgeEl.innerText = 'OK'; }
+
+            if (stepNum === 4) {
+                const finalNode = document.getElementById('node-downstream');
+                if (finalNode) {
+                    finalNode.querySelector('.node-icon').className = 'node-icon success text-white';
+                    finalNode.querySelector('.node-badge span').className = 'badge bg-success';
+                    finalNode.querySelector('.node-badge span').innerText = 'Tamamlandı';
+                }
+                const finalPipe = document.querySelector('#pipe-5 .tube-fluid');
+                if (finalPipe) finalPipe.classList.add('flowing');
+
+                document.getElementById('pipeline-status-text').className = 'badge bg-success px-3 py-1';
+                document.getElementById('pipeline-status-text').innerText = 'Sipariş Tamamlandı (Canlı)';
+            }
+        } else {
+            if (pipeEl) pipeEl.classList.add('flowing');
+            if (iconEl) iconEl.classList.add('active');
+            if (badgeEl) { badgeEl.className = 'badge bg-info'; badgeEl.innerText = 'İşleniyor...'; }
+        }
+    }
+
+    signalrConnection.start()
+        .then(() => {
+            const badge = document.getElementById('signalr-badge');
+            if (badge) {
+                badge.className = 'badge bg-success bg-opacity-10 text-success border border-success border-opacity-30 py-2 px-3 shadow-sm d-flex align-items-center gap-2';
+                badge.innerHTML = '<span class="pulse-dot bg-success"></span><span class="fw-semibold">SignalR Canlı Dinleniyor (Gerçek Site Siparişleri)</span>';
+            }
+            logLiveMessage('SignalR', '🟢 SignalR Hub bağlantısı aktif! Gerçek siteden (/order/checkout) gelen tüm sipariş telemetrileri bu pencereye akacaktır.', 'success');
+        })
+        .catch(err => {
+            const badge = document.getElementById('signalr-badge');
+            if (badge) {
+                badge.className = 'badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-30 py-2 px-3 shadow-sm d-flex align-items-center gap-2';
+                badge.innerHTML = '<i class="fa-solid fa-circle-exclamation text-danger"></i><span>SignalR Bağlantı Hatası</span>';
+            }
+            logLiveMessage('SignalR', '❌ SignalR bağlantısı kurulamadı: ' + err, 'error');
+        });
+</script>

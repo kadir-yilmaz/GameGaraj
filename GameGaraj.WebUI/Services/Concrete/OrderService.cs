@@ -135,6 +135,87 @@ namespace GameGaraj.WebUI.Services.Concrete
             }
         }
 
+        public async Task<OrderCreatedViewModel> CreateDirectOrderAsync(DirectOrderInput input)
+        {
+            try
+            {
+                var orderCreateInput = new
+                {
+                    BuyerId = string.IsNullOrWhiteSpace(input.BuyerId) ? "kadiryilmaz.dev@gmail.com" : input.BuyerId,
+                    OriginalTotalAmount = input.TotalAmount,
+                    CampaignDiscountAmount = 0m,
+                    CouponDiscountAmount = 0m,
+                    ShippingFee = 0m,
+                    TotalPaidAmount = input.TotalAmount,
+                    CouponCode = (string?)null,
+                    AppliedCampaignName = (string?)null,
+                    Address = new
+                    {
+                        FirstName = input.CustomerName,
+                        LastName = input.CustomerSurname,
+                        PhoneNumber = input.CustomerPhone,
+                        Email = input.CustomerEmail,
+                        Province = input.Province,
+                        District = input.District,
+                        Neighborhood = input.AddressDetail,
+                        PostalCode = "34398",
+                        AddressDetail = input.AddressDetail
+                    },
+                    OrderItems = new[]
+                    {
+                        new
+                        {
+                            ProductId = input.ProductId,
+                            ProductName = input.ProductName,
+                            Price = input.TotalAmount,
+                            PictureUrl = !string.IsNullOrWhiteSpace(input.PictureUrl) ? input.PictureUrl : "/default.jpg",
+                            Quantity = input.Quantity > 0 ? input.Quantity : 1,
+                            DiscountAmount = 0m
+                        }
+                    },
+                    OrderDiscounts = Array.Empty<object>()
+                };
+
+                var json = JsonSerializer.Serialize(orderCreateInput);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                _logger.LogInformation("[OrderService] Sending direct order HTTP POST to Order.API. Protected by Polly resilience. BuyerId: {BuyerId}", orderCreateInput.BuyerId);
+
+                var response = await _httpClient.PostAsync("orders", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    if (int.TryParse(responseContent, out int orderId))
+                    {
+                        _logger.LogInformation("[OrderService] Order created successfully via Polly resilient client! OrderId: {OrderId}", orderId);
+                        return new OrderCreatedViewModel 
+                        { 
+                            OrderId = orderId,
+                            IsSuccessful = true 
+                        };
+                    }
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("[OrderService] Order creation returned non-success status {StatusCode}: {Error}", response.StatusCode, errorContent);
+                return new OrderCreatedViewModel 
+                { 
+                    IsSuccessful = false, 
+                    Error = $"HTTP {response.StatusCode}: {errorContent}" 
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[OrderService] Exception during CreateDirectOrderAsync");
+                return new OrderCreatedViewModel 
+                { 
+                    IsSuccessful = false, 
+                    Error = ex.Message 
+                };
+            }
+        }
+
         public async Task<List<OrderViewModel>> GetOrders()
         {
             try

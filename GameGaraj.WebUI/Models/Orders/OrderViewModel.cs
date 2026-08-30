@@ -67,4 +67,21 @@ namespace GameGaraj.WebUI.Models.Orders
         public string? AppliedCampaignName { get; set; }
         public List<OrderPricingLedgerViewModel> OrderPricingLedgers { get; set; } = new();
     }
+
+    public class DirectOrderInput
+    {
+        public string BuyerId { get; set; } = string.Empty;
+        public decimal TotalAmount { get; set; }
+        public string ProductId { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public string PictureUrl { get; set; } = "/default.jpg";
+        public int Quantity { get; set; } = 1;
+        public string CustomerName { get; set; } = string.Empty;
+        public string CustomerSurname { get; set; } = string.Empty;
+        public string CustomerEmail { get; set; } = string.Empty;
+        public string CustomerPhone { get; set; } = string.Empty;
+        public string Province { get; set; } = string.Empty;
+        public string District { get; set; } = string.Empty;
+        public string AddressDetail { get; set; } = string.Empty;
+    }
 }

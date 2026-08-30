@@ -17,6 +17,7 @@ using MassTransit;
 using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
+using GameGaraj.Shared.Chaos;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,9 @@ builder.AddObservability(ObservabilityConstants.OrderService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<OrderMetrics>();
+
+// Chaos Engine
+builder.Services.AddChaosServices();
 
 // Add services to the container.
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Remove("sub");
@@ -84,9 +88,17 @@ builder.Services.AddHostedService<OrderExpirationWorker>();
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateOrderCommandHandler).Assembly));
 
-// MassTransit + RabbitMQ (Event consumers)
+// MassTransit + RabbitMQ (Event consumers + Outbox)
 builder.Services.AddMassTransit(x =>
 {
+    x.AddEntityFrameworkOutbox<OrderDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.UseBusOutbox();
+        o.QueryDelay = TimeSpan.FromSeconds(1);
+        o.DuplicateDetectionWindow = TimeSpan.FromMinutes(5);
+    });
+
     x.AddConsumer<ProductNameChangedConsumer>();
     x.AddConsumer<PaymentCompletedConsumer>();
     x.AddConsumer<PaymentFailedConsumer>();
@@ -103,26 +115,31 @@ builder.Services.AddMassTransit(x =>
 
         cfg.ReceiveEndpoint("product-name-changed-order-service", e =>
         {
+            e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200)));
             e.ConfigureConsumer<ProductNameChangedConsumer>(context);
         });
 
         cfg.ReceiveEndpoint("payment-completed-order-service", e =>
         {
+            e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200)));
             e.ConfigureConsumer<PaymentCompletedConsumer>(context);
         });
 
         cfg.ReceiveEndpoint("payment-failed-order-service", e =>
         {
+            e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200)));
             e.ConfigureConsumer<PaymentFailedConsumer>(context);
         });
 
         cfg.ReceiveEndpoint("stock-not-reserved-order-service", e =>
         {
+            e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200)));
             e.ConfigureConsumer<StockNotReservedConsumer>(context);
         });
 
         cfg.ReceiveEndpoint("user-address-save-requested-order-service", e =>
         {
+            e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200)));
             e.ConfigureConsumer<UserAddressSaveRequestedConsumer>(context);
         });
     });
@@ -142,6 +159,9 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Chaos Testing Engine
+app.UseChaos("order");
 
 app.UseCustomRequestLogging();
 

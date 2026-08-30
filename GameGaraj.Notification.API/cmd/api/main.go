@@ -46,6 +46,13 @@ func init() {
 // @host localhost:5025
 // @BasePath /
 func main() {
+	println("=====================================================")
+	println("   ✉️  GameGaraj Notification API (:5025)")
+	println("   Durum: CALISIYOR VE DINLEMEDE")
+	println("   Kapatmak icin: Bu pencereyi kapatin veya Ctrl+C yapin")
+	println("=====================================================")
+	println()
+
 	log.Println("[Main] Starting Go Notification Service...")
 
 	// 1. Load Configuration
@@ -70,7 +77,7 @@ func main() {
 	// 4. Initialize Services and Storage
 	minioClient, err := storage.NewMinioClient(cfg)
 	if err != nil {
-		log.Fatalf("[Main] ❌ Failed to initialize MinIO Client: %v", err)
+		log.Printf("[Main] ⚠️ MinIO Client uyarisi: %v (Faturalar yerel diskten okunacaktir)", err)
 	}
 
 	emailService := service.NewEmailService(cfg)
@@ -79,13 +86,13 @@ func main() {
 	// 5. Initialize and Start RabbitMQ Consumer
 	consumer, err := queue.NewConsumer(cfg, emailService, smsService, minioClient)
 	if err != nil {
-		log.Fatalf("[Main] ❌ Failed to initialize RabbitMQ Consumer: %v", err)
-	}
-	defer consumer.Close()
-
-	err = consumer.Start(ctx)
-	if err != nil {
-		log.Fatalf("[Main] ❌ Failed to start RabbitMQ Consumer: %v", err)
+		log.Printf("[Main] ⚠️ RabbitMQ Consumer uyarisi: %v", err)
+	} else {
+		defer consumer.Close()
+		err = consumer.Start(ctx)
+		if err != nil {
+			log.Printf("[Main] ⚠️ RabbitMQ Consumer baslatilamadi: %v", err)
+		}
 	}
 
 	// 6. Initialize Web Server (Gin)
@@ -129,9 +136,16 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("[HTTP] Web Server running on port %s", cfg.Port)
+		log.Printf("[HTTP] 🟢 Web Server basariyla baslatildi, port dinleniyor: :%s", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("[HTTP] ❌ Web Server failed: %v", err)
+			log.Printf("[HTTP] ❌ Web Server hatasi: %v", err)
+			println("\n[HATA] Notification API (:5025) baslatilamadi.")
+			println("Port baska bir uygulama tarafindan kullaniliyor olabilir.")
+			println("Cikmak icin Enter tusuna basin...")
+			var dummy string
+			_, _ = os.Stdin.Read(make([]byte, 1))
+			_ = dummy
+			os.Exit(1)
 		}
 	}()
 

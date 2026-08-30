@@ -65,9 +65,12 @@ locust/.env
 # Ensure all frontend assets are tracked (overriding global dist/ etc.)
 !**/wwwroot/**
 
-# But ignore user-uploaded media files
+# But ignore user-uploaded media files and generated documents
 **/wwwroot/photos/
 **/wwwroot/images/
+**/wwwroot/invoices/*
+!**/wwwroot/invoices/.gitkeep
+*.pdf
 
 # GitHub Actions Runner
 actions-runner-k8s/

@@ -86,6 +86,52 @@ Bu proje, sadece bir e-ticaret uygulaması değil; yüksek trafik, veri tutarlı
 
 ---
 
+## 💎 Dağıtık İşlem Mimarisi: Saga Choreography & Transactional Outbox
+
+GameGaraj sipariş akışında dağıtık veri tutarlılığı (**Eventual Consistency**) ve sıfır veri kaybı garantisi sağlamak için **Saga Choreography Pattern** ve **Transactional Outbox Pattern** mimarisi uygulanmıştır.
+
+```
+[ Kullanıcı Sipariş Verdi ]
+            │
+            ▼ (Faz 1: Senkron Doğrulama & Ödeme)
+ ┌─────────────────────────────────────────────────────────────┐
+ │ 1. Catalog.API  ──► Stok Kontrolü & Rezervasyonu           │
+ │ 2. Payment.API  ──► İyzico Kredi Kartı Tahsilatı            │
+ │ 3. Order.API    ──► Sipariş Kaydı (Transactional Outbox)   │
+ └──────────────────────────────┬──────────────────────────────┘
+                                │
+                                ▼ (Faz 2: Asenkron Event Dağıtımı)
+                     [ MassTransit / RabbitMQ ]
+                                │
+         ┌──────────────────────┼──────────────────────┐
+         ▼                      ▼                      ▼
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│   Invoice.API    │  │ Notification.API │  │   Campaign.API   │
+│   (.NET 8)       │  │ (Go 1.23 + Gin)  │  │   (.NET 8)       │
+│                  │  │                  │  │                  │
+│ • PDF Üretimi    │  │ • Gmail SMTP     │  │ • Hediye Kupon   │
+│ • MinIO / Disk   │  │ • PDF Eki E-posta│  │ • Sadakat Puanı  │
+└────────┬─────────┘  └──────────────────┘  └──────────────────┘
+         │ (Fatura Hazır Event)
+         └──────────────────────► Notification.API (Fatura Maili)
+```
+
+### 1. 2-Aşamalı Sipariş Yaşam Döngüsü (2-Phase Lifecycle)
+* **Faz 1 (Senkron / Pre-Payment):** Stoksuz ürün satışını ve mükerrer çekimleri engellemek için `Catalog.API` (Stok Rezervasyonu) ve `Payment.API` (İyzico Gateway) senkron doğrulanır.
+* **Faz 2 (Asenkron / Post-Payment Choreography):** Ödeme onaylandığı anda `OrderPaymentCompletedEvent` fırlatılır. `Invoice.API`, `Notification.API` ve `Campaign.API` tamamen bağımsız ve paralel olarak çalışarak faturayı basar, maili atar ve hediye kuponları hesaba tanımlar.
+
+### 2. Transactional Outbox Pattern (Dual-Write Çözümü)
+* **Problem:** Veritabanına sipariş yazılırken tam o anda RabbitMQ'nun erişilemez olması durumunda para çekilmiş ama sipariş/event kaybolmuş olabilirdi (Dual-Write Inconsistency).
+* **Çözüm:** **MassTransit EF Core Outbox** kullanılarak sipariş kaydı ve mesaj `OutboxMessages` tablosuna **aynı SQL transaction'ı içinde atomik olarak** yazılır. RabbitMQ gelse de gelmese de veritabanı bütünlüğü korunur; kuyruk hazır olduğunda arka plan worker'ı mesajları kayıpsız iletir (At-least-once delivery).
+
+### 3. Chaos Engineering & Admin Pipeline Simülatörü
+Admin panelde yer alan **Boru Hattı & Chaos Simülatörü** (`/Admin/OrderPipelineDemo`) üzerinden mikroservislerin dayanıklılığı canlı test edilebilir:
+* **Canlı Vana Kontrolleri:** 7 mikroservisin her biri tek tıkla `🟢 Aktif`, `💤 Uykuda (503)` veya `⏱️ 3sn Gecikmeli` modlarına alınabilir.
+* **Canlı Kurtarma (Self-Healing):** `Invoice.API` uykudayken sipariş verilse bile işlem çökmeyip MassTransit Retry kuyruğunda bekletilir; vana tekrar açıldığı anda fatura otomatik basılır ve mail gönderilir.
+* **Çift Konsol & SignalR Telemetri:** Hem simülasyon adımları hem de gerçek site üzerinden gelen siparişlerin boru hattı akışı eşzamanlı olarak izlenir.
+
+---
+
 ## 🔄 Catalog API & Search API Ayrımı (CQRS & Read/Write Mimarisi)
 
 Sistemde okuma ve yazma operasyonları net bir sorumluluk ayrımı (Separation of Concerns) ile iki farklı servise paylaştırılmıştır:

@@ -55,6 +55,9 @@
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     var userName = User.Identity?.Name ?? "User";
+                    var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value 
+                                    ?? User.Claims.FirstOrDefault(c => c.Type == "email")?.Value 
+                                    ?? (userName.Contains("@") ? userName : "kadiryilmaz.dev@gmail.com");
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle px-0 d-flex align-items-center text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" id="profileDropdownLink">
                             <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white me-2" style="width: 32px; height: 32px; font-size: 0.9rem; position: relative;">
@@ -65,14 +68,16 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-0" style="width: 320px; max-height: 480px; overflow-y: auto; z-index:1100;">
                             <li class="px-3 py-2 border-bottom bg-light">
-                                <small class="text-muted d-block">Hesabım</small>
-                                <span class="fw-bold text-dark">@userName</span>
+                                <small class="text-muted d-block" style="font-size: 0.72rem;">Giriş Yapılan Hesap</small>
+                                <div class="fw-bold text-dark text-truncate">@userName</div>
+                                <div class="text-secondary small text-truncate" style="font-size: 0.78rem;"><i class="fa-regular fa-envelope me-1 text-primary"></i>@userEmail</div>
                             </li>
                             @if (User.IsInRole("admin") || User.IsInRole("editor"))
                             {
                                 <li><a class="dropdown-item py-2" asp-area="Admin" asp-controller="Dashboard" asp-action="Index" target="_blank"><i class="fas fa-cog me-2 text-primary"></i>Admin Paneli</a></li>
                                 <li><hr class="dropdown-divider my-0"></li>
                             }
+                            <li><a class="dropdown-item py-2" asp-controller="Auth" asp-action="Profile"><i class="fas fa-user-circle me-2 text-primary"></i>Profilim &amp; Güvenlik</a></li>
                             <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="History"><i class="fas fa-box me-2 text-muted"></i>Siparişlerim</a></li>
                             <li><a class="dropdown-item py-2" asp-controller="Reviews" asp-action="Index"><i class="fas fa-comments me-2 text-muted"></i>Yorumlarım</a></li>
                             <li>
@@ -141,6 +146,9 @@
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         var mobileUserName = User.Identity?.Name ?? "User";
+                        var mobileUserEmail = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value 
+                                              ?? User.Claims.FirstOrDefault(c => c.Type == "email")?.Value 
+                                              ?? (mobileUserName.Contains("@") ? mobileUserName : "kadiryilmaz.dev@gmail.com");
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle px-0 text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" id="mobileProfileDropdownLink">
                                 <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 30px; height: 30px; font-size: 0.85rem; position: relative;">
@@ -150,8 +158,16 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-0" style="width: 280px; max-height: 400px; overflow-y: auto; z-index: 1100;">
                                 <li class="px-3 py-2 border-bottom bg-light">
-                                    <small class="text-muted">@mobileUserName</small>
+                                    <small class="text-muted d-block" style="font-size: 0.72rem;">Giriş Yapılan Hesap</small>
+                                    <div class="fw-bold text-dark text-truncate">@mobileUserName</div>
+                                    <div class="text-secondary small text-truncate" style="font-size: 0.78rem;"><i class="fa-regular fa-envelope me-1 text-primary"></i>@mobileUserEmail</div>
                                 </li>
+                                @if (User.IsInRole("admin") || User.IsInRole("editor"))
+                                {
+                                    <li><a class="dropdown-item py-2" asp-area="Admin" asp-controller="Dashboard" asp-action="Index" target="_blank"><i class="fas fa-cog me-2 text-primary"></i>Admin Paneli</a></li>
+                                    <li><hr class="dropdown-divider my-0"></li>
+                                }
+                                <li><a class="dropdown-item py-2" asp-controller="Auth" asp-action="Profile"><i class="fas fa-user-circle me-2 text-primary"></i>Profilim &amp; Güvenlik</a></li>
                                 <li><a class="dropdown-item py-2" asp-controller="Order" asp-action="History"><i class="fas fa-box me-2 text-muted"></i>Siparişlerim</a></li>
                                 <li><a class="dropdown-item py-2" asp-controller="Reviews" asp-action="Index"><i class="fas fa-comments me-2 text-muted"></i>Yorumlarım</a></li>
                                 <li>
@@ -171,7 +187,7 @@
                                 </li>
 
                                 <li><hr class="dropdown-divider my-0"></li>
-                                <li><a class="dropdown-item py-2 text-danger" asp-controller="Auth" asp-action="SignOut"><i class="fas fa-sign-out-alt me-2"></i>Çıkış</a></li>
+                                <li><a class="dropdown-item py-2 text-danger" asp-controller="Auth" asp-action="SignOut"><i class="fas fa-sign-out-alt me-2"></i>Çıkış Yap</a></li>
                             </ul>
                         </li>
                     }

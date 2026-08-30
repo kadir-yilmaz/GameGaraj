@@ -42,6 +42,13 @@ func main() {
 	}
 	defer logger.Sync()
 
+	fmt.Println("=====================================================")
+	fmt.Println("   🚀 GameGaraj Search API (:5082)")
+	fmt.Println("   Durum: CALISIYOR VE DINLEMEDE")
+	fmt.Println("   Kapatmak icin: Bu pencereyi kapatin veya Ctrl+C yapin")
+	fmt.Println("=====================================================")
+	fmt.Println()
+
 	logger.Info("Starting GameGaraj Search API...")
 
 	// Config
@@ -186,7 +193,12 @@ func main() {
 	go func() {
 		logger.Info("HTTP server starting", zap.String("port", cfg.Server.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("HTTP server failed", zap.Error(err))
+			logger.Error("HTTP server failed", zap.Error(err))
+			fmt.Printf("\n[HATA] Search API (:5082) baslatilamadi: %v\n", err)
+			fmt.Println("Port baska bir uygulama tarafindan kullaniliyor olabilir.")
+			fmt.Println("Cikmak icin Enter tusuna basin...")
+			fmt.Scanln()
+			os.Exit(1)
 		}
 	}()
 

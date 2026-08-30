@@ -395,6 +395,12 @@
                     <span>Gözlemlenebilirlik</span>
                 </a>
 
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderPipelineDemo" ? "active" : "")" 
+                   asp-area="Admin" asp-controller="OrderPipelineDemo" asp-action="Index">
+                    <i class="fas fa-diagram-project text-warning"></i>
+                    <span class="text-warning fw-semibold">Boru Hattı (Demo)</span>
+                </a>
+
                 <div class="sidebar-section-title">Hızlı Bağlantılar</div>
                 <a class="list-group-item" asp-area="" asp-controller="Home" asp-action="Index" target="_blank">
                     <i class="fas fa-external-link-alt"></i>

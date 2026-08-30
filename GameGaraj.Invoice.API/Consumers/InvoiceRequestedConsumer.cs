@@ -5,6 +5,7 @@ using GameGaraj.Invoice.API.Services;
 using GameGaraj.Shared.Events;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
+using GameGaraj.Shared.Chaos;
 using System.Threading.Tasks;
 using OpenTelemetry.Trace;
 using System;
@@ -21,20 +22,53 @@ namespace GameGaraj.Invoice.API.Consumers
         private readonly IPdfGenerator _pdfGenerator;
         private readonly IStorageService _storageService;
         private readonly InvoiceMetrics _metrics;
+        private readonly IChaosManager _chaosManager;
 
         public InvoiceRequestedConsumer(
             IPdfGenerator pdfGenerator,
             IStorageService storageService,
-            InvoiceMetrics metrics)
+            InvoiceMetrics metrics,
+            IChaosManager chaosManager)
         {
             _pdfGenerator = pdfGenerator;
             _storageService = storageService;
             _metrics = metrics;
+            _chaosManager = chaosManager;
         }
 
         public async Task Consume(ConsumeContext<InvoiceRequested> context)
         {
             Console.WriteLine($"[InvoiceRequestedConsumer] Received InvoiceRequested for OrderId: {context.Message.OrderId}");
+
+            // 🛑 Chaos / Uyku & Gecikme Kontrolü
+            try
+            {
+                var chaosRule = await _chaosManager.GetRuleAsync("invoice");
+                if (chaosRule != null && chaosRule.Enabled)
+                {
+                    if (chaosRule.AlwaysFail)
+                    {
+                        Console.WriteLine($"[Chaos] 💤 Invoice.API UYKU MODUNDA! Sipariş #{context.Message.OrderId} için fatura üretimi bekletiliyor (Kuyrukta yeniden denenecek)...");
+                        await Task.Delay(3000, context.CancellationToken);
+                        throw new InvalidOperationException("[Chaos] Invoice.API uykuda (503 Service Unavailable). Fatura işlemi kuyrukta bekletiliyor.");
+                    }
+
+                    if (chaosRule.LatencyMs > 0)
+                    {
+                        Console.WriteLine($"[Chaos] ⏱️ Invoice.API {chaosRule.LatencyMs} ms gecikme uygulanıyor...");
+                        await Task.Delay(chaosRule.LatencyMs, context.CancellationToken);
+                    }
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                throw; // Rethrow chaos sleep exception to trigger MassTransit retry
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Chaos] Warning checking chaos rule: {ex.Message}");
+            }
+
             Console.WriteLine($"[InvoiceRequestedConsumer] Generating PDF and uploading to MinIO storage...");
 
             using (var activity = AppDiagnostics.StartActivity("Create Invoice"))

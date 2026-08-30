@@ -1,4 +1,5 @@
 using GameGaraj.Order.Domain.Entities;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace GameGaraj.Order.Infrastructure
@@ -56,6 +57,11 @@ namespace GameGaraj.Order.Infrastructure
                 .HasOne(o => o.InvoiceAddress)
                 .WithMany()
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // MassTransit Outbox Entities
+            modelBuilder.AddInboxStateEntity();
+            modelBuilder.AddOutboxMessageEntity();
+            modelBuilder.AddOutboxStateEntity();
 
             base.OnModelCreating(modelBuilder);
         }

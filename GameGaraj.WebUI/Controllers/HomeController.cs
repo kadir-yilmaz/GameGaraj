@@ -31,11 +31,21 @@ namespace GameGaraj.WebUI.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var featuredProducts = await _catalogService.GetFeaturedProductsAsync();
-            await ApplyUserProductStateAsync(featuredProducts);
-            await ApplyReviewSummariesAsync(featuredProducts);
+            var featuredTask = _catalogService.GetFeaturedProductsAsync();
+            var categoriesTask = _catalogService.GetAllCategoriesAsync();
+            var rulesTask = _campaignService.GetAllRulesAsync();
+            var couponsTask = _campaignService.GetPublicCouponsAsync();
+            var rewardRulesTask = _campaignService.GetAllRewardRulesAsync();
+            var carouselTask = _campaignService.GetCarouselImagesAsync();
 
-            var allCategories = await _catalogService.GetAllCategoriesAsync();
+            await Task.WhenAll(featuredTask, categoriesTask, rulesTask, couponsTask, rewardRulesTask, carouselTask);
+
+            var featuredProducts = featuredTask.Result ?? new List<GameGaraj.WebUI.Models.Products.ProductViewModel>();
+            var allCategories = categoriesTask.Result ?? new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
+
+            var userStateTask = ApplyUserProductStateAsync(featuredProducts);
+            var reviewSummaryTask = ApplyReviewSummariesAsync(featuredProducts);
+
             var flattenedCategories = new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
             void Flatten(IEnumerable<GameGaraj.WebUI.Models.Products.CategoryViewModel> categories)
             {
@@ -52,10 +62,10 @@ namespace GameGaraj.WebUI.Controllers
 
             try
             {
-                var rules = await _campaignService.GetAllRulesAsync();
-                var coupons = await _campaignService.GetPublicCouponsAsync();
-                var rewardRules = await _campaignService.GetAllRewardRulesAsync();
-                var carouselList = await _campaignService.GetCarouselImagesAsync();
+                var rules = rulesTask.Result ?? new List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>();
+                var coupons = couponsTask.Result ?? new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>();
+                var rewardRules = rewardRulesTask.Result ?? new List<GameGaraj.WebUI.Models.Campaigns.CouponRewardRuleViewModel>();
+                var carouselList = carouselTask.Result ?? new List<GameGaraj.WebUI.Models.Campaigns.CarouselImageViewModel>();
 
                 ViewBag.CarouselImages = carouselList.Select(img => img.ImageUrl).ToList();
 
@@ -65,18 +75,23 @@ namespace GameGaraj.WebUI.Controllers
                                 && (!r.StartDate.HasValue || r.StartDate.Value <= now)
                                 && (!r.EndDate.HasValue || r.EndDate.Value.Date >= now.Date))
                     .ToList();
-                var ruleProducts = new Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel>();
-                foreach (var rule in activeRules)
+
+                var uniqueProductIds = activeRules
+                    .Select(r => r.ProductId)
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Distinct()
+                    .ToList();
+
+                var ruleProductTasks = uniqueProductIds.Select(async id => new
                 {
-                    if (!string.IsNullOrEmpty(rule.ProductId) && !ruleProducts.ContainsKey(rule.ProductId))
-                    {
-                        var product = await _catalogService.GetProductByIdAsync(rule.ProductId);
-                        if (product != null)
-                        {
-                            ruleProducts[rule.ProductId] = product;
-                        }
-                    }
-                }
+                    Id = id,
+                    Product = await _catalogService.GetProductByIdAsync(id!)
+                });
+
+                var ruleProductResults = await Task.WhenAll(ruleProductTasks);
+                var ruleProducts = ruleProductResults
+                    .Where(x => x.Product != null)
+                    .ToDictionary(x => x.Id!, x => x.Product!);
 
                 ViewBag.ActiveRules = activeRules;
                 ViewBag.RuleProducts = ruleProducts;
@@ -91,6 +106,8 @@ namespace GameGaraj.WebUI.Controllers
                 ViewBag.RewardRules = new List<GameGaraj.WebUI.Models.Campaigns.CouponRewardRuleViewModel>();
                 ViewBag.CarouselImages = new List<string>();
             }
+
+            await Task.WhenAll(userStateTask, reviewSummaryTask);
 
             return View(featuredProducts);
         }

@@ -760,5 +760,33 @@ namespace GameGaraj.WebUI.Services.Concrete
             var response = await _httpClient.DeleteAsync($"products/{id}");
             return response.IsSuccessStatusCode;
         }
+
+        public async Task<GameGaraj.Shared.Dtos.StockValidationResponse?> ValidateStockAsync(GameGaraj.Shared.Dtos.StockValidationRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("products/stock/validate", request);
+                var content = await response.Content.ReadAsStringAsync();
+
+                if (string.IsNullOrWhiteSpace(content))
+                    return null;
+
+                var result = JsonSerializer.Deserialize<GameGaraj.Shared.Dtos.StockValidationResponse>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CatalogService] Error validating stock before payment.");
+                return new GameGaraj.Shared.Dtos.StockValidationResponse
+                {
+                    IsValid = false,
+                    Errors = new List<string> { "Stok dogrulama servisine erisilemedi: " + ex.Message }
+                };
+            }
+        }
     }
 }

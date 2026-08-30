@@ -1,4 +1,5 @@
 using GameGaraj.Catalog.API.Models;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace GameGaraj.Catalog.API.Data
@@ -81,6 +82,11 @@ namespace GameGaraj.Catalog.API.Data
                 entity.HasIndex(e => new { e.EntityType, e.EntityId, e.Status });
                 entity.HasIndex(e => e.CreatedAt);
             });
+
+            // MassTransit Outbox Entities
+            modelBuilder.AddInboxStateEntity();
+            modelBuilder.AddOutboxMessageEntity();
+            modelBuilder.AddOutboxStateEntity();
         }
     }
 }

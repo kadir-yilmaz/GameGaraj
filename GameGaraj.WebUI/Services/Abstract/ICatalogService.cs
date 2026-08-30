@@ -33,5 +33,6 @@ namespace GameGaraj.WebUI.Services.Abstract
         Task<ProductViewModel?> CreateProductAsync(ProductCreateInput model);
         Task<bool> UpdateProductAsync(ProductUpdateInput model);
         Task<bool> DeleteProductAsync(string id);
+        Task<GameGaraj.Shared.Dtos.StockValidationResponse?> ValidateStockAsync(GameGaraj.Shared.Dtos.StockValidationRequest request);
     }
 }

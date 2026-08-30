@@ -44,6 +44,14 @@ namespace GameGaraj.Order.Application.Consumers
 
                 activity?.SetTag("user.id", order.BuyerId);
 
+                // Idempotency check: Sipariş zaten tamamlanmışsa mükerrer işlem yapma
+                if (order.Status == (int)OrderStatus.Completed)
+                {
+                    Console.WriteLine($"[PaymentCompletedConsumer] ⚠️ Order {order.Id} is already Completed. Skipping duplicate event.");
+                    activity?.SetTag("saga.duplicate", true);
+                    return;
+                }
+
                 // Ödeme başarılı, sipariş hazırlanmaya başlasın
                 order.Status = (int)OrderStatus.Completed; // Önce Completed yap (ödeme onayı)
                 await _context.SaveChangesAsync();

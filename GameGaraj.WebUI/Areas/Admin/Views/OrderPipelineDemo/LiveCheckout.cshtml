@@ -1,0 +1,552 @@
+@{
+    ViewData["Title"] = "Canlı Checkout Simülasyonu";
+    Layout = null;
+    var catalogProducts = ViewBag.Products as List<GameGaraj.WebUI.Models.Products.ProductViewModel> ?? new List<GameGaraj.WebUI.Models.Products.ProductViewModel>();
+}
+
+<!DOCTYPE html>
+<html lang="tr" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GameGaraj - Canlı Checkout &amp; Saga Doğrulama</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0b0f19;
+            color: #f1f5f9;
+            min-height: 100vh;
+        }
+        .brand-gradient {
+            background: linear-gradient(135deg, #ff6b00, #ea580c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .checkout-card {
+            background: #131b2e;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+        }
+        .product-option-card {
+            background: #0f172a;
+            border: 2px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .product-option-card:hover, .product-option-card.selected {
+            border-color: #ff6b00;
+            background: rgba(255, 107, 0, 0.05);
+            box-shadow: 0 0 15px rgba(255, 107, 0, 0.2);
+        }
+        .btn-gamegaraj {
+            background: linear-gradient(135deg, #ff6b00, #ea580c);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            padding: 14px 28px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(255, 107, 0, 0.35);
+            transition: all 0.25s ease;
+        }
+        .btn-gamegaraj:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255, 107, 0, 0.5);
+            color: #fff;
+        }
+        .step-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #ff6b00;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+        @@keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .prod-thumb {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="py-3 border-bottom border-secondary border-opacity-25 bg-black bg-opacity-50 sticky-top">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="/" class="text-decoration-none d-flex align-items-center gap-2">
+                <span class="fs-4 fw-black brand-gradient"><i class="fa-solid fa-gamepad text-warning me-2"></i>GameGaraj</span>
+                <span class="badge bg-warning text-dark fw-bold ms-2">Canlı Checkout Simülasyonu</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <div class="text-end d-none d-md-block">
+                    <div class="small fw-semibold text-light">kadiryilmaz.dev@gmail.com</div>
+                    <div class="extra-small text-secondary" style="font-size:0.75rem;">Yönetici (Admin) Hesabı</div>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm" onclick="window.close()">
+                    <i class="fa-solid fa-xmark me-1"></i>Pencereyi Kapat
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container py-4">
+        <div class="row g-4">
+            
+            <!-- Sol Panel: Adres ve Ürün Seçimi -->
+            <div class="col-lg-7">
+                
+                <!-- 1. Ürün Seçimi (Catalog Veritabanı + Özel Giriş) -->
+                <div class="checkout-card p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-light mb-0">
+                            <i class="fa-solid fa-box text-warning me-2"></i>1. Test Edilecek Ürünü Seçin
+                        </h5>
+                        <span class="badge bg-secondary">@catalogProducts.Count Adet DB Ürünü</span>
+                    </div>
+                    
+                    <div class="d-flex flex-column gap-3" id="product-list-container" style="max-height: 380px; overflow-y: auto; padding-right: 5px;">
+                        
+                        @for (int i = 0; i < catalogProducts.Count; i++)
+                        {
+                            var prod = catalogProducts[i];
+                            bool isDefaultSelected = i == 0 || prod.Name.Contains("14700K", StringComparison.OrdinalIgnoreCase);
+                            <div class="product-option-card p-3 @(isDefaultSelected ? "selected" : "")" 
+                                 id="opt-prod-@prod.Id" 
+                                 onclick="selectCatalogProduct('@prod.Id', '@prod.Name', @prod.Price, '@prod.FirstImageUrl', @prod.AvailableStock)">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        @if (!string.IsNullOrWhiteSpace(prod.FirstImageUrl) && prod.FirstImageUrl != "/default.jpg")
+                                        {
+                                            <img src="@prod.FirstImageUrl" alt="@prod.Name" class="prod-thumb border border-secondary border-opacity-25" />
+                                        }
+                                        else
+                                        {
+                                            <div class="rounded p-2 bg-dark border border-secondary border-opacity-25 text-primary fs-4" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+                                                <i class="fa-solid fa-microchip"></i>
+                                            </div>
+                                        }
+                                        <div>
+                                            <div class="fw-bold text-light">@prod.Name</div>
+                                            <div class="text-secondary small font-monospace">ID: @prod.Id</div>
+                                            @if (prod.AvailableStock > 0)
+                                            {
+                                                <span class="badge bg-success mt-1"><i class="fa-solid fa-check me-1"></i>@prod.AvailableStock Adet Stokta (Başarılı Akış)</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger mt-1"><i class="fa-solid fa-ban me-1"></i>0 Stok (Saga Stok Koruması)</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fs-5 fw-bold text-warning">₺@prod.Price.ToString("N2")</div>
+                                        <div class="text-muted extra-small">@prod.CategoryName</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Özel / Olmayan Ürün Kartı -->
+                        <div class="product-option-card p-3" id="opt-prod-custom" onclick="selectCustomProduct()">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rounded p-2 bg-dark border border-secondary border-opacity-25 text-secondary fs-4" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+                                        <i class="fa-solid fa-circle-question"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-light">⚙️ Olmayan / Özel Ürün (Hata Testi)</div>
+                                        <div class="text-secondary small">ID: <code>00000000-0000-0000-0000-000000000000</code></div>
+                                        <span class="badge bg-secondary mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>DB'de Kaydı Yok (400 Hatası)</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fs-5 fw-bold text-warning">₺5.000,00</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Custom Product Inputs (Açılır Kapanır) -->
+                    <div id="live-custom-panel" class="mt-3 p-3 rounded bg-black bg-opacity-50 border border-secondary border-opacity-25 d-none">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label text-secondary small mb-1">Özel Product ID (GUID)</label>
+                                <input type="text" id="live-custom-id" class="form-control form-control-sm bg-dark text-light border-secondary font-monospace" value="00000000-0000-0000-0000-000000000000" oninput="updateLiveCustomData()" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-secondary small mb-1">Özel Ürün Adı</label>
+                                <input type="text" id="live-custom-name" class="form-control form-control-sm bg-dark text-light border-secondary" value="Silinmiş Test Ürünü" oninput="updateLiveCustomData()" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label text-secondary small mb-1">Fiyat (TL)</label>
+                                <input type="number" id="live-custom-price" class="form-control form-control-sm bg-dark text-light border-secondary" value="5000" oninput="updateLiveCustomData()" />
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 2. Teslimat Adresi -->
+                <div class="checkout-card p-4 mb-4">
+                    <h5 class="fw-bold text-light mb-3">
+                        <i class="fa-solid fa-location-dot text-warning me-2"></i>2. Teslimat &amp; Fatura Adresi
+                    </h5>
+                    <div class="p-3 bg-dark bg-opacity-50 rounded border border-secondary border-opacity-25">
+                        <div class="fw-bold text-light">Kadir Yılmaz &bull; +90 555 123 4567</div>
+                        <div class="text-secondary small mt-1">Maslak Mah. Büyükdere Cad. No:123, Sarıyer / İstanbul</div>
+                        <div class="text-muted small mt-1">E-Posta: kadiryilmaz.dev@gmail.com</div>
+                    </div>
+                </div>
+
+                <!-- 3. Ödeme Bilgileri -->
+                <div class="checkout-card p-4">
+                    <h5 class="fw-bold text-light mb-3">
+                        <i class="fa-solid fa-credit-card text-warning me-2"></i>3. Ödeme Seçeneği (İyzico Sandbox)
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label text-secondary small">Hazır Test Kartı Seçimi</label>
+                            <select id="select-card-type" class="form-select bg-dark text-light border-secondary" onchange="onCardPresetChange()">
+                                <option value="5528790000000008">🟢 Geçerli Test Kartı (5528 7900 0000 0008)</option>
+                                <option value="5528790000000001">🔴 Yetersiz Bakiye Kartı (Rollback Testi)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small">Kart Numarası</label>
+                            <input type="text" id="input-card-number" class="form-control bg-dark text-light border-secondary font-monospace" value="5528790000000008" readonly />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small">Kart Üzerindeki İsim</label>
+                            <input type="text" id="input-card-name" class="form-control bg-dark text-light border-secondary" value="Kadir Yılmaz" readonly />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">Son Kullanma Tarihi</label>
+                            <input type="text" id="input-card-exp" class="form-control bg-dark text-light border-secondary font-monospace" value="12/29" readonly />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">CVV / Güvenlik Kodu</label>
+                            <input type="text" id="input-card-cvv" class="form-control bg-dark text-light border-secondary font-monospace" value="123" readonly />
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Sağ Panel: Sipariş Özeti & Canlı Akış -->
+            <div class="col-lg-5">
+                <div class="checkout-card p-4 sticky-top" style="top: 80px;">
+                    <h5 class="fw-bold text-light mb-3">
+                        <i class="fa-solid fa-receipt text-warning me-2"></i>Sipariş Özeti
+                    </h5>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-secondary" id="summary-product-name">Intel Core i7-14700K</span>
+                        <span class="text-light fw-bold" id="summary-product-price">₺15.500,00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-secondary">Kargo</span>
+                        <span class="text-success fw-bold">Ücretsiz</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-secondary">KDV Dahil</span>
+                        <span class="text-secondary">%20</span>
+                    </div>
+
+                    <hr class="border-secondary border-opacity-25" />
+
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="fs-5 fw-bold text-light">Toplam Tutar:</span>
+                        <span class="fs-4 fw-bold text-warning" id="summary-total-price">₺15.500,00</span>
+                    </div>
+
+                    <button id="btn-submit-order" class="btn btn-gamegaraj w-100 fs-5" onclick="processLiveCheckout()">
+                        <i class="fa-solid fa-lock me-2"></i>Siparişi Onayla &amp; Öde
+                    </button>
+
+                    <div class="mt-3 text-center">
+                        <small class="text-muted" style="font-size:0.75rem;">
+                            <i class="fa-solid fa-shield-halved text-success me-1"></i>256-Bit SSL &bull; Saga Stok Ön-Doğrulama Garantisi
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Live Progress Modal (Adım Adım Spinner) -->
+    <div class="modal fade" id="progressModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border border-secondary shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-black bg-opacity-40 border-secondary border-opacity-25 py-3">
+                    <h5 class="modal-title fw-bold text-light fs-6">
+                        <i class="fa-solid fa-bolt text-warning me-2"></i>Saga Sipariş &amp; Boru Hattı Akışı
+                    </h5>
+                </div>
+                <div class="modal-body p-4 bg-black bg-opacity-50">
+                    
+                    <div class="d-flex flex-column gap-3" id="steps-container">
+                        
+                        <!-- Step 1: Catalog Stock Validation -->
+                        <div class="d-flex align-items-center justify-content-between p-3 rounded bg-dark border border-secondary border-opacity-25" id="step-1-el">
+                            <div class="d-flex align-items-center gap-3">
+                                <div id="step-1-icon"><div class="step-spinner"></div></div>
+                                <div>
+                                    <div class="fw-bold text-light small">1. Catalog.API Stok Doğrulama</div>
+                                    <div class="text-secondary extra-small" id="step-1-msg">Stok kontrol ediliyor ve rezerve ediliyor...</div>
+                                </div>
+                            </div>
+                            <span id="step-1-badge" class="badge bg-secondary">İşleniyor</span>
+                        </div>
+
+                        <!-- Step 2: Order API Outbox -->
+                        <div class="d-flex align-items-center justify-content-between p-3 rounded bg-dark border border-secondary border-opacity-25 opacity-50" id="step-2-el">
+                            <div class="d-flex align-items-center gap-3">
+                                <div id="step-2-icon"><i class="fa-solid fa-clock text-secondary"></i></div>
+                                <div>
+                                    <div class="fw-bold text-light small">2. Order.API Sipariş &amp; Outbox</div>
+                                    <div class="text-secondary extra-small" id="step-2-msg">Sipariş 'Pending' olarak kaydedilecek...</div>
+                                </div>
+                            </div>
+                            <span id="step-2-badge" class="badge bg-secondary">Bekliyor</span>
+                        </div>
+
+                        <!-- Step 3: Payment Process -->
+                        <div class="d-flex align-items-center justify-content-between p-3 rounded bg-dark border border-secondary border-opacity-25 opacity-50" id="step-3-el">
+                            <div class="d-flex align-items-center gap-3">
+                                <div id="step-3-icon"><i class="fa-solid fa-clock text-secondary"></i></div>
+                                <div>
+                                    <div class="fw-bold text-light small">3. Payment.API İyzico Ödeme</div>
+                                    <div class="text-secondary extra-small" id="step-3-msg">Karttan ödeme çekilecek...</div>
+                                </div>
+                            </div>
+                            <span id="step-3-badge" class="badge bg-secondary">Bekliyor</span>
+                        </div>
+
+                        <!-- Step 4: RabbitMQ Event Bus -->
+                        <div class="d-flex align-items-center justify-content-between p-3 rounded bg-dark border border-secondary border-opacity-25 opacity-50" id="step-4-el">
+                            <div class="d-flex align-items-center gap-3">
+                                <div id="step-4-icon"><i class="fa-solid fa-clock text-secondary"></i></div>
+                                <div>
+                                    <div class="fw-bold text-light small">4. RabbitMQ Saga Dağıtımı</div>
+                                    <div class="text-secondary extra-small" id="step-4-msg">Stok düşümü, Fatura PDF, Kupon oluşturulacak...</div>
+                                </div>
+                            </div>
+                            <span id="step-4-badge" class="badge bg-secondary">Bekliyor</span>
+                        </div>
+
+                    </div>
+
+                    <!-- Result Panel -->
+                    <div id="result-box" class="mt-4 p-3 rounded text-center d-none">
+                        <div id="result-icon" class="fs-1 mb-2"></div>
+                        <h5 id="result-title" class="fw-bold mb-1"></h5>
+                        <p id="result-desc" class="small mb-3 text-secondary"></p>
+                        <div id="result-actions" class="d-flex justify-content-center gap-2">
+                            <button class="btn btn-warning btn-sm px-4 fw-bold" onclick="window.location.href='/'">Ana Sayfaya Dön</button>
+                            <button class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Kapat</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentProduct = {
+            id: '7bd6ed51-c13f-46fd-9602-293979dc61fd',
+            name: 'Intel Core i7-14700K',
+            price: 15500,
+            pictureUrl: '/default.jpg'
+        };
+
+        function onCardPresetChange() {
+            const val = document.getElementById('select-card-type').value;
+            document.getElementById('input-card-number').value = val;
+            if (val === '5528790000000008') {
+                document.getElementById('input-card-exp').value = '12/29';
+                document.getElementById('input-card-cvv').value = '123';
+            } else {
+                document.getElementById('input-card-exp').value = '12/28';
+                document.getElementById('input-card-cvv').value = '123';
+            }
+        }
+
+        function selectCatalogProduct(id, name, price, img, stock) {
+            document.querySelectorAll('.product-option-card').forEach(el => el.classList.remove('selected'));
+            const card = document.getElementById(`opt-prod-${id}`);
+            if (card) card.classList.add('selected');
+            document.getElementById('live-custom-panel').classList.add('d-none');
+
+            currentProduct = {
+                id: id,
+                name: name,
+                price: price,
+                pictureUrl: img || '/default.jpg'
+            };
+
+            updateSummaryUI();
+        }
+
+        function selectCustomProduct() {
+            document.querySelectorAll('.product-option-card').forEach(el => el.classList.remove('selected'));
+            document.getElementById('opt-prod-custom').classList.add('selected');
+            document.getElementById('live-custom-panel').classList.remove('d-none');
+
+            updateLiveCustomData();
+        }
+
+        function updateLiveCustomData() {
+            currentProduct = {
+                id: document.getElementById('live-custom-id').value.trim() || '00000000-0000-0000-0000-000000000000',
+                name: document.getElementById('live-custom-name').value.trim() || 'Silinmiş Test Ürünü',
+                price: parseFloat(document.getElementById('live-custom-price').value) || 5000,
+                pictureUrl: '/default.jpg'
+            };
+
+            updateSummaryUI();
+        }
+
+        function updateSummaryUI() {
+            document.getElementById('summary-product-name').innerText = currentProduct.name;
+            const priceStr = '₺' + currentProduct.price.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+            document.getElementById('summary-product-price').innerText = priceStr;
+            document.getElementById('summary-total-price').innerText = priceStr;
+        }
+
+        async function processLiveCheckout() {
+            const p = currentProduct;
+            const cardNumber = document.getElementById('input-card-number').value;
+
+            // Reset modal steps
+            for (let i = 1; i <= 4; i++) {
+                const el = document.getElementById(`step-${i}-el`);
+                el.className = 'd-flex align-items-center justify-content-between p-3 rounded bg-dark border border-secondary border-opacity-25 ' + (i > 1 ? 'opacity-50' : '');
+                document.getElementById(`step-${i}-icon`).innerHTML = (i === 1) ? '<div class="step-spinner"></div>' : '<i class="fa-solid fa-clock text-secondary"></i>';
+                document.getElementById(`step-${i}-badge`).className = 'badge bg-secondary';
+                document.getElementById(`step-${i}-badge`).innerText = (i === 1) ? 'İşleniyor' : 'Bekliyor';
+            }
+            document.getElementById('result-box').className = 'mt-4 p-3 rounded text-center d-none';
+
+            const modal = new bootstrap.Modal(document.getElementById('progressModal'));
+            modal.show();
+
+            let orderId = 0;
+
+            // ADIM 1: Catalog Stock Validate
+            await new Promise(r => setTimeout(r, 600));
+            const step1Res = await executeStep('stock_validate', 'Catalog.API Stok Doğrulama', p.id, p.name, p.pictureUrl, p.price, 0, cardNumber);
+
+            if (!step1Res.success) {
+                markStepFailed(1, step1Res.message);
+                showResult(false, '❌ Stok Yetersiz (Saga Koruması)', `Ürün stoğu tükendiği veya ürün bulunamadığı için (${step1Res.message}) sipariş durduruldu. Kartınızdan kesinlikle para çekilmedi!`);
+                return;
+            }
+            markStepSuccess(1, 'Stok doğrulandı ve rezerve edildi');
+
+            // ADIM 2: Order API Create Order
+            activateStep(2);
+            await new Promise(r => setTimeout(r, 600));
+            const step2Res = await executeStep('order_create', 'Order.API Sipariş Oluşturma', p.id, p.name, p.pictureUrl, p.price, 0, cardNumber);
+
+            if (!step2Res.success) {
+                markStepFailed(2, step2Res.message);
+                showResult(false, '❌ Sipariş Oluşturulamadı', step2Res.message);
+                return;
+            }
+            orderId = (step2Res.payload && step2Res.payload.orderId) ? step2Res.payload.orderId : 10101;
+            markStepSuccess(2, `Sipariş #${orderId} 'Pending' statüsünde DB & Outbox'a yazıldı`);
+
+            // ADIM 3: Payment Process
+            activateStep(3);
+            await new Promise(r => setTimeout(r, 700));
+            const step3Res = await executeStep('payment_process', 'Payment.API Ödeme Çekme', p.id, p.name, p.pictureUrl, p.price, orderId, cardNumber);
+
+            if (!step3Res.success) {
+                markStepFailed(3, step3Res.message);
+                showResult(false, '⚠️ Ödeme Başarısız (Saga Rollback Devrede)', `Ödeme alınamadı (${step3Res.message}). Rezerve edilen stok Catalog.API tarafından otomatik iade edildi (Stock Released).`);
+                return;
+            }
+            markStepSuccess(3, 'Ödeme İyzico üzerinden başarıyla çekildi');
+
+            // ADIM 4: RabbitMQ Events
+            activateStep(4);
+            await new Promise(r => setTimeout(r, 600));
+            const step4Res = await executeStep('rabbitmq_events', 'RabbitMQ Saga Dağıtımı', p.id, p.name, p.pictureUrl, p.price, orderId, cardNumber);
+            markStepSuccess(4, 'Stok düşüldü, PDF Fatura MinIO\'ya kaydedildi, Kupon kazanımı işlendi');
+
+            // Final Success Result
+            showResult(true, '🎉 Tebrikler! Siparişiniz Alındı!', `Sipariş No: #${orderId} başarıyla tamamlandı. PostgreSQL'de stok güncellendi, SQL Server'da sipariş 'Completed' statüsüne geçti.`);
+        }
+
+        function activateStep(stepNum) {
+            const el = document.getElementById(`step-${stepNum}-el`);
+            el.classList.remove('opacity-50');
+            document.getElementById(`step-${stepNum}-icon`).innerHTML = '<div class="step-spinner"></div>';
+            document.getElementById(`step-${stepNum}-badge`).className = 'badge bg-info';
+            document.getElementById(`step-${stepNum}-badge`).innerText = 'İşleniyor';
+        }
+
+        function markStepSuccess(stepNum, msg) {
+            document.getElementById(`step-${stepNum}-icon`).innerHTML = '<i class="fa-solid fa-circle-check text-success fs-5"></i>';
+            document.getElementById(`step-${stepNum}-badge`).className = 'badge bg-success';
+            document.getElementById(`step-${stepNum}-badge`).innerText = 'Tamam';
+            if (msg) document.getElementById(`step-${stepNum}-msg`).innerText = msg;
+        }
+
+        function markStepFailed(stepNum, msg) {
+            document.getElementById(`step-${stepNum}-icon`).innerHTML = '<i class="fa-solid fa-circle-xmark text-danger fs-5"></i>';
+            document.getElementById(`step-${stepNum}-badge`).className = 'badge bg-danger';
+            document.getElementById(`step-${stepNum}-badge`).innerText = 'Hata';
+            if (msg) document.getElementById(`step-${stepNum}-msg`).innerText = msg;
+        }
+
+        function showResult(isSuccess, title, desc) {
+            const resultBox = document.getElementById('result-box');
+            resultBox.className = `mt-4 p-3 rounded text-center bg-black bg-opacity-60 border ${isSuccess ? 'border-success' : 'border-danger'}`;
+            document.getElementById('result-icon').innerHTML = isSuccess 
+                ? '<i class="fa-solid fa-circle-check text-success"></i>' 
+                : '<i class="fa-solid fa-triangle-exclamation text-danger"></i>';
+            document.getElementById('result-title').className = `fw-bold mb-1 ${isSuccess ? 'text-success' : 'text-danger'}`;
+            document.getElementById('result-title').innerText = title;
+            document.getElementById('result-desc').innerText = desc;
+            resultBox.classList.remove('d-none');
+        }
+
+        async function executeStep(stepKey, stepName, productId, productName, pictureUrl, totalPrice, orderId, cardNumber) {
+            try {
+                const res = await fetch('/Admin/OrderPipelineDemo/ExecuteStep', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        stepKey,
+                        stepName,
+                        productId,
+                        productName,
+                        pictureUrl: pictureUrl || '/default.jpg',
+                        quantity: 1,
+                        totalPrice,
+                        orderId,
+                        cardNumber,
+                        cardName: 'Kadir Yılmaz'
+                    })
+                });
+                return await res.json();
+            } catch (err) {
+                return { success: false, message: err.toString() };
+            }
+        }
+    </script>
+</body>
+</html>

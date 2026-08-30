@@ -12,6 +12,7 @@ namespace GameGaraj.Invoice.API.Services
         public LocalStorageService(IWebHostEnvironment environment)
         {
             var wwwrootPath = environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot");
+            Directory.CreateDirectory(wwwrootPath);
             _invoicesFolder = Path.Combine(wwwrootPath, "invoices");
             Directory.CreateDirectory(_invoicesFolder);
         }

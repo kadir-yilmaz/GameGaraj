@@ -40,6 +40,14 @@ namespace GameGaraj.Order.Application.Consumers
                     return;
                 }
 
+                // Idempotency check: Sipariş zaten iptal edildiyse mükerrer işlem yapma
+                if (order.Status == (int)OrderStatus.Failed)
+                {
+                    Console.WriteLine($"[PaymentFailedConsumer] ⚠️ Order {order.Id} is already Failed. Skipping duplicate event.");
+                    activity?.SetTag("saga.duplicate", true);
+                    return;
+                }
+
                 order.Status = (int)OrderStatus.Failed;
                 await _context.SaveChangesAsync();
 

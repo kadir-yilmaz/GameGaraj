@@ -4,6 +4,7 @@ using GameGaraj.Invoice.API.Services;
 using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
+using GameGaraj.Shared.Chaos;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Minio;
 
@@ -47,6 +48,9 @@ builder.AddObservability(ObservabilityConstants.InvoiceService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<InvoiceMetrics>();
+
+// Chaos Engine
+builder.Services.AddChaosServices();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -132,6 +136,18 @@ builder.Services.AddMassTransit(x =>
         
         cfg.ReceiveEndpoint("invoice-requested-service", e =>
         {
+            e.UseMessageRetry(r => r.Intervals(
+                TimeSpan.FromSeconds(3),
+                TimeSpan.FromSeconds(3),
+                TimeSpan.FromSeconds(3),
+                TimeSpan.FromSeconds(3),
+                TimeSpan.FromSeconds(3),
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(10),
+                TimeSpan.FromSeconds(10)
+            ));
             e.ConfigureConsumer<InvoiceRequestedConsumer>(context);
         });
     });
@@ -151,6 +167,9 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Chaos Testing Engine
+app.UseChaos("invoice");
 
 app.UseCustomRequestLogging();
 

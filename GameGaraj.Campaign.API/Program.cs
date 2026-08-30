@@ -5,6 +5,7 @@ using GameGaraj.Campaign.API.Services.Concrete;
 using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
+using GameGaraj.Shared.Chaos;
 using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,9 @@ builder.AddObservability(ObservabilityConstants.CampaignService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<CampaignMetrics>();
+
+// Chaos Engine
+builder.Services.AddChaosServices();
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -67,6 +71,7 @@ builder.Services.AddMassTransit(x =>
 
         cfg.ReceiveEndpoint("coupon-reward-triggered-campaign-service", e =>
         {
+            e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200)));
             e.ConfigureConsumer<GameGaraj.Campaign.API.Consumers.CouponRewardTriggeredConsumer>(context);
         });
     });
@@ -87,6 +92,10 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 
 app.UseRouting();
+
+// Chaos Testing Engine
+app.UseChaos("campaign");
+
 app.UseCustomRequestLogging();
 
 // OpenTelemetry Prometheus /metrics endpoint

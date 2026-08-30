@@ -10,8 +10,11 @@
   "editUsernameAllowed": false,
   "bruteForceProtected": true,
   "accessTokenLifespan": 3600,
-  "ssoSessionIdleTimeout": 1800,
-  "ssoSessionMaxLifespan": 36000,
+  "ssoSessionIdleTimeout": 604800,
+  "ssoSessionMaxLifespan": 2592000,
+  "ssoSessionIdleTimeoutRememberMe": 604800,
+  "ssoSessionMaxLifespanRememberMe": 2592000,
+  "rememberMe": true,
   "smtpServer": {
     "host": "${env.SMTP_HOST:smtp.gmail.com}",
     "port": "${env.SMTP_PORT:587}",
@@ -145,19 +148,44 @@
       ]
     }
   ],
+  "authenticationFlows": [
+    {
+      "alias": "auto link first broker login",
+      "description": "Auto link Google account to existing user by email without prompt",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "idp-create-user-if-unique",
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "idp-auto-link",
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        }
+      ]
+    }
+  ],
   "identityProviders": [
     {
       "alias": "google",
       "displayName": "Google",
       "providerId": "google",
       "enabled": true,
-      "updateProfileFirstLoginMode": "on",
+      "updateProfileFirstLoginMode": "off",
       "trustEmail": true,
       "storeToken": false,
       "addReadTokenRoleOnCreate": false,
       "authenticateByDefault": false,
       "linkOnly": false,
-      "firstBrokerLoginFlowAlias": "first broker login",
+      "firstBrokerLoginFlowAlias": "auto link first broker login",
       "config": {
         "syncMode": "FORCE",
         "clientId": "${GOOGLE_CLIENT_ID}",

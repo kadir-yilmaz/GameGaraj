@@ -35,6 +35,13 @@ namespace GameGaraj.Order.Application.Consumers
 
                 if (order != null)
                 {
+                    if (order.Status == (int)OrderStatus.Failed)
+                    {
+                        _logger.LogInformation($"[StockNotReservedConsumer] Order {order.Id} is already Failed. Skipping duplicate event.");
+                        activity?.SetTag("saga.duplicate", true);
+                        return;
+                    }
+
                     order.Status = (int)OrderStatus.Failed;
                     await _context.SaveChangesAsync();
                     _logger.LogInformation($"[StockNotReservedConsumer] Order {order.Id} status updated to Failed due to insufficient stock.");

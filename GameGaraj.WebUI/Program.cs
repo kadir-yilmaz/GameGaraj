@@ -4,11 +4,13 @@ using GameGaraj.WebUI.Services.Concrete;
 using GameGaraj.WebUI.Settings;
 using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
+using GameGaraj.Shared.Chaos;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using System.Security.Claims;
 using System.Text.Json;
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication;
 using AspNetCoreHero.ToastNotification;
 using AspNetCoreHero.ToastNotification.Extensions;
@@ -183,6 +185,7 @@ builder.Services.AddAuthentication(options =>
         options.Scope.Add("openid");
         options.Scope.Add("profile");
         options.Scope.Add("email");
+        options.Scope.Add("roles");
 
         options.TokenValidationParameters.NameClaimType = "preferred_username";
         options.TokenValidationParameters.RoleClaimType = ClaimTypes.Role;
@@ -212,33 +215,71 @@ builder.Services.AddAuthentication(options =>
                     return Task.CompletedTask;
                 }
 
+                // 1. Check realm_access in ID Token claims
                 var realmAccessClaim = identity.FindFirst("realm_access")?.Value;
-                if (string.IsNullOrWhiteSpace(realmAccessClaim))
-                {
-                    return Task.CompletedTask;
-                }
 
-                try
+                // 2. If not in ID Token, extract from Access Token JWT
+                if (string.IsNullOrWhiteSpace(realmAccessClaim) && !string.IsNullOrWhiteSpace(context.TokenEndpointResponse?.AccessToken))
                 {
-                    var realmAccess = JsonSerializer.Deserialize<JsonElement>(realmAccessClaim);
-                    if (realmAccess.ValueKind == JsonValueKind.Object &&
-                        realmAccess.TryGetProperty("roles", out var roles) &&
-                        roles.ValueKind == JsonValueKind.Array)
+                    try
                     {
-                        foreach (var role in roles.EnumerateArray()
-                            .Select(item => item.GetString())
-                            .Where(item => !string.IsNullOrWhiteSpace(item)))
+                        var handler = new JwtSecurityTokenHandler();
+                        var jwt = handler.ReadJwtToken(context.TokenEndpointResponse.AccessToken);
+                        realmAccessClaim = jwt.Claims.FirstOrDefault(c => c.Type == "realm_access")?.Value;
+
+                        // Also extract any direct role claims from access token
+                        foreach (var claim in jwt.Claims.Where(c => c.Type == "roles" || c.Type == "role" || c.Type == ClaimTypes.Role))
                         {
-                            if (!identity.HasClaim(ClaimTypes.Role, role!))
+                            if (!identity.HasClaim(ClaimTypes.Role, claim.Value))
                             {
-                                identity.AddClaim(new Claim(ClaimTypes.Role, role!));
+                                identity.AddClaim(new Claim(ClaimTypes.Role, claim.Value));
                             }
                         }
                     }
+                    catch { }
                 }
-                catch
+
+                // 3. Parse realm_access JSON if present
+                if (!string.IsNullOrWhiteSpace(realmAccessClaim))
                 {
-                    // Keep login flow alive even if role parsing fails.
+                    try
+                    {
+                        var realmAccess = JsonSerializer.Deserialize<JsonElement>(realmAccessClaim);
+                        if (realmAccess.ValueKind == JsonValueKind.Object &&
+                            realmAccess.TryGetProperty("roles", out var roles) &&
+                            roles.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var role in roles.EnumerateArray()
+                                .Select(item => item.GetString())
+                                .Where(item => !string.IsNullOrWhiteSpace(item)))
+                            {
+                                if (!identity.HasClaim(ClaimTypes.Role, role!))
+                                {
+                                    identity.AddClaim(new Claim(ClaimTypes.Role, role!));
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                // 4. Default SuperAdmin Fallback by Email
+                var email = identity.FindFirst(ClaimTypes.Email)?.Value 
+                            ?? identity.FindFirst("email")?.Value 
+                            ?? identity.FindFirst("preferred_username")?.Value;
+
+                if (!string.IsNullOrWhiteSpace(email) && 
+                    (email.Equals("kadiryilmaz.dev@gmail.com", StringComparison.OrdinalIgnoreCase) ||
+                     email.Equals(builder.Configuration["ADMIN_EMAIL"], StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (!identity.HasClaim(ClaimTypes.Role, "admin"))
+                    {
+                        identity.AddClaim(new Claim(ClaimTypes.Role, "admin"));
+                    }
+                    if (!identity.HasClaim(ClaimTypes.Role, "user"))
+                    {
+                        identity.AddClaim(new Claim(ClaimTypes.Role, "user"));
+                    }
                 }
 
                 return Task.CompletedTask;
@@ -294,6 +335,13 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
+// Chaos Management Engine
+builder.Services.AddChaosServices();
+
+// Real-Time SignalR Pipeline Telemetry
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IPipelineNotifier, PipelineNotifier>();
+
 var app = builder.Build();
 
 
@@ -321,6 +369,9 @@ app.UseNotyf();
 
 // Custom Request Logging Ekle
 app.UseCustomRequestLogging();
+
+// Map SignalR Hub
+app.MapHub<GameGaraj.WebUI.Hubs.PipelineHub>("/hubs/pipeline");
 
 // SEO Routes - Hepsiburada tarzı (öncelik sırasına göre)
 app.MapControllerRoute(

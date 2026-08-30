@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"gamegaraj-notification-api/internal/config"
@@ -12,6 +15,7 @@ import (
 	"gamegaraj-notification-api/internal/storage"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -42,6 +46,7 @@ type Consumer struct {
 	emailService service.EmailService
 	smsService   service.SmsService
 	minioClient  *storage.MinioClient
+	rdb          *redis.Client
 	tracer       trace.Tracer
 }
 
@@ -112,12 +117,20 @@ func NewConsumer(
 
 	tracer := otel.Tracer(tracerName)
 
+	var rdb *redis.Client
+	if cfg.RedisURL != "" {
+		rdb = redis.NewClient(&redis.Options{
+			Addr: cfg.RedisURL,
+		})
+	}
+
 	return &Consumer{
 		conn:         conn,
 		channel:      channel,
 		emailService: emailService,
 		smsService:   smsService,
 		minioClient:  minioClient,
+		rdb:          rdb,
 		tracer:       tracer,
 	}, nil
 }
@@ -165,6 +178,32 @@ func (c *Consumer) processMessage(ctx context.Context, d amqp.Delivery) {
 
 	log.Printf("[RabbitMQ] Received a message from RabbitMQ (Size: %d bytes)", len(d.Body))
 
+	// 💤 Chaos Manager Check for Notification.API (Uyku Modu & Gecikme)
+	if c.rdb != nil {
+		ctxTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
+		val, err := c.rdb.Get(ctxTimeout, "chaos:rule:notification").Result()
+		cancel()
+		if err == nil && val != "" {
+			var rule struct {
+				Enabled    bool `json:"enabled"`
+				AlwaysFail bool `json:"alwaysFail"`
+				LatencyMs  int  `json:"latencyMs"`
+			}
+			if err := json.Unmarshal([]byte(val), &rule); err == nil && rule.Enabled {
+				if rule.AlwaysFail {
+					log.Printf("[Chaos] 💤 Notification.API UYKU MODUNDA! E-posta bekletiliyor, mesaj kuyruğa iade edildi (Nack requeue)...")
+					time.Sleep(3 * time.Second)
+					_ = d.Nack(false, true)
+					return
+				}
+				if rule.LatencyMs > 0 {
+					log.Printf("[Chaos] ⏱️ Notification.API %d ms gecikme uygulanıyor...", rule.LatencyMs)
+					time.Sleep(time.Duration(rule.LatencyMs) * time.Millisecond)
+				}
+			}
+		}
+	}
+
 	var envelope MassTransitEnvelope
 	if err := json.Unmarshal(d.Body, &envelope); err != nil {
 		log.Printf("[RabbitMQ] ❌ Failed to parse JSON envelope: %v", err)
@@ -190,20 +229,36 @@ func (c *Consumer) processMessage(ctx context.Context, d amqp.Delivery) {
 		if msg.AttachmentPath != "" {
 			span.AddEvent("downloading_attachment", trace.WithAttributes(attribute.String("path", msg.AttachmentPath)))
 			
-			// Download attachment from MinIO
-			minioCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-			attachmentBytes, err = c.minioClient.DownloadFile(minioCtx, msg.AttachmentPath)
-			cancel()
-			if err != nil {
-				log.Printf("[RabbitMQ] ❌ Failed to download attachment from MinIO: %v", err)
-				span.RecordError(err)
-				// Requeue message on temporary storage failures
-				_ = d.Nack(false, true)
-				return
+			// 1. Check local storage on disk (Invoice.API wwwroot/invoices)
+			cleanPath := strings.TrimPrefix(msg.AttachmentPath, "/")
+			possiblePaths := []string{
+				cleanPath,
+				filepath.Join("..", "GameGaraj.Invoice.API", "wwwroot", cleanPath),
+				filepath.Join("..", "..", "GameGaraj.Invoice.API", "wwwroot", cleanPath),
+				filepath.Join("GameGaraj.Invoice.API", "wwwroot", cleanPath),
+			}
+
+			for _, p := range possiblePaths {
+				if data, readErr := os.ReadFile(p); readErr == nil && len(data) > 0 {
+					attachmentBytes = data
+					log.Printf("[Storage] ✅ Invoice PDF loaded from local disk: %s (%d bytes)", p, len(data))
+					break
+				}
+			}
+
+			// 2. If not found on local disk, try MinIO S3 object storage
+			if len(attachmentBytes) == 0 && c.minioClient != nil {
+				minioCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+				var minioErr error
+				attachmentBytes, minioErr = c.minioClient.DownloadFile(minioCtx, msg.AttachmentPath)
+				cancel()
+				if minioErr != nil {
+					log.Printf("[Storage] ⚠️ Could not fetch attachment from MinIO (%v), will proceed sending email without attachment...", minioErr)
+				}
 			}
 		}
 
-		emailCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		emailCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		err = c.emailService.SendEmail(emailCtx, msg.Recipient, msg.Title, msg.Body, attachmentBytes, msg.AttachmentName)
 		cancel()
 

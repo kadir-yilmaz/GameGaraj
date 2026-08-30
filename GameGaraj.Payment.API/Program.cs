@@ -8,6 +8,7 @@ using GameGaraj.Payment.API.Settings;
 using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
+using GameGaraj.Shared.Chaos;
 
 LoadDotEnv();
 
@@ -49,6 +50,9 @@ builder.AddObservability(ObservabilityConstants.PaymentService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<PaymentMetrics>();
+
+// Chaos Engine
+builder.Services.AddChaosServices();
 
 // Iyzipay Settings
 builder.Services.Configure<IyzipaySettings>(
@@ -117,6 +121,9 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Chaos Testing Engine
+app.UseChaos("payment");
 
 app.UseCustomRequestLogging();
 

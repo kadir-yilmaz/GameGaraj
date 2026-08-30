@@ -287,6 +287,31 @@ namespace GameGaraj.WebUI.Controllers
         }
 
         [HttpGet]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> Profile()
+        {
+            var userId = _identityService.GetUserId();
+            var email = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value 
+                        ?? User.Claims.FirstOrDefault(c => c.Type == "email")?.Value 
+                        ?? User.Identity?.Name ?? "";
+            var name = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.GivenName)?.Value 
+                       ?? User.Claims.FirstOrDefault(c => c.Type == "name")?.Value 
+                       ?? User.Identity?.Name ?? "";
+            var surname = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Surname)?.Value ?? "";
+
+            var model = new ProfileViewModel
+            {
+                UserId = userId,
+                Email = email,
+                Name = name,
+                Surname = surname,
+                Roles = User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role").Select(c => c.Value).Distinct().ToList()
+            };
+
+            return View(model);
+        }
+
+        [HttpGet]
         [Route("Auth/AccessDenied")]
         [Route("Admin/Auth/AccessDenied")]
         public IActionResult AccessDenied(string? returnUrl = null)

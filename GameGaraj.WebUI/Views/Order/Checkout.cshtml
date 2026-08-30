@@ -1044,7 +1044,7 @@
                     document.getElementById('customerNameInput').value = this.dataset.firstname || '';
                     document.getElementById('customerSurnameInput').value = this.dataset.lastname || '';
                     document.getElementById('customerPhoneInput').value = this.dataset.phone || '';
-                    document.getElementById('customerEmailInput').value = this.dataset.email || '';
+                    document.getElementById('customerEmailInput').value = this.dataset.email || '@(User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value ?? User.Claims.FirstOrDefault(c => c.Type == "email")?.Value ?? "kadiryilmaz.dev@gmail.com")';
                     
                     // Dropdown setting needs careful async handling
                     const p = this.dataset.province;

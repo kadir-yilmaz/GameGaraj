@@ -11,6 +11,7 @@ using Npgsql;
 using Elastic.Clients.Elasticsearch;
 using GameGaraj.Catalog.API.Models;
 using GameGaraj.Catalog.API.Services.Hosted;
+using GameGaraj.Shared.Chaos;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,9 @@ builder.AddObservability(ObservabilityConstants.CatalogService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<CatalogMetrics>();
+
+// Chaos Engine
+builder.Services.AddChaosServices();
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
@@ -88,9 +92,17 @@ builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// MassTransit Configuration
+// MassTransit Configuration + Outbox
 builder.Services.AddMassTransit(x =>
 {
+    x.AddEntityFrameworkOutbox<CatalogDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+        o.QueryDelay = TimeSpan.FromSeconds(1);
+        o.DuplicateDetectionWindow = TimeSpan.FromMinutes(5);
+    });
+
     x.AddConsumer<OrderStartedConsumer>();
     x.AddConsumer<PaymentCompletedConsumer>();
     x.AddConsumer<PaymentFailedConsumer>();
@@ -112,16 +124,19 @@ builder.Services.AddMassTransit(x =>
 
         cfg.ReceiveEndpoint("order-started-catalog-service", e =>
         {
+            e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200)));
             e.ConfigureConsumer<OrderStartedConsumer>(context);
         });
 
         cfg.ReceiveEndpoint("payment-completed-catalog-service", e =>
         {
+            e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200)));
             e.ConfigureConsumer<PaymentCompletedConsumer>(context);
         });
 
         cfg.ReceiveEndpoint("payment-failed-catalog-service", e =>
         {
+            e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200)));
             e.ConfigureConsumer<PaymentFailedConsumer>(context);
         });
     });
@@ -150,6 +165,9 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Chaos Testing Engine
+app.UseChaos("catalog");
 
 app.UseCustomRequestLogging();
 

@@ -7,12 +7,13 @@
     kolayca baslatmanizi, durdurmanizi, yeniden baslatmanizi ve durumlarini izlemenizi saglar.
 
 .EXAMPLE
-    .\services.ps1 start
-    .\services.ps1 stop
-    .\services.ps1 restart
-    .\services.ps1 status
-    .\services.ps1 start search
-    .\services.ps1 stop notification
+    .\go-services.ps1 start
+    .\go-services.ps1 stop
+    .\go-services.ps1 restart
+    .\go-services.ps1 status
+    .\go-services.ps1 start search
+    .\go-services.ps1 stop notification
+    .\go-services.ps1 logs notification
 #>
 
 [CmdletBinding()]
@@ -45,13 +46,21 @@ $NotifPort  = 5025
 $SearchLog = Join-Path $LogDir "search-api.log"
 $NotifLog  = Join-Path $LogDir "notification-api.log"
 
-function Get-PortPID($Port) {
+function Get-ServicePID($Port, $ProcessName) {
     try {
         $conn = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($conn) {
+        if ($conn -and $conn.OwningProcess) {
             return $conn.OwningProcess
         }
     } catch {}
+
+    try {
+        $proc = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($proc) {
+            return $proc.Id
+        }
+    } catch {}
+
     return $null
 }
 
@@ -69,7 +78,7 @@ function Show-Status {
     Write-Host "-------------------------------------------------" -ForegroundColor Gray
 
     # Search API
-    $searchPID = Get-PortPID $SearchPort
+    $searchPID = Get-ServicePID $SearchPort "search-api"
     if ($searchPID) {
         $proc = Get-Process -Id $searchPID -ErrorAction SilentlyContinue
         $ram = if ($proc) { [math]::Round($proc.WorkingSet64 / 1MB, 1) } else { 0 }
@@ -83,7 +92,7 @@ function Show-Status {
     }
 
     # Notification API
-    $notifPID = Get-PortPID $NotifPort
+    $notifPID = Get-ServicePID $NotifPort "notif-api"
     if ($notifPID) {
         $proc = Get-Process -Id $notifPID -ErrorAction SilentlyContinue
         $ram = if ($proc) { [math]::Round($proc.WorkingSet64 / 1MB, 1) } else { 0 }
@@ -101,7 +110,7 @@ function Show-Status {
 }
 
 function Start-SearchAPI {
-    $existingPID = Get-PortPID $SearchPort
+    $existingPID = Get-ServicePID $SearchPort "search-api"
     if ($existingPID) {
         Write-Host " [!] Search API zaten calisiyor (Port: $SearchPort, PID: $existingPID)" -ForegroundColor Yellow
         return
@@ -110,13 +119,14 @@ function Start-SearchAPI {
     Write-Host " [>] Search API baslatiliyor (:5082)..." -ForegroundColor Cyan
     
     $exePath = Join-Path $SearchDir "search-api.exe"
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    if (Test-Path $exePath) {
-        $psi.FileName = $exePath
-    } else {
-        $psi.FileName = "go"
-        $psi.Arguments = "run cmd/server/main.go"
+    if (-not (Test-Path $exePath)) {
+        Push-Location $SearchDir
+        go build -o search-api.exe cmd/server/main.go
+        Pop-Location
     }
+
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $exePath
     $psi.WorkingDirectory = $SearchDir
     $psi.UseShellExecute = $true
     $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
@@ -124,7 +134,7 @@ function Start-SearchAPI {
 
     Start-Sleep -Seconds 2
 
-    $newPID = Get-PortPID $SearchPort
+    $newPID = Get-ServicePID $SearchPort "search-api"
     if ($newPID) {
         Write-Host " [OK] Search API basariyla baslatildi (PID: $newPID, Port: $SearchPort)" -ForegroundColor Green
     } else {
@@ -133,10 +143,18 @@ function Start-SearchAPI {
 }
 
 function Stop-SearchAPI {
-    $pidToKill = Get-PortPID $SearchPort
-    if ($pidToKill) {
-        Write-Host " [x] Search API durduruluyor (PID: $pidToKill)..." -ForegroundColor Yellow
-        Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
+    $pids = @()
+    $p1 = Get-ServicePID $SearchPort "search-api"
+    if ($p1) { $pids += $p1 }
+    $p2 = (Get-Process -Name "search-api" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)
+    if ($p2) { $pids += $p2 }
+    $pids = $pids | Select-Object -Unique
+
+    if ($pids.Count -gt 0) {
+        foreach ($pidToKill in $pids) {
+            Write-Host " [x] Search API durduruluyor (PID: $pidToKill)..." -ForegroundColor Yellow
+            Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
+        }
         Start-Sleep -Milliseconds 500
         Write-Host " [OK] Search API durduruldu." -ForegroundColor Green
     } else {
@@ -145,7 +163,7 @@ function Stop-SearchAPI {
 }
 
 function Start-NotifAPI {
-    $existingPID = Get-PortPID $NotifPort
+    $existingPID = Get-ServicePID $NotifPort "notif-api"
     if ($existingPID) {
         Write-Host " [!] Notification API zaten calisiyor (Port: $NotifPort, PID: $existingPID)" -ForegroundColor Yellow
         return
@@ -154,13 +172,14 @@ function Start-NotifAPI {
     Write-Host " [>] Notification API baslatiliyor (:5025)..." -ForegroundColor Cyan
     
     $exePath = Join-Path $NotifDir "notif-api.exe"
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    if (Test-Path $exePath) {
-        $psi.FileName = $exePath
-    } else {
-        $psi.FileName = "go"
-        $psi.Arguments = "run cmd/api/main.go"
+    if (-not (Test-Path $exePath)) {
+        Push-Location $NotifDir
+        go build -o notif-api.exe cmd/api/main.go
+        Pop-Location
     }
+
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $exePath
     $psi.WorkingDirectory = $NotifDir
     $psi.UseShellExecute = $true
     $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
@@ -168,7 +187,7 @@ function Start-NotifAPI {
 
     Start-Sleep -Seconds 2
 
-    $newPID = Get-PortPID $NotifPort
+    $newPID = Get-ServicePID $NotifPort "notif-api"
     if ($newPID) {
         Write-Host " [OK] Notification API basariyla baslatildi (PID: $newPID, Port: $NotifPort)" -ForegroundColor Green
     } else {
@@ -177,10 +196,18 @@ function Start-NotifAPI {
 }
 
 function Stop-NotifAPI {
-    $pidToKill = Get-PortPID $NotifPort
-    if ($pidToKill) {
-        Write-Host " [x] Notification API durduruluyor (PID: $pidToKill)..." -ForegroundColor Yellow
-        Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
+    $pids = @()
+    $p1 = Get-ServicePID $NotifPort "notif-api"
+    if ($p1) { $pids += $p1 }
+    $p2 = (Get-Process -Name "notif-api" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)
+    if ($p2) { $pids += $p2 }
+    $pids = $pids | Select-Object -Unique
+
+    if ($pids.Count -gt 0) {
+        foreach ($pidToKill in $pids) {
+            Write-Host " [x] Notification API durduruluyor (PID: $pidToKill)..." -ForegroundColor Yellow
+            Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
+        }
         Start-Sleep -Milliseconds 500
         Write-Host " [OK] Notification API durduruldu." -ForegroundColor Green
     } else {
@@ -204,7 +231,7 @@ function Show-Logs($targetService) {
             Write-Host "Henuz Notification API logu bulunamadi." -ForegroundColor Yellow
         }
     } else {
-        Write-Host "Kullanim: .\services.ps1 logs search | notification" -ForegroundColor Yellow
+        Write-Host "Kullanim: .\go-services.ps1 logs search | notification" -ForegroundColor Yellow
     }
 }
 
@@ -240,15 +267,16 @@ switch ($Action.ToLower()) {
     "help" {
         Show-Header
         Write-Host "Kullanilabilir Komutlar:" -ForegroundColor Yellow
-        Write-Host "  .\services.ps1 start              -> Tum Go servislerini baslatir" -ForegroundColor White
-        Write-Host "  .\services.ps1 stop               -> Tum Go servislerini durdurur" -ForegroundColor White
-        Write-Host "  .\services.ps1 restart            -> Tum Go servislerini yeniden baslatir" -ForegroundColor White
-        Write-Host "  .\services.ps1 status             -> Servislerin port ve calisma durumunu gosterir" -ForegroundColor White
-        Write-Host "  .\services.ps1 start search       -> Sadece Search API'yi (:5082) baslatir" -ForegroundColor White
-        Write-Host "  .\services.ps1 stop search        -> Sadece Search API'yi durdurur" -ForegroundColor White
-        Write-Host "  .\services.ps1 start notif        -> Sadece Notification API'yi (:5025) baslatir" -ForegroundColor White
-        Write-Host "  .\services.ps1 stop notif         -> Sadece Notification API'yi durdurur" -ForegroundColor White
-        Write-Host "  .\services.ps1 logs search        -> Search API loglarini listeler" -ForegroundColor White
+        Write-Host "  .\go-services.ps1 start              -> Tum Go servislerini baslatir" -ForegroundColor White
+        Write-Host "  .\go-services.ps1 stop               -> Tum Go servislerini durdurur" -ForegroundColor White
+        Write-Host "  .\go-services.ps1 restart            -> Tum Go servislerini yeniden baslatir" -ForegroundColor White
+        Write-Host "  .\go-services.ps1 status             -> Servislerin port ve calisma durumunu gosterir" -ForegroundColor White
+        Write-Host "  .\go-services.ps1 start search       -> Sadece Search API'yi (:5082) baslatir" -ForegroundColor White
+        Write-Host "  .\go-services.ps1 stop search        -> Sadece Search API'yi durdurur" -ForegroundColor White
+        Write-Host "  .\go-services.ps1 start notif        -> Sadece Notification API'yi (:5025) baslatir" -ForegroundColor White
+        Write-Host "  .\go-services.ps1 stop notif         -> Sadece Notification API'yi durdurur" -ForegroundColor White
+        Write-Host "  .\go-services.ps1 logs search        -> Search API loglarini listeler" -ForegroundColor White
+        Write-Host "  .\go-services.ps1 logs notification  -> Notification API loglarini listeler" -ForegroundColor White
         Write-Host ""
     }
 }

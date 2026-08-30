@@ -658,11 +658,11 @@ namespace GameGaraj.WebUI.Services.Concrete
 
         private async Task SendOtpEmailAsync(string toEmail, string name, string otpCode)
         {
-            string host = _configuration["SMTP_HOST"] ?? "smtp.gmail.com";
-            int port = int.TryParse(_configuration["SMTP_PORT"], out int p) ? p : 587;
-            string user = _configuration["SMTP_USER"] ?? "kadiryilmaz19821@gmail.com";
-            string pass = _configuration["SMTP_PASSWORD"] ?? "dtbfbkverbcvrnok";
-            string from = _configuration["SMTP_FROM_EMAIL"] ?? "kadiryilmaz19821@gmail.com";
+            string host = _configuration["SMTP_HOST"] ?? _configuration["EmailSettings:SmtpHost"] ?? "smtp.gmail.com";
+            int port = int.TryParse(_configuration["SMTP_PORT"] ?? _configuration["EmailSettings:SmtpPort"], out int p) ? p : 587;
+            string user = _configuration["SMTP_USER"] ?? _configuration["EmailSettings:SmtpUsername"] ?? "";
+            string pass = _configuration["SMTP_PASSWORD"] ?? _configuration["EmailSettings:SmtpPassword"] ?? "";
+            string from = _configuration["SMTP_FROM_EMAIL"] ?? user;
             string fromName = _configuration["SMTP_FROM_NAME"] ?? "GameGaraj";
 
             using var client = new System.Net.Mail.SmtpClient(host, port)
