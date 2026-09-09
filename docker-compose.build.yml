@@ -23,6 +23,12 @@ services:
       context: .
       dockerfile: GameGaraj.Review.API/Dockerfile
 
+  discussion-api:
+    image: ${IMAGE_REPOSITORY:-ghcr.io/kadir-yilmaz/gamegaraj}/discussion-api:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: GameGaraj.Discussion.API/Dockerfile
+
   photostock-api:
     image: ${IMAGE_REPOSITORY:-ghcr.io/kadir-yilmaz/gamegaraj}/photostock-api:${IMAGE_TAG:-latest}
     build:

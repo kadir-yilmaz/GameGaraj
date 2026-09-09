@@ -1,0 +1,259 @@
+@model GameGaraj.WebUI.Models.Products.ProductViewModel
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject GameGaraj.WebUI.Services.Abstract.ICampaignService CampaignService
+@{
+    var reviewSummary = ViewBag.Reviews as GameGaraj.WebUI.Models.Reviews.ReviewListViewModel ?? new GameGaraj.WebUI.Models.Reviews.ReviewListViewModel();
+
+    var httpContext = HttpContextAccessor.HttpContext;
+    List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel> activeRules = null;
+    if (httpContext != null)
+    {
+        if (httpContext.Items.TryGetValue("ActiveCampaignRules", out var cachedRules))
+        {
+            activeRules = cachedRules as List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>;
+        }
+        else
+        {
+            try
+            {
+                var allRules = await CampaignService.GetAllRulesAsync();
+                var now = DateTime.UtcNow;
+                activeRules = allRules
+                    .Where(r => r.IsActive
+                                && (!r.StartDate.HasValue || r.StartDate.Value <= now)
+                                && (!r.EndDate.HasValue || r.EndDate.Value.Date >= now.Date))
+                    .ToList();
+                httpContext.Items["ActiveCampaignRules"] = activeRules;
+            }
+            catch
+            {
+                activeRules = new List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>();
+            }
+        }
+    }
+
+    bool CampaignAppliesToProduct(GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel rule)
+    {
+        if (!string.IsNullOrWhiteSpace(rule.ProductId))
+        {
+            return rule.ProductId.Equals(Model.Id, StringComparison.OrdinalIgnoreCase);
+        }
+
+        var hasCategory = !string.IsNullOrWhiteSpace(rule.CategoryId);
+        var hasBrand = !string.IsNullOrWhiteSpace(rule.BrandName);
+
+        if (!hasCategory && !hasBrand)
+        {
+            return false;
+        }
+
+        var categoryMatches = !hasCategory || rule.CategoryId!.Equals(Model.CategoryId, StringComparison.OrdinalIgnoreCase);
+        var brandMatches = !hasBrand || (!string.IsNullOrWhiteSpace(Model.Brand) && rule.BrandName!.Equals(Model.Brand, StringComparison.OrdinalIgnoreCase));
+
+        return categoryMatches && brandMatches;
+    }
+
+    GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel matchingCampaign = null;
+    if (activeRules != null)
+    {
+        matchingCampaign = activeRules.FirstOrDefault(CampaignAppliesToProduct);
+    }
+}
+
+<!-- Product Info -->
+<div class="col-lg-5">
+    <div class="product-info-section">
+        <!-- Brand -->
+        @if (!string.IsNullOrWhiteSpace(Model.Brand))
+        {
+            <a href="/ara?marka=@(Uri.EscapeDataString(Model.Brand))" class="product-brand">@Model.Brand</a>
+        }
+
+        <!-- Title -->
+        <h1 class="product-title">@Model.Name</h1>
+
+        <!-- Rating -->
+        @if (reviewSummary.TotalCount == 0)
+        {
+            <div class="product-rating">
+                <span class="text-muted small">Henüz değerlendirilmemiş</span>
+            </div>
+        }
+        else
+        {
+            <div class="product-rating">
+                <span class="stars">
+                    @for (var i = 1; i <= 5; i++)
+                    {
+                        <i class="@(i <= Math.Round(reviewSummary.AverageRating) ? "fas" : "far") fa-star"></i>
+                    }
+                </span>
+                <span>@reviewSummary.AverageRating.ToString("0.0")</span>
+                <a href="#reviews" class="rating-count" onclick="openTabByName('reviews')">@reviewSummary.TotalCount Değerlendirme</a>
+            </div>
+        }
+
+        <!-- Price -->
+        <div class="price-section">
+            @if (matchingCampaign != null)
+            {
+                <div class="product-card-campaign" title="@matchingCampaign.Name">
+                    @matchingCampaign.Name
+                </div>
+            }
+            <div class="main-price" style="display: flex; flex-direction: column;">
+                @if (matchingCampaign != null && ((matchingCampaign.DiscountRate.HasValue && matchingCampaign.DiscountRate.Value > 0) || (matchingCampaign.FixedDiscount.HasValue && matchingCampaign.FixedDiscount.Value > 0)))
+                {
+                    decimal discountedPrice = Model.Price;
+                    if (matchingCampaign.DiscountRate.HasValue && matchingCampaign.DiscountRate.Value > 0)
+                    {
+                        var discountRate = matchingCampaign.DiscountRate.Value;
+                        discountedPrice = Model.Price - (Model.Price * (discountRate / 100m));
+                    }
+                    else if (matchingCampaign.FixedDiscount.HasValue && matchingCampaign.FixedDiscount.Value > 0)
+                    {
+                        discountedPrice = Model.Price - matchingCampaign.FixedDiscount.Value;
+                        if (discountedPrice < 0) discountedPrice = 0;
+                    }
+                    <div style="font-size: 1.1rem; color: #999; text-decoration: line-through; margin-bottom: -5px; font-weight: 600;">
+                        @Model.Price.ToString("N2") <span class="currency" style="font-size: 0.9rem;">TL</span>
+                    </div>
+                    <div class="text-success">
+                        @discountedPrice.ToString("N2") <span class="currency text-success">TL</span>
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        @Model.Price.ToString("N2") <span class="currency">TL</span>
+                    </div>
+                }
+            </div>
+            <div class="installment-info">
+                <i class="far fa-credit-card"></i>
+                <span>Peşin Fiyatına</span>
+                <span class="installment-badge">9 x @((Model.Price / 9).ToString("N2")) TL</span>
+            </div>
+        </div>
+
+        @if (Model.AvailableStock > 0 || (Model.AvailableStock == 0 && Model.Stock > 0))
+        {
+            <div class="stock-strip">
+                <span>
+                    <i class="fas fa-check-circle"></i>
+                    Stokta (@(Model.AvailableStock > 0 ? Model.AvailableStock : Model.Stock) adet)
+                </span>
+                <span class="stock-strip-note">
+                    15 saat 34 dk içinde sipariş ver, bugün kargoda
+                </span>
+            </div>
+        }
+        else
+        {
+            <div class="stock-strip out-of-stock">
+                <span>
+                    <i class="fas fa-times-circle"></i>
+                    Stokta yok
+                </span>
+            </div>
+        }
+
+        <!-- Variants (if specs exist) -->
+        @if (Model.Specs.Any())
+        {
+            <div class="variant-section">
+                @{
+                    var displayedSpecs = Model.Specs.Take(2).ToList();
+                }
+                <div class="variant-grid">
+                    @foreach (var spec in displayedSpecs)
+                    {
+                        <div class="variant-group">
+                            <span class="variant-label">@spec.Key:</span>
+                            <span class="variant-value">@spec.Value</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Add to Cart -->
+        <div class="cart-section">
+            <div class="cart-actions-row">
+                @if (Model.AvailableStock > 0 || (Model.AvailableStock == 0 && Model.Stock > 0))
+                {
+                    <form asp-controller="Basket" asp-action="AddItem" method="post" id="addToCartForm"
+                        class="js-add-to-cart-form">
+                        <input type="hidden" name="productId" value="@Model.Id" />
+                        <input type="hidden" name="quantity" value="1" id="quantityInput" />
+                        <button type="submit" class="add-to-cart-btn @(Model.IsInBasket ? "in-cart" : "")"
+                            @(Model.IsInBasket ? "disabled" : "")>
+                            <i class="fas @(Model.IsInBasket ? "fa-check" : "fa-cart-plus")"></i>
+                            <span>@(Model.IsInBasket ? "Sepete Eklendi" : "Sepete Ekle")</span>
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <button class="add-to-cart-btn" disabled>
+                        <i class="fas fa-ban"></i>
+                        Stokta Yok
+                    </button>
+                }
+
+                <div class="action-buttons">
+                    <button type="button" class="action-btn" aria-label="Kaydet" title="Kaydet">
+                        <i class="far fa-bookmark"></i>
+                    </button>
+                    <button type="button" class="action-btn btn-favorite @(Model.IsFavorite ? "active" : "")"
+                        data-product-id="@Model.Id" aria-label="Favorilere Ekle" title="Favorilere Ekle">
+                        <i class="@(Model.IsFavorite ? "fas" : "far") fa-heart"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Right Sidebar -->
+<div class="col-lg-3">
+    <div class="sidebar-section">
+        <!-- Campaigns -->
+        <div class="sidebar-card">
+            <div class="sidebar-title">
+                <i class="fas fa-tags campaign-icon"></i>
+                Kampanyalar
+            </div>
+            <div class="campaign-item">
+                <i class="fas fa-check-circle campaign-icon"></i>
+                <span>150 TL üzeri kargo bedava</span>
+            </div>
+            <div class="campaign-item">
+                <i class="fas fa-check-circle campaign-icon"></i>
+                <span>Kredi kartına 9 taksit</span>
+            </div>
+        </div>
+
+        <div class="sidebar-card">
+            <div class="sidebar-title">
+                <i class="fas fa-truck campaign-icon"></i>
+                Teslimat Seçenekleri
+            </div>
+            <div class="delivery-section">
+                <div class="delivery-option">
+                    <i class="fas fa-truck delivery-icon"></i>
+                    <div class="delivery-text">
+                        <strong>Ücretsiz Kargo</strong> ile yarın kapınızda!
+                    </div>
+                </div>
+                <div class="delivery-option">
+                    <i class="fas fa-store delivery-icon"></i>
+                    <div class="delivery-text">
+                        <strong>Mağazadan Teslim</strong> - Bugün teslim al
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

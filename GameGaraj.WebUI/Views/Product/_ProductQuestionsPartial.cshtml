@@ -1,0 +1,217 @@
+@model GameGaraj.WebUI.Models.Products.ProductViewModel
+@{
+    var questionSummary = ViewBag.Questions as GameGaraj.WebUI.Models.Discussion.QuestionListViewModel ?? new GameGaraj.WebUI.Models.Discussion.QuestionListViewModel();
+
+    static string FormatUserDisplayName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "K. Yılmaz";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+        {
+            var firstInitial = parts[0][0].ToString().ToUpper();
+            var lastName = string.Join(" ", parts.Skip(1));
+            return $"{firstInitial}. {lastName}";
+        }
+        return name;
+    }
+}
+
+<div class="qa-tab-container">
+    <!-- Hero Bar -->
+    <div class="qa-hero-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h3 class="fw-bold mb-0 text-dark" style="font-size: 1.25rem;">
+                    <i class="fas fa-comments text-warning me-1"></i> Ürün Soru &amp; Cevapları
+                </h3>
+                <span class="qa-badge-count">@questionSummary.TotalCount</span>
+            </div>
+            <p class="text-muted small mb-0">Ürün hakkında merak ettiklerinizi doğrudan uzmanlarımıza sorabilirsiniz.</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-ask-question-primary js-ask-question-btn">
+                <i class="fas fa-pen me-1"></i> Soru Sor
+            </button>
+        </div>
+    </div>
+
+    <!-- Ask Question Form Box (Collapsible) -->
+    <div id="askQuestionFormContainer" class="qa-form-card p-4" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0 text-dark" style="font-size: 1.05rem;">
+                <i class="fas fa-question-circle text-warning me-1"></i> Satıcıya Soru Sorun
+            </h5>
+            <button type="button" class="btn-close btn-sm" onclick="$('#askQuestionFormContainer').slideUp(200);" aria-label="Close"></button>
+        </div>
+
+        <!-- Suggested Questions Chips -->
+        <div class="mb-3">
+            <small class="text-muted d-block mb-1 fw-semibold">Hızlı Şablonlar (Tıklayarak ekleyin):</small>
+            <div class="d-flex flex-wrap gap-1">
+                <span class="qa-chip" onclick="applyQuestionTemplate('Kutu içeriğinde neler var ve kablo dahil mi?')">📦 Kutu İçeriği</span>
+                <span class="qa-chip" onclick="applyQuestionTemplate('Bu ürünün garanti süresi kaç yıl ve yetkili servis garantili mi?')">🛡️ Garanti Süresi</span>
+                <span class="qa-chip" onclick="applyQuestionTemplate('Siparişi bugün versem ne zaman kargoya verilir?')">🚚 Teslimat &amp; Kargo</span>
+                <span class="qa-chip" onclick="applyQuestionTemplate('Ürünün RAM / Depolama kapasitesi yükseltilebilir mi?')">⚡ Yükseltme Uyumu</span>
+            </div>
+        </div>
+
+        <form asp-controller="Product" asp-action="CreateQuestion" method="post" id="askQuestionForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ProductId" value="@Model.Id" />
+            <input type="hidden" name="ProductName" value="@Model.Name" />
+            <input type="hidden" name="ProductImageUrl" value="@Model.FirstImageUrl" />
+            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString#qa" />
+            
+            <div class="mb-3">
+                <textarea id="askQuestionTextarea" name="QuestionText" class="form-control" rows="3" 
+                          placeholder="Ürün hakkında aklınıza takılan özellikleri veya teslimat detaylarını yazın (En az 10 karakter)..." 
+                          minlength="10" maxlength="500" required style="border-radius: 8px; font-size: 0.95rem;"></textarea>
+                
+                <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
+                    <div class="small text-muted">
+                        <i class="fas fa-circle-info text-primary me-1"></i>
+                        Kişisel iletişim bilgileri (telefon, adres vb.) ve argo içeren sorular onaylanmaz.
+                    </div>
+                    <div id="askQuestionCharCounter" class="badge bg-light text-secondary border">0 / 500</div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" onclick="$('#askQuestionFormContainer').slideUp(200);">Vazgeç</button>
+                <button type="submit" class="btn btn-ask-question-primary btn-sm px-4" id="btnSubmitQuestion">
+                    <i class="fas fa-paper-plane me-1"></i> Soruyu Gönder
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Search Questions Filter (If >= 2 questions) -->
+    @if (questionSummary.Items.Count >= 2)
+    {
+        <div class="mb-3">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" id="qaSearchInput" class="form-control border-start-0" placeholder="Sorular içinde ara..." onkeyup="filterQuestions()" />
+            </div>
+        </div>
+    }
+
+    <!-- Questions List -->
+    @if (questionSummary.Items.Any())
+    {
+        <div class="qa-list" id="qaQuestionsList">
+            @foreach (var q in questionSummary.Items)
+            {
+                var formattedName = FormatUserDisplayName(q.UserName);
+                var userInitial = !string.IsNullOrWhiteSpace(formattedName) ? formattedName.Substring(0, 1).ToUpper() : "K";
+
+                <div class="qa-card-item qa-question-entry" data-question-id="@q.Id" data-text="@q.QuestionText.ToLower()">
+                    <!-- Question Header -->
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="qa-avatar">@userInitial</div>
+                            <div>
+                                <span class="fw-bold text-dark" style="font-size: 0.95rem;">@formattedName</span>
+                                <div class="text-muted" style="font-size: 0.75rem;">
+                                    <i class="far fa-calendar-alt me-1"></i>@q.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                                </div>
+                            </div>
+                        </div>
+                        @if (q.Answer != null)
+                        {
+                            <span class="qa-status-badge qa-status-answered">
+                                <i class="fas fa-check-double me-1"></i>Cevaplandı
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="qa-status-badge qa-status-pending">
+                                <i class="fas fa-clock me-1"></i>Beklemede
+                            </span>
+                        }
+                    </div>
+
+                    <!-- Question Text -->
+                    <p class="text-dark mb-0 fw-medium" style="font-size: 0.95rem; line-height: 1.55;">
+                        @q.QuestionText
+                    </p>
+
+                    <!-- Answer Section -->
+                    @if (q.Answer != null)
+                    {
+                        <div class="qa-seller-answer-box">
+                            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="qa-seller-badge">
+                                        <i class="fas fa-check-circle"></i> SATICI YANITI
+                                    </span>
+                                    <span class="small fw-bold text-dark">@(string.IsNullOrWhiteSpace(q.Answer.ResponderName) ? "GameGaraj" : q.Answer.ResponderName)</span>
+                                </div>
+                                <small class="text-muted" style="font-size: 0.75rem;">
+                                    <i class="far fa-clock me-1"></i>@q.Answer.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                                </small>
+                            </div>
+                            <p class="mb-2 text-dark" style="font-size: 0.92rem; line-height: 1.6;">
+                                @q.Answer.AnswerText
+                            </p>
+                            <div class="d-flex align-items-center justify-content-end gap-2 mt-2 pt-2 border-top border-light-subtle flex-wrap">
+                                <span class="text-muted small" style="font-size: 0.8rem;">Bu yanıt yardımcı oldu mu?</span>
+                                <button type="button" 
+                                        class="qa-vote-btn qa-vote-helpful @(q.Answer.UserVote == "helpful" ? "voted-helpful" : "")" 
+                                        data-answer-id="@q.Answer.Id" 
+                                        data-is-helpful="true" 
+                                        onclick="handleAnswerVote(this)"
+                                        title="Faydalı">
+                                    <i class="@(q.Answer.UserVote == "helpful" ? "fas" : "far") fa-thumbs-up"></i>
+                                    <span class="badge rounded-pill qa-helpful-count">@q.Answer.HelpfulCount</span>
+                                </button>
+                                <button type="button" 
+                                        class="qa-vote-btn qa-vote-dislike @(q.Answer.UserVote == "dislike" ? "voted-dislike" : "")" 
+                                        data-answer-id="@q.Answer.Id" 
+                                        data-is-helpful="false" 
+                                        onclick="handleAnswerVote(this)"
+                                        title="Faydalı Değil">
+                                    <i class="@(q.Answer.UserVote == "dislike" ? "fas" : "far") fa-thumbs-down"></i>
+                                    <span class="badge rounded-pill qa-dislike-count">@q.Answer.DislikeCount</span>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning border-0 d-flex align-items-center gap-2 py-2 px-3 mt-2 mb-0 rounded-3" style="background: #fffbeb; font-size: 0.85rem;">
+                            <i class="fas fa-clock-rotate-left text-warning"></i>
+                            <div>
+                                <strong class="text-dark">Beklemede:</strong> <span class="text-muted">Sorunuz satıcıya iletildi. Yanıtlandığında burada herkese açık olarak yayınlanacaktır.</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        @if (questionSummary.TotalCount > questionSummary.Items.Count)
+        {
+            <div class="text-center mt-3" id="qaLoadMoreContainer">
+                <button type="button" class="btn btn-outline-primary btn-sm px-4 py-2 rounded-pill shadow-sm" id="btnLoadMoreQuestions" onclick="loadMoreQuestions()">
+                    <i class="fas fa-chevron-down me-1"></i> Daha Fazla Soru Göster (<span id="qaRemainingCount">@(questionSummary.TotalCount - questionSummary.Items.Count)</span> soru daha)
+                </button>
+            </div>
+        }
+    }
+    else
+    {
+        <!-- Empty State -->
+        <div class="qa-empty-state">
+            <div class="qa-empty-icon">
+                <i class="fas fa-comments"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-2">Bu Ürün İçin Henüz Soru Sorulmamış</h5>
+            <p class="text-muted small mb-3" style="max-width: 460px; margin: 0 auto;">
+                Ürünün performansı, uyumluluğu veya teslimat süreci hakkında aklınıza takılan her şeyi uzmanlarımıza sorabilirsiniz.
+            </p>
+            <button type="button" class="btn btn-ask-question-primary btn-sm px-4 js-ask-question-btn">
+                <i class="fas fa-paper-plane me-1"></i> İlk Soruyu Sen Sor
+            </button>
+        </div>
+    }
+</div>

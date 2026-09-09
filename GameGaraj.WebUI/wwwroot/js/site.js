@@ -68,7 +68,31 @@ window.showAppToast = function (type, message) {
     }
 };
 
+// Sayfa yönlendirmelerinde bildirimin kaybolmaması için sessionStorage tabanlı Flash Bildirim
+window.setPendingToast = function (type, message) {
+    try {
+        sessionStorage.setItem('gamegaraj_pending_toast', JSON.stringify({ type: type, message: message }));
+    } catch (e) {
+        console.error("sessionStorage pending toast error:", e);
+    }
+};
+
 $(document).ready(function () {
+    // Önceki sayfadan aktarılan bekleyen bildirim varsa göster ve temizle
+    try {
+        var pendingToast = sessionStorage.getItem('gamegaraj_pending_toast');
+        if (pendingToast) {
+            sessionStorage.removeItem('gamegaraj_pending_toast');
+            var toastData = JSON.parse(pendingToast);
+            if (toastData && toastData.message) {
+                setTimeout(function () {
+                    window.showAppToast(toastData.type || 'info', toastData.message);
+                }, 250);
+            }
+        }
+    } catch (e) {
+        console.error("Pending toast parsing error:", e);
+    }
     function buildGoToBasketButton(isMiniButton) {
         if (isMiniButton) {
             return '<a href="/Basket/Index" class="btn-mini-cart btn-mini-cart-success" title="Sepete Git"><i class="fas fa-check"></i></a>';
@@ -140,7 +164,8 @@ $(document).ready(function () {
     $(document).on('click', '.js-favorites-link', function (e) {
         if (!window.isAuthenticated) {
             e.preventDefault();
-            window.showAppToast('warning', 'Favorilerinizi g&ouml;rmek i&ccedil;in l&uuml;tfen giri&#351; yap&#305;n.');
+            window.setPendingToast('warning', 'Favorilerinizi görmek için lütfen giriş yapın.');
+            window.location.href = '/Auth/SignIn?returnUrl=' + encodeURIComponent('/Favorites');
         }
     });
 
@@ -150,7 +175,9 @@ $(document).ready(function () {
         e.stopPropagation(); // Prevent card link from triggering
 
         if (!window.isAuthenticated) {
-            window.showAppToast('warning', 'Favorilere eklemek i&ccedil;in l&uuml;tfen giri&#351; yap&#305;n.');
+            window.setPendingToast('warning', 'Favorilere eklemek için lütfen giriş yapın.');
+            var currentUrl = window.location.pathname + window.location.search;
+            window.location.href = '/Auth/SignIn?returnUrl=' + encodeURIComponent(currentUrl);
             return;
         }
 

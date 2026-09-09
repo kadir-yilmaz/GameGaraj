@@ -325,6 +325,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // MassTransit
 builder.Services.AddMassTransit(x =>
 {
+    x.AddConsumer<GameGaraj.WebUI.Consumers.QuestionCreatedWebConsumer>();
+    x.AddConsumer<GameGaraj.WebUI.Consumers.QuestionAnsweredWebConsumer>();
+    x.AddConsumer<GameGaraj.WebUI.Consumers.QuestionDeletedWebConsumer>();
+
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(builder.Configuration["RabbitMQUrl"], "/", host =>
@@ -332,13 +336,15 @@ builder.Services.AddMassTransit(x =>
             host.Username("guest");
             host.Password("guest");
         });
+
+        cfg.ConfigureEndpoints(context);
     });
 });
 
 // Chaos Management Engine
 builder.Services.AddChaosServices();
 
-// Real-Time SignalR Pipeline Telemetry
+// Real-Time SignalR Pipeline Telemetry & Discussion
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IPipelineNotifier, PipelineNotifier>();
 
@@ -370,8 +376,9 @@ app.UseNotyf();
 // Custom Request Logging Ekle
 app.UseCustomRequestLogging();
 
-// Map SignalR Hub
+// Map SignalR Hubs
 app.MapHub<GameGaraj.WebUI.Hubs.PipelineHub>("/hubs/pipeline");
+app.MapHub<GameGaraj.WebUI.Hubs.DiscussionHub>("/hubs/discussion");
 
 // SEO Routes - Hepsiburada tarzı (öncelik sırasına göre)
 app.MapControllerRoute(

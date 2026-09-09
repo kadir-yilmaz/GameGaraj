@@ -1,0 +1,89 @@
+@model GameGaraj.WebUI.Models.Products.ProductViewModel
+@{
+    var displayImageUrls = Model.DisplayImageUrls;
+}
+
+<!-- Image Gallery -->
+<div class="col-lg-4">
+    <div class="image-gallery">
+        <div class="main-image-wrapper">
+            @if (displayImageUrls.Count > 1)
+            {
+                <button type="button" class="image-nav-btn prev" onclick="prevImage()" aria-label="Önceki Görsel">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button type="button" class="image-nav-btn next" onclick="nextImage()" aria-label="Sonraki Görsel">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            }
+            <img src="@Model.FirstImageUrl" alt="@Model.Name" id="mainImage"
+                onclick="openGalleryModal()" title="Büyütmek için tıklayın"
+                onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
+        </div>
+
+        @if (displayImageUrls.Count > 1)
+        {
+            <div class="thumbnail-row">
+                @for (int i = 0; i < displayImageUrls.Count; i++)
+                {
+                    <div class="thumbnail-item @(i == 0 ? "active" : "")"
+                        onclick="selectImage(@i, '@displayImageUrls[i]')">
+                        <img src="@displayImageUrls[i]" alt="@Model.Name - @(i + 1)"
+                             onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Fullscreen Image Gallery Modal -->
+<div class="modal fade gallery-modal" id="imageGalleryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body"
+                onclick="if(event.target === this) { const m = bootstrap.Modal.getInstance(document.getElementById('imageGalleryModal')); if(m) m.hide(); }">
+                <div class="gallery-shell">
+                    <div class="gallery-header">
+                        <div class="modal-title-bar" title="Büyütmek için tıklayın">
+                            @Model.Name
+                        </div>
+                        <button type="button" class="modal-close-btn" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="modal-image-container" onclick="event.stopPropagation();">
+                        <div class="modal-main-image">
+                            @if (displayImageUrls.Count > 1)
+                            {
+                                <button type="button" class="image-nav-btn prev" onclick="prevModalImage()" aria-label="Önceki Görsel">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button type="button" class="image-nav-btn next" onclick="nextModalImage()" aria-label="Sonraki Görsel">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            }
+                            <img src="@Model.FirstImageUrl" id="modalMainImage" alt="@Model.Name"
+                                 onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
+                        </div>
+
+                        @if (displayImageUrls.Count > 1)
+                        {
+                            <div class="modal-thumbnails">
+                                @for (int i = 0; i < displayImageUrls.Count; i++)
+                                {
+                                    <div class="modal-thumb-item @(i == 0 ? "active" : "")"
+                                        onclick="selectModalImage(@i, '@displayImageUrls[i]')">
+                                        <img src="@displayImageUrls[i]" alt="Thumbnail @(i + 1)"
+                                             onerror="this.onerror=null;this.src='@GameGaraj.WebUI.Models.Products.ProductViewModel.DefaultImageUrl';">
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

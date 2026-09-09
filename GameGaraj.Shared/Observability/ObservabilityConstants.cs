@@ -14,6 +14,7 @@ namespace GameGaraj.Shared.Observability
         public const string PaymentService = "GameGaraj.Payment";
         public const string InvoiceService = "GameGaraj.Invoice";
         public const string ReviewService = "GameGaraj.Review";
+        public const string DiscussionService = "GameGaraj.Discussion";
         public const string CampaignService = "GameGaraj.Campaign";
         public const string PhotoStockService = "GameGaraj.PhotoStock";
         public const string WebUIService = "GameGaraj.WebUI";

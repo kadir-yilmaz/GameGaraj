@@ -114,6 +114,16 @@ namespace GameGaraj.WebUI.Extensions
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>()
             .AddConfiguredResilienceHandler("Search.API");
+
+            // Discussion Service
+            services.AddHttpClient<IDiscussionService, DiscussionService>(client =>
+            {
+                client.BaseAddress = new Uri(gatewayUri, "api/discussion/");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
+            .AddHttpMessageHandler<UserIdDelegatingHandler>()
+            .AddConfiguredResilienceHandler("Discussion.API");
         }
 
         private static IHttpClientBuilder AddConfiguredResilienceHandler(this IHttpClientBuilder builder, string serviceName)

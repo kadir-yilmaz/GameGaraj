@@ -1,0 +1,154 @@
+@model List<GameGaraj.WebUI.Models.Discussion.QuestionViewModel>
+@{
+    ViewData["Title"] = "Sorularım & Cevaplar";
+    var pendingList = Model.Where(q => q.Answer == null).ToList();
+    var answeredList = Model.Where(q => q.Answer != null).ToList();
+}
+
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-4">
+        <div>
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb small mb-0">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none text-muted">Ana Sayfa</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Auth" asp-action="Profile" class="text-decoration-none text-muted">Hesabım</a></li>
+                    <li class="breadcrumb-item active text-primary" aria-current="page">Sorularım</li>
+                </ol>
+            </nav>
+            <h2 class="mb-1 fw-bold text-dark"><i class="fas fa-question-circle text-primary me-2"></i>Sorularım &amp; Cevaplar</h2>
+            <p class="text-muted mb-0">Ürünler hakkında satıcıya sorduğunuz tüm soruları ve yetkili satıcı yanıtlarını buradan takip edebilirsiniz.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Reviews" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-comments me-1"></i>Değerlendirmelerim
+            </a>
+            <a asp-controller="Order" asp-action="History" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-box me-1"></i>Siparişlerim
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Filter Tabs -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-2">
+            <ul class="nav nav-pills nav-fill gap-2" id="questionTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-semibold" id="all-tab" data-bs-toggle="pill" data-bs-target="#all-questions" type="button" role="tab">
+                        <i class="fas fa-list me-1"></i> Tüm Sorularım 
+                        <span class="badge bg-secondary ms-1">@Model.Count</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-semibold" id="answered-tab" data-bs-toggle="pill" data-bs-target="#answered-questions" type="button" role="tab">
+                        <i class="fas fa-check-circle text-success me-1"></i> Cevaplananlar 
+                        <span class="badge bg-success ms-1">@answeredList.Count</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-semibold" id="pending-tab" data-bs-toggle="pill" data-bs-target="#pending-questions" type="button" role="tab">
+                        <i class="fas fa-clock text-warning me-1"></i> Cevap Bekleyenler 
+                        <span class="badge bg-warning text-dark ms-1">@pendingList.Count</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="questionTabsContent">
+        <!-- All Questions -->
+        <div class="tab-pane fade show active" id="all-questions" role="tabpanel">
+            @if (Model.Any())
+            {
+                <div class="row g-3">
+                    @foreach (var q in Model)
+                    {
+                        @await Html.PartialAsync("_QuestionCardPartial", q)
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center bg-white border rounded-4 py-5 shadow-sm">
+                    <div class="mb-3 text-muted" style="font-size: 3rem;">
+                        <i class="far fa-comments"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark">Henüz Bir Soru Sormadınız</h5>
+                    <p class="text-muted small mb-3">Beğendiğiniz ürünlerin detay sayfasından aklınıza takılan özellikleri satıcıya sorabilirsiniz.</p>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-sm px-4">
+                        <i class="fas fa-shopping-bag me-1"></i> Alışverişe Başla
+                    </a>
+                </div>
+            }
+        </div>
+
+        <!-- Answered Questions -->
+        <div class="tab-pane fade" id="answered-questions" role="tabpanel">
+            @if (answeredList.Any())
+            {
+                <div class="row g-3">
+                    @foreach (var q in answeredList)
+                    {
+                        @await Html.PartialAsync("_QuestionCardPartial", q)
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center bg-white border rounded-4 py-5 shadow-sm">
+                    <i class="far fa-check-circle fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Henüz cevaplanmış bir sorunuz bulunmuyor.</p>
+                </div>
+            }
+        </div>
+
+        <!-- Pending Questions -->
+        <div class="tab-pane fade" id="pending-questions" role="tabpanel">
+            @if (pendingList.Any())
+            {
+                <div class="row g-3">
+                    @foreach (var q in pendingList)
+                    {
+                        @await Html.PartialAsync("_QuestionCardPartial", q)
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center bg-white border rounded-4 py-5 shadow-sm">
+                    <i class="far fa-clock fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Cevap bekleyen sorunuz bulunmuyor.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .qa-user-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+    }
+    .qa-user-card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+    .nav-pills .nav-link {
+        color: #64748b;
+        border-radius: 8px;
+        padding: 0.6rem 1rem;
+    }
+    .nav-pills .nav-link.active {
+        background-color: #ff6000;
+        color: #ffffff;
+    }
+    .qa-seller-reply-box {
+        background: #f8fafc;
+        border-left: 4px solid #ff6000;
+        border-radius: 0 8px 8px 0;
+        padding: 0.85rem 1rem;
+    }
+</style>

@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body style="min-height: 100vh; display: flex; flex-direction: column;">
     <header>
@@ -78,12 +79,69 @@
     </footer>
 
     <!-- Core Scripts -->
-    <script>
-        window.isAuthenticated = @(User.Identity?.IsAuthenticated == true ? "true" : "false");
-    </script>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script>
+        window.isAuthenticated = @(User.Identity?.IsAuthenticated == true ? "true" : "false");
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            var userId = User.FindFirst("sub")?.Value 
+                         ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                         ?? string.Empty;
+            <text>
+            window.currentUserId = "@userId";
+            (function () {
+                if (!window.currentUserId) return;
+
+                const discConn = new signalR.HubConnectionBuilder()
+                    .withUrl('/hubs/discussion', {
+                        skipNegotiation: false,
+                        transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling
+                    })
+                    .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+                    .build();
+
+                discConn.on("ReceiveMyQuestionAnswered", function (data) {
+                    console.log("[SignalR Global] Sorum cevaplandı:", data);
+
+                    // 1. Canlı Toast Bildirimi (Güncelleme mi Yeni Cevap mı)
+                    if (window.showAppToast) {
+                        if (data.isEdit) {
+                            window.showAppToast('info', `💬 Yanıt Güncellendi: "${data.productName || 'Ürün'}" sorunuza verilen yanıt satıcı tarafından güncellendi.`);
+                        } else {
+                            window.showAppToast('success', `💬 Sorunuz Cevaplandı: "${data.productName || 'Ürün'}" için yetkili satıcı yanıt verdi!`);
+                        }
+                    }
+
+                    // 2. Sadece yeni cevapsa rozet (badge) sayısını artır
+                    if (!data.isEdit) {
+                        const $profileBadges = $('#nav-profile-badge, #nav-mobile-profile-badge');
+                        $profileBadges.each(function () {
+                            let count = parseInt($(this).text() || '0') + 1;
+                            $(this).text(count).removeClass('d-none');
+                        });
+
+                        const $badges = $('#nav-user-discussion-badge, #nav-mobile-user-discussion-badge');
+                        $badges.each(function () {
+                            let count = parseInt($(this).text() || '0') + 1;
+                            $(this).text(count).removeClass('d-none');
+                        });
+                    }
+                });
+
+                discConn.start()
+                    .then(function () {
+                        discConn.invoke("JoinUserGroup", window.currentUserId).catch(console.error);
+                    })
+                    .catch(function (err) {
+                        console.warn("[SignalR Global] Discussion Hub bağlantı hatası:", err);
+                    });
+            })();
+            </text>
+        }
+    </script>
     
     @await Component.InvokeAsync("Notyf")
 

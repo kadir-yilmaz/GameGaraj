@@ -26,6 +26,19 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=GameGarajReviewDb
 
+  # PostgreSQL for Discussion Service
+  discussiondb:
+    image: postgres:16-alpine
+    container_name: gamegaraj-discussion-postgres
+    ports:
+      - "5436:5432"
+    volumes:
+      - discussion_postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=GameGarajDiscussionDb
+
   # ============ REDIS SENTINEL CLUSTER (Basket API) ============
 
   # Redis Master — Yazma + Okuma yapılır
@@ -261,5 +274,6 @@ volumes:
   rabbitmq_data:
   catalog_postgres_data:
   review_postgres_data:
+  discussion_postgres_data:
   elasticsearch_data:
   jaeger_data:

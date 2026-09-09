@@ -1,0 +1,73 @@
+@model GameGaraj.WebUI.Models.Discussion.QuestionViewModel
+
+<div class="col-lg-6">
+    <div class="qa-user-card p-3 h-100 d-flex flex-column justify-content-between">
+        <div>
+            <!-- Product Header -->
+            <div class="d-flex align-items-center gap-3 pb-2 mb-2 border-bottom">
+                <img src="@(string.IsNullOrWhiteSpace(Model.ProductImageUrl) ? "/images/no-image.png" : Model.ProductImageUrl)"
+                     alt="@Model.ProductName"
+                     class="rounded border"
+                     style="width: 52px; height: 52px; object-fit: contain;"
+                     onerror="this.onerror=null;this.src='/images/no-image.png';" />
+                <div class="flex-grow-1 text-truncate">
+                    <a asp-controller="Product" asp-action="Detail" asp-route-id="@Model.ProductId" class="fw-bold text-dark text-decoration-none text-truncate d-block" style="font-size: 0.95rem;">
+                        @Model.ProductName
+                    </a>
+                    <small class="text-muted"><i class="far fa-calendar-alt me-1"></i>@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                </div>
+                <div>
+                    @if (Model.Answer != null)
+                    {
+                        <span class="badge bg-success-subtle text-success border border-success-subtle small">
+                            <i class="fas fa-check-double me-1"></i>Cevaplandı
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
+                            <i class="fas fa-clock me-1"></i>Cevap Bekliyor
+                        </span>
+                    }
+                </div>
+            </div>
+
+            <!-- Question Text -->
+            <div class="mb-3">
+                <div class="small fw-semibold text-muted mb-1"><i class="fas fa-question text-primary me-1"></i>Sorduğunuz Soru:</div>
+                <p class="text-dark mb-0" style="font-size: 0.92rem; line-height: 1.5;">
+                    @Model.QuestionText
+                </p>
+            </div>
+
+            <!-- Answer or Pending Box -->
+            @if (Model.Answer != null)
+            {
+                <div class="qa-seller-reply-box mt-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge bg-warning text-dark fw-bold" style="font-size: 0.7rem;">
+                            <i class="fas fa-check-circle"></i> SATICI YANITI
+                        </span>
+                        <small class="text-muted" style="font-size: 0.72rem;">@Model.Answer.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                    </div>
+                    <p class="text-dark mb-0" style="font-size: 0.88rem; line-height: 1.5;">
+                        @Model.Answer.AnswerText
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning border-0 py-2 px-3 mb-0 rounded-3 small" style="background: #fffbeb;">
+                    <i class="fas fa-hourglass-half text-warning me-1"></i>
+                    Sorunuz satıcıya iletildi. Uzman ekibimiz yanıtladığında bildirim alacaksınız.
+                </div>
+            }
+        </div>
+
+        <div class="d-flex justify-content-end pt-3 mt-2 border-top">
+            <a asp-controller="Product" asp-action="Detail" asp-route-id="@Model.ProductId" class="btn btn-outline-primary btn-sm px-3" style="border-radius: 6px;">
+                <i class="fas fa-eye me-1"></i> Ürünü İncele
+            </a>
+        </div>
+    </div>
+</div>

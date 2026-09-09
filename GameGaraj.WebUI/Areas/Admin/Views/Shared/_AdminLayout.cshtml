@@ -19,7 +19,7 @@
 
     <style>
         :root {
-            --sidebar-width: 250px;
+            --sidebar-width: 280px;
             --sidebar-bg: #0f172a;
             --sidebar-text: #94a3b8;
             --sidebar-active-bg: rgba(255, 107, 0, 0.12);
@@ -99,7 +99,15 @@
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 0.5rem 0.6rem;
+            padding: 0.6rem 0.75rem;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+
+        #sidebar-wrapper .list-group::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+            width: 0px;
+            background: transparent;
         }
 
         #sidebar-wrapper .list-group-item {
@@ -351,6 +359,13 @@
                    asp-area="Admin" asp-controller="Review" asp-action="Index">
                     <i class="fas fa-comments"></i>
                     <span>Yorum Yönetimi</span>
+                </a>
+                
+                <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Discussion" ? "active" : "")" 
+                   asp-area="Admin" asp-controller="Discussion" asp-action="Index">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Soru-Cevap Yönetimi</span>
+                    <span id="admin-discussion-badge" class="badge bg-warning text-dark ms-auto d-none" style="font-size: 0.72rem;">0</span>
                 </a>
                 
                 <a class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Campaign" ? "active" : "")" 
@@ -626,6 +641,55 @@
                 <text>window.showNotification('@Html.Raw(TempData["Error"])', 'error');</text>
             }
         });
+    </script>
+    <!-- SignalR for Admin Real-Time Events -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script>
+        (function () {
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl('/hubs/discussion', {
+                    skipNegotiation: false,
+                    transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling
+                })
+                .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+                .build();
+
+            connection.on("ReceiveAdminNewQuestion", function (data) {
+                console.log("[SignalR Admin] New Question Received:", data);
+
+                // Admin bildirim toast'ı göster
+                if (window.showNotification) {
+                    window.showNotification(`💬 Yeni Soru: ${data.formattedUserName || data.userName} (${data.productName || 'Ürün'})`, 'warning');
+                }
+
+                // Sidebar badge güncelle
+                const $badge = $('#admin-discussion-badge');
+                if ($badge.length) {
+                    let count = parseInt($badge.text() || '0') + 1;
+                    $badge.text(count).removeClass('d-none');
+                }
+
+                // Soru-Cevap yönetim sayfası açıksa canlı etkinlik tetikle
+                document.dispatchEvent(new CustomEvent('admin-new-question', { detail: data }));
+            });
+
+            connection.on("ReceiveAdminQuestionAnswered", function (data) {
+                document.dispatchEvent(new CustomEvent('admin-question-answered', { detail: data }));
+            });
+
+            connection.on("ReceiveAdminQuestionDeleted", function (data) {
+                document.dispatchEvent(new CustomEvent('admin-question-deleted', { detail: data }));
+            });
+
+            connection.start()
+                .then(function () {
+                    console.log("[SignalR Admin] Discussion Hub bağlantısı kuruldu.");
+                    connection.invoke("JoinAdminGroup").catch(console.error);
+                })
+                .catch(function (err) {
+                    console.warn("[SignalR Admin] Discussion Hub bağlantı hatası:", err);
+                });
+        })();
     </script>
     @await Component.InvokeAsync("Notyf")
     @await RenderSectionAsync("Scripts", required: false)

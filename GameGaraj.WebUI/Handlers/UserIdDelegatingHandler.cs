@@ -25,13 +25,49 @@ namespace GameGaraj.WebUI.Handlers
             }
 
             var user = _httpContextAccessor.HttpContext?.User;
-            if (user?.Identity?.IsAuthenticated == true && !request.Headers.Contains("X-User-Email"))
+            if (user?.Identity?.IsAuthenticated == true)
             {
-                var email = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
-                            ?? user.FindFirst("email")?.Value;
-                if (!string.IsNullOrEmpty(email))
+                if (!request.Headers.Contains("X-User-Email"))
                 {
-                    request.Headers.Add("X-User-Email", email);
+                    var email = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+                                ?? user.FindFirst("email")?.Value;
+                    if (!string.IsNullOrEmpty(email))
+                    {
+                        request.Headers.Add("X-User-Email", email);
+                    }
+                }
+
+                if (!request.Headers.Contains("X-User-Name"))
+                {
+                    var givenName = user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? user.FindFirst("given_name")?.Value;
+                    var surname = user.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value ?? user.FindFirst("family_name")?.Value;
+                    var fullName = !string.IsNullOrEmpty(givenName) && !string.IsNullOrEmpty(surname) 
+                                   ? $"{givenName} {surname}" 
+                                   : null;
+
+                    var name = fullName
+                               ?? user.FindFirst("name")?.Value
+                               ?? user.Identity?.Name 
+                               ?? user.FindFirst("preferred_username")?.Value;
+
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        // HTTP header değerleri ASCII olmalıdır; Türkçe karakterler için URL-encode yapılıyor
+                        request.Headers.Add("X-User-Name", Uri.EscapeDataString(name));
+                    }
+                }
+
+                if (!request.Headers.Contains("X-User-Role"))
+                {
+                    var roles = user.FindAll(System.Security.Claims.ClaimTypes.Role)
+                                    .Concat(user.FindAll("role"))
+                                    .Select(c => c.Value)
+                                    .Distinct();
+                    var roleString = string.Join(",", roles);
+                    if (!string.IsNullOrEmpty(roleString))
+                    {
+                        request.Headers.Add("X-User-Role", roleString);
+                    }
                 }
             }
 

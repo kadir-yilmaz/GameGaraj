@@ -1,0 +1,477 @@
+@model GameGaraj.WebUI.Models.Discussion.AdminQuestionListViewModel
+@{
+    ViewData["Title"] = "Soru-Cevap Yönetimi";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var currentUrl = Context.Request.Path + Context.Request.QueryString;
+    var selectedStatus = ViewBag.Status as int?;
+    var isArchived = ViewBag.Archived as bool?;
+    var currentQuery = ViewBag.Query as string;
+    var totalActive = Model.PendingCount + Model.AnsweredCount;
+
+    static string StatusText(int status) => status switch
+    {
+        0 => "Cevap bekliyor",
+        1 => "Cevaplandı",
+        _ => "Bilinmiyor"
+    };
+
+    static string StatusClass(int status) => status switch
+    {
+        0 => "warning",
+        1 => "success",
+        _ => "secondary"
+    };
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-4">
+        <div>
+            <h2 class="mb-1 fw-bold text-dark"><i class="fas fa-question-circle me-2 text-primary"></i>Soru-Cevap Yönetimi</h2>
+            <p class="text-muted mb-0">Müşterilerden gelen ürün sorularını yanıtlayabilir, düzenleyebilir ve yönetebilirsiniz.</p>
+        </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <a class="text-decoration-none" asp-action="Index" asp-route-q="@currentQuery" asp-route-pageSize="@Model.PageSize">
+                <div class="border rounded-4 bg-white p-3 shadow-sm h-100 transition-hover @(selectedStatus == null && isArchived != true ? "border-primary border-2" : "")">
+                    <div class="text-muted small fw-semibold">Tüm Sorular</div>
+                    <div class="h3 mb-0 fw-bold text-dark mt-1">@totalActive</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a class="text-decoration-none" asp-action="Index" asp-route-status="0" asp-route-q="@currentQuery" asp-route-pageSize="@Model.PageSize">
+                <div class="border rounded-4 bg-white p-3 shadow-sm h-100 transition-hover @(selectedStatus == 0 ? "border-warning border-2" : "")">
+                    <div class="text-muted small fw-semibold">Cevap Bekleyen</div>
+                    <div class="h3 mb-0 fw-bold text-warning mt-1">@Model.PendingCount</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a class="text-decoration-none" asp-action="Index" asp-route-status="1" asp-route-q="@currentQuery" asp-route-pageSize="@Model.PageSize">
+                <div class="border rounded-4 bg-white p-3 shadow-sm h-100 transition-hover @(selectedStatus == 1 ? "border-success border-2" : "")">
+                    <div class="text-muted small fw-semibold">Cevaplanan</div>
+                    <div class="h3 mb-0 fw-bold text-success mt-1">@Model.AnsweredCount</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a class="text-decoration-none" asp-action="Index" asp-route-archived="true" asp-route-q="@currentQuery" asp-route-pageSize="@Model.PageSize">
+                <div class="border rounded-4 bg-white p-3 shadow-sm h-100 transition-hover @(isArchived == true ? "border-secondary border-2" : "")">
+                    <div class="text-muted small fw-semibold">Arşivlenmiş (Ürün silindi)</div>
+                    <div class="h3 mb-0 fw-bold text-secondary mt-1">@Model.ArchivedCount</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <form method="get" class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-6">
+                    <label class="form-label small fw-bold text-muted">Arama Yap</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" name="q" value="@ViewBag.Query" class="form-control border-start-0" placeholder="Ürün adı, kullanıcı veya soru içeriği..." />
+                    </div>
+                </div>
+                <div class="col-lg-2">
+                    <label class="form-label small fw-bold text-muted">Durum</label>
+                    <select name="status" asp-items="ViewBag.StatusOptions" class="form-select"></select>
+                </div>
+                <div class="col-lg-2">
+                    <label class="form-label small fw-bold text-muted">Sayfa Boyutu</label>
+                    <select name="pageSize" class="form-select">
+                        <option value="20">20 Adet</option>
+                        <option value="50">50 Adet</option>
+                        <option value="100">100 Adet</option>
+                    </select>
+                </div>
+                <div class="col-lg-2">
+                    <button type="submit" class="btn btn-dark w-100 fw-semibold"><i class="fas fa-filter me-2"></i>Filtrele</button>
+                </div>
+            </div>
+            <input type="hidden" name="page" value="1" />
+            @if (isArchived == true)
+            {
+                <input type="hidden" name="archived" value="true" />
+            }
+        </div>
+    </form>
+
+    <!-- Table -->
+    @if (Model.Items.Any())
+    {
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0 qa-table">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 220px;">Ürün</th>
+                            <th style="min-width: 140px;">Kullanıcı</th>
+                            <th style="min-width: 280px;">Soru</th>
+                            <th style="min-width: 320px;">Satıcı Cevabı</th>
+                            <th style="min-width: 110px;">Durum</th>
+                            <th class="text-end" style="min-width: 80px;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var question in Model.Items)
+                        {
+                            <tr id="question-row-@question.Id" class="@(question.HasProfanity ? "table-danger" : question.IsSpamSuspected ? "table-warning" : question.IsArchived ? "table-secondary" : "")">
+                                <td>
+                                    <div class="fw-bold text-dark" style="font-size: 0.95rem;">@question.ProductName</div>
+                                    <small class="text-muted"><i class="far fa-calendar-alt me-1"></i>@question.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                                    @if (question.IsArchived)
+                                    {
+                                        <div class="mt-1">
+                                            <span class="badge bg-secondary"><i class="fas fa-archive me-1"></i>Ürün silindi</span>
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">@question.UserName</div>
+                                </td>
+                                <td>
+                                    <div class="text-dark" style="line-height: 1.5; font-size: 0.92rem;">@question.QuestionText</div>
+                                    @if (question.HasProfanity || question.IsSpamSuspected)
+                                    {
+                                        <div class="mt-2 d-flex gap-1 flex-wrap">
+                                            @if (question.HasProfanity)
+                                            {
+                                                <span class="badge bg-danger">Yasaklı Kelime</span>
+                                            }
+                                            @if (question.IsSpamSuspected)
+                                            {
+                                                <span class="badge bg-warning text-dark">Spam Şüpheli</span>
+                                            }
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(question.AdminNote))
+                                    {
+                                        <div class="alert alert-info py-2 px-3 mt-2 mb-0 small rounded-3">
+                                            <i class="fas fa-circle-info me-1"></i>
+                                            @question.AdminNote
+                                        </div>
+                                    }
+                                </td>
+                                <td class="qa-answer-cell">
+                                    @if (question.Answer != null)
+                                    {
+                                        <div class="qa-admin-answer-box">
+                                            <div class="d-flex justify-content-between align-items-center mb-1 gap-2">
+                                                <small class="text-muted d-flex align-items-center gap-1" style="font-size: 0.76rem;">
+                                                    <i class="fas fa-reply text-primary"></i>
+                                                    <strong class="text-dark">@question.Answer.ResponderName</strong>
+                                                    <span>—</span>
+                                                    <span>@question.Answer.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                                                </small>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 text-nowrap js-btn-open-answer"
+                                                        data-question-id="@question.Id"
+                                                        data-product-name="@question.ProductName"
+                                                        data-question-text="@question.QuestionText"
+                                                        data-answer-text="@question.Answer.AnswerText"
+                                                        data-is-edit="true"
+                                                        style="font-size: 0.76rem;"
+                                                        title="Cevabı Düzenle">
+                                                    <i class="fas fa-pen me-1 text-primary"></i> Düzenle
+                                                </button>
+                                            </div>
+                                            <div class="text-dark small text-break qa-answer-text" style="line-height: 1.45;">@question.Answer.AnswerText</div>
+                                        </div>
+                                    }
+                                    else if (!question.IsArchived)
+                                    {
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold js-btn-open-answer shadow-sm"
+                                                data-question-id="@question.Id"
+                                                data-product-name="@question.ProductName"
+                                                data-question-text="@question.QuestionText"
+                                                data-answer-text=""
+                                                data-is-edit="false">
+                                            <i class="fas fa-plus me-1"></i> Cevap Yaz
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted fst-italic small">Arşivlenmiş</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (question.IsArchived)
+                                    {
+                                        <span class="badge bg-secondary">Arşivlenmiş</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-@StatusClass(question.Status) rounded-pill px-2.5 py-1.5">@StatusText(question.Status)</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <form asp-action="Delete" method="post" onsubmit="return confirm('Bu soruyu silmek istediğinize emin misiniz?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="questionId" value="@question.Id" />
+                                        <input type="hidden" name="returnUrl" value="@currentUrl" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-3" title="Soruyu Sil">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    @for (var i = 1; i <= Model.TotalPages; i++)
+                    {
+                        <li class="page-item @(i == Model.Page ? "active" : "")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-page="@i"
+                               asp-route-status="@selectedStatus"
+                               asp-route-archived="@isArchived"
+                               asp-route-q="@currentQuery"
+                               asp-route-pageSize="@Model.PageSize">@i</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+    }
+    else
+    {
+        <div class="text-center bg-white border rounded-4 py-5 shadow-sm" id="noQuestionsBox">
+            <i class="far fa-question-circle fa-3x text-muted mb-3"></i>
+            <h5 class="fw-bold text-dark">Soru Bulunamadı</h5>
+            <p class="text-muted mb-0">Seçili filtrelere uygun soru kaydı mevcut değil.</p>
+        </div>
+    }
+</div>
+
+<!-- Answer / Edit Modal Popup -->
+<div class="modal fade" id="answerModal" tabindex="-1" aria-labelledby="answerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form asp-action="Answer" method="post" id="answerModalForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="QuestionId" id="modalQuestionId" />
+                <input type="hidden" name="returnUrl" value="@currentUrl" />
+
+                <div class="modal-header border-bottom px-4 py-3 bg-light">
+                    <h5 class="modal-title fw-bold text-dark" id="answerModalLabel">
+                        <i class="fas fa-reply text-primary me-2"></i>Soruya Cevap Ver
+                    </h5>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body px-4 py-3">
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <div class="small fw-bold text-primary mb-1" id="modalProductName"></div>
+                        <div class="small text-dark" style="line-height: 1.5;" id="modalQuestionText"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Yetkili Satıcı Yanıtı <span class="text-danger">*</span></label>
+                        <textarea name="AnswerText" id="modalAnswerText" class="form-control rounded-3" rows="4" placeholder="Müşterinin sorusuna açık ve net bir yanıt yazınız..." required minlength="5" maxlength="1000"></textarea>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <small class="text-muted">En az 5, en fazla 1000 karakter</small>
+                            <small class="text-muted" id="modalCharCounter">0 / 1000</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3 bg-light">
+                    <button type="button" class="btn btn-outline-secondary px-3 rounded-3" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold rounded-3" id="modalSubmitBtn">
+                        <i class="fas fa-paper-plane me-1"></i> Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Modal Open Handler (Both for "+ Cevap Yaz" and "✏️ Düzenle")
+        $(document).on('click', '.js-btn-open-answer', function () {
+            const btn = $(this);
+            const questionId = btn.attr('data-question-id');
+            const productName = btn.attr('data-product-name') || 'Ürün';
+            const questionText = btn.attr('data-question-text') || '';
+            const answerText = btn.attr('data-answer-text') || '';
+            const isEdit = btn.attr('data-is-edit') === 'true';
+
+            $('#modalQuestionId').val(questionId);
+            $('#modalProductName').html('<i class="fas fa-box me-1"></i> ' + escapeHtml(productName));
+            $('#modalQuestionText').text(questionText);
+            $('#modalAnswerText').val(answerText);
+            $('#modalCharCounter').text(answerText.length + ' / 1000');
+
+            if (isEdit) {
+                $('#answerModalLabel').html('<i class="fas fa-edit text-primary me-2"></i>Cevabı Düzenle');
+                $('#modalSubmitBtn').html('<i class="fas fa-save me-1"></i> Cevabı Güncelle');
+            } else {
+                $('#answerModalLabel').html('<i class="fas fa-reply text-primary me-2"></i>Soruya Cevap Ver');
+                $('#modalSubmitBtn').html('<i class="fas fa-paper-plane me-1"></i> Yanıtı Gönder');
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('answerModal'));
+            modal.show();
+        });
+
+        // Character counter in modal
+        $('#modalAnswerText').on('input', function () {
+            $('#modalCharCounter').text(this.value.length + ' / 1000');
+        });
+
+        // SignalR Canlı Etkinlik Dinleyicileri
+        document.addEventListener('admin-new-question', function (e) {
+            const q = e.detail;
+            console.log("[Admin View] Canlı yeni soru alındı:", q);
+
+            $('#noQuestionsBox').hide();
+
+            // Sayaçları güncelle
+            const $totalCards = $('.h3.text-dark, .h3.text-warning');
+            $totalCards.each(function () {
+                let val = parseInt($(this).text() || '0') + 1;
+                $(this).text(val);
+            });
+
+            if ($('tbody').length) {
+                const dateStr = new Date(q.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const rowHtml = `
+                    <tr id="question-row-${q.id}" class="table-warning" style="animation: highlightNew 2s ease;">
+                        <td>
+                            <div class="fw-bold text-dark" style="font-size: 0.95rem;">${escapeHtml(q.productName || 'Ürün')}</div>
+                            <small class="text-muted"><i class="far fa-calendar-alt me-1"></i>${dateStr}</small>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">${escapeHtml(q.userName || 'Kullanıcı')}</div>
+                        </td>
+                        <td>
+                            <div class="text-dark" style="line-height: 1.5; font-size: 0.92rem;">${escapeHtml(q.questionText || '')}</div>
+                        </td>
+                        <td class="qa-answer-cell">
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold js-btn-open-answer shadow-sm"
+                                    data-question-id="${q.id}"
+                                    data-product-name="${escapeHtml(q.productName || 'Ürün')}"
+                                    data-question-text="${escapeHtml(q.questionText || '')}"
+                                    data-answer-text=""
+                                    data-is-edit="false">
+                                <i class="fas fa-plus me-1"></i> Cevap Yaz
+                            </button>
+                        </td>
+                        <td>
+                            <span class="badge bg-warning rounded-pill px-2.5 py-1.5 text-dark">Cevap bekliyor</span>
+                        </td>
+                        <td class="text-end">
+                            <form action="/Admin/Discussion/Delete" method="post" onsubmit="return confirm('Bu soruyu silmek istediğinize emin misiniz?');">
+                                <input type="hidden" name="__RequestVerificationToken" value="${$('input[name="__RequestVerificationToken"]').val() || ''}" />
+                                <input type="hidden" name="questionId" value="${q.id}" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-3" title="Soruyu Sil">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>`;
+
+                $('tbody').prepend(rowHtml);
+            } else {
+                setTimeout(function () { window.location.reload(); }, 1000);
+            }
+        });
+
+        document.addEventListener('admin-question-deleted', function (e) {
+            const data = e.detail;
+            $(`#question-row-${data.questionId}`).fadeOut(300, function () {
+                $(this).remove();
+            });
+        });
+
+        document.addEventListener('admin-question-answered', function (e) {
+            const data = e.detail;
+            const $row = $(`#question-row-${data.questionId}`);
+            if ($row.length) {
+                $row.find('.badge').replaceWith('<span class="badge bg-success rounded-pill px-2.5 py-1.5">Cevaplandı</span>');
+                const dateStr = new Date(data.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                
+                const answerCellHtml = `
+                    <div class="qa-admin-answer-box">
+                        <div class="d-flex justify-content-between align-items-center mb-1 gap-2">
+                            <small class="text-muted d-flex align-items-center gap-1" style="font-size: 0.76rem;">
+                                <i class="fas fa-reply text-primary"></i>
+                                <strong class="text-dark">${escapeHtml(data.responderName || 'Admin')}</strong>
+                                <span>—</span>
+                                <span>${dateStr}</span>
+                            </small>
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 text-nowrap js-btn-open-answer"
+                                    data-question-id="${data.questionId}"
+                                    data-product-name="${escapeHtml(data.productName || 'Ürün')}"
+                                    data-question-text="${escapeHtml($row.find('td:nth-child(3)').text().trim())}"
+                                    data-answer-text="${escapeHtml(data.answerText || '')}"
+                                    data-is-edit="true"
+                                    style="font-size: 0.76rem;"
+                                    title="Cevabı Düzenle">
+                                <i class="fas fa-pen me-1 text-primary"></i> Düzenle
+                            </button>
+                        </div>
+                        <div class="text-dark small text-break qa-answer-text" style="line-height: 1.45;">${escapeHtml(data.answerText)}</div>
+                    </div>`;
+
+                $row.find('.qa-answer-cell').html(answerCellHtml);
+            }
+        });
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+    <style>
+        .qa-table th {
+            padding: 1rem 1.25rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            background-color: #f8fafc;
+            color: #64748b;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .qa-table td {
+            padding: 1.35rem 1.25rem !important;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .qa-admin-answer-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 3.5px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 0.75rem 0.9rem;
+        }
+        .transition-hover {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .transition-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06) !important;
+        }
+        @@keyframes highlightNew {
+            0% { background-color: #fef08a; }
+            100% { background-color: transparent; }
+        }
+    </style>
+}

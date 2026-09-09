@@ -1,0 +1,32 @@
+@model GameGaraj.WebUI.Models.Products.ProductViewModel
+
+<h2 class="specs-header">Ürün Özellikleri</h2>
+
+<!-- Info Icons -->
+@if (Model.Specs.Any())
+{
+    <div class="info-icons">
+        @foreach (var spec in Model.Specs.Take(5))
+        {
+            <div class="info-icon-item">
+                <i class="fas fa-microchip"></i>
+                <span>@spec.Key</span>
+                <strong>@spec.Value</strong>
+            </div>
+        }
+    </div>
+
+    <div class="specs-table">
+        @foreach (var spec in Model.Specs)
+        {
+            <div class="spec-row">
+                <span class="spec-label">@spec.Key</span>
+                <span class="spec-value">@spec.Value</span>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p class="text-muted">Bu ürün için teknik özellik bilgisi bulunmamaktadır.</p>
+}

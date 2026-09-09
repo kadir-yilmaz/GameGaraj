@@ -5,6 +5,8 @@ using GameGaraj.WebUI.Models.Products;
 using GameGaraj.WebUI.Models.Reviews;
 using Microsoft.AspNetCore.Mvc;
 
+using GameGaraj.WebUI.Models.Discussion;
+
 namespace GameGaraj.WebUI.Controllers
 {
     public class ProductController : Controller
@@ -14,6 +16,7 @@ namespace GameGaraj.WebUI.Controllers
         private readonly IBasketService _basketService;
         private readonly IFavoritesService _favoritesService;
         private readonly IReviewService _reviewService;
+        private readonly IDiscussionService _discussionService;
         private readonly INotyfService _notyf;
         private readonly ILogger<ProductController> _logger;
 
@@ -23,6 +26,7 @@ namespace GameGaraj.WebUI.Controllers
             IBasketService basketService,
             IFavoritesService favoritesService,
             IReviewService reviewService,
+            IDiscussionService discussionService,
             INotyfService notyf,
             ILogger<ProductController> logger)
         {
@@ -31,6 +35,7 @@ namespace GameGaraj.WebUI.Controllers
             _basketService = basketService;
             _favoritesService = favoritesService;
             _reviewService = reviewService;
+            _discussionService = discussionService;
             _notyf = notyf;
             _logger = logger;
         }
@@ -167,15 +172,16 @@ namespace GameGaraj.WebUI.Controllers
 
             var pid = product.Id?.Trim() ?? string.Empty;
 
-            // Parallelize all supplementary lookups (basket, favorites, reviews, permissions, category)
+            // Parallelize all supplementary lookups (basket, favorites, reviews, questions, permissions, category)
             var basketTask = _basketService.GetBasketAsync();
             var favTask = _favoritesService.IsFavoriteAsync(pid);
             var reviewsTask = _reviewService.GetProductReviewsAsync(pid, 0, 10);
+            var questionsTask = _discussionService.GetProductQuestionsAsync(pid, 0, 20);
             var canReviewTask = User.Identity?.IsAuthenticated == true ? _reviewService.CanReviewAsync(pid) : Task.FromResult(new CanReviewViewModel { CanReview = false });
             var userReviewTask = User.Identity?.IsAuthenticated == true ? _reviewService.GetUserReviewAsync(pid) : Task.FromResult(new UserReviewResponseViewModel());
             var categoryTask = !string.IsNullOrEmpty(product.CategoryId) ? _catalogService.GetCategoryByIdAsync(product.CategoryId) : Task.FromResult<CategoryViewModel?>(null);
 
-            await Task.WhenAll(basketTask, favTask, reviewsTask, canReviewTask, userReviewTask, categoryTask);
+            await Task.WhenAll(basketTask, favTask, reviewsTask, questionsTask, canReviewTask, userReviewTask, categoryTask);
 
             var basket = basketTask.Result;
             var basketProductIds = basket?.Items?
@@ -189,6 +195,7 @@ namespace GameGaraj.WebUI.Controllers
             product.IsFavorite = favTask.Result;
 
             ViewBag.Reviews = reviewsTask.Result;
+            ViewBag.Questions = questionsTask.Result;
 
             if (User.Identity?.IsAuthenticated == true)
             {
@@ -213,6 +220,75 @@ namespace GameGaraj.WebUI.Controllers
             var result = await _reviewService.CreateAsync(input);
             NotifyReviewResult(result);
             return RedirectToLocalOrProduct(input.ProductId, returnUrl);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateQuestion(CreateQuestionInput input, string? returnUrl = null)
+        {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                _notyf.Warning("Soru sormak için lütfen giriş yapın.");
+                return RedirectToAction("SignIn", "Auth", new { returnUrl });
+            }
+
+            var result = await _discussionService.CreateQuestionAsync(input);
+            if (result.Succeeded)
+            {
+                _notyf.Success(result.Message);
+            }
+            else
+            {
+                _notyf.Error(string.IsNullOrWhiteSpace(result.Message) ? "Soru gönderilemedi." : result.Message);
+            }
+
+            return RedirectToLocalOrProduct(input.ProductId, returnUrl);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateQuestionAjax(CreateQuestionInput input)
+        {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                return Json(new { succeeded = false, message = "Soru sormak için lütfen giriş yapın.", requireAuth = true });
+            }
+
+            var result = await _discussionService.CreateQuestionAsync(input);
+            return Json(new
+            {
+                succeeded = result.Succeeded,
+                message = result.Message,
+                id = result.Id,
+                productId = input.ProductId,
+                questionText = input.QuestionText,
+                userName = User.Identity?.Name ?? "Kullanıcı"
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VoteAnswer(string answerId, bool isHelpful)
+        {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                return Json(new { succeeded = false, message = "Oy kullanmak için lütfen giriş yapın.", requireAuth = true });
+            }
+
+            var result = await _discussionService.VoteAnswerAsync(answerId, isHelpful);
+            return Json(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetMoreQuestions(string productId, int page = 1, int pageSize = 10)
+        {
+            if (string.IsNullOrWhiteSpace(productId))
+            {
+                return BadRequest();
+            }
+
+            var questions = await _discussionService.GetProductQuestionsAsync(productId, page, pageSize);
+            return Json(questions);
         }
 
         [HttpPost]
