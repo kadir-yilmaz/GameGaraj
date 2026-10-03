@@ -15,4 +15,5 @@ spec:
       storage: {{ .Values.monitoring.grafana.persistence.size }}
   {{- if .Values.monitoring.grafana.persistence.storageClassName }}
   storageClassName: {{ .Values.monitoring.grafana.persistence.storageClassName | quote }}
+  {{- end }}
 {{- end }}

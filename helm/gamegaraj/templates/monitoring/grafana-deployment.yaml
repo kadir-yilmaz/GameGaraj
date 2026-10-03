@@ -72,4 +72,5 @@ spec:
             claimName: grafana-storage
           {{- else }}
           emptyDir: {}
+          {{- end }}
 {{- end }}
