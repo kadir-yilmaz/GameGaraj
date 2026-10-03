@@ -1,4 +1,4 @@
-﻿{{- if .Values.monitoring.grafana.persistence.enabled }}
+{{- if .Values.monitoring.grafana.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -15,4 +15,4 @@ spec:
       storage: {{ .Values.monitoring.grafana.persistence.size }}
   {{- if .Values.monitoring.grafana.persistence.storageClassName }}
   storageClassName: {{ .Values.monitoring.grafana.persistence.storageClassName | quote }}
-  {{- end }}
+{{- end }}

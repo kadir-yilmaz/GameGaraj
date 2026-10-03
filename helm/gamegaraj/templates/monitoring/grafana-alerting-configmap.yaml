@@ -1,4 +1,4 @@
-﻿{{- if .Values.monitoring.enabled }}
+{{- if .Values.monitoring.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -144,7 +144,7 @@ data:
               severity: critical
             annotations:
               summary: "More than 10 payment failures in 10 minutes"
-              description: "Payment failure count spiked â€” possible payment gateway issue."
+              description: "Payment failure count spiked — possible payment gateway issue."
 
           - uid: gamegaraj-email-failures
             title: Invoice Email Failures
@@ -176,5 +176,5 @@ data:
               severity: warning
             annotations:
               summary: "More than 5 invoice email failures in 10 minutes"
-              description: "Invoice email delivery is failing â€” check SMTP configuration."
+              description: "Invoice email delivery is failing — check SMTP configuration."
 {{- end }}
