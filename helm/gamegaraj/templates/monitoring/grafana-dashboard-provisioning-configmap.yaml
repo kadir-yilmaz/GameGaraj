@@ -1,0 +1,24 @@
+﻿{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provisioning
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: grafana
+    {{- include "gamegaraj.labels" $ | nindent 4 }}
+data:
+  dashboard.yml: |
+    apiVersion: 1
+    providers:
+      - name: 'GameGaraj'
+        orgId: 1
+        folder: 'GameGaraj'
+        type: file
+        disableDeletion: false
+        editable: false
+        updateIntervalSeconds: 10
+        options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: false
+{{- end }}
