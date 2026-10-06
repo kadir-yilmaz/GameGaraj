@@ -113,6 +113,17 @@ services:
       ConnectionStrings__PostgresConnection: review-postgres-connection
 
   # ---------------------------------------------------------------------------
+  # Discussion API (PostgreSQL)
+  # ---------------------------------------------------------------------------
+  discussion-api:
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/discussion-api:c5af4a1-148-1"
+    replicas: 4
+    env:
+      IdentityOption__Audience: "discussion.api"
+    secretEnv:
+      ConnectionStrings__PostgresConnection: discussion-postgres-connection
+
+  # ---------------------------------------------------------------------------
   # PhotoStock API (MinIO)
   # ---------------------------------------------------------------------------
   photostock-api:
