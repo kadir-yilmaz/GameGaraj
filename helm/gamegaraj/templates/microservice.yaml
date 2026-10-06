@@ -38,6 +38,14 @@ spec:
         - name: {{ . | quote }}
         {{- end }}
       {{- end }}
+      {{- if $svc.tolerations }}
+      tolerations:
+        {{- toYaml $svc.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if $svc.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml $svc.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ $name }}
           image: {{ $svc.image }}
@@ -84,6 +92,10 @@ spec:
                   key: {{ $secretKey }}
             {{- end }}
             {{- end }}
+          {{- if .resources }}
+          resources:
+            {{- toYaml .resources | nindent 12 }}
+          {{- end }}
 ---
 apiVersion: v1
 kind: Service

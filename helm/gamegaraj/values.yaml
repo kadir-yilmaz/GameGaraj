@@ -79,6 +79,7 @@ services:
   catalog-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/catalog-api:985c3ca-144-1"
     nodePort: 30010
+    replicas: 6
     skipCommonRabbit: true
     env:
       IdentityOption__Audience: "catalog.api"
@@ -86,6 +87,25 @@ services:
       RabbitMQUrl: rabbitmq-url
       ConnectionStrings__PostgresConnection: catalog-postgres-connection
       ConnectionStrings__Redis: redis-connection
+    resources:
+      requests:
+        memory: "400Mi"
+        cpu: "100m"
+      limits:
+        memory: "600Mi"
+        cpu: "300m"
+    tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "catalog"
+        effect: "NoSchedule"
+    topologySpreadConstraints:
+      - maxSkew: 2
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: catalog-api
 
   # ---------------------------------------------------------------------------
   # Review API (PostgreSQL)
