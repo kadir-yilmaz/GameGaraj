@@ -22,6 +22,14 @@ on:
           - review-api
           - notification-api
           - webui
+      architecture:
+        description: Build Architecture (Normal = Intel only, Multiarch = Intel + ARM)
+        required: true
+        default: normal
+        type: choice
+        options:
+          - normal
+          - multiarch
 
 concurrency:
   group: gamegaraj-k3s-app-deploy
@@ -34,7 +42,7 @@ permissions:
 jobs:
   deploy:
     name: Build Images And Update Tags
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
 
     env:
       BUILD_SERVICE: ${{ github.event.inputs.service || 'all' }}
@@ -158,8 +166,13 @@ jobs:
             echo "No services changed or selected. Skipping docker build."
             echo "SKIP_TAG_UPDATE=true" >> "$GITHUB_ENV"
           else
-            echo "Building services (Multi-Arch): $SERVICES_TO_BUILD"
-            IMAGE_REPOSITORY="$IMAGE_REPOSITORY" IMAGE_TAG="$DEPLOY_TAG" docker buildx bake -f docker-compose.build.yml --set "*.platform=linux/amd64,linux/arm64" --push $SERVICES_TO_BUILD
+            if [ "${{ github.event.inputs.architecture }}" = "multiarch" ]; then
+              TARGET_PLATFORMS="linux/amd64,linux/arm64"
+            else
+              TARGET_PLATFORMS="linux/amd64"
+            fi
+            echo "Building services ($TARGET_PLATFORMS): $SERVICES_TO_BUILD"
+            IMAGE_REPOSITORY="$IMAGE_REPOSITORY" IMAGE_TAG="$DEPLOY_TAG" docker buildx bake -f docker-compose.build.yml --set "*.platform=$TARGET_PLATFORMS" --push $SERVICES_TO_BUILD
             echo "SERVICES_BUILT=$SERVICES_TO_BUILD" >> "$GITHUB_ENV"
           fi
 
