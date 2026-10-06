@@ -20,6 +20,7 @@ on:
           - invoice-api
           - campaign-api
           - review-api
+          - discussion-api
           - notification-api
           - webui
       architecture:
