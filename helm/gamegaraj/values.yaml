@@ -97,21 +97,6 @@ services:
       limits:
         memory: "600Mi"
         cpu: "300m"
-    affinity:
-      nodeAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-                - key: kubernetes.io/hostname
-                  operator: In
-                  values:
-                    - localhost.localdomain
-    tolerations:
-      - key: "dedicated"
-        operator: "Equal"
-        value: "catalog"
-        effect: "NoSchedule"
     topologySpreadConstraints:
       - maxSkew: 2
         topologyKey: kubernetes.io/hostname
@@ -255,21 +240,6 @@ services:
       requests:
         memory: "150Mi"
         cpu: "100m"
-    affinity:
-      nodeAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-                - key: kubernetes.io/hostname
-                  operator: In
-                  values:
-                    - localhost.localdomain
-    tolerations:
-      - key: "dedicated"
-        operator: "Equal"
-        value: "catalog"
-        effect: "NoSchedule"
     env:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"

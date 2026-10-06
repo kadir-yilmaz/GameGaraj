@@ -31,6 +31,14 @@ on:
         options:
           - normal
           - multiarch
+      runner:
+        description: Choose the build server (ubuntu-latest = GitHub, self-hosted = 16GB Homeserver)
+        required: true
+        default: self-hosted
+        type: choice
+        options:
+          - self-hosted
+          - ubuntu-latest
 
 concurrency:
   group: gamegaraj-k3s-app-deploy
@@ -43,7 +51,7 @@ permissions:
 jobs:
   deploy:
     name: Build Images And Update Tags
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
 
     env:
       BUILD_SERVICE: ${{ github.event.inputs.service || 'all' }}
