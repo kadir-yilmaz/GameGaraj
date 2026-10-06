@@ -122,7 +122,13 @@ jobs:
           set -euo pipefail
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
 
-      - name: Build Application Images
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Multi-Arch Images
         run: |
           set -euo pipefail
 
@@ -152,16 +158,10 @@ jobs:
             echo "No services changed or selected. Skipping docker build."
             echo "SKIP_TAG_UPDATE=true" >> "$GITHUB_ENV"
           else
-            echo "Building services: $SERVICES_TO_BUILD"
-            IMAGE_REPOSITORY="$IMAGE_REPOSITORY" IMAGE_TAG="$DEPLOY_TAG" docker compose -f docker-compose.build.yml build $SERVICES_TO_BUILD
+            echo "Building services (Multi-Arch): $SERVICES_TO_BUILD"
+            IMAGE_REPOSITORY="$IMAGE_REPOSITORY" IMAGE_TAG="$DEPLOY_TAG" docker buildx bake -f docker-compose.build.yml --set "*.platform=linux/amd64,linux/arm64" --push $SERVICES_TO_BUILD
             echo "SERVICES_BUILT=$SERVICES_TO_BUILD" >> "$GITHUB_ENV"
           fi
-
-      - name: Push Application Images
-        if: ${{ env.SKIP_TAG_UPDATE != 'true' }}
-        run: |
-          set -euo pipefail
-          IMAGE_REPOSITORY="$IMAGE_REPOSITORY" IMAGE_TAG="$DEPLOY_TAG" docker compose -f docker-compose.build.yml push $SERVICES_BUILT
 
       - name: Update Image Tags in values.yaml
         if: ${{ env.SKIP_TAG_UPDATE != 'true' }}
