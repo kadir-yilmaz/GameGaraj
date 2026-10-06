@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -6,15 +6,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG TARGETARCH
 WORKDIR /src
 COPY . .
-RUN dotnet restore "GameGaraj.Invoice.API/GameGaraj.Invoice.API.csproj"
+RUN dotnet restore "GameGaraj.Invoice.API/GameGaraj.Invoice.API.csproj" -a $TARGETARCH
 WORKDIR "/src/GameGaraj.Invoice.API"
-RUN dotnet build "GameGaraj.Invoice.API.csproj" -c Release -o /app/build
+RUN dotnet build "GameGaraj.Invoice.API.csproj" -c Release -o /app/build -a $TARGETARCH
 
 FROM build AS publish
-RUN dotnet publish "GameGaraj.Invoice.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
+ARG TARGETARCH
+RUN dotnet publish "GameGaraj.Invoice.API.csproj" -c Release -o /app/publish /p:UseAppHost=false -a $TARGETARCH
 
 FROM base AS final
 WORKDIR /app

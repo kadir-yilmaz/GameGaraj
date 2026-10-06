@@ -1,4 +1,4 @@
-FROM golang:alpine AS build
+﻿FROM golang:alpine AS build
 
 ENV GOTOOLCHAIN=auto
 WORKDIR /app
@@ -9,7 +9,7 @@ RUN go mod download
 
 # Copy source code and build
 COPY . .
-RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /search-api ./cmd/server
+RUN go mod tidy && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /search-api ./cmd/server
 
 # Final minimal image
 FROM alpine:3.19

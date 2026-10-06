@@ -1,5 +1,7 @@
-# Stage 1: Build the Go binary
-FROM golang:alpine AS builder
+﻿# Stage 1: Build the Go binary
+FROM --platform=$BUILDPLATFORM golang:alpine AS builder
+ARG TARGETOS
+ARG TARGETARCH
 
 ENV GOTOOLCHAIN=auto
 WORKDIR /app
@@ -12,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build static binary
-RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/notification-api cmd/api/main.go
+RUN go mod tidy && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-w -s" -o /app/notification-api cmd/api/main.go
 
 # Stage 2: Minimal runtime image
 FROM alpine:3.19
