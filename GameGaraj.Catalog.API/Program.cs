@@ -1,10 +1,9 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using GameGaraj.Catalog.API.Data;
 using GameGaraj.Catalog.API.Services.Abstract;
 using GameGaraj.Catalog.API.Services.Concrete;
 using MassTransit;
 using GameGaraj.Catalog.API.Consumers;
-using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 using Npgsql;
@@ -15,15 +14,13 @@ using GameGaraj.Shared.Chaos;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Yüksek anlık yük testleri (Load Test) için ThreadPool'u baştan genişletiyoruz
-// Böylece anlık 1000 RPS geldiğinde StackExchange.Redis timeout'a düşmez.
+// YÃ¼ksek anlÄ±k yÃ¼k testleri (Load Test) iÃ§in ThreadPool'u baÅŸtan geniÅŸletiyoruz
+// BÃ¶ylece anlÄ±k 1000 RPS geldiÄŸinde StackExchange.Redis timeout'a dÃ¼ÅŸmez.
 System.Threading.ThreadPool.SetMinThreads(1000, 1000);
 
 // Serilog Ekle
-builder.AddSerilogLogging("Catalog.API");
 
 // OpenTelemetry (Tracing + Metrics)
-builder.AddObservability(ObservabilityConstants.CatalogService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<CatalogMetrics>();
@@ -169,10 +166,7 @@ app.UseAuthorization();
 // Chaos Testing Engine
 app.UseChaos("catalog");
 
-app.UseCustomRequestLogging();
-
 // OpenTelemetry Prometheus /metrics endpoint
-app.UseObservability();
 
 app.MapControllers();
 

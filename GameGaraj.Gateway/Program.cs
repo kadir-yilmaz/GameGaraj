@@ -1,19 +1,16 @@
 using GameGaraj.Gateway.Extensions;
-using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using System.Diagnostics;
 using Yarp.ReverseProxy.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Yüksek anlık yük testleri (Load Test) için ThreadPool'u baştan genişletiyoruz
+// YÃ¼ksek anlÄ±k yÃ¼k testleri (Load Test) iÃ§in ThreadPool'u baÅŸtan geniÅŸletiyoruz
 System.Threading.ThreadPool.SetMinThreads(1000, 1000);
 
 // Serilog Ekle
-builder.AddSerilogLogging("Gateway");
 
 // OpenTelemetry (Tracing + Metrics)
-builder.AddObservability(ObservabilityConstants.GatewayService);
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
@@ -48,10 +45,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Custom Request Logging Ekle
-app.UseCustomRequestLogging(includeGatewayRouting: true);
+
 
 // OpenTelemetry Prometheus /metrics endpoint
-app.UseObservability();
 
 app.MapReverseProxy();
 

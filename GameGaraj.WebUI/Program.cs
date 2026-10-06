@@ -1,8 +1,7 @@
-using GameGaraj.WebUI.Extensions;
+﻿using GameGaraj.WebUI.Extensions;
 using GameGaraj.WebUI.Services.Abstract;
 using GameGaraj.WebUI.Services.Concrete;
 using GameGaraj.WebUI.Settings;
-using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Chaos;
 using MassTransit;
@@ -29,10 +28,8 @@ System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Ekle
-builder.AddSerilogLogging("WebUI");
-builder.AddObservability(ObservabilityConstants.WebUIService);
 
-// Options Pattern - appsettings.json'dan ayarları okuma
+// Options Pattern - appsettings.json'dan ayarlarÄ± okuma
 builder.Services.Configure<ServiceApiSettings>(builder.Configuration.GetSection("ServiceApiSettings"));
 builder.Services.Configure<ObservabilitySettings>(builder.Configuration.GetSection("ObservabilitySettings"));
 
@@ -66,8 +63,8 @@ if (!string.IsNullOrWhiteSpace(redisUrl) &&
       }
 
       var redisOptions = ConfigurationOptions.Parse(redisUrl);
-      redisOptions.AbortOnConnectFail = true; // Hızlı hata fırlatması için
-      redisOptions.ConnectTimeout = 3000; // 3 saniye içinde bağlanamazsa pes et
+      redisOptions.AbortOnConnectFail = true; // HÄ±zlÄ± hata fÄ±rlatmasÄ± iÃ§in
+      redisOptions.ConnectTimeout = 3000; // 3 saniye iÃ§inde baÄŸlanamazsa pes et
       var redis = ConnectionMultiplexer.Connect(redisOptions);
       
       dataProtectionBuilder.PersistKeysToStackExchangeRedis(redis, "data-protection:keys");
@@ -109,12 +106,12 @@ builder.Services.AddAuthentication(options =>
         options.SlidingExpiration = true;
         options.Cookie.Name = "GameGarajWebCookie";
         
-        // Güvenlik (Security) Ayarları: XSS ve CSRF koruması
+        // GÃ¼venlik (Security) AyarlarÄ±: XSS ve CSRF korumasÄ±
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
             ? CookieSecurePolicy.SameAsRequest
             : CookieSecurePolicy.Always; // HTTPS zorunlu
-        options.Cookie.SameSite = SameSiteMode.Lax; // CSRF koruması
+        options.Cookie.SameSite = SameSiteMode.Lax; // CSRF korumasÄ±
 
         options.Events = new CookieAuthenticationEvents
         {
@@ -306,7 +303,7 @@ builder.Services.AddNotyf(config =>
 // MVC
 builder.Services.AddControllersWithViews();
 
-// Routing - SEO için tüm URL'lerin küçük harf olmasını sağlar
+// Routing - SEO iÃ§in tÃ¼m URL'lerin kÃ¼Ã§Ã¼k harf olmasÄ±nÄ± saÄŸlar
 builder.Services.AddRouting(options =>
 {
     options.LowercaseUrls = true;
@@ -314,7 +311,7 @@ builder.Services.AddRouting(options =>
     options.ConstraintMap.Add("categorySlug", typeof(GameGaraj.WebUI.Extensions.CategorySlugConstraint));
 });
 
-// Proxy'lerden gelen X-Forwarded-Proto ve X-Forwarded-For başlıklarını kabul etmesi için
+// Proxy'lerden gelen X-Forwarded-Proto ve X-Forwarded-For baÅŸlÄ±klarÄ±nÄ± kabul etmesi iÃ§in
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -369,18 +366,16 @@ app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseObservability();
 
 app.UseNotyf();
 
 // Custom Request Logging Ekle
-app.UseCustomRequestLogging();
 
 // Map SignalR Hubs
 app.MapHub<GameGaraj.WebUI.Hubs.PipelineHub>("/hubs/pipeline");
 app.MapHub<GameGaraj.WebUI.Hubs.DiscussionHub>("/hubs/discussion");
 
-// SEO Routes - Hepsiburada tarzı (öncelik sırasına göre)
+// SEO Routes - Hepsiburada tarzÄ± (Ã¶ncelik sÄ±rasÄ±na gÃ¶re)
 app.MapControllerRoute(
     name: "search",
     pattern: "ara",

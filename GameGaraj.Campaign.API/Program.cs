@@ -1,8 +1,7 @@
-using GameGaraj.Campaign.API.Rules;
+﻿using GameGaraj.Campaign.API.Rules;
 using GameGaraj.Campaign.API.Services;
 using GameGaraj.Campaign.API.Services.Abstract;
 using GameGaraj.Campaign.API.Services.Concrete;
-using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 using GameGaraj.Shared.Chaos;
@@ -11,10 +10,8 @@ using MassTransit;
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Ekle
-builder.AddSerilogLogging("Campaign.API");
 
 // OpenTelemetry (Tracing + Metrics)
-builder.AddObservability(ObservabilityConstants.CampaignService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<CampaignMetrics>();
@@ -27,7 +24,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// CORS — WebUI'dan erişim için
+// CORS â€” WebUI'dan eriÅŸim iÃ§in
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -77,7 +74,7 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-// Run Migration — campaign_rule, coupons, rewards, notifications, purchase logs tablolarını oluştur
+// Run Migration â€” campaign_rule, coupons, rewards, notifications, purchase logs tablolarÄ±nÄ± oluÅŸtur
 DbMigrationHelper.EnsureDatabaseSetup(builder.Configuration);
 
 var app = builder.Build();
@@ -96,10 +93,7 @@ app.UseRouting();
 // Chaos Testing Engine
 app.UseChaos("campaign");
 
-app.UseCustomRequestLogging();
-
 // OpenTelemetry Prometheus /metrics endpoint
-app.UseObservability();
 
 app.MapControllers();
 

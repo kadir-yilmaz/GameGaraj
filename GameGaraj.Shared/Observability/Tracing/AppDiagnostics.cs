@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 
-namespace GameGaraj.Shared.Observability.Tracing
+namespace GameGaraj.Shared.Observability
 {
     /// <summary>
     /// Central manual trace helper for all GameGaraj applications.

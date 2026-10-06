@@ -1,11 +1,10 @@
-using MassTransit;
+﻿using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Mvc;
 using GameGaraj.Payment.API.Settings;
-using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 using GameGaraj.Shared.Chaos;
@@ -43,10 +42,8 @@ void LoadDotEnv()
 }
 
 // Serilog Ekle
-builder.AddSerilogLogging("Payment.API");
 
 // OpenTelemetry (Tracing + Metrics)
-builder.AddObservability(ObservabilityConstants.PaymentService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<PaymentMetrics>();
@@ -125,10 +122,7 @@ app.UseAuthorization();
 // Chaos Testing Engine
 app.UseChaos("payment");
 
-app.UseCustomRequestLogging();
-
 // OpenTelemetry Prometheus /metrics endpoint
-app.UseObservability();
 
 app.MapControllers();
 

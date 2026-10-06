@@ -1,5 +1,4 @@
-using GameGaraj.Shared.Logging;
-using GameGaraj.Shared.Observability;
+﻿using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Minio;
@@ -8,10 +7,8 @@ using GameGaraj.PhotoStock.API.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Ekle
-builder.AddSerilogLogging("PhotoStock.API");
 
 // OpenTelemetry (Tracing + Metrics)
-builder.AddObservability(ObservabilityConstants.PhotoStockService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<PhotoStockMetrics>();
@@ -116,10 +113,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseCustomRequestLogging();
-
 // OpenTelemetry Prometheus /metrics endpoint
-app.UseObservability();
 
 app.MapControllers();
 

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +14,6 @@ using GameGaraj.Order.Infrastructure.Repositories.Concrete;
 using GameGaraj.Order.API.Services.Hosted;
 using Microsoft.AspNetCore.Mvc;
 using MassTransit;
-using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 using GameGaraj.Shared.Chaos;
@@ -22,10 +21,8 @@ using GameGaraj.Shared.Chaos;
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Ekle
-builder.AddSerilogLogging("Order.API");
 
 // OpenTelemetry (Tracing + Metrics)
-builder.AddObservability(ObservabilityConstants.OrderService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<OrderMetrics>();
@@ -163,10 +160,7 @@ app.UseAuthorization();
 // Chaos Testing Engine
 app.UseChaos("order");
 
-app.UseCustomRequestLogging();
-
 // OpenTelemetry Prometheus /metrics endpoint
-app.UseObservability();
 
 app.MapControllers();
 

@@ -1,18 +1,14 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
 using GameGaraj.Review.API.Data;
 using GameGaraj.Review.API.Services;
-using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddSerilogLogging("Review.API");
-
 // OpenTelemetry (Tracing + Metrics)
-builder.AddObservability(ObservabilityConstants.ReviewService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<ReviewMetrics>();
@@ -111,10 +107,8 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseCustomRequestLogging();
 
 // OpenTelemetry Prometheus /metrics endpoint
-app.UseObservability();
 
 app.MapControllers();
 

@@ -1,7 +1,6 @@
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 
@@ -20,14 +19,12 @@ using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Yüksek anlık yük testleri (Load Test) için ThreadPool'u baştan genişletiyoruz
+// YÃ¼ksek anlÄ±k yÃ¼k testleri (Load Test) iÃ§in ThreadPool'u baÅŸtan geniÅŸletiyoruz
 System.Threading.ThreadPool.SetMinThreads(1000, 1000);
 
 // Serilog Ekle
-builder.AddSerilogLogging("Basket.API");
 
 // OpenTelemetry (Tracing + Metrics)
-builder.AddObservability(ObservabilityConstants.BasketService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<BasketMetrics>();
@@ -36,7 +33,7 @@ builder.Services.AddSingleton<BasketMetrics>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Redis Cache - Multi-Endpoint Master/Replica desteği (Failover durumunda otomatik master tespiti yapar)
+// Redis Cache - Multi-Endpoint Master/Replica desteÄŸi (Failover durumunda otomatik master tespiti yapar)
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     var redisConnection = builder.Configuration.GetConnectionString("Redis");
@@ -92,10 +89,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseCustomRequestLogging();
-
 // OpenTelemetry Prometheus /metrics endpoint
-app.UseObservability();
 
 // Versioning Set
 var apiVersionSet = app.NewApiVersionSet()

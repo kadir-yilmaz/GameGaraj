@@ -1,11 +1,10 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using GameGaraj.Discussion.API.Consumers;
 using GameGaraj.Discussion.API.Data;
 using GameGaraj.Discussion.API.Hubs;
 using GameGaraj.Discussion.API.Services;
-using GameGaraj.Shared.Logging;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -14,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Ekle
-builder.AddSerilogLogging("Discussion.API");
 
 // PostgreSQL
 builder.Services.AddDbContext<DiscussionDbContext>(options =>
@@ -39,7 +37,7 @@ builder.Services.AddControllers()
         manager.ApplicationParts.Add(new Microsoft.AspNetCore.Mvc.ApplicationParts.AssemblyPart(typeof(Program).Assembly));
     });
 
-// Authentication — JWT Bearer (Keycloak)
+// Authentication â€” JWT Bearer (Keycloak)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -88,7 +86,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
                 return Task.CompletedTask;
             },
-            // SignalR WebSocket bağlantısında JWT token query string'den gelir
+            // SignalR WebSocket baÄŸlantÄ±sÄ±nda JWT token query string'den gelir
             OnMessageReceived = context =>
             {
                 var accessToken = context.Request.Query["access_token"];
@@ -112,7 +110,7 @@ builder.Services.AddSignalR();
 // Rate Limiting (Madde 10)
 builder.Services.AddRateLimiter(options =>
 {
-    // Soru sorma: Kullanıcı başına 5 soru / dakika
+    // Soru sorma: KullanÄ±cÄ± baÅŸÄ±na 5 soru / dakika
     options.AddPolicy("question-create", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             httpContext.User.FindFirst("sub")?.Value ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
@@ -122,7 +120,7 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1)
             }));
 
-    // Cevap verme: Admin başına 30 cevap / dakika
+    // Cevap verme: Admin baÅŸÄ±na 30 cevap / dakika
     options.AddPolicy("answer-create", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             httpContext.User.FindFirst("sub")?.Value ?? "admin",
@@ -166,7 +164,7 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-// CORS (WebUI'dan SignalR bağlantısı için)
+// CORS (WebUI'dan SignalR baÄŸlantÄ±sÄ± iÃ§in)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("SignalRCors", policy =>
@@ -207,11 +205,9 @@ app.UseAuthorization();
 
 app.UseRateLimiter();
 
-app.UseCustomRequestLogging();
-
 app.MapControllers();
 
-// SignalR Hub — Discussion API'de (Madde 9: yetkilendirilmiş bağlantı)
+// SignalR Hub â€” Discussion API'de (Madde 9: yetkilendirilmiÅŸ baÄŸlantÄ±)
 app.MapHub<DiscussionHub>("/hubs/discussion");
 
 app.Run();

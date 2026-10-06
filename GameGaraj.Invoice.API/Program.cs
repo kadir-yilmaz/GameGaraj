@@ -1,7 +1,6 @@
-using MassTransit;
+﻿using MassTransit;
 using GameGaraj.Invoice.API.Consumers;
 using GameGaraj.Invoice.API.Services;
-using GameGaraj.Shared.Logging;
 using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 using GameGaraj.Shared.Chaos;
@@ -41,10 +40,8 @@ void LoadDotEnv()
 }
 
 // Serilog Ekle
-builder.AddSerilogLogging("Invoice.API");
 
 // OpenTelemetry (Tracing + Metrics)
-builder.AddObservability(ObservabilityConstants.InvoiceService);
 
 // Custom Business Metrics
 builder.Services.AddSingleton<InvoiceMetrics>();
@@ -171,10 +168,7 @@ app.UseAuthorization();
 // Chaos Testing Engine
 app.UseChaos("invoice");
 
-app.UseCustomRequestLogging();
-
 // OpenTelemetry Prometheus /metrics endpoint
-app.UseObservability();
 
 app.MapControllers();
 
