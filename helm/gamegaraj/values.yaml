@@ -17,7 +17,7 @@ global:
   rabbitmqUrl: "192.168.1.56"
   identityAuthority: "http://192.168.1.56:8080/realms/GameGaraj"
   elasticUri: "http://192.168.1.56:9201"
-  otlpEndpoint: "http://jaeger:4317"
+  otlpEndpoint: "http://192.168.1.56:4317"
   otlpSamplingRatio: "1.0"
   otlpIncludeDatabaseSpans: "false"
   otlpSuppressLowValueManualSpans: "true"
@@ -245,7 +245,7 @@ services:
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
       APP_VERSION: "c5af4a1-148-1"
-      OpenTelemetry__OtlpEndpoint: "http://jaeger:4317"
+      OpenTelemetry__OtlpEndpoint: "http://192.168.1.56:4317"
       ObservabilitySettings__ElasticSearchUri: "http://192.168.1.56:9201"
       ObservabilitySettings__Services__Gateway: "http://gateway:8080"
       ObservabilitySettings__Services__CatalogAPI: "http://catalog-api:8080"
@@ -285,15 +285,4 @@ monitoring:
   enabled: true
   prometheus:
     image: "prom/prometheus:v2.51.0"
-  grafana:
-    image: "grafana/grafana:10.4.1"
-    nodePort: 30300
-    persistence:
-      enabled: true
-      size: 2Gi
-      accessMode: ReadWriteOnce
-      storageClassName: ""
-  jaeger:
-    image: "jaegertracing/all-in-one:1.56"
-    nodePort: 30686
 
