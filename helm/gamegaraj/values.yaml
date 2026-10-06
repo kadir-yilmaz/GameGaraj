@@ -48,7 +48,7 @@ services:
   # ---------------------------------------------------------------------------
   gateway:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/gateway:c5af4a1-148-1"
-    replicas: 2
+    replicas: 4
     serviceType: NodePort
     nodePort: 30000
     env:
@@ -239,7 +239,7 @@ services:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:c5af4a1-148-1"
     serviceType: NodePort
     nodePort: 30075
-    replicas: 2
+    replicas: 4
     resources:
       requests:
         memory: "150Mi"
