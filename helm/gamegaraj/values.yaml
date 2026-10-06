@@ -116,7 +116,7 @@ services:
   # Discussion API (PostgreSQL)
   # ---------------------------------------------------------------------------
   discussion-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/discussion-api:c5af4a1-148-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/discussion-api:15b3557-150-1"
     replicas: 4
     env:
       IdentityOption__Audience: "discussion.api"
