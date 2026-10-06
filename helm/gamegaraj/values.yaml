@@ -91,8 +91,8 @@ services:
       ConnectionStrings__Redis: redis-connection
     resources:
       requests:
-        memory: "100Mi"
-        cpu: "50m"
+        memory: "350Mi"
+        cpu: "300m"
       limits:
         memory: "600Mi"
         cpu: "300m"
