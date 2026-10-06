@@ -1,4 +1,4 @@
-namespace GameGaraj.Shared.Observability
+namespace GameGaraj.Shared.Observability.Admin
 {
     /// <summary>
     /// Central constants for the observability platform.

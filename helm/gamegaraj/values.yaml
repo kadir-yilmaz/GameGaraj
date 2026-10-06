@@ -17,7 +17,7 @@ global:
   rabbitmqUrl: "192.168.1.56"
   identityAuthority: "http://192.168.1.56:8080/realms/GameGaraj"
   elasticUri: "http://192.168.1.56:9201"
-  otlpEndpoint: "http://192.168.1.56:4317"
+  otlpEndpoint: "http://jaeger:4317"
   otlpSamplingRatio: "1.0"
   otlpIncludeDatabaseSpans: "false"
   otlpSuppressLowValueManualSpans: "true"
@@ -30,14 +30,16 @@ fullnameOverride: ""
 # =============================================================================
 # Microservice Definitions
 # =============================================================================
-# Each entry generates a Deployment + NodePort Service.
+# Each entry generates a Deployment + ClusterIP Service (default).
+# Only services that need external access should set serviceType: NodePort.
 # Fields:
-#   image      - container image (required)
-#   nodePort   - NodePort number (required)
-#   replicas   - replica count (default: 1)
-#   env        - plain environment variables (map)
-#   secretEnv  - env vars sourced from gamegaraj-secrets (map: envName → secretKey)
-#   skipCommon - if true, do NOT inject global common env vars (default: false)
+#   image        - container image (required)
+#   serviceType  - K8s service type (default: ClusterIP)
+#   nodePort     - NodePort number (only when serviceType is NodePort)
+#   replicas     - replica count (default: 1)
+#   env          - plain environment variables (map)
+#   secretEnv    - env vars sourced from gamegaraj-secrets (map: envName → secretKey)
+#   skipCommon   - if true, do NOT inject global common env vars (default: false)
 # =============================================================================
 services:
 
@@ -46,6 +48,7 @@ services:
   # ---------------------------------------------------------------------------
   gateway:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/gateway:985c3ca-144-1"
+    serviceType: NodePort
     nodePort: 30000
     env:
       # Cluster addresses — K8s service DNS + port
@@ -78,7 +81,6 @@ services:
   # ---------------------------------------------------------------------------
   catalog-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/catalog-api:985c3ca-144-1"
-    nodePort: 30010
     replicas: 6
     skipCommonRabbit: true
     env:
@@ -112,7 +114,6 @@ services:
   # ---------------------------------------------------------------------------
   review-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/review-api:985c3ca-144-1"
-    nodePort: 30018
     skipCommonRabbit: true
     env:
       IdentityOption__Audience: "review.api"
@@ -126,7 +127,6 @@ services:
   # ---------------------------------------------------------------------------
   photostock-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/photostock-api:985c3ca-144-1"
-    nodePort: 30015
     env:
       IdentityOption__Audience: "photostock.api"
       Minio__UseLocalStorage: "false"
@@ -142,7 +142,6 @@ services:
   # ---------------------------------------------------------------------------
   basket-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/basket-api:985c3ca-144-1"
-    nodePort: 30011
     env:
       IdentityOption__Audience: "basket.api"
     secretEnv:
@@ -155,7 +154,6 @@ services:
   # ---------------------------------------------------------------------------
   order-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/order-api:985c3ca-144-1"
-    nodePort: 30013
     secretEnv:
       ConnectionStrings__DefaultConnection: order-sqlserver-connection
 
@@ -164,7 +162,6 @@ services:
   # ---------------------------------------------------------------------------
   payment-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/payment-api:985c3ca-144-1"
-    nodePort: 30014
     env:
       Iyzipay__BaseUrl: "https://sandbox-api.iyzipay.com"
     secretEnv:
@@ -176,7 +173,6 @@ services:
   # ---------------------------------------------------------------------------
   invoice-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/invoice-api:985c3ca-144-1"
-    nodePort: 30017
     env:
       IdentityOption__Audience: "invoice.api"
       Minio__UseLocalStorage: "false"
@@ -192,7 +188,6 @@ services:
   # ---------------------------------------------------------------------------
   notification-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/notification-api:985c3ca-144-1"
-    nodePort: 30019
     env:
       GIN_MODE: "release"
       Minio__UseLocalStorage: "false"
@@ -210,7 +205,6 @@ services:
   # ---------------------------------------------------------------------------
   campaign-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/campaign-api:985c3ca-144-1"
-    nodePort: 30016
     secretEnv:
       ConnectionStrings__SqlServer: campaign-sqlserver-connection
 
@@ -219,7 +213,6 @@ services:
   # ---------------------------------------------------------------------------
   search-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/search-api:985c3ca-144-1"
-    nodePort: 30020
     env:
       GIN_MODE: "release"
       SEARCH_SERVER_PORT: ":8080"
@@ -235,6 +228,7 @@ services:
   # ---------------------------------------------------------------------------
   webui:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:985c3ca-144-1"
+    serviceType: NodePort
     nodePort: 30075
     replicas: 1
     env:
@@ -242,7 +236,7 @@ services:
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
       APP_VERSION: "985c3ca-144-1"
-      OpenTelemetry__OtlpEndpoint: "http://192.168.1.56:4317"
+      OpenTelemetry__OtlpEndpoint: "http://jaeger:4317"
       ObservabilitySettings__ElasticSearchUri: "http://192.168.1.56:9201"
       ObservabilitySettings__Services__Gateway: "http://gateway:8080"
       ObservabilitySettings__Services__CatalogAPI: "http://catalog-api:8080"

@@ -104,12 +104,14 @@ metadata:
   labels:
     {{- include "gamegaraj.labels" $ | nindent 4 }}
 spec:
-  type: NodePort
+  type: {{ $svc.serviceType | default "ClusterIP" }}
   selector:
     app: {{ $name }}
   ports:
     - protocol: TCP
       port: {{ $.Values.global.containerPort }}
       targetPort: {{ $.Values.global.containerPort }}
+      {{- if and $svc.nodePort (eq ($svc.serviceType | default "ClusterIP") "NodePort") }}
       nodePort: {{ $svc.nodePort }}
+      {{- end }}
 {{- end }}
