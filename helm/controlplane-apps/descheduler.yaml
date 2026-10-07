@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: descheduler
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes-sigs.github.io/descheduler/
+    targetRevision: 0.30.1
+    chart: descheduler
+    helm:
+      values: |
+        kind: CronJob
+        schedule: "*/5 * * * *" # Her 5 dakikada bir dengesizligi kontrol et
+        nodeSelector:
+          kubernetes.io/hostname: kadirserver # Descheduler kendi de cökmesin diye ana makineye alindi
+        deschedulerPolicy:
+          strategies:
+            RemoveDuplicates:
+              enabled: true
+            RemovePodsViolatingNodeTaints:
+              enabled: true
+            RemovePodsViolatingNodeAffinity:
+              enabled: true
+              params:
+                nodeAffinityType:
+                - requiredDuringSchedulingIgnoredDuringExecution
+            RemovePodsViolatingInterPodAntiAffinity:
+              enabled: true
+            RemovePodsViolatingTopologySpreadConstraint: # Topology Spread Constraint ihlallerini duzelt
+              enabled: true
+              params:
+                includeSoftConstraints: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
