@@ -185,6 +185,7 @@ services:
   notification-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/notification-api:c5af4a1-148-1"
     replicas: 2
+    port: 5025
     env:
       GIN_MODE: "release"
       Minio__UseLocalStorage: "false"

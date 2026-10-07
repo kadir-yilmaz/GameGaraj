@@ -63,8 +63,9 @@ spec:
           image: {{ $svc.image }}
           imagePullPolicy: {{ $.Values.global.imagePullPolicy | default "IfNotPresent" }}
           ports:
-            - containerPort: {{ $.Values.global.containerPort | default 8080 }}
+            - containerPort: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
               name: http
+              protocol: TCP
           env:
             {{- if not $svc.skipCommon }}
             - name: ASPNETCORE_ENVIRONMENT
@@ -111,7 +112,7 @@ spec:
           {{- else if not $svc.disableDefaultProbes }}
           readinessProbe:
             tcpSocket:
-              port: {{ $.Values.global.containerPort | default 8080 }}
+              port: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 3
@@ -123,7 +124,7 @@ spec:
           {{- else if not $svc.disableDefaultProbes }}
           livenessProbe:
             tcpSocket:
-              port: {{ $.Values.global.containerPort | default 8080 }}
+              port: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 3
@@ -149,8 +150,8 @@ spec:
     app: {{ $name }}
   ports:
     - protocol: TCP
-      port: {{ $.Values.global.containerPort | default 8080 }}
-      targetPort: {{ $.Values.global.containerPort | default 8080 }}
+      port: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
+      targetPort: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
       name: http
       {{- if and $svc.nodePort (eq ($svc.serviceType | default "ClusterIP") "NodePort") }}
       nodePort: {{ $svc.nodePort }}
