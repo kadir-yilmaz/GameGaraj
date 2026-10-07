@@ -8,58 +8,18 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: oci://registry.k8s.io/dashboard/kubernetes-dashboard
-    targetRevision: 7.6.1
+    repoURL: https://kubernetes-sigs.github.io/headlamp/
+    targetRevision: 0.45.0
+    chart: headlamp
     helm:
       values: |
-        app:
-          nodeSelector:
-            kubernetes.io/hostname: kadirserver
-          tolerations:
-            - key: "management"
-              operator: "Equal"
-              value: "only"
-              effect: "NoSchedule"
-        api:
-          nodeSelector:
-            kubernetes.io/hostname: kadirserver
-          tolerations:
-            - key: "management"
-              operator: "Equal"
-              value: "only"
-              effect: "NoSchedule"
-        web:
-          nodeSelector:
-            kubernetes.io/hostname: kadirserver
-          tolerations:
-            - key: "management"
-              operator: "Equal"
-              value: "only"
-              effect: "NoSchedule"
-        metricsScraper:
-          nodeSelector:
-            kubernetes.io/hostname: kadirserver
-          tolerations:
-            - key: "management"
-              operator: "Equal"
-              value: "only"
-              effect: "NoSchedule"
-        auth:
-          nodeSelector:
-            kubernetes.io/hostname: kadirserver
-          tolerations:
-            - key: "management"
-              operator: "Equal"
-              value: "only"
-              effect: "NoSchedule"
-        kong:
-          nodeSelector:
-            kubernetes.io/hostname: kadirserver
-          tolerations:
-            - key: "management"
-              operator: "Equal"
-              value: "only"
-              effect: "NoSchedule"
+        nodeSelector:
+          kubernetes.io/hostname: kadirserver
+        tolerations:
+          - key: "management"
+            operator: "Equal"
+            value: "only"
+            effect: "NoSchedule"
   destination:
     server: https://kubernetes.default.svc
     namespace: kubernetes-dashboard
