@@ -18,6 +18,8 @@ spec:
         app: prometheus
     spec:
       serviceAccountName: prometheus
+      nodeSelector:
+        kubernetes.io/hostname: "kadirserver"
       containers:
         - name: prometheus
           image: {{ .Values.monitoring.prometheus.image }}
