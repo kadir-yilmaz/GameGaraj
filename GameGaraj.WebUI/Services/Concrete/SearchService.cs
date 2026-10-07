@@ -2,6 +2,8 @@ using System.Text.Json;
 using GameGaraj.WebUI.Models.Common;
 using GameGaraj.WebUI.Models.Products;
 using GameGaraj.WebUI.Services.Abstract;
+using GameGaraj.WebUI.Settings;
+using Microsoft.Extensions.Options;
 
 namespace GameGaraj.WebUI.Services.Concrete
 {
@@ -10,11 +12,13 @@ namespace GameGaraj.WebUI.Services.Concrete
         private readonly HttpClient _httpClient;
         private readonly ILogger<SearchService> _logger;
         private readonly JsonSerializerOptions _jsonOptions;
+        private readonly ServiceApiSettings _settings;
 
-        public SearchService(HttpClient httpClient, ILogger<SearchService> logger)
+        public SearchService(HttpClient httpClient, ILogger<SearchService> logger, IOptions<ServiceApiSettings> settings)
         {
             _httpClient = httpClient;
             _logger = logger;
+            _settings = settings.Value;
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -35,7 +39,9 @@ namespace GameGaraj.WebUI.Services.Concrete
                 }
 
                 var content = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<List<ProductViewModel>>(content, _jsonOptions) ?? new List<ProductViewModel>();
+                var products = JsonSerializer.Deserialize<List<ProductViewModel>>(content, _jsonOptions) ?? new List<ProductViewModel>();
+                SetProductImageUrls(products);
+                return products;
             }
             catch (Exception ex)
             {
@@ -107,7 +113,9 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (!response.IsSuccessStatusCode) return null;
 
                 var content = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<ProductViewModel>(content, _jsonOptions);
+                var product = JsonSerializer.Deserialize<ProductViewModel>(content, _jsonOptions);
+                SetProductImageUrls(product);
+                return product;
             }
             catch (Exception ex)
             {
@@ -124,7 +132,9 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (!response.IsSuccessStatusCode) return null;
 
                 var content = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<ProductViewModel>(content, _jsonOptions);
+                var product = JsonSerializer.Deserialize<ProductViewModel>(content, _jsonOptions);
+                SetProductImageUrls(product);
+                return product;
             }
             catch (Exception ex)
             {
@@ -224,6 +234,31 @@ namespace GameGaraj.WebUI.Services.Concrete
             {
                 _logger.LogError(ex, "Error triggering reindex in Search API");
                 return null;
+            }
+        }
+
+        private void SetProductImageUrls(List<ProductViewModel>? products)
+        {
+            if (products == null || !products.Any()) return;
+            foreach (var product in products)
+            {
+                SetProductImageUrls(product);
+            }
+        }
+
+        private void SetProductImageUrls(ProductViewModel? product)
+        {
+            if (product?.ImageUrls == null || !product.ImageUrls.Any()) return;
+
+            for (int i = 0; i < product.ImageUrls.Count; i++)
+            {
+                if (!product.ImageUrls[i].StartsWith("http"))
+                {
+                    var imgBase = _settings.PhotoBaseUrl;
+                    var baseUrl = imgBase.EndsWith("/") ? imgBase : imgBase + "/";
+                    var path = product.ImageUrls[i].StartsWith("/") ? product.ImageUrls[i].Substring(1) : product.ImageUrls[i];
+                    product.ImageUrls[i] = baseUrl + path;
+                }
             }
         }
     }
