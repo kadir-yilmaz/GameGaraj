@@ -11,10 +11,13 @@ global:
   aspnetEnvironment: Production
   aspnetUrls: "http://+:8080"
   containerPort: 8080
-  nodeSelector:
-    kubernetes.io/hostname: kadirserver
 
-  # Infrastructure addresses (192.168.1.56 = Dokploy host)
+  # GameGaraj iş yükleri sadece worker düğümlerine dağıtılır.
+  # Kontrol düzlemi olan kadirserver'a gitmez.
+  nodeSelector:
+    gamegaraj-node: "worker"
+
+  # Altyapı adresleri (192.168.1.56 = Dokploy host)
   rabbitmqUrl: "192.168.1.56"
   identityAuthority: "http://192.168.1.56:8080/realms/GameGaraj"
   elasticUri: "http://192.168.1.56:9201"
