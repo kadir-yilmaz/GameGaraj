@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: kubernetes-dashboard
+  name: headlamp
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -25,7 +25,7 @@ spec:
           nodePort: 30444
   destination:
     server: https://kubernetes.default.svc
-    namespace: kubernetes-dashboard
+    namespace: headlamp
   syncPolicy:
     automated:
       prune: true
