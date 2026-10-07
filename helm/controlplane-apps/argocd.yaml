@@ -47,11 +47,11 @@ spec:
   - group: ""
     kind: Service
     name: argocd-repo-server
-    jqPathExpressions:
-    - .spec.ports[] | select(.name == "tcp-repo-server").targetPort
-    - .spec.selector."app.kubernetes.io/instance"
+    jsonPointers:
+    - /spec/ports
+    - /spec/selector
   - group: ""
     kind: Service
     name: argocd-server
-    jqPathExpressions:
-    - .spec.selector."app.kubernetes.io/instance"
+    jsonPointers:
+    - /spec/selector
