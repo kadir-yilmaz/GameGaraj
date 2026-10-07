@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    targetRevision: 7.6.8 # ArgoCD'nin güncel Helm Chart sürümü
+    chart: argo-cd
+    helm:
+      values: |
+        controller:
+          replicas: 1
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        server:
+          replicas: 1
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        repoServer:
+          replicas: 1
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        dex:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        applicationSet:
+          replicas: 1
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        redis:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

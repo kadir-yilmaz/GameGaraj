@@ -242,6 +242,7 @@ services:
     serviceType: NodePort
     nodePort: 30075
     replicas: 2
+    sessionAffinity: "ClientIP"
     resources:
       requests:
         memory: "150Mi"

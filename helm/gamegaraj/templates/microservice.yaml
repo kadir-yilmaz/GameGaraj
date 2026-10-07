@@ -112,6 +112,9 @@ metadata:
     {{- include "gamegaraj.labels" $ | nindent 4 }}
 spec:
   type: {{ $svc.serviceType | default "ClusterIP" }}
+  {{- if $svc.sessionAffinity }}
+  sessionAffinity: {{ $svc.sessionAffinity }}
+  {{- end }}
   selector:
     app: {{ $name }}
   ports:

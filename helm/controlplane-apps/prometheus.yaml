@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-stack
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    targetRevision: 65.2.0
+    chart: kube-prometheus-stack
+    helm:
+      values: |
+        prometheus:
+          prometheusSpec:
+            nodeSelector:
+              kubernetes.io/hostname: kadirserver
+        alertmanager:
+          alertmanagerSpec:
+            nodeSelector:
+              kubernetes.io/hostname: kadirserver
+        grafana:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        kubeStateMetrics:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        prometheusOperator:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

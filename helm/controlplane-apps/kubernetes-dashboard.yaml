@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubernetes-dashboard
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes.github.io/dashboard/
+    targetRevision: 7.6.1 # Mümkün olan en kararlı sürümlerden biri
+    chart: kubernetes-dashboard
+    helm:
+      values: |
+        app:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        api:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        web:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        metricsScraper:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        auth:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        kong:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubernetes-dashboard
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
