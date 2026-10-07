@@ -19,6 +19,9 @@ spec:
           replicas: 1
           nodeSelector:
             kubernetes.io/hostname: kadirserver
+          service:
+            type: NodePort
+            nodePortHttps: 30580
         repoServer:
           replicas: 1
           nodeSelector:
