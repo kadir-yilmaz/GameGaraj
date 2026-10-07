@@ -110,25 +110,23 @@ spec:
             {{- toYaml $svc.readinessProbe | nindent 12 }}
           {{- else if not $svc.disableDefaultProbes }}
           readinessProbe:
-            httpGet:
-              path: {{ $svc.readinessPath | default ($svc.healthPath | default "/") }}
+            tcpSocket:
               port: {{ $.Values.global.containerPort | default 8080 }}
-            initialDelaySeconds: 15
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 5
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
           {{- end }}
           {{- if $svc.livenessProbe }}
           livenessProbe:
             {{- toYaml $svc.livenessProbe | nindent 12 }}
           {{- else if not $svc.disableDefaultProbes }}
           livenessProbe:
-            httpGet:
-              path: {{ $svc.livenessPath | default ($svc.healthPath | default "/") }}
+            tcpSocket:
               port: {{ $.Values.global.containerPort | default 8080 }}
-            initialDelaySeconds: 30
-            periodSeconds: 15
-            timeoutSeconds: 5
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
             failureThreshold: 5
           {{- end }}
           {{- if $svc.resources }}
