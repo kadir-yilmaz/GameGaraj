@@ -10,7 +10,6 @@ spec:
   source:
     repoURL: oci://registry.k8s.io/dashboard/kubernetes-dashboard
     targetRevision: 7.6.1
-    chart: kubernetes-dashboard
     helm:
       values: |
         app:
