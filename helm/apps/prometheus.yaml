@@ -15,19 +15,44 @@ spec:
           prometheusSpec:
             nodeSelector:
               kubernetes.io/hostname: kadirserver
+            tolerations:
+              - key: "management"
+                operator: "Equal"
+                value: "only"
+                effect: "NoSchedule"
         alertmanager:
           alertmanagerSpec:
             nodeSelector:
               kubernetes.io/hostname: kadirserver
+            tolerations:
+              - key: "management"
+                operator: "Equal"
+                value: "only"
+                effect: "NoSchedule"
         grafana:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
+          tolerations:
+            - key: "management"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
         kubeStateMetrics:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
+          tolerations:
+            - key: "management"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
         prometheusOperator:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
+          tolerations:
+            - key: "management"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
