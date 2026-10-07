@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: registry-k8s-io.github.io/dashboard
+    repoURL: oci://registry-k8s-io.github.io/dashboard/kubernetes-dashboard
     targetRevision: 7.6.1
     chart: kubernetes-dashboard
     helm:
