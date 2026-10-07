@@ -2,10 +2,9 @@
 # GameGaraj Helm Chart — values.yaml
 # =============================================================================
 # Infrastructure (DBs, RabbitMQ, Keycloak, Elastic, MinIO, Redis) runs on
-# 192.168.1.56 via Dokploy docker-compose.  K3s pods reach them by IP.
+# 192.168.1.56 via Dokploy docker-compose. K3s pods reach them by IP.
 # =============================================================================
 
-# -- Global settings shared by all services
 global:
   imagePullPolicy: IfNotPresent
   imagePullSecrets: []
@@ -13,7 +12,7 @@ global:
   aspnetUrls: "http://+:8080"
   containerPort: 8080
   nodeSelector:
-    gamegaraj-node: "worker"
+    kubernetes.io/hostname: kadirserver
 
   # Infrastructure addresses (192.168.1.56 = Dokploy host)
   rabbitmqUrl: "192.168.1.56"
@@ -24,24 +23,11 @@ global:
   otlpIncludeDatabaseSpans: "false"
   otlpSuppressLowValueManualSpans: "true"
 
-# -- Override chart name
 nameOverride: ""
-# -- Override fully qualified chart name
 fullnameOverride: ""
 
 # =============================================================================
 # Microservice Definitions
-# =============================================================================
-# Each entry generates a Deployment + ClusterIP Service (default).
-# Only services that need external access should set serviceType: NodePort.
-# Fields:
-#   image        - container image (required)
-#   serviceType  - K8s service type (default: ClusterIP)
-#   nodePort     - NodePort number (only when serviceType is NodePort)
-#   replicas     - replica count (default: 1)
-#   env          - plain environment variables (map)
-#   secretEnv    - env vars sourced from gamegaraj-secrets (map: envName → secretKey)
-#   skipCommon   - if true, do NOT inject global common env vars (default: false)
 # =============================================================================
 services:
 
@@ -54,7 +40,6 @@ services:
     serviceType: NodePort
     nodePort: 30000
     env:
-      # Cluster addresses — K8s service DNS + port
       ReverseProxy__Clusters__catalog-cluster__Destinations__destination1__Address: "http://catalog-api:8080"
       ReverseProxy__Clusters__basket-cluster__Destinations__destination1__Address: "http://basket-api:8080"
       ReverseProxy__Clusters__order-cluster__Destinations__destination1__Address: "http://order-api:8080"
@@ -63,7 +48,6 @@ services:
       ReverseProxy__Clusters__photostock-cluster__Destinations__destination1__Address: "http://photostock-api:8080"
       ReverseProxy__Clusters__campaign-cluster__Destinations__destination1__Address: "http://campaign-api:8080"
       ReverseProxy__Clusters__search-cluster__Destinations__destination1__Address: "http://search-api:8080"
-      # Critical review flow routes: WebUI -> Gateway -> Review API.
       ReverseProxy__Routes__order-route__ClusterId: "order-cluster"
       ReverseProxy__Routes__order-route__Match__Path: "/api/order/{**catch-all}"
       ReverseProxy__Routes__order-route__Transforms__0__PathPattern: "/api/{**catch-all}"
@@ -73,9 +57,7 @@ services:
       ReverseProxy__Routes__review-route__ClusterId: "review-cluster"
       ReverseProxy__Routes__review-route__Match__Path: "/api/review/{**catch-all}"
       ReverseProxy__Routes__review-route__Transforms__0__PathPattern: "/api/{**catch-all}"
-      # Identity — internal address for token validation
       IdentityOption__Address: "http://192.168.1.56:8080/realms/GameGaraj"
-      # Issuer must match the issuer claim in JWT tokens (public URL)
       IdentityOption__Issuer: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       IdentityOption__Audience: "gateway.api"
 
@@ -109,7 +91,6 @@ services:
     skipCommonRabbit: true
     env:
       IdentityOption__Audience: "review.api"
-      # Review API appends /api/ and calls orders/{userId}/owns/{productId}.
       ServiceUrls__OrderApi: "http://order-api:8080"
     secretEnv:
       ConnectionStrings__PostgresConnection: review-postgres-connection
@@ -151,8 +132,6 @@ services:
       IdentityOption__Audience: "basket.api"
     secretEnv:
       ConnectionStrings__Redis: redis-connection
-
-  # ---------------------------------------------------------------------------
 
   # ---------------------------------------------------------------------------
   # Order API (SQL Server)
@@ -267,29 +246,7 @@ services:
     secretEnv:
       ConnectionStrings__Redis: redis-connection
 
-# =============================================================================
-# Kubernetes Secret (gamegaraj-secrets)
-# =============================================================================
-# Secrets are managed EXTERNALLY via the k3s-secret-sync.yml GitHub Actions
-# workflow (kubectl create secret). ArgoCD does NOT manage secrets.
-# The microservice deployments reference gamegaraj-secrets by name.
-# =============================================================================
-
-
-# =============================================================================
-# ConfigMaps
-# =============================================================================
 configMaps:
-  # Optional init-dbs SQL ConfigMap
   initdbs:
     enabled: false
     data: ""
-
-# =============================================================================
-# Monitoring (Prometheus, Grafana & Jaeger)
-# =============================================================================
-monitoring:
-  enabled: true
-  prometheus:
-    image: "prom/prometheus:v2.51.0"
-

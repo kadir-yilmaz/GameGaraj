@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: descheduler
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
@@ -12,9 +14,9 @@ spec:
     helm:
       values: |
         kind: CronJob
-        schedule: "*/5 * * * *" # Her 5 dakikada bir dengesizligi kontrol et
+        schedule: "*/5 * * * *"
         nodeSelector:
-          kubernetes.io/hostname: kadirserver # Descheduler kendi de cökmesin diye ana makineye alindi
+          kubernetes.io/hostname: kadirserver
         deschedulerPolicy:
           strategies:
             RemoveDuplicates:
@@ -28,7 +30,7 @@ spec:
                 - requiredDuringSchedulingIgnoredDuringExecution
             RemovePodsViolatingInterPodAntiAffinity:
               enabled: true
-            RemovePodsViolatingTopologySpreadConstraint: # Topology Spread Constraint ihlallerini duzelt
+            RemovePodsViolatingTopologySpreadConstraint:
               enabled: true
               params:
                 includeSoftConstraints: false
@@ -41,3 +43,10 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

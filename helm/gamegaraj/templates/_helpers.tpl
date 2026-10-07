@@ -33,16 +33,16 @@ Common labels.
 */}}
 {{- define "gamegaraj.labels" -}}
 helm.sh/chart: {{ include "gamegaraj.chart" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: gamegaraj
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
 {{- end }}
 
 {{/*
 Selector labels for a specific service.
-Usage: include "gamegaraj.selectorLabels" (dict "name" $name)
 */}}
 {{- define "gamegaraj.selectorLabels" -}}
-app.kubernetes.io/name: {{ .name }}
-app.kubernetes.io/instance: {{ .release }}
+app: {{ .name }}
 {{- end }}
