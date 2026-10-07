@@ -17,6 +17,11 @@ spec:
         schedule: "*/5 * * * *"
         nodeSelector:
           kubernetes.io/hostname: kadirserver
+        tolerations:
+          - key: "management"
+            operator: "Equal"
+            value: "only"
+            effect: "NoSchedule"
         deschedulerPolicy:
           strategies:
             RemoveDuplicates:
