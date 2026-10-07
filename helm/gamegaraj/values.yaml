@@ -17,6 +17,12 @@ global:
   nodeSelector:
     gamegaraj-node: "worker"
 
+  tolerations:
+    - key: "gamegaraj"
+      operator: "Equal"
+      value: "only"
+      effect: "NoSchedule"
+
   # Altyapı adresleri (192.168.1.56 = Dokploy host)
   rabbitmqUrl: "192.168.1.56"
   identityAuthority: "http://192.168.1.56:8080/realms/GameGaraj"

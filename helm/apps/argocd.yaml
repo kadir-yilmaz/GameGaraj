@@ -11,6 +11,12 @@ spec:
     chart: argo-cd
     helm:
       values: |
+        global:
+          tolerations:
+            - key: "management"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
         controller:
           replicas: 1
           nodeSelector:

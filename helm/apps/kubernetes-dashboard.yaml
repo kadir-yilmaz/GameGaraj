@@ -16,21 +16,51 @@ spec:
         app:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
+          tolerations:
+            - key: "management"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
         api:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
+          tolerations:
+            - key: "management"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
         web:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
+          tolerations:
+            - key: "management"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
         metricsScraper:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
+          tolerations:
+            - key: "management"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
         auth:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
+          tolerations:
+            - key: "management"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
         kong:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
+          tolerations:
+            - key: "management"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
   destination:
     server: https://kubernetes.default.svc
     namespace: kubernetes-dashboard

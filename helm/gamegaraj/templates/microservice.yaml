@@ -38,9 +38,14 @@ spec:
         - name: {{ . | quote }}
         {{- end }}
       {{- end }}
-      {{- if $svc.tolerations }}
+      {{- if or $.Values.global.tolerations $svc.tolerations }}
       tolerations:
+      {{- if $.Values.global.tolerations }}
+        {{- toYaml $.Values.global.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if $svc.tolerations }}
         {{- toYaml $svc.tolerations | nindent 8 }}
+      {{- end }}
       {{- end }}
       {{- if $.Values.global.nodeSelector }}
       nodeSelector:
@@ -100,27 +105,31 @@ spec:
                   key: {{ $secretKey }}
             {{- end }}
             {{- end }}
-          {{- if $svc.livenessProbe }}
-          livenessProbe:
-            {{- toYaml $svc.livenessProbe | nindent 12 }}
-          {{- else if not $svc.disableDefaultProbes }}
-          livenessProbe:
-            httpGet:
-              path: {{ $svc.healthPath | default "/healthz" }}
-              port: {{ $.Values.global.containerPort | default 8080 }}
-            initialDelaySeconds: 15
-            periodSeconds: 20
-          {{- end }}
           {{- if $svc.readinessProbe }}
           readinessProbe:
             {{- toYaml $svc.readinessProbe | nindent 12 }}
           {{- else if not $svc.disableDefaultProbes }}
           readinessProbe:
             httpGet:
-              path: {{ $svc.healthPath | default "/healthz" }}
+              path: {{ $svc.readinessPath | default ($svc.healthPath | default "/") }}
               port: {{ $.Values.global.containerPort | default 8080 }}
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          {{- end }}
+          {{- if $svc.livenessProbe }}
+          livenessProbe:
+            {{- toYaml $svc.livenessProbe | nindent 12 }}
+          {{- else if not $svc.disableDefaultProbes }}
+          livenessProbe:
+            httpGet:
+              path: {{ $svc.livenessPath | default ($svc.healthPath | default "/") }}
+              port: {{ $.Values.global.containerPort | default 8080 }}
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
           {{- end }}
           {{- if $svc.resources }}
           resources:
