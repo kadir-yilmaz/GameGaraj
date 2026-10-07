@@ -20,6 +20,9 @@ spec:
             operator: "Equal"
             value: "only"
             effect: "NoSchedule"
+        service:
+          type: NodePort
+          nodePort: 30444
   destination:
     server: https://kubernetes.default.svc
     namespace: kubernetes-dashboard
