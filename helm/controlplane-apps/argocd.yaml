@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://argoproj.github.io/argo-helm
-    targetRevision: 7.6.8 # ArgoCD'nin güncel Helm Chart sürümü
+    targetRevision: 10.9.7 # app version v3.5.4
     chart: argo-cd
     helm:
       values: |
@@ -36,22 +36,12 @@ spec:
         redis:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
+          image:
+            repository: public.ecr.aws/docker/library/redis
+            tag: 7.2.4-alpine
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-  ignoreDifferences:
-  - group: ""
-    kind: Service
-    name: argocd-repo-server
-    jsonPointers:
-    - /spec/ports
-    - /spec/selector
-  - group: ""
-    kind: Service
-    name: argocd-server
-    jsonPointers:
-    - /spec/selector
+    syncOptions:
+      - ServerSideApply=true
