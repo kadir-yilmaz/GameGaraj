@@ -37,7 +37,7 @@ spec:
               operator: "Equal"
               value: "only"
               effect: "NoSchedule"
-        kubeStateMetrics:
+        kube-state-metrics:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
           tolerations:
@@ -53,6 +53,15 @@ spec:
               operator: "Equal"
               value: "only"
               effect: "NoSchedule"
+          admissionWebhooks:
+            patch:
+              nodeSelector:
+                kubernetes.io/hostname: kadirserver
+              tolerations:
+                - key: "management"
+                  operator: "Equal"
+                  value: "only"
+                  effect: "NoSchedule"
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
