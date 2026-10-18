@@ -22,7 +22,7 @@ spec:
     metadata:
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "{{ $.Values.global.containerPort }}"
+        prometheus.io/port: "{{ $.Values.global.containerPort | default 8080 }}"
         prometheus.io/path: "/metrics"
         gamegaraj.io/image: {{ $svc.image | quote }}
         {{- if and $svc.env (hasKey $svc.env "APP_VERSION") }}
@@ -38,12 +38,14 @@ spec:
         - name: {{ . | quote }}
         {{- end }}
       {{- end }}
+      {{- if or $.Values.global.tolerations $svc.tolerations }}
+      tolerations:
       {{- if $.Values.global.tolerations }}
-      tolerations:
         {{- toYaml $.Values.global.tolerations | nindent 8 }}
-      {{- else if $svc.tolerations }}
-      tolerations:
+      {{- end }}
+      {{- if $svc.tolerations }}
         {{- toYaml $svc.tolerations | nindent 8 }}
+      {{- end }}
       {{- end }}
       {{- if $.Values.global.nodeSelector }}
       nodeSelector:
@@ -59,15 +61,17 @@ spec:
       containers:
         - name: {{ $name }}
           image: {{ $svc.image }}
-          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy | default "IfNotPresent" }}
           ports:
-            - containerPort: {{ $.Values.global.containerPort }}
+            - containerPort: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
+              name: http
+              protocol: TCP
           env:
             {{- if not $svc.skipCommon }}
             - name: ASPNETCORE_ENVIRONMENT
-              value: {{ $.Values.global.aspnetEnvironment | quote }}
+              value: {{ $.Values.global.aspnetEnvironment | default "Production" | quote }}
             - name: ASPNETCORE_URLS
-              value: {{ $.Values.global.aspnetUrls | quote }}
+              value: {{ $.Values.global.aspnetUrls | default "http://+:8080" | quote }}
             {{- if not $svc.skipCommonRabbit }}
             - name: RabbitMQUrl
               value: {{ $.Values.global.rabbitmqUrl | quote }}
@@ -81,11 +85,11 @@ spec:
             - name: OpenTelemetry__OtlpEndpoint
               value: {{ $.Values.global.otlpEndpoint | quote }}
             - name: OpenTelemetry__SamplingRatio
-              value: {{ $.Values.global.otlpSamplingRatio | quote }}
+              value: {{ $.Values.global.otlpSamplingRatio | default "1.0" | quote }}
             - name: OpenTelemetry__IncludeDatabaseSpans
-              value: {{ $.Values.global.otlpIncludeDatabaseSpans | quote }}
+              value: {{ $.Values.global.otlpIncludeDatabaseSpans | default "true" | quote }}
             - name: OpenTelemetry__SuppressLowValueManualSpans
-              value: {{ $.Values.global.otlpSuppressLowValueManualSpans | quote }}
+              value: {{ $.Values.global.otlpSuppressLowValueManualSpans | default "true" | quote }}
             {{- end }}
             {{- if $svc.env }}
             {{- range $envKey, $envVal := $svc.env }}
@@ -102,9 +106,33 @@ spec:
                   key: {{ $secretKey }}
             {{- end }}
             {{- end }}
-          {{- if .resources }}
+          {{- if $svc.readinessProbe }}
+          readinessProbe:
+            {{- toYaml $svc.readinessProbe | nindent 12 }}
+          {{- else if not $svc.disableDefaultProbes }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          {{- end }}
+          {{- if $svc.livenessProbe }}
+          livenessProbe:
+            {{- toYaml $svc.livenessProbe | nindent 12 }}
+          {{- else if not $svc.disableDefaultProbes }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5
+          {{- end }}
+          {{- if $svc.resources }}
           resources:
-            {{- toYaml .resources | nindent 12 }}
+            {{- toYaml $svc.resources | nindent 12 }}
           {{- end }}
 ---
 apiVersion: v1
@@ -115,12 +143,16 @@ metadata:
     {{- include "gamegaraj.labels" $ | nindent 4 }}
 spec:
   type: {{ $svc.serviceType | default "ClusterIP" }}
+  {{- if $svc.sessionAffinity }}
+  sessionAffinity: {{ $svc.sessionAffinity }}
+  {{- end }}
   selector:
     app: {{ $name }}
   ports:
     - protocol: TCP
-      port: {{ $.Values.global.containerPort }}
-      targetPort: {{ $.Values.global.containerPort }}
+      port: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
+      targetPort: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
+      name: http
       {{- if and $svc.nodePort (eq ($svc.serviceType | default "ClusterIP") "NodePort") }}
       nodePort: {{ $svc.nodePort }}
       {{- end }}

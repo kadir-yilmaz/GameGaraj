@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: descheduler
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes-sigs.github.io/descheduler/
+    targetRevision: 0.30.1
+    chart: descheduler
+    helm:
+      values: |
+        kind: CronJob
+        schedule: "*/5 * * * *"
+        nodeSelector:
+          kubernetes.io/hostname: kadirserver
+        tolerations:
+          - key: "management"
+            operator: "Equal"
+            value: "only"
+            effect: "NoSchedule"
+        deschedulerPolicy:
+          strategies:
+            RemoveDuplicates:
+              enabled: true
+            RemovePodsViolatingNodeTaints:
+              enabled: true
+            RemovePodsViolatingNodeAffinity:
+              enabled: true
+              params:
+                nodeAffinityType:
+                - requiredDuringSchedulingIgnoredDuringExecution
+            RemovePodsViolatingInterPodAntiAffinity:
+              enabled: true
+            RemovePodsViolatingTopologySpreadConstraint:
+              enabled: true
+              params:
+                includeSoftConstraints: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

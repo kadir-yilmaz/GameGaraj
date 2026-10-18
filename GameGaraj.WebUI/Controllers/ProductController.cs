@@ -159,7 +159,16 @@ namespace GameGaraj.WebUI.Controllers
             if (string.IsNullOrEmpty(productId))
                 return NotFound();
 
-            var product = await _catalogService.GetProductByIdAsync(productId);
+            // Önce süper hızlı olan Elasticsearch'ten (Search API) okumayı deniyoruz
+            var product = await _searchService.GetProductByIdAsync(productId);
+            
+            // Eğer Elasticsearch çöktüyse, bağlanılamadıysa veya ürün henüz ES'ye senkronize olmadıysa (null döner)
+            if (product == null)
+            {
+                _logger.LogWarning($"[Fallback] Ürün (ID: {productId}) Elasticsearch'ten çekilemedi. Veritabanına (PostgreSQL) istek atılıyor...");
+                product = await _catalogService.GetProductByIdAsync(productId);
+            }
+
             if (product == null)
                 return NotFound();
 

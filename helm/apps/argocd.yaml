@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    targetRevision: 10.9.7 # app version v3.5.4
+    chart: argo-cd
+    helm:
+      values: |
+        global:
+          tolerations:
+            - key: "management"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
+        controller:
+          replicas: 1
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        server:
+          replicas: 1
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+          service:
+            type: NodePort
+            nodePortHttps: 30580
+        repoServer:
+          replicas: 1
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        dex:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        applicationSet:
+          replicas: 1
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+        redis:
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
+          image:
+            repository: public.ecr.aws/docker/library/redis
+            tag: 7.2.4-alpine
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    syncOptions:
+      - ServerSideApply=true
