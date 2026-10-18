@@ -14,6 +14,11 @@ global:
   containerPort: 8080
   nodeSelector:
     gamegaraj-node: "worker"
+  tolerations:
+    - key: "gamegaraj"
+      operator: "Equal"
+      value: "only"
+      effect: "NoSchedule"
 
   # Infrastructure addresses (192.168.1.56 = Dokploy host)
   rabbitmqUrl: "192.168.1.56"
