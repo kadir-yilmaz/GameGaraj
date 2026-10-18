@@ -38,7 +38,7 @@ spec:
             RemovePodsViolatingTopologySpreadConstraint:
               enabled: true
               params:
-                includeSoftConstraints: false
+                includeSoftConstraints: true
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
