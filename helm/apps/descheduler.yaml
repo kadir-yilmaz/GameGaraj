@@ -15,30 +15,36 @@ spec:
       values: |
         kind: CronJob
         schedule: "*/5 * * * *"
+        
         nodeSelector:
           kubernetes.io/hostname: kadirserver
+        
         tolerations:
-          - key: "management"
-            operator: "Equal"
-            value: "only"
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
             effect: "NoSchedule"
+
+        deschedulerPolicyAPIVersion: "descheduler/v1alpha2"
         deschedulerPolicy:
-          strategies:
-            RemoveDuplicates:
-              enabled: true
-            RemovePodsViolatingNodeTaints:
-              enabled: true
-            RemovePodsViolatingNodeAffinity:
-              enabled: true
-              params:
-                nodeAffinityType:
-                - requiredDuringSchedulingIgnoredDuringExecution
-            RemovePodsViolatingInterPodAntiAffinity:
-              enabled: true
-            RemovePodsViolatingTopologySpreadConstraint:
-              enabled: true
-              params:
-                includeSoftConstraints: true
+          profiles:
+            - name: default
+              pluginConfig:
+                - name: RemovePodsViolatingTopologySpreadConstraint
+                  args:
+                    includeSoftConstraints: true
+                - name: RemovePodsViolatingNodeAffinity
+                  args:
+                    nodeAffinityType:
+                      - requiredDuringSchedulingIgnoredDuringExecution
+              plugins:
+                deschedule:
+                  enabled:
+                    - RemoveDuplicates
+                    - RemovePodsViolatingNodeTaints
+                    - RemovePodsViolatingNodeAffinity
+                    - RemovePodsViolatingInterPodAntiAffinity
+                    - RemovePodsViolatingTopologySpreadConstraint
+
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
