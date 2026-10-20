@@ -11,8 +11,35 @@ spec:
     chart: kube-prometheus-stack
     helm:
       values: |
+        # --- K3s'te erisilemeyen bilesenler (surekli sahte alarm uretir) ---
+        kubeControllerManager:
+          enabled: false
+        kubeScheduler:
+          enabled: false
+        kubeProxy:
+          enabled: false
+        kubeEtcd:
+          enabled: false
+        defaultRules:
+          rules:
+            etcd: false
+            kubeControllerManager: false
+            kubeProxy: false
+            kubeSchedulerAlerting: false
+            kubeSchedulerRecording: false
+
         prometheus:
           prometheusSpec:
+            retention: 15d
+            retentionSize: 8GB
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: local-path
+                  accessModes: ["ReadWriteOnce"]
+                  resources:
+                    requests:
+                      storage: 10Gi
             nodeSelector:
               kubernetes.io/hostname: kadirserver
             tolerations:
@@ -20,8 +47,13 @@ spec:
                 operator: "Equal"
                 value: "only"
                 effect: "NoSchedule"
+
         alertmanager:
           alertmanagerSpec:
+            # Secret: GitHub workflow olusturur (monitoring/alertmanager-telegram)
+            # Pod icinde: /etc/alertmanager/secrets/alertmanager-telegram/token
+            secrets:
+              - alertmanager-telegram
             nodeSelector:
               kubernetes.io/hostname: kadirserver
             tolerations:
@@ -29,7 +61,40 @@ spec:
                 operator: "Equal"
                 value: "only"
                 effect: "NoSchedule"
+          config:
+            global:
+              resolve_timeout: 5m
+            route:
+              receiver: "null"
+              group_by: ["alertname", "node"]
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 4h
+              routes:
+                - receiver: "null"
+                  matchers:
+                    - 'alertname=~"Watchdog|InfoInhibitor"'
+                - receiver: telegram
+                  matchers:
+                    - 'severity="critical"'
+            receivers:
+              - name: "null"
+              - name: telegram
+                telegram_configs:
+                  - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram/token
+                    chat_id: 8628590221
+                    send_resolved: true
+
         grafana:
+          admin:
+            existingSecret: grafana-admin
+            userKey: admin-user
+            passwordKey: admin-password
+          persistence:
+            enabled: true
+            type: pvc
+            storageClassName: local-path
+            size: 2Gi
           nodeSelector:
             kubernetes.io/hostname: kadirserver
           tolerations:
@@ -37,6 +102,7 @@ spec:
               operator: "Equal"
               value: "only"
               effect: "NoSchedule"
+
         kube-state-metrics:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
@@ -45,6 +111,7 @@ spec:
               operator: "Equal"
               value: "only"
               effect: "NoSchedule"
+
         prometheusOperator:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
@@ -62,9 +129,68 @@ spec:
                   operator: "Equal"
                   value: "only"
                   effect: "NoSchedule"
+
         prometheus-node-exporter:
           tolerations:
             - operator: "Exists"
+
+        # --- Ozel alarm kurallari (hepsi severity=critical -> Telegram) ---
+        additionalPrometheusRulesMap:
+          homelab-critical:
+            groups:
+              - name: homelab.nodes
+                rules:
+                  - alert: WorkerNodeNotReady
+                    expr: kube_node_status_condition{condition="Ready",status="true",node=~"rockyserver|cachyos-x8664"} == 0
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Worker node NotReady (5 dk+). Detay icin node etiketine bak."
+                  - alert: NodeExporterDown
+                    expr: up{job="node-exporter"} == 0
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Bir node'dan metrik gelmiyor (makine ag dan dusmus olabilir)."
+                  - alert: NodeMemoryHigh
+                    expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.90
+                    for: 10m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Node RAM kullanimi %90 ustu (OOMKill riski)."
+                  - alert: NodeDiskAlmostFull
+                    expr: (1 - node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}) > 0.90
+                    for: 10m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Node disk kullanimi %90 ustu."
+              - name: homelab.gamegaraj
+                rules:
+                  - alert: GamegarajPodsPending
+                    expr: sum(kube_pod_status_phase{namespace="gamegaraj",phase="Pending"}) > 0
+                    for: 10m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "gamegaraj pod'lari Pending'de takili (node dustu, kaynak/taint/PVC sorunu olabilir)."
+                  - alert: GamegarajReplicasUnavailable
+                    expr: kube_deployment_status_replicas_unavailable{namespace="gamegaraj"} > 0
+                    for: 10m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "gamegaraj deployment'inda hazir olmayan replika var."
+                  - alert: GamegarajPodCrashLooping
+                    expr: increase(kube_pod_container_status_restarts_total{namespace="gamegaraj"}[15m]) > 3
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "gamegaraj pod'u surekli restart ediyor (CrashLoopBackOff)."
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
