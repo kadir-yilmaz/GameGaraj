@@ -58,6 +58,10 @@ spec:
           labelSelector:
             matchLabels:
               app: {{ $name }}
+          matchLabelKeys:
+            - pod-template-hash
+          nodeAffinityPolicy: Honor
+          nodeTaintsPolicy: Honor
       containers:
         - name: {{ $name }}
           image: {{ $svc.image }}
