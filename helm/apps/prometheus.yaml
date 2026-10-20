@@ -43,9 +43,8 @@ spec:
             nodeSelector:
               kubernetes.io/hostname: kadirserver
             tolerations:
-              - key: "management"
-                operator: "Equal"
-                value: "only"
+              - key: "node-role.kubernetes.io/control-plane"
+                operator: "Exists"
                 effect: "NoSchedule"
 
         alertmanager:
@@ -57,9 +56,8 @@ spec:
             nodeSelector:
               kubernetes.io/hostname: kadirserver
             tolerations:
-              - key: "management"
-                operator: "Equal"
-                value: "only"
+              - key: "node-role.kubernetes.io/control-plane"
+                operator: "Exists"
                 effect: "NoSchedule"
           config:
             global:
@@ -98,36 +96,32 @@ spec:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
           tolerations:
-            - key: "management"
-              operator: "Equal"
-              value: "only"
+            - key: "node-role.kubernetes.io/control-plane"
+              operator: "Exists"
               effect: "NoSchedule"
 
         kube-state-metrics:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
           tolerations:
-            - key: "management"
-              operator: "Equal"
-              value: "only"
+            - key: "node-role.kubernetes.io/control-plane"
+              operator: "Exists"
               effect: "NoSchedule"
 
         prometheusOperator:
           nodeSelector:
             kubernetes.io/hostname: kadirserver
           tolerations:
-            - key: "management"
-              operator: "Equal"
-              value: "only"
+            - key: "node-role.kubernetes.io/control-plane"
+              operator: "Exists"
               effect: "NoSchedule"
           admissionWebhooks:
             patch:
               nodeSelector:
                 kubernetes.io/hostname: kadirserver
               tolerations:
-                - key: "management"
-                  operator: "Equal"
-                  value: "only"
+                - key: "node-role.kubernetes.io/control-plane"
+                  operator: "Exists"
                   effect: "NoSchedule"
 
         prometheus-node-exporter:
