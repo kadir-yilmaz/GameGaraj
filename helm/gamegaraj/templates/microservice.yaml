@@ -54,19 +54,25 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: ScheduleAnyway
+          whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
               app: {{ $name }}
+          matchLabelKeys:
+            - pod-template-hash
+          nodeAffinityPolicy: Honor
+          nodeTaintsPolicy: Honor
       containers:
         - name: {{ $name }}
           image: {{ $svc.image }}
           imagePullPolicy: {{ $.Values.global.imagePullPolicy | default "IfNotPresent" }}
           ports:
-            - containerPort: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
-              name: http
+            - name: http
+              containerPort: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
               protocol: TCP
           env:
+            - name: DOTNET_USE_POLLING_FILE_WATCHER
+              value: "true"
             {{- if not $svc.skipCommon }}
             - name: ASPNETCORE_ENVIRONMENT
               value: {{ $.Values.global.aspnetEnvironment | default "Production" | quote }}
