@@ -62,19 +62,26 @@ spec:
           config:
             global:
               resolve_timeout: 5m
+            # --- Node down olunca alt alertleri bastir (tek mesaj yeterli) ---
+            inhibit_rules:
+              - source_matchers:
+                  - 'alertname="WorkerNodeNotReady"'
+                target_matchers:
+                  - 'alertname=~"NodeExporterDown|GamegarajPodsPending|GamegarajReplicasUnavailable"'
+                equal: ["node"]
             route:
               receiver: "null"
-              group_by: ["alertname", "node"]
-              group_wait: 30s
-              group_interval: 5m
-              repeat_interval: 4h
+              group_by: ["alertname", "namespace", "node"]
+              group_wait: 1m
+              group_interval: 30m
+              repeat_interval: 8760h
               routes:
                 - receiver: "null"
                   matchers:
                     - 'alertname=~"Watchdog|InfoInhibitor"'
                 - receiver: telegram
                   matchers:
-                    - 'severity="critical"'
+                    - 'severity=~"critical|warning"'
             receivers:
               - name: "null"
               - name: telegram
@@ -82,6 +89,19 @@ spec:
                   - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram/token
                     chat_id: 8628590221
                     send_resolved: true
+                    parse_mode: HTML
+                    message: '{{ if eq .Status "firing" }}🔥 <b>ALARM{{ if gt (len .Alerts.Firing) 1 }}LAR{{ end }}</b> ({{ len .Alerts.Firing }}){{ range .Alerts.Firing }}
+
+⚠️ <b>{{ .Labels.alertname }}</b>
+📝 {{ .Annotations.summary }}
+{{ if .Annotations.description }}📊 {{ .Annotations.description }}
+{{ end }}🏷 Severity: <code>{{ .Labels.severity }}</code>{{ if .Labels.node }} | Node: <code>{{ .Labels.node }}</code>{{ end }}{{ if .Labels.namespace }} | NS: <code>{{ .Labels.namespace }}</code>{{ end }}{{ if .Labels.pod }} | Pod: <code>{{ .Labels.pod }}</code>{{ end }}
+🕐 {{ .StartsAt.Local.Format "02.01.2006 15:04:05" }}{{ end }}{{ else }}✅ <b>DUZELD{{ if gt (len .Alerts.Resolved) 1 }}ILER{{ else }}I{{ end }}</b> ({{ len .Alerts.Resolved }}){{ range .Alerts.Resolved }}
+
+✅ <b>{{ .Labels.alertname }}</b>
+📝 {{ .Annotations.summary }}
+🏷 Severity: <code>{{ .Labels.severity }}</code>{{ if .Labels.node }} | Node: <code>{{ .Labels.node }}</code>{{ end }}{{ if .Labels.namespace }} | NS: <code>{{ .Labels.namespace }}</code>{{ end }}
+🕐 Duzelde: {{ .EndsAt.Local.Format "02.01.2006 15:04:05" }}{{ end }}{{ end }}'
 
         grafana:
           admin:
@@ -128,63 +148,105 @@ spec:
           tolerations:
             - operator: "Exists"
 
-        # --- Ozel alarm kurallari (hepsi severity=critical -> Telegram) ---
+        # --- Ozel alarm kurallari ---
         additionalPrometheusRulesMap:
-          homelab-critical:
+          homelab-alerts:
             groups:
+              # ==================== NODE ALERTLERI ====================
               - name: homelab.nodes
                 rules:
                   - alert: WorkerNodeNotReady
                     expr: kube_node_status_condition{condition="Ready",status="true",node=~"rockyserver|cachyos-x8664"} == 0
-                    for: 5m
+                    for: 3m
                     labels:
                       severity: critical
                     annotations:
-                      summary: "Worker node NotReady (5 dk+). Detay icin node etiketine bak."
+                      summary: "🖥 {{ $labels.node }} node'u NotReady durumunda"
+                      description: "Node 3 dakikadir Ready degil. Uzerindeki pod'lar baska node'a tasinabilir."
+
                   - alert: NodeExporterDown
                     expr: up{job="node-exporter"} == 0
                     for: 5m
                     labels:
                       severity: critical
                     annotations:
-                      summary: "Bir node'dan metrik gelmiyor (makine ag dan dusmus olabilir)."
-                  - alert: NodeMemoryHigh
-                    expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.90
+                      summary: "📡 {{ $labels.instance }} node-exporter'a ulasilamiyor"
+                      description: "5 dakikadir metrik gelmiyor, makine kapanmis veya agdan dusmus olabilir."
+
+                  - alert: NodeCPUHigh
+                    expr: (1 - avg by(instance,node) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.90
+                    for: 15m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "⚡ {{ $labels.node }} CPU kullanimi cok yuksek"
+                      description: "CPU kullanimi 15 dakikadir %{{ $value | humanizePercentage }} seviyesinde."
+
+                  - alert: NodeMemoryWarning
+                    expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.85
                     for: 10m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "🧠 {{ $labels.node }} RAM kullanimi yuksek"
+                      description: "RAM kullanimi %{{ $value | humanizePercentage }} (>%85, 10 dk+)."
+
+                  - alert: NodeMemoryCritical
+                    expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.95
+                    for: 5m
                     labels:
                       severity: critical
                     annotations:
-                      summary: "Node RAM kullanimi %90 ustu (OOMKill riski)."
-                  - alert: NodeDiskAlmostFull
-                    expr: (1 - node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}) > 0.90
+                      summary: "🧠 {{ $labels.node }} RAM kritik seviyede!"
+                      description: "RAM kullanimi %{{ $value | humanizePercentage }} (>%95). OOMKill riski var."
+
+                  - alert: NodeDiskWarning
+                    expr: (1 - node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}) > 0.85
                     for: 10m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "💾 {{ $labels.node }} disk kullanimi yuksek"
+                      description: "Disk kullanimi %{{ $value | humanizePercentage }} (>%85)."
+
+                  - alert: NodeDiskCritical
+                    expr: (1 - node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}) > 0.95
+                    for: 5m
                     labels:
                       severity: critical
                     annotations:
-                      summary: "Node disk kullanimi %90 ustu."
+                      summary: "💾 {{ $labels.node }} disk kritik seviyede!"
+                      description: "Disk kullanimi %{{ $value | humanizePercentage }} (>%95). Yazma hatalari olusabilir."
+
+              # ==================== GAMEGARAJ POD ALERTLERI ====================
               - name: homelab.gamegaraj
                 rules:
                   - alert: GamegarajPodsPending
-                    expr: sum(kube_pod_status_phase{namespace="gamegaraj",phase="Pending"}) > 0
+                    expr: sum by(pod) (kube_pod_status_phase{namespace="gamegaraj",phase="Pending"}) > 0
                     for: 10m
                     labels:
                       severity: critical
                     annotations:
-                      summary: "gamegaraj pod'lari Pending'de takili (node dustu, kaynak/taint/PVC sorunu olabilir)."
+                      summary: "⏳ {{ $labels.pod }} pod'u Pending durumunda"
+                      description: "10 dakikadir schedule edilemiyor. Kaynak, taint veya PVC sorunu olabilir."
+
                   - alert: GamegarajReplicasUnavailable
                     expr: kube_deployment_status_replicas_unavailable{namespace="gamegaraj"} > 0
                     for: 10m
                     labels:
                       severity: critical
                     annotations:
-                      summary: "gamegaraj deployment'inda hazir olmayan replika var."
+                      summary: "🔄 {{ $labels.deployment }} deployment'inda eksik replika"
+                      description: "{{ $value }} replika 10 dakikadir hazir degil."
+
                   - alert: GamegarajPodCrashLooping
                     expr: increase(kube_pod_container_status_restarts_total{namespace="gamegaraj"}[15m]) > 3
                     for: 5m
                     labels:
                       severity: critical
                     annotations:
-                      summary: "gamegaraj pod'u surekli restart ediyor (CrashLoopBackOff)."
+                      summary: "💥 {{ $labels.pod }} surekli restart ediyor"
+                      description: "Son 15 dk'da {{ $value | humanize }} restart. Container: {{ $labels.container }}."
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
