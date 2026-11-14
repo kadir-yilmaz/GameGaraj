@@ -258,6 +258,8 @@ def node_metrics() -> dict:
 def pod_stats(pods: list) -> dict:
     stats: dict[str, dict] = {}
     for pod in pods:
+        if (pod.get("metadata") or {}).get("deletionTimestamp"):
+            continue
         node = (pod.get("spec") or {}).get("nodeName")
         phase = (pod.get("status") or {}).get("phase")
         if not node or phase in {"Succeeded", "Failed"}:
@@ -515,9 +517,11 @@ def cluster_info() -> list[str]:
         meta = pod.get("metadata") or {}
         ref = f"{meta.get('namespace')}/{meta.get('name')}"
         state, ok = pod_state(pod)
+        if state == "Terminating":
+            continue
         if not ok:
-            if is_job_pod(pod) or state == "Terminating":
-                bucket = "Terminating" if state == "Terminating" else state.split(" ")[0]
+            if is_job_pod(pod):
+                bucket = state.split(" ")[0]
                 job_counts[bucket] = job_counts.get(bucket, 0) + 1
             else:
                 app_issues.append(f"{ref} {state}")
@@ -575,6 +579,8 @@ def cluster_info_nodes() -> list[str]:
             ns = (p.get("metadata") or {}).get("namespace", "?")
             pname = (p.get("metadata") or {}).get("name", "?")
             st, ok = pod_state(p)
+            if st == "Terminating":
+                continue
             by_ns.setdefault(ns, []).append((pname, st, ok))
 
         for ns in sorted(by_ns):
@@ -626,6 +632,8 @@ def cluster_info_apps() -> list[str]:
             if not pname.startswith(prefix):
                 continue
             st, ok = pod_state(p)
+            if st == "Terminating":
+                continue
             if ok:
                 nd = (p.get("spec") or {}).get("nodeName") or "?"
                 nodes_used[nd] = nodes_used.get(nd, 0) + 1
