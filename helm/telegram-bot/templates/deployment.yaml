@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "telegram-bot.name" . }}
+  labels:
+    {{- include "telegram-bot.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "telegram-bot.name" . }}
+  template:
+    metadata:
+      labels:
+        {{- include "telegram-bot.labels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "telegram-bot.name" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: bot
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "/app/bot.py"]
+          env:
+            - name: TELEGRAM_CHAT_ID
+              value: {{ .Values.telegram.chatId | quote }}
+            - name: TELEGRAM_TOKEN_FILE
+              value: /telegram/token
+            - name: GAMEGARAJ_NAMESPACE
+              value: {{ .Values.gamegarajNamespace | quote }}
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          volumeMounts:
+            - name: bot
+              mountPath: /app
+              readOnly: true
+            - name: telegram
+              mountPath: /telegram
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: bot
+          configMap:
+            name: {{ include "telegram-bot.name" . }}
+        - name: telegram
+          secret:
+            secretName: {{ .Values.telegram.existingSecret }}
+            items:
+              - key: {{ .Values.telegram.existingSecretKey }}
+                path: token

@@ -1,0 +1,29 @@
+image:
+  repository: python
+  tag: "3.12-alpine"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+telegram:
+  chatId: "8628590221"
+  existingSecret: alertmanager-telegram
+  existingSecretKey: token
+
+gamegarajNamespace: gamegaraj
+
+nodeSelector:
+  kubernetes.io/hostname: kadirserver
+
+tolerations:
+  - key: "node-role.kubernetes.io/control-plane"
+    operator: "Exists"
+    effect: "NoSchedule"
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi

@@ -62,26 +62,18 @@ spec:
           config:
             global:
               resolve_timeout: 5m
-            # --- Node down olunca alt alertleri bastir (tek mesaj yeterli) ---
-            inhibit_rules:
-              - source_matchers:
-                  - 'alertname="WorkerNodeNotReady"'
-                target_matchers:
-                  - 'alertname=~"NodeExporterDown|GamegarajPodsPending|GamegarajReplicasUnavailable"'
-                equal: ["node"]
+            # Telegram'a sadece worker node kapandi/acildi gider.
+            # Diger alertler Alertmanager/Grafana'da kalir, chat'e dusmez.
             route:
               receiver: "null"
-              group_by: ["alertname", "namespace", "node"]
+              group_by: ["alertname", "node"]
               group_wait: 1m
               group_interval: 30m
               repeat_interval: 8760h
               routes:
-                - receiver: "null"
-                  matchers:
-                    - 'alertname=~"Watchdog|InfoInhibitor"'
                 - receiver: telegram
                   matchers:
-                    - 'severity=~"critical|warning"'
+                    - 'alertname="WorkerNodeNotReady"'
             receivers:
               - name: "null"
               - name: telegram
@@ -90,18 +82,7 @@ spec:
                     chat_id: 8628590221
                     send_resolved: true
                     parse_mode: HTML
-                    message: '{{ if eq .Status "firing" }}🔥 <b>ALARM{{ if gt (len .Alerts.Firing) 1 }}LAR{{ end }}</b> ({{ len .Alerts.Firing }}){{ range .Alerts.Firing }}
-
-⚠️ <b>{{ .Labels.alertname }}</b>
-📝 {{ .Annotations.summary }}
-{{ if .Annotations.description }}📊 {{ .Annotations.description }}
-{{ end }}🏷 Severity: <code>{{ .Labels.severity }}</code>{{ if .Labels.node }} | Node: <code>{{ .Labels.node }}</code>{{ end }}{{ if .Labels.namespace }} | NS: <code>{{ .Labels.namespace }}</code>{{ end }}{{ if .Labels.pod }} | Pod: <code>{{ .Labels.pod }}</code>{{ end }}
-🕐 {{ .StartsAt.Local.Format "02.01.2006 15:04:05" }}{{ end }}{{ else }}✅ <b>DUZELD{{ if gt (len .Alerts.Resolved) 1 }}ILER{{ else }}I{{ end }}</b> ({{ len .Alerts.Resolved }}){{ range .Alerts.Resolved }}
-
-✅ <b>{{ .Labels.alertname }}</b>
-📝 {{ .Annotations.summary }}
-🏷 Severity: <code>{{ .Labels.severity }}</code>{{ if .Labels.node }} | Node: <code>{{ .Labels.node }}</code>{{ end }}{{ if .Labels.namespace }} | NS: <code>{{ .Labels.namespace }}</code>{{ end }}
-🕐 Duzelde: {{ .EndsAt.Local.Format "02.01.2006 15:04:05" }}{{ end }}{{ end }}'
+                    message: '{{ if eq .Status "firing" }}🔴 {{ (index .Alerts.Firing 0).Labels.node }} kapalı{{ else }}🟢 {{ (index .Alerts.Resolved 0).Labels.node }} açıldı{{ end }}'
 
         grafana:
           admin:
