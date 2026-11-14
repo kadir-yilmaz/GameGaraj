@@ -11,6 +11,17 @@ telegram:
   existingSecretKey: token
 
 gamegarajNamespace: gamegaraj
+argocdNamespace: argocd
+
+# Her saat basi sadece node saglik raporu
+report:
+  hourly: true
+  tzOffsetHours: 3   # Europe/Istanbul (UTC+3)
+
+# Node cokme / acilma bildirimi
+nodeWatch:
+  intervalSeconds: 30   # kontrol araligi
+  debounceChecks: 2     # durum degisikligi kac ardisik kontrolde dogrulanacak (sahte alarm onler)
 
 nodeSelector:
   kubernetes.io/hostname: kadirserver

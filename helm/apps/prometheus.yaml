@@ -62,18 +62,20 @@ spec:
           config:
             global:
               resolve_timeout: 5m
-            # Telegram'a sadece worker node kapandi/acildi gider.
-            # Diger alertler Alertmanager/Grafana'da kalir, chat'e dusmez.
+            # Telegram bildirimleri telegram-bot tarafindan yapilir (node cokme/acilma + saatlik rapor).
+            # Alertmanager alertleri Alertmanager/Grafana'da kalir, chat'e dusmez.
             route:
               receiver: "null"
               group_by: ["alertname", "node"]
               group_wait: 1m
               group_interval: 30m
               repeat_interval: 8760h
-              routes:
-                - receiver: telegram
-                  matchers:
-                    - 'alertname="WorkerNodeNotReady"'
+              routes: []
+                # Node kapandi/acildi bildirimi artik telegram-bot (helm/telegram-bot) tarafindan
+                # gonderiliyor. Cift mesaj olmamasi icin bu route kapatildi.
+                # - receiver: telegram
+                #   matchers:
+                #     - 'alertname="WorkerNodeNotReady"'
             receivers:
               - name: "null"
               - name: telegram

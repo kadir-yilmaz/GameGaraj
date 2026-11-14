@@ -37,6 +37,16 @@ spec:
               value: /telegram/token
             - name: GAMEGARAJ_NAMESPACE
               value: {{ .Values.gamegarajNamespace | quote }}
+            - name: ARGOCD_NAMESPACE
+              value: {{ .Values.argocdNamespace | quote }}
+            - name: TZ_OFFSET_HOURS
+              value: {{ .Values.report.tzOffsetHours | quote }}
+            - name: HOURLY_REPORT
+              value: {{ .Values.report.hourly | quote }}
+            - name: NODE_CHECK_INTERVAL
+              value: {{ .Values.nodeWatch.intervalSeconds | quote }}
+            - name: NODE_DEBOUNCE_CHECKS
+              value: {{ .Values.nodeWatch.debounceChecks | quote }}
             - name: PYTHONUNBUFFERED
               value: "1"
           volumeMounts:
