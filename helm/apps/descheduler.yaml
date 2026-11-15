@@ -29,21 +29,30 @@ spec:
           profiles:
             - name: default
               pluginConfig:
+                - name: DefaultEvictor
+                  args:
+                    ignorePvcPods: true
+                    evictLocalStoragePods: true
                 - name: RemovePodsViolatingTopologySpreadConstraint
                   args:
-                    includeSoftConstraints: true
+                    constraints:
+                      - DoNotSchedule
+                      - ScheduleAnyway
                 - name: RemovePodsViolatingNodeAffinity
                   args:
                     nodeAffinityType:
                       - requiredDuringSchedulingIgnoredDuringExecution
+                - name: RemovePodsViolatingNodeTaints
+                - name: RemovePodsViolatingInterPodAntiAffinity
               plugins:
+                balance:
+                  enabled:
+                    - RemovePodsViolatingTopologySpreadConstraint
                 deschedule:
                   enabled:
-                    - RemoveDuplicates
                     - RemovePodsViolatingNodeTaints
                     - RemovePodsViolatingNodeAffinity
                     - RemovePodsViolatingInterPodAntiAffinity
-                    - RemovePodsViolatingTopologySpreadConstraint
 
   destination:
     server: https://kubernetes.default.svc
