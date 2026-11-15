@@ -112,6 +112,18 @@ spec:
                   key: {{ $secretKey }}
             {{- end }}
             {{- end }}
+          {{- if $svc.startupProbe }}
+          startupProbe:
+            {{- toYaml $svc.startupProbe | nindent 12 }}
+          {{- else if not $svc.disableDefaultProbes }}
+          startupProbe:
+            tcpSocket:
+              port: {{ $svc.port | default $.Values.global.containerPort | default 8080 }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24
+          {{- end }}
           {{- if $svc.readinessProbe }}
           readinessProbe:
             {{- toYaml $svc.readinessProbe | nindent 12 }}
