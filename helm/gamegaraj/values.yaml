@@ -22,6 +22,19 @@ global:
       value: "only"
       effect: "NoSchedule"
 
+  # Pod dağıtım, kaynak ve kapanış standartları
+  terminationGracePeriodSeconds: 30
+  topologySpread:
+    maxSkew: 1
+    whenUnsatisfiable: ScheduleAnyway
+  defaultResources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
   # Altyapı adresleri (192.168.1.56 = Dokploy host)
   rabbitmqUrl: "192.168.1.56"
   identityAuthority: "http://192.168.1.56:8080/realms/GameGaraj"

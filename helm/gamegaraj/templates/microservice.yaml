@@ -32,6 +32,7 @@ spec:
         app: {{ $name }}
         {{- include "gamegaraj.labels" $ | nindent 8 }}
     spec:
+      terminationGracePeriodSeconds: {{ $svc.terminationGracePeriodSeconds | default $.Values.global.terminationGracePeriodSeconds | default 30 }}
       {{- if $.Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- range $.Values.global.imagePullSecrets }}
@@ -51,10 +52,11 @@ spec:
       nodeSelector:
         {{- toYaml $.Values.global.nodeSelector | nindent 8 }}
       {{- end }}
+      {{- $ts := $.Values.global.topologySpread | default dict }}
       topologySpreadConstraints:
-        - maxSkew: 1
+        - maxSkew: {{ $ts.maxSkew | default 1 }}
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: DoNotSchedule
+          whenUnsatisfiable: {{ $svc.whenUnsatisfiable | default $ts.whenUnsatisfiable | default "ScheduleAnyway" }}
           labelSelector:
             matchLabels:
               app: {{ $name }}
@@ -62,6 +64,15 @@ spec:
             - pod-template-hash
           nodeAffinityPolicy: Honor
           nodeTaintsPolicy: Honor
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: {{ $name }}
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: {{ $name }}
           image: {{ $svc.image }}
@@ -148,9 +159,10 @@ spec:
             timeoutSeconds: 3
             failureThreshold: 5
           {{- end }}
-          {{- if $svc.resources }}
+          {{- $resources := $svc.resources | default $.Values.global.defaultResources }}
+          {{- if $resources }}
           resources:
-            {{- toYaml $svc.resources | nindent 12 }}
+            {{- toYaml $resources | nindent 12 }}
           {{- end }}
 ---
 apiVersion: v1
