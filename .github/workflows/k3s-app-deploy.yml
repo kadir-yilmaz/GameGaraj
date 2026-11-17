@@ -3,26 +3,76 @@ name: K3s App Deploy
 on:
   workflow_dispatch:
     inputs:
-      service:
-        description: Application image to build
-        required: true
-        default: all
-        type: choice
-        options:
-          - all
-          - gateway
-          - catalog-api
-          - search-api
-          - photostock-api
-          - basket-api
-          - order-api
-          - payment-api
-          - invoice-api
-          - campaign-api
-          - review-api
-          - discussion-api
-          - notification-api
-          - webui
+      all:
+        description: All services (tümünü build et)
+        required: false
+        default: false
+        type: boolean
+      gateway:
+        description: gateway
+        required: false
+        default: false
+        type: boolean
+      catalog-api:
+        description: catalog-api
+        required: false
+        default: false
+        type: boolean
+      search-api:
+        description: search-api
+        required: false
+        default: false
+        type: boolean
+      photostock-api:
+        description: photostock-api
+        required: false
+        default: false
+        type: boolean
+      basket-api:
+        description: basket-api
+        required: false
+        default: false
+        type: boolean
+      order-api:
+        description: order-api
+        required: false
+        default: false
+        type: boolean
+      payment-api:
+        description: payment-api
+        required: false
+        default: false
+        type: boolean
+      invoice-api:
+        description: invoice-api
+        required: false
+        default: false
+        type: boolean
+      campaign-api:
+        description: campaign-api
+        required: false
+        default: false
+        type: boolean
+      review-api:
+        description: review-api
+        required: false
+        default: false
+        type: boolean
+      discussion-api:
+        description: discussion-api
+        required: false
+        default: false
+        type: boolean
+      notification-api:
+        description: notification-api
+        required: false
+        default: false
+        type: boolean
+      webui:
+        description: webui
+        required: false
+        default: false
+        type: boolean
       architecture:
         description: Build Architecture (Normal = Intel only, Multiarch = Intel + ARM)
         required: true
@@ -53,9 +103,6 @@ jobs:
     name: Build Images And Update Tags
     runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
 
-    env:
-      BUILD_SERVICE: ${{ github.event.inputs.service || 'all' }}
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -63,29 +110,27 @@ jobs:
           fetch-depth: 2
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Detect Changed Services
+      - name: Detect Selected Services
         id: filter
         run: |
           set -euo pipefail
 
-          MANUAL_SERVICE="${{ github.event.inputs.service }}"
-          
-          build_gateway=false
-          build_catalog_api=false
-          build_search_api=false
-          build_photostock_api=false
-          build_basket_api=false
-          build_order_api=false
-          build_payment_api=false
-          build_invoice_api=false
-          build_campaign_api=false
-          build_review_api=false
-          build_discussion_api=false
-          build_notification_api=false
-          build_webui=false
+          build_all="${{ inputs.all }}"
+          build_gateway="${{ inputs.gateway }}"
+          build_catalog_api="${{ inputs['catalog-api'] }}"
+          build_search_api="${{ inputs['search-api'] }}"
+          build_photostock_api="${{ inputs['photostock-api'] }}"
+          build_basket_api="${{ inputs['basket-api'] }}"
+          build_order_api="${{ inputs['order-api'] }}"
+          build_payment_api="${{ inputs['payment-api'] }}"
+          build_invoice_api="${{ inputs['invoice-api'] }}"
+          build_campaign_api="${{ inputs['campaign-api'] }}"
+          build_review_api="${{ inputs['review-api'] }}"
+          build_discussion_api="${{ inputs['discussion-api'] }}"
+          build_notification_api="${{ inputs['notification-api'] }}"
+          build_webui="${{ inputs.webui }}"
 
-          echo "Workflow manually triggered for service: $MANUAL_SERVICE"
-          if [ "$MANUAL_SERVICE" = "all" ] || [ -z "$MANUAL_SERVICE" ]; then
+          if [ "$build_all" = "true" ]; then
             build_gateway=true
             build_catalog_api=true
             build_search_api=true
@@ -99,9 +144,11 @@ jobs:
             build_discussion_api=true
             build_notification_api=true
             build_webui=true
-          else
-            # Enable only the manually selected service
-            eval "build_${MANUAL_SERVICE//-/_}=true"
+          fi
+
+          if [ "$build_gateway" != "true" ] && [ "$build_catalog_api" != "true" ] && [ "$build_search_api" != "true" ] && [ "$build_photostock_api" != "true" ] && [ "$build_basket_api" != "true" ] && [ "$build_order_api" != "true" ] && [ "$build_payment_api" != "true" ] && [ "$build_invoice_api" != "true" ] && [ "$build_campaign_api" != "true" ] && [ "$build_review_api" != "true" ] && [ "$build_discussion_api" != "true" ] && [ "$build_notification_api" != "true" ] && [ "$build_webui" != "true" ]; then
+            echo "::error::En az bir servis veya 'all' seçmelisiniz."
+            exit 1
           fi
 
           echo "build_gateway=$build_gateway" >> "$GITHUB_OUTPUT"
