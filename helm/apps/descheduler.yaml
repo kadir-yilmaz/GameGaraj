@@ -15,6 +15,18 @@ spec:
       values: |
         kind: CronJob
         schedule: "*/5 * * * *"
+        startingDeadlineSeconds: 120
+        successfulJobsHistoryLimit: 2
+        failedJobsHistoryLimit: 1
+        ttlSecondsAfterFinished: 300
+
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
         
         nodeSelector:
           kubernetes.io/hostname: kadirserver
@@ -33,6 +45,7 @@ spec:
                   args:
                     ignorePvcPods: true
                     evictLocalStoragePods: true
+                    nodeFit: true
                 - name: RemovePodsViolatingTopologySpreadConstraint
                   args:
                     constraints:
