@@ -102,6 +102,7 @@ services:
       ServiceUrls__OrderApi: "http://order-api:8080"
     secretEnv:
       ConnectionStrings__PostgresConnection: review-postgres-connection
+      ConnectionStrings__Redis: redis-connection
 
   # ---------------------------------------------------------------------------
   # Discussion API (PostgreSQL)
@@ -113,6 +114,7 @@ services:
       IdentityOption__Audience: "discussion.api"
     secretEnv:
       ConnectionStrings__PostgresConnection: discussion-postgres-connection
+      ConnectionStrings__Redis: redis-connection
 
   # ---------------------------------------------------------------------------
   # PhotoStock API (MinIO)

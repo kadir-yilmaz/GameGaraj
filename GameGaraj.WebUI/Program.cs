@@ -1,4 +1,4 @@
-﻿using GameGaraj.WebUI.Extensions;
+using GameGaraj.WebUI.Extensions;
 using GameGaraj.WebUI.Services.Abstract;
 using GameGaraj.WebUI.Services.Concrete;
 using GameGaraj.WebUI.Settings;
@@ -322,9 +322,17 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // MassTransit
 builder.Services.AddMassTransit(x =>
 {
-    x.AddConsumer<GameGaraj.WebUI.Consumers.QuestionCreatedWebConsumer>();
-    x.AddConsumer<GameGaraj.WebUI.Consumers.QuestionAnsweredWebConsumer>();
-    x.AddConsumer<GameGaraj.WebUI.Consumers.QuestionDeletedWebConsumer>();
+    // SignalR dağıtımı: Her WebUI pod'u kendi tarayıcı bağlantılarına push yapabilmek için
+    // event'in bir kopyasını almalı. Paylaşılan kuyruk (competing consumers) yerine pod başına
+    // geçici (auto-delete) kuyruk kullanılır → fan-out.
+    var signalRInstanceId = Environment.MachineName.ToLowerInvariant();
+
+    x.AddConsumer<GameGaraj.WebUI.Consumers.QuestionCreatedWebConsumer>()
+        .Endpoint(e => { e.InstanceId = signalRInstanceId; e.Temporary = true; });
+    x.AddConsumer<GameGaraj.WebUI.Consumers.QuestionAnsweredWebConsumer>()
+        .Endpoint(e => { e.InstanceId = signalRInstanceId; e.Temporary = true; });
+    x.AddConsumer<GameGaraj.WebUI.Consumers.QuestionDeletedWebConsumer>()
+        .Endpoint(e => { e.InstanceId = signalRInstanceId; e.Temporary = true; });
 
     x.UsingRabbitMq((context, cfg) =>
     {

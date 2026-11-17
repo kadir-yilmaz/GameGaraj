@@ -89,7 +89,17 @@ public class ContentModerationService : IContentModerationService
 
     private ModerationTermsSnapshot GetModerationTerms()
     {
-        var cachedStr = _cache.GetString(ModerationTermsCacheKey);
+        string? cachedStr = null;
+        try
+        {
+            cachedStr = _cache.GetString(ModerationTermsCacheKey);
+        }
+        catch (Exception ex)
+        {
+            // Redis erişilemezse yorum oluşturma akışı kırılmasın; DB'den devam edilir.
+            _logger.LogWarning(ex, "Moderation terms cache could not be read. Falling back to database.");
+        }
+
         if (!string.IsNullOrEmpty(cachedStr))
         {
             try
@@ -128,8 +138,15 @@ public class ContentModerationService : IContentModerationService
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToArray());
                     
-            var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) };
-            _cache.SetString(ModerationTermsCacheKey, JsonSerializer.Serialize(snapshot), options);
+            try
+            {
+                var options = new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) };
+                _cache.SetString(ModerationTermsCacheKey, JsonSerializer.Serialize(snapshot), options);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Moderation terms could not be written to cache.");
+            }
 
             return snapshot;
         }

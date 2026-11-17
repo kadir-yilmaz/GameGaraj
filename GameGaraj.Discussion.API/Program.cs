@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using GameGaraj.Discussion.API.Consumers;
@@ -21,7 +21,18 @@ builder.Services.AddDbContext<DiscussionDbContext>(options =>
 // Redis Cache
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    var redisConnection = builder.Configuration.GetConnectionString("Redis");
+    if (!string.IsNullOrWhiteSpace(redisConnection))
+    {
+        // Secret Go servisleriyle ortak (host:port), bu yüzden abortConnect burada kodda kapatılır.
+        var redisOptions = StackExchange.Redis.ConfigurationOptions.Parse(redisConnection);
+        redisOptions.AbortOnConnectFail = false;
+        options.ConfigurationOptions = redisOptions;
+    }
+    else
+    {
+        Console.WriteLine("[Discussion API Warning] ConnectionStrings:Redis is not configured. Cache operations will fail and fall back to database.");
+    }
     options.InstanceName = "discussion-api:";
 });
 

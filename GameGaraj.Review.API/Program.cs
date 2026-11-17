@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Text.Json;
 using GameGaraj.Review.API.Data;
 using GameGaraj.Review.API.Services;
@@ -18,7 +18,18 @@ builder.Services.AddDbContext<ReviewDbContext>(options =>
 
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    var redisConnection = builder.Configuration.GetConnectionString("Redis");
+    if (!string.IsNullOrWhiteSpace(redisConnection))
+    {
+        // Secret Go servisleriyle ortak (host:port), bu yüzden abortConnect burada kodda kapatılır.
+        var redisOptions = StackExchange.Redis.ConfigurationOptions.Parse(redisConnection);
+        redisOptions.AbortOnConnectFail = false;
+        options.ConfigurationOptions = redisOptions;
+    }
+    else
+    {
+        Console.WriteLine("[Review API Warning] ConnectionStrings:Redis is not configured. Cache operations will fail and fall back to database.");
+    }
     options.InstanceName = "review-api:";
 });
 builder.Services.AddHttpContextAccessor();
