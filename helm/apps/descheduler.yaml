@@ -18,7 +18,7 @@ spec:
         startingDeadlineSeconds: 120
         successfulJobsHistoryLimit: 2
         failedJobsHistoryLimit: 1
-        ttlSecondsAfterFinished: 300
+        ttlSecondsAfterFinished: 600
 
         resources:
           requests:
