@@ -94,7 +94,7 @@ services:
   # Review API (PostgreSQL)
   # ---------------------------------------------------------------------------
   review-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/review-api:c5af4a1-148-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/review-api:022636f-153-1"
     replicas: 3
     skipCommonRabbit: true
     env:
@@ -108,7 +108,7 @@ services:
   # Discussion API (PostgreSQL)
   # ---------------------------------------------------------------------------
   discussion-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/discussion-api:15b3557-150-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/discussion-api:022636f-153-1"
     replicas: 3
     env:
       IdentityOption__Audience: "discussion.api"
@@ -228,7 +228,7 @@ services:
   # WebUI (MVC — routes through Gateway internally)
   # ---------------------------------------------------------------------------
   webui:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:a032387-152-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:022636f-153-1"
     serviceType: NodePort
     nodePort: 30075
     replicas: 3
@@ -241,7 +241,7 @@ services:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
-      APP_VERSION: "a032387-152-1"
+      APP_VERSION: "022636f-153-1"
       ObservabilitySettings__ElasticSearchUri: "http://192.168.1.56:9201"
       ObservabilitySettings__Services__Gateway: "http://gateway:8080"
       ObservabilitySettings__Services__CatalogAPI: "http://catalog-api:8080"
