@@ -1087,6 +1087,8 @@
     padding: 0.3rem 0.65rem;
     border-radius: 6px;
     line-height: 1.2;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .qa-status-answered {
@@ -1154,11 +1156,50 @@
     padding: 1.25rem 1.5rem;
     margin-bottom: 1rem;
     transition: all 0.2s ease;
+    overflow: hidden;
 }
 
 .qa-card-item:hover {
     border-color: #cbd5e1;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.qa-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+}
+
+.qa-user-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+    flex: 1 1 170px;
+}
+
+.qa-user-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.qa-user-name {
+    display: block;
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.qa-question-text,
+.qa-answer-text {
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .qa-avatar {
@@ -1172,6 +1213,7 @@
     justify-content: center;
     font-weight: 700;
     font-size: 0.85rem;
+    flex-shrink: 0;
 }
 
 .qa-seller-answer-box {
@@ -1180,6 +1222,25 @@
     border-radius: 0 10px 10px 0;
     padding: 1rem 1.25rem;
     margin-top: 1rem;
+}
+
+.qa-vote-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.qa-vote-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-left: auto;
+    flex-shrink: 0;
 }
 
 .qa-seller-badge {
@@ -1280,5 +1341,56 @@
     justify-content: center;
     font-size: 1.75rem;
     margin-bottom: 1rem;
+}
+
+@media (max-width: 575px) {
+    .tab-content {
+        padding: 1rem;
+    }
+
+    .qa-hero-header {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .qa-hero-header > div:last-child,
+    .qa-hero-header .btn-ask-question-primary {
+        width: 100%;
+    }
+
+    .qa-form-card {
+        padding: 1rem !important;
+        margin-bottom: 1.25rem;
+    }
+
+    .qa-card-item {
+        padding: 0.9rem 1rem;
+        border-radius: 10px;
+    }
+
+    .qa-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+
+    .qa-user-name {
+        font-size: 0.88rem;
+    }
+
+    .qa-status-badge {
+        font-size: 0.72rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .qa-seller-answer-box {
+        padding: 0.85rem 0.9rem;
+        margin-top: 0.75rem;
+    }
+
+    .qa-vote-btn {
+        padding: 0.28rem 0.55rem;
+        font-size: 0.82rem;
+    }
 }
 

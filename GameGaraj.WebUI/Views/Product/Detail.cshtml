@@ -360,6 +360,114 @@
             });
         }
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function formatQaDisplayName(name) {
+            if (!name || !String(name).trim()) return 'Kullanıcı';
+            const trimmed = String(name).trim();
+            const parts = trimmed.split(/\s+/);
+            if (parts.length >= 2) {
+                return `${parts[0].charAt(0).toUpperCase()}. ${parts.slice(1).join(' ')}`;
+            }
+            return trimmed;
+        }
+
+        function renderQaPendingNotice() {
+            return `
+                <div class="alert alert-warning border-0 d-flex align-items-start gap-2 py-2 px-3 mt-2 mb-0 rounded-3" style="background: #fffbeb; font-size: 0.85rem;">
+                    <i class="fas fa-clock-rotate-left text-warning mt-1 flex-shrink-0"></i>
+                    <div>
+                        <strong class="text-dark">Beklemede:</strong> <span class="text-muted">Sorunuz satıcıya iletildi. Yanıtlandığında burada herkese açık olarak yayınlanacaktır.</span>
+                    </div>
+                </div>`;
+        }
+
+        function renderQaSellerAnswerBox(a, animate) {
+            const answerId = a.answerId || a.id || '';
+            const ansDateStr = new Date(a.createdAt || Date.now()).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const ansResponder = a.responderName || 'GameGaraj';
+            const helpfulCount = a.helpfulCount || 0;
+            const dislikeCount = a.dislikeCount || 0;
+            const isHelpfulActive = a.userVote === 'helpful';
+            const isDislikeActive = a.userVote === 'dislike';
+            const styleAttr = animate ? ' style="animation: qaFadeIn 0.4s ease;"' : '';
+
+            return `
+                <div class="qa-seller-answer-box"${styleAttr}>
+                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="qa-seller-badge">
+                                <i class="fas fa-check-circle"></i> SATICI YANITI
+                            </span>
+                            <span class="small fw-bold text-dark">${escapeHtml(ansResponder)}</span>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.75rem;">
+                            <i class="far fa-clock me-1"></i>${ansDateStr}
+                        </small>
+                    </div>
+                    <p class="mb-2 text-dark qa-answer-text" style="font-size: 0.92rem; line-height: 1.6;">
+                        ${escapeHtml(a.answerText)}
+                    </p>
+                    <div class="qa-vote-bar">
+                        <span class="text-muted small" style="font-size: 0.8rem;">Bu yanıt yardımcı oldu mu?</span>
+                        <div class="qa-vote-actions">
+                            <button type="button"
+                                    class="qa-vote-btn qa-vote-helpful ${isHelpfulActive ? 'voted-helpful' : ''}"
+                                    data-answer-id="${escapeHtml(answerId)}"
+                                    data-is-helpful="true"
+                                    onclick="handleAnswerVote(this)"
+                                    title="Faydalı">
+                                <i class="${isHelpfulActive ? 'fas' : 'far'} fa-thumbs-up"></i>
+                                <span class="badge rounded-pill qa-helpful-count">${helpfulCount}</span>
+                            </button>
+                            <button type="button"
+                                    class="qa-vote-btn qa-vote-dislike ${isDislikeActive ? 'voted-dislike' : ''}"
+                                    data-answer-id="${escapeHtml(answerId)}"
+                                    data-is-helpful="false"
+                                    onclick="handleAnswerVote(this)"
+                                    title="Faydalı Değil">
+                                <i class="${isDislikeActive ? 'fas' : 'far'} fa-thumbs-down"></i>
+                                <span class="badge rounded-pill qa-dislike-count">${dislikeCount}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function renderQaQuestionCard(q, animate) {
+            const rawName = q.formattedUserName || formatQaDisplayName(q.userName);
+            const initial = rawName.substring(0, 1).toUpperCase();
+            const dateStr = new Date(q.createdAt || Date.now()).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const badgeHtml = q.answer
+                ? '<span class="qa-status-badge qa-status-answered"><i class="fas fa-check-double me-1"></i>Cevaplandı</span>'
+                : '<span class="qa-status-badge qa-status-pending"><i class="fas fa-clock me-1"></i>Beklemede</span>';
+            const bodyHtml = q.answer ? renderQaSellerAnswerBox(q.answer, false) : renderQaPendingNotice();
+            const styleAttr = animate ? ' style="animation: qaFadeIn 0.4s ease;"' : '';
+
+            return `
+                <div class="qa-card-item qa-question-entry" data-question-id="${escapeHtml(q.id)}" data-text="${escapeHtml(q.questionText || '').toLowerCase()}"${styleAttr}>
+                    <div class="qa-card-header">
+                        <div class="qa-user-meta">
+                            <div class="qa-avatar">${escapeHtml(initial)}</div>
+                            <div class="qa-user-info">
+                                <span class="qa-user-name">${escapeHtml(rawName)}</span>
+                                <div class="text-muted" style="font-size: 0.75rem;">
+                                    <i class="far fa-calendar-alt me-1"></i>${dateStr}
+                                </div>
+                            </div>
+                        </div>
+                        ${badgeHtml}
+                    </div>
+                    <p class="text-dark mb-0 fw-medium qa-question-text" style="font-size: 0.95rem; line-height: 1.55;">
+                        ${escapeHtml(q.questionText)}
+                    </p>
+                    ${bodyHtml}
+                </div>`;
+        }
+
         // Form submit AJAX (No Full Page Reload)
         $(document).on('submit', '#askQuestionForm', function (e) {
             e.preventDefault();
@@ -402,35 +510,12 @@
                         }
 
                         if (res.id && $(`.qa-question-entry[data-question-id="${res.id}"]`).length === 0) {
-                            const initial = (res.userName || 'K').substring(0, 1).toUpperCase();
-                            const nowStr = new Date().toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-                            const html = `
-                                <div class="qa-card-item qa-question-entry" data-question-id="${res.id}" data-text="${escapeHtml(res.questionText || '').toLowerCase()}" style="animation: qaFadeIn 0.4s ease;">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="qa-avatar">${initial}</div>
-                                            <div>
-                                                <span class="fw-bold text-dark" style="font-size: 0.95rem;">${escapeHtml(res.userName)}</span>
-                                                <div class="text-muted" style="font-size: 0.75rem;">
-                                                    <i class="far fa-calendar-alt me-1"></i>${nowStr}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <span class="qa-status-badge qa-status-pending">
-                                            <i class="fas fa-clock me-1"></i>Beklemede
-                                        </span>
-                                    </div>
-                                    <p class="text-dark mb-0 fw-medium" style="font-size: 0.95rem; line-height: 1.55;">
-                                        ${escapeHtml(res.questionText)}
-                                    </p>
-                                    <div class="alert alert-warning border-0 d-flex align-items-center gap-2 py-2 px-3 mt-2 mb-0 rounded-3" style="background: #fffbeb; font-size: 0.85rem;">
-                                        <i class="fas fa-clock-rotate-left text-warning"></i>
-                                        <div>
-                                            <strong class="text-dark">Beklemede:</strong> <span class="text-muted">Sorunuz satıcıya iletildi. Yanıtlandığında burada herkese açık olarak yayınlanacaktır.</span>
-                                        </div>
-                                    </div>
-                                </div>`;
+                            const html = renderQaQuestionCard({
+                                id: res.id,
+                                userName: res.userName,
+                                questionText: res.questionText,
+                                createdAt: Date.now()
+                            }, true);
 
                             $('#qaQuestionsList').prepend(html);
                             updateQaTabCounters(1);
@@ -473,92 +558,7 @@
                         currentQaPage++;
                         res.items.forEach(function (q) {
                             if ($(`.qa-question-entry[data-question-id="${q.id}"]`).length > 0) return;
-
-                            const name = q.formattedUserName || q.userName || 'Kullanıcı';
-                            const initial = name.substring(0, 1).toUpperCase();
-                            const dateStr = new Date(q.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-                            let answerHtml = '';
-                            let badgeHtml = '<span class="qa-status-badge qa-status-pending"><i class="fas fa-clock me-1"></i>Beklemede</span>';
-
-                            if (q.answer) {
-                                badgeHtml = '<span class="qa-status-badge qa-status-answered"><i class="fas fa-check-double me-1"></i>Cevaplandı</span>';
-                                const ansDateStr = new Date(q.answer.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                                const ansResponder = q.answer.responderName || 'GameGaraj';
-                                const helpfulCount = q.answer.helpfulCount || 0;
-                                const dislikeCount = q.answer.dislikeCount || 0;
-                                const isHelpfulActive = q.answer.userVote === 'helpful';
-                                const isDislikeActive = q.answer.userVote === 'dislike';
-
-                                answerHtml = `
-                                    <div class="qa-seller-answer-box">
-                                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <span class="qa-seller-badge">
-                                                    <i class="fas fa-check-circle"></i> SATICI YANITI
-                                                </span>
-                                                <span class="small fw-bold text-dark">${escapeHtml(ansResponder)}</span>
-                                            </div>
-                                            <small class="text-muted" style="font-size: 0.75rem;">
-                                                <i class="far fa-clock me-1"></i>${ansDateStr}
-                                            </small>
-                                        </div>
-                                        <p class="mb-2 text-dark" style="font-size: 0.92rem; line-height: 1.6;">
-                                            ${escapeHtml(q.answer.answerText)}
-                                        </p>
-                                        <div class="d-flex align-items-center justify-content-end gap-2 mt-2 pt-2 border-top border-light-subtle flex-wrap">
-                                            <span class="text-muted small" style="font-size: 0.8rem;">Bu yanıt yardımcı oldu mu?</span>
-                                            <button type="button" 
-                                                    class="qa-vote-btn qa-vote-helpful ${isHelpfulActive ? 'voted-helpful' : ''}" 
-                                                    data-answer-id="${q.answer.id}" 
-                                                    data-is-helpful="true" 
-                                                    onclick="handleAnswerVote(this)"
-                                                    title="Faydalı">
-                                                <i class="${isHelpfulActive ? 'fas' : 'far'} fa-thumbs-up"></i>
-                                                <span class="badge rounded-pill qa-helpful-count">${helpfulCount}</span>
-                                            </button>
-                                            <button type="button" 
-                                                    class="qa-vote-btn qa-vote-dislike ${isDislikeActive ? 'voted-dislike' : ''}" 
-                                                    data-answer-id="${q.answer.id}" 
-                                                    data-is-helpful="false" 
-                                                    onclick="handleAnswerVote(this)"
-                                                    title="Faydalı Değil">
-                                                <i class="${isDislikeActive ? 'fas' : 'far'} fa-thumbs-down"></i>
-                                                <span class="badge rounded-pill qa-dislike-count">${dislikeCount}</span>
-                                            </button>
-                                        </div>
-                                    </div>`;
-                            } else {
-                                answerHtml = `
-                                    <div class="alert alert-warning border-0 d-flex align-items-center gap-2 py-2 px-3 mt-2 mb-0 rounded-3" style="background: #fffbeb; font-size: 0.85rem;">
-                                        <i class="fas fa-clock-rotate-left text-warning"></i>
-                                        <div>
-                                            <strong class="text-dark">Beklemede:</strong> <span class="text-muted">Sorunuz satıcıya iletildi. Yanıtlandığında burada herkese açık olarak yayınlanacaktır.</span>
-                                        </div>
-                                    </div>`;
-                            }
-
-                            const cardHtml = `
-                                <div class="qa-card-item qa-question-entry" data-question-id="${q.id}" data-text="${(q.questionText || '').toLowerCase()}">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="qa-avatar">${initial}</div>
-                                            <div>
-                                                <span class="fw-bold text-dark" style="font-size: 0.95rem;">${escapeHtml(name)}</span>
-                                                <div class="text-muted" style="font-size: 0.75rem;">
-                                                    <i class="far fa-calendar-alt me-1"></i>${dateStr}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        ${badgeHtml}
-                                    </div>
-                                    <p class="text-dark mb-0 fw-medium" style="font-size: 0.95rem; line-height: 1.55;">
-                                        ${escapeHtml(q.questionText)}
-                                    </p>
-                                    ${answerHtml}
-                                </div>`;
-
-                            $('#qaQuestionsList').append(cardHtml);
+                            $('#qaQuestionsList').append(renderQaQuestionCard(q, false));
                         });
 
                         const loadedCount = $('.qa-question-entry').length;
@@ -592,11 +592,6 @@
             });
         }
 
-        function escapeHtml(text) {
-            if (!text) return '';
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
-
         (function () {
             const productId = "@Model.Id";
             if (!productId) return;
@@ -621,38 +616,7 @@
 
                 if ($(`.qa-question-entry[data-question-id="${q.id}"]`).length > 0) return;
 
-                const name = q.formattedUserName || q.userName || 'Kullanıcı';
-                const initial = name.substring(0, 1).toUpperCase();
-                const dateStr = new Date(q.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-                const html = `
-                    <div class="qa-card-item qa-question-entry" data-question-id="${q.id}" data-text="${(q.questionText || '').toLowerCase()}" style="animation: qaFadeIn 0.4s ease;">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="qa-avatar">${initial}</div>
-                                <div>
-                                    <span class="fw-bold text-dark" style="font-size: 0.95rem;">${escapeHtml(name)}</span>
-                                    <div class="text-muted" style="font-size: 0.75rem;">
-                                        <i class="far fa-calendar-alt me-1"></i>${dateStr}
-                                    </div>
-                                </div>
-                            </div>
-                            <span class="qa-status-badge qa-status-pending">
-                                <i class="fas fa-clock me-1"></i>Beklemede
-                            </span>
-                        </div>
-                        <p class="text-dark mb-0 fw-medium" style="font-size: 0.95rem; line-height: 1.55;">
-                            ${escapeHtml(q.questionText)}
-                        </p>
-                        <div class="alert alert-warning border-0 d-flex align-items-center gap-2 py-2 px-3 mt-2 mb-0 rounded-3" style="background: #fffbeb; font-size: 0.85rem;">
-                            <i class="fas fa-clock-rotate-left text-warning"></i>
-                            <div>
-                                <strong class="text-dark">Beklemede:</strong> <span class="text-muted">Sorunuz satıcıya iletildi. Yanıtlandığında burada herkese açık olarak yayınlanacaktır.</span>
-                            </div>
-                        </div>
-                    </div>`;
-
-                $('#qaQuestionsList').prepend(html);
+                $('#qaQuestionsList').prepend(renderQaQuestionCard(q, true));
                 updateQaTabCounters(1);
             });
 
@@ -669,7 +633,6 @@
                     $qCard.find('.alert-warning').remove();
 
                     const dateStr = new Date(a.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                    const responder = a.responderName || 'GameGaraj';
 
                     const $existingBox = $qCard.find('.qa-seller-answer-box');
                     if ($existingBox.length > 0) {
@@ -678,47 +641,7 @@
                         $existingBox.css('background-color', '#eff6ff');
                         setTimeout(function () { $existingBox.css('background-color', '#fff9f5'); }, 1200);
                     } else {
-                        const answerId = a.answerId || a.id || '';
-                        const answerBox = `
-                            <div class="qa-seller-answer-box" style="animation: qaFadeIn 0.4s ease;">
-                                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="qa-seller-badge">
-                                            <i class="fas fa-check-circle"></i> SATICI YANITI
-                                        </span>
-                                        <span class="small fw-bold text-dark">${escapeHtml(responder)}</span>
-                                    </div>
-                                    <small class="text-muted" style="font-size: 0.75rem;">
-                                        <i class="far fa-clock me-1"></i>${dateStr}
-                                    </small>
-                                </div>
-                                <p class="mb-2 text-dark" style="font-size: 0.92rem; line-height: 1.6;">
-                                    ${escapeHtml(a.answerText)}
-                                </p>
-                                <div class="d-flex align-items-center justify-content-end gap-2 mt-2 pt-2 border-top border-light-subtle flex-wrap">
-                                    <span class="text-muted small" style="font-size: 0.8rem;">Bu yanıt yardımcı oldu mu?</span>
-                                    <button type="button" 
-                                            class="qa-vote-btn qa-vote-helpful" 
-                                            data-answer-id="${answerId}" 
-                                            data-is-helpful="true" 
-                                            onclick="handleAnswerVote(this)"
-                                            title="Faydalı">
-                                        <i class="far fa-thumbs-up"></i>
-                                        <span class="badge rounded-pill qa-helpful-count">0</span>
-                                    </button>
-                                    <button type="button" 
-                                            class="qa-vote-btn qa-vote-dislike" 
-                                            data-answer-id="${answerId}" 
-                                            data-is-helpful="false" 
-                                            onclick="handleAnswerVote(this)"
-                                            title="Faydalı Değil">
-                                        <i class="far fa-thumbs-down"></i>
-                                        <span class="badge rounded-pill qa-dislike-count">0</span>
-                                    </button>
-                                </div>
-                            </div>`;
-
-                        $qCard.append(answerBox);
+                        $qCard.append(renderQaSellerAnswerBox(a, true));
                     }
                 }
             });

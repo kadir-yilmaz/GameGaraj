@@ -107,11 +107,11 @@
 
                 <div class="qa-card-item qa-question-entry" data-question-id="@q.Id" data-text="@q.QuestionText.ToLower()">
                     <!-- Question Header -->
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div class="d-flex align-items-center gap-2">
+                    <div class="qa-card-header">
+                        <div class="qa-user-meta">
                             <div class="qa-avatar">@userInitial</div>
-                            <div>
-                                <span class="fw-bold text-dark" style="font-size: 0.95rem;">@formattedName</span>
+                            <div class="qa-user-info">
+                                <span class="qa-user-name">@formattedName</span>
                                 <div class="text-muted" style="font-size: 0.75rem;">
                                     <i class="far fa-calendar-alt me-1"></i>@q.CreatedAt.ToString("dd.MM.yyyy HH:mm")
                                 </div>
@@ -132,7 +132,7 @@
                     </div>
 
                     <!-- Question Text -->
-                    <p class="text-dark mb-0 fw-medium" style="font-size: 0.95rem; line-height: 1.55;">
+                    <p class="text-dark mb-0 fw-medium qa-question-text" style="font-size: 0.95rem; line-height: 1.55;">
                         @q.QuestionText
                     </p>
 
@@ -141,7 +141,7 @@
                     {
                         <div class="qa-seller-answer-box">
                             <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                                <div class="d-flex align-items-center gap-2">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
                                     <span class="qa-seller-badge">
                                         <i class="fas fa-check-circle"></i> SATICI YANITI
                                     </span>
@@ -151,36 +151,38 @@
                                     <i class="far fa-clock me-1"></i>@q.Answer.CreatedAt.ToString("dd.MM.yyyy HH:mm")
                                 </small>
                             </div>
-                            <p class="mb-2 text-dark" style="font-size: 0.92rem; line-height: 1.6;">
+                            <p class="mb-2 text-dark qa-answer-text" style="font-size: 0.92rem; line-height: 1.6;">
                                 @q.Answer.AnswerText
                             </p>
-                            <div class="d-flex align-items-center justify-content-end gap-2 mt-2 pt-2 border-top border-light-subtle flex-wrap">
+                            <div class="qa-vote-bar">
                                 <span class="text-muted small" style="font-size: 0.8rem;">Bu yanıt yardımcı oldu mu?</span>
-                                <button type="button" 
-                                        class="qa-vote-btn qa-vote-helpful @(q.Answer.UserVote == "helpful" ? "voted-helpful" : "")" 
-                                        data-answer-id="@q.Answer.Id" 
-                                        data-is-helpful="true" 
-                                        onclick="handleAnswerVote(this)"
-                                        title="Faydalı">
-                                    <i class="@(q.Answer.UserVote == "helpful" ? "fas" : "far") fa-thumbs-up"></i>
-                                    <span class="badge rounded-pill qa-helpful-count">@q.Answer.HelpfulCount</span>
-                                </button>
-                                <button type="button" 
-                                        class="qa-vote-btn qa-vote-dislike @(q.Answer.UserVote == "dislike" ? "voted-dislike" : "")" 
-                                        data-answer-id="@q.Answer.Id" 
-                                        data-is-helpful="false" 
-                                        onclick="handleAnswerVote(this)"
-                                        title="Faydalı Değil">
-                                    <i class="@(q.Answer.UserVote == "dislike" ? "fas" : "far") fa-thumbs-down"></i>
-                                    <span class="badge rounded-pill qa-dislike-count">@q.Answer.DislikeCount</span>
-                                </button>
+                                <div class="qa-vote-actions">
+                                    <button type="button" 
+                                            class="qa-vote-btn qa-vote-helpful @(q.Answer.UserVote == "helpful" ? "voted-helpful" : "")" 
+                                            data-answer-id="@q.Answer.Id" 
+                                            data-is-helpful="true" 
+                                            onclick="handleAnswerVote(this)"
+                                            title="Faydalı">
+                                        <i class="@(q.Answer.UserVote == "helpful" ? "fas" : "far") fa-thumbs-up"></i>
+                                        <span class="badge rounded-pill qa-helpful-count">@q.Answer.HelpfulCount</span>
+                                    </button>
+                                    <button type="button" 
+                                            class="qa-vote-btn qa-vote-dislike @(q.Answer.UserVote == "dislike" ? "voted-dislike" : "")" 
+                                            data-answer-id="@q.Answer.Id" 
+                                            data-is-helpful="false" 
+                                            onclick="handleAnswerVote(this)"
+                                            title="Faydalı Değil">
+                                        <i class="@(q.Answer.UserVote == "dislike" ? "fas" : "far") fa-thumbs-down"></i>
+                                        <span class="badge rounded-pill qa-dislike-count">@q.Answer.DislikeCount</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     }
                     else
                     {
-                        <div class="alert alert-warning border-0 d-flex align-items-center gap-2 py-2 px-3 mt-2 mb-0 rounded-3" style="background: #fffbeb; font-size: 0.85rem;">
-                            <i class="fas fa-clock-rotate-left text-warning"></i>
+                        <div class="alert alert-warning border-0 d-flex align-items-start gap-2 py-2 px-3 mt-2 mb-0 rounded-3" style="background: #fffbeb; font-size: 0.85rem;">
+                            <i class="fas fa-clock-rotate-left text-warning mt-1 flex-shrink-0"></i>
                             <div>
                                 <strong class="text-dark">Beklemede:</strong> <span class="text-muted">Sorunuz satıcıya iletildi. Yanıtlandığında burada herkese açık olarak yayınlanacaktır.</span>
                             </div>

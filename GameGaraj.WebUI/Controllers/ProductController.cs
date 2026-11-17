@@ -263,6 +263,17 @@ namespace GameGaraj.WebUI.Controllers
                 return Json(new { succeeded = false, message = "Soru sormak için lütfen giriş yapın.", requireAuth = true });
             }
 
+            var givenName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.FindFirst("given_name")?.Value;
+            var surname = User.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value ?? User.FindFirst("family_name")?.Value;
+            var fullName = !string.IsNullOrEmpty(givenName) && !string.IsNullOrEmpty(surname)
+                ? $"{givenName} {surname}"
+                : null;
+            var displayName = fullName
+                ?? User.FindFirst("name")?.Value
+                ?? User.Identity?.Name
+                ?? User.FindFirst("preferred_username")?.Value
+                ?? "Kullanıcı";
+
             var result = await _discussionService.CreateQuestionAsync(input);
             return Json(new
             {
@@ -271,7 +282,7 @@ namespace GameGaraj.WebUI.Controllers
                 id = result.Id,
                 productId = input.ProductId,
                 questionText = input.QuestionText,
-                userName = User.Identity?.Name ?? "Kullanıcı"
+                userName = displayName
             });
         }
 
