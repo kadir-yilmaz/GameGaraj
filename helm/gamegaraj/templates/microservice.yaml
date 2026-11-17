@@ -123,6 +123,16 @@ spec:
                   key: {{ $secretKey }}
             {{- end }}
             {{- end }}
+            {{- if $svc.optionalSecretEnv }}
+            {{- range $envKey, $secretKey := $svc.optionalSecretEnv }}
+            - name: {{ $envKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: gamegaraj-secrets
+                  key: {{ $secretKey }}
+                  optional: true
+            {{- end }}
+            {{- end }}
           {{- if $svc.startupProbe }}
           startupProbe:
             {{- toYaml $svc.startupProbe | nindent 12 }}

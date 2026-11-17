@@ -37,10 +37,19 @@ namespace GameGaraj.WebUI.Services.Concrete
             _configuration = configuration;
         }
 
+        private string GetKeycloakRootUrl()
+        {
+            var identityBaseUri = (_serviceApiSettings.IdentityBaseUri ?? string.Empty).TrimEnd('/');
+            const string realmSuffix = "/realms/GameGaraj";
+            return identityBaseUri.EndsWith(realmSuffix, StringComparison.OrdinalIgnoreCase)
+                ? identityBaseUri[..^realmSuffix.Length]
+                : identityBaseUri;
+        }
+
         public async Task<(string? Error, string? UserId)> SignInAsync(SignInViewModel model)
         {
             // 1. Keycloak'a İstek Hazırla
-            var tokenEndpoint = $"{_serviceApiSettings.IdentityBaseUri}/protocol/openid-connect/token";
+            var tokenEndpoint = $"{_serviceApiSettings.IdentityBaseUri.TrimEnd('/')}/protocol/openid-connect/token";
 
             var requestContent = new FormUrlEncodedContent(new Dictionary<string, string>
             {
@@ -50,11 +59,28 @@ namespace GameGaraj.WebUI.Services.Concrete
                 { "password", model.Password }
             });
 
-            var response = await _httpClient.PostAsync(tokenEndpoint, requestContent);
+            HttpResponseMessage response;
+            try
+            {
+                response = await _httpClient.PostAsync(tokenEndpoint, requestContent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[IdentityService SignInAsync Request Error] Endpoint: {tokenEndpoint}, Error: {ex.Message}");
+                return ("Kimlik doğrulama servisine ulaşılamıyor. Lütfen daha sonra tekrar deneyin.", null);
+            }
 
             if (!response.IsSuccessStatusCode)
             {
-                return ("Kullanıcı adı veya şifre hatalı.", null);
+                var errorBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[IdentityService SignInAsync Failed] StatusCode: {(int)response.StatusCode}, Endpoint: {tokenEndpoint}, Body: {errorBody}");
+
+                if (response.StatusCode is System.Net.HttpStatusCode.BadRequest or System.Net.HttpStatusCode.Unauthorized)
+                {
+                    return ("Kullanıcı adı veya şifre hatalı.", null);
+                }
+
+                return ($"Kimlik doğrulama servisine ulaşılamıyor (HTTP {(int)response.StatusCode}). Lütfen daha sonra tekrar deneyin.", null);
             }
 
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -92,35 +118,14 @@ namespace GameGaraj.WebUI.Services.Concrete
             try
             {
                 // 1. Admin token al (Keycloak'a kullanıcı eklemek için)
-                var adminTokenEndpoint = $"{_serviceApiSettings.IdentityBaseUri.Replace("/realms/GameGaraj", "")}/realms/master/protocol/openid-connect/token";
-                
-                var adminUsername = Environment.GetEnvironmentVariable("KEYCLOAK_ADMIN_USERNAME") ?? "admin";
-                var adminPassword = Environment.GetEnvironmentVariable("KEYCLOAK_ADMIN_PASSWORD") ?? "admin";
-
-                var adminTokenContent = new FormUrlEncodedContent(new Dictionary<string, string>
+                var adminAccessToken = await GetAdminAccessTokenAsync();
+                if (string.IsNullOrEmpty(adminAccessToken))
                 {
-                    { "client_id", "admin-cli" },
-                    { "grant_type", "password" },
-                    { "username", adminUsername },
-                    { "password", adminPassword }
-                });
-
-                var adminTokenResponse = await _httpClient.PostAsync(adminTokenEndpoint, adminTokenContent);
-                if (!adminTokenResponse.IsSuccessStatusCode)
-                {
-                    return "Kayıt işlemi sırasında bir hata oluştu.";
-                }
-
-                var adminTokenJson = await adminTokenResponse.Content.ReadAsStringAsync();
-                var adminToken = JsonSerializer.Deserialize<TokenResponse>(adminTokenJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                if (adminToken == null)
-                {
-                    return "Kayıt işlemi sırasında bir hata oluştu.";
+                    return "Kimlik doğrulama servisine ulaşılamıyor veya admin yetkisi alınamadı.";
                 }
 
                 // 2. Kullanıcıyı oluştur
-                var createUserEndpoint = $"{_serviceApiSettings.IdentityBaseUri.Replace("/realms/GameGaraj", "")}/admin/realms/GameGaraj/users";
+                var createUserEndpoint = $"{GetKeycloakRootUrl()}/admin/realms/GameGaraj/users";
                 
                 var userData = new
                 {
@@ -142,7 +147,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 };
 
                 var createUserRequest = new HttpRequestMessage(HttpMethod.Post, createUserEndpoint);
-                createUserRequest.Headers.Add("Authorization", $"Bearer {adminToken.AccessToken}");
+                createUserRequest.Headers.Add("Authorization", $"Bearer {adminAccessToken}");
                 createUserRequest.Content = new StringContent(
                     JsonSerializer.Serialize(userData),
                     System.Text.Encoding.UTF8,
@@ -154,6 +159,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (!createUserResponse.IsSuccessStatusCode)
                 {
                     var errorContent = await createUserResponse.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[IdentityService SignUpAsync Failed] StatusCode: {(int)createUserResponse.StatusCode}, Body: {errorContent}");
                     if (errorContent.Contains("User exists"))
                     {
                         return "Bu email adresi zaten kullanılıyor.";
@@ -368,9 +374,13 @@ namespace GameGaraj.WebUI.Services.Concrete
         {
             try
             {
-                var adminTokenEndpoint = $"{_serviceApiSettings.IdentityBaseUri.Replace("/realms/GameGaraj", "")}/realms/master/protocol/openid-connect/token";
-                var adminUsername = Environment.GetEnvironmentVariable("KEYCLOAK_ADMIN_USERNAME") ?? "admin";
-                var adminPassword = Environment.GetEnvironmentVariable("KEYCLOAK_ADMIN_PASSWORD") ?? "admin";
+                var adminTokenEndpoint = $"{GetKeycloakRootUrl()}/realms/master/protocol/openid-connect/token";
+                var adminUsername = _configuration["KEYCLOAK_ADMIN_USERNAME"]
+                    ?? Environment.GetEnvironmentVariable("KEYCLOAK_ADMIN_USERNAME")
+                    ?? "admin";
+                var adminPassword = _configuration["KEYCLOAK_ADMIN_PASSWORD"]
+                    ?? Environment.GetEnvironmentVariable("KEYCLOAK_ADMIN_PASSWORD")
+                    ?? "admin";
 
                 var adminTokenContent = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
@@ -381,14 +391,20 @@ namespace GameGaraj.WebUI.Services.Concrete
                 });
 
                 var adminTokenResponse = await _httpClient.PostAsync(adminTokenEndpoint, adminTokenContent);
-                if (!adminTokenResponse.IsSuccessStatusCode) return null;
+                if (!adminTokenResponse.IsSuccessStatusCode)
+                {
+                    var errorBody = await adminTokenResponse.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[IdentityService GetAdminAccessTokenAsync Failed] StatusCode: {(int)adminTokenResponse.StatusCode}, Endpoint: {adminTokenEndpoint}, Body: {errorBody}");
+                    return null;
+                }
 
                 var adminTokenJson = await adminTokenResponse.Content.ReadAsStringAsync();
                 var adminToken = JsonSerializer.Deserialize<TokenResponse>(adminTokenJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 return adminToken?.AccessToken;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[IdentityService GetAdminAccessTokenAsync Error] {ex.Message}");
                 return null;
             }
         }
@@ -400,7 +416,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 var accessToken = await GetAdminAccessTokenAsync();
                 if (string.IsNullOrEmpty(accessToken)) return new();
 
-                var searchUsersEndpoint = $"{_serviceApiSettings.IdentityBaseUri.Replace("/realms/GameGaraj", "")}/admin/realms/GameGaraj/users?search={Uri.EscapeDataString(query)}&max=20";
+                var searchUsersEndpoint = $"{GetKeycloakRootUrl()}/admin/realms/GameGaraj/users?search={Uri.EscapeDataString(query)}&max=20";
                 
                 var searchRequest = new HttpRequestMessage(HttpMethod.Get, searchUsersEndpoint);
                 searchRequest.Headers.Add("Authorization", $"Bearer {accessToken}");
@@ -431,7 +447,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (string.IsNullOrEmpty(accessToken))
                     return (false, "Admin yetkisi alınamadı.");
 
-                var baseAdminUrl = $"{_serviceApiSettings.IdentityBaseUri.Replace("/realms/GameGaraj", "")}/admin/realms/GameGaraj";
+                var baseAdminUrl = $"{GetKeycloakRootUrl()}/admin/realms/GameGaraj";
                 
                 var searchEndpoint = $"{baseAdminUrl}/users?email={Uri.EscapeDataString(emailOrUsername)}&exact=true";
                 var searchRequest = new HttpRequestMessage(HttpMethod.Get, searchEndpoint);
@@ -499,7 +515,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (string.IsNullOrEmpty(accessToken))
                     return (false, "Admin yetkisi alınamadı.");
 
-                var baseAdminUrl = $"{_serviceApiSettings.IdentityBaseUri.Replace("/realms/GameGaraj", "")}/admin/realms/GameGaraj";
+                var baseAdminUrl = $"{GetKeycloakRootUrl()}/admin/realms/GameGaraj";
                 var resetEndpoint = $"{baseAdminUrl}/users/{userId}/reset-password";
 
                 var resetRequest = new HttpRequestMessage(HttpMethod.Put, resetEndpoint);
@@ -544,7 +560,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (string.IsNullOrEmpty(accessToken))
                     return (false, "Kimlik doğrulama servisine ulaşılamadı.");
 
-                var baseAdminUrl = $"{_serviceApiSettings.IdentityBaseUri.Replace("/realms/GameGaraj", "")}/admin/realms/GameGaraj";
+                var baseAdminUrl = $"{GetKeycloakRootUrl()}/admin/realms/GameGaraj";
                 var searchEndpoint = $"{baseAdminUrl}/users?email={Uri.EscapeDataString(email)}&exact=true";
 
                 var searchRequest = new HttpRequestMessage(HttpMethod.Get, searchEndpoint);
@@ -614,7 +630,7 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (string.IsNullOrEmpty(accessToken))
                     return (false, "Admin yetkisi alınamadı.");
 
-                var baseAdminUrl = $"{_serviceApiSettings.IdentityBaseUri.Replace("/realms/GameGaraj", "")}/admin/realms/GameGaraj";
+                var baseAdminUrl = $"{GetKeycloakRootUrl()}/admin/realms/GameGaraj";
                 var searchEndpoint = $"{baseAdminUrl}/users?email={Uri.EscapeDataString(email)}&exact=true";
 
                 var searchRequest = new HttpRequestMessage(HttpMethod.Get, searchEndpoint);
