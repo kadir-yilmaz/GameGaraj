@@ -56,7 +56,7 @@ services:
   # API Gateway (YARP reverse proxy)
   # ---------------------------------------------------------------------------
   gateway:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/gateway:c5af4a1-148-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/gateway:da02629-155-1"
     replicas: 3
     serviceType: NodePort
     nodePort: 30000
@@ -86,7 +86,7 @@ services:
   # Catalog API (PostgreSQL)
   # ---------------------------------------------------------------------------
   catalog-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/catalog-api:c5af4a1-148-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/catalog-api:da02629-155-1"
     replicas: 3
     skipCommonRabbit: true
     env:
@@ -160,7 +160,7 @@ services:
   # Order API (SQL Server)
   # ---------------------------------------------------------------------------
   order-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/order-api:c5af4a1-148-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/order-api:da02629-155-1"
     replicas: 3
     secretEnv:
       ConnectionStrings__DefaultConnection: order-sqlserver-connection
@@ -169,7 +169,7 @@ services:
   # Payment API (Iyzico)
   # ---------------------------------------------------------------------------
   payment-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/payment-api:c5af4a1-148-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/payment-api:da02629-155-1"
     replicas: 3
     env:
       Iyzipay__BaseUrl: "https://sandbox-api.iyzipay.com"
@@ -181,7 +181,7 @@ services:
   # Invoice API (PDF & MinIO)
   # ---------------------------------------------------------------------------
   invoice-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/invoice-api:c5af4a1-148-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/invoice-api:da02629-155-1"
     replicas: 3
     env:
       IdentityOption__Audience: "invoice.api"
@@ -241,7 +241,7 @@ services:
   # WebUI (MVC — routes through Gateway internally)
   # ---------------------------------------------------------------------------
   webui:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:34768ef-154-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:da02629-155-1"
     serviceType: NodePort
     nodePort: 30075
     replicas: 3
@@ -254,7 +254,7 @@ services:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
-      APP_VERSION: "34768ef-154-1"
+      APP_VERSION: "da02629-155-1"
       ObservabilitySettings__ElasticSearchUri: "http://192.168.1.56:9201"
       ObservabilitySettings__Services__Gateway: "http://gateway:8080"
       ObservabilitySettings__Services__CatalogAPI: "http://catalog-api:8080"
