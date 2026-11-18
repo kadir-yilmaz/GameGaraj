@@ -70,7 +70,7 @@ func LoadConfig() *Config {
 		SmtpPort:        getEnvInt("SMTP_PORT", 587),
 		SmtpUsername:    getEnv("SMTP_USERNAME", getEnv("SMTP_USER", getEnv("EmailSettings__SmtpUsername", ""))),
 		SmtpPassword:    getEnv("SMTP_PASSWORD", getEnv("EmailSettings__SmtpPassword", "")),
-		SmtpFromEmail:   getEnv("SMTP_FROM_EMAIL", getEnv("SMTP_USER", getEnv("EmailSettings__SmtpUsername", ""))),
+		SmtpFromEmail:   getEnv("SMTP_FROM_EMAIL", getEnv("SMTP_USERNAME", getEnv("SMTP_USER", getEnv("EmailSettings__SmtpUsername", "")))),
 		SmtpFromName:    getEnv("SMTP_FROM_NAME", "GameGaraj"),
 		OtlpEndpoint:    getEnv("OpenTelemetry__OtlpEndpoint", "http://localhost:4317"),
 		Environment:     getEnv("ENVIRONMENT", "Development"),

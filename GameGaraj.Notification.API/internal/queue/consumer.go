@@ -48,6 +48,7 @@ type Consumer struct {
 	minioClient  *storage.MinioClient
 	rdb          *redis.Client
 	tracer       trace.Tracer
+	done         chan struct{}
 }
 
 func NewConsumer(
@@ -132,6 +133,7 @@ func NewConsumer(
 		minioClient:  minioClient,
 		rdb:          rdb,
 		tracer:       tracer,
+		done:         make(chan struct{}),
 	}, nil
 }
 
@@ -152,6 +154,7 @@ func (c *Consumer) Start(ctx context.Context) error {
 	log.Printf("[RabbitMQ] Consumer started. Listening on queue: %s", queueName)
 
 	go func() {
+		defer close(c.done)
 		for {
 			select {
 			case <-ctx.Done():
@@ -282,6 +285,10 @@ func (c *Consumer) processMessage(ctx context.Context, d amqp.Delivery) {
 	// Successfully processed
 	log.Printf("[RabbitMQ] ✅ Notification successfully sent to: %s", msg.Recipient)
 	_ = d.Ack(false)
+}
+
+func (c *Consumer) Done() <-chan struct{} {
+	return c.done
 }
 
 func (c *Consumer) Close() {

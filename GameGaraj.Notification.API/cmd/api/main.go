@@ -83,17 +83,8 @@ func main() {
 	emailService := service.NewEmailService(cfg)
 	smsService := service.NewSmsService()
 
-	// 5. Initialize and Start RabbitMQ Consumer
-	consumer, err := queue.NewConsumer(cfg, emailService, smsService, minioClient)
-	if err != nil {
-		log.Printf("[Main] ⚠️ RabbitMQ Consumer uyarisi: %v", err)
-	} else {
-		defer consumer.Close()
-		err = consumer.Start(ctx)
-		if err != nil {
-			log.Printf("[Main] ⚠️ RabbitMQ Consumer baslatilamadi: %v", err)
-		}
-	}
+	// 5. Initialize and Start RabbitMQ Consumer (with automatic retry & reconnect)
+	go runConsumerLoop(ctx, cfg, emailService, smsService, minioClient)
 
 	// 6. Initialize Web Server (Gin)
 	if cfg.Environment == "Production" {
@@ -213,5 +204,44 @@ func recordHTTPMetrics() gin.HandlerFunc {
 			strconv.Itoa(c.Writer.Status()),
 			route,
 		).Observe(time.Since(start).Seconds())
+	}
+}
+
+func runConsumerLoop(
+	ctx context.Context,
+	cfg *config.Config,
+	emailService service.EmailService,
+	smsService service.SmsService,
+	minioClient *storage.MinioClient,
+) {
+	const retryDelay = 5 * time.Second
+
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+
+		consumer, err := queue.NewConsumer(cfg, emailService, smsService, minioClient)
+		if err != nil {
+			log.Printf("[Main] ⚠️ RabbitMQ bağlantısı kurulamadı (%v), %s sonra tekrar denenecek...", err, retryDelay)
+		} else if err = consumer.Start(ctx); err != nil {
+			log.Printf("[Main] ⚠️ RabbitMQ consumer başlatılamadı (%v), %s sonra tekrar denenecek...", err, retryDelay)
+			consumer.Close()
+		} else {
+			select {
+			case <-ctx.Done():
+				consumer.Close()
+				return
+			case <-consumer.Done():
+				log.Printf("[Main] ⚠️ RabbitMQ bağlantısı koptu, %s sonra yeniden bağlanılacak...", retryDelay)
+				consumer.Close()
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(retryDelay):
+		}
 	}
 }
