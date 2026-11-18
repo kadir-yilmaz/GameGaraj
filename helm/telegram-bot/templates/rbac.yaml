@@ -13,7 +13,10 @@ metadata:
     {{- include "telegram-bot.labels" . | nindent 4 }}
 rules:
   - apiGroups: [""]
-    resources: ["nodes", "pods", "pods/log", "namespaces", "events", "persistentvolumeclaims"]
+    resources: ["nodes"]
+    verbs: ["get", "list", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "namespaces", "events", "persistentvolumeclaims"]
     verbs: ["get", "list"]
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets", "daemonsets"]

@@ -47,6 +47,10 @@ spec:
               value: {{ .Values.nodeWatch.intervalSeconds | quote }}
             - name: NODE_DEBOUNCE_CHECKS
               value: {{ .Values.nodeWatch.debounceChecks | quote }}
+            - name: AUTO_OUT_OF_SERVICE
+              value: {{ .Values.nodeWatch.autoOutOfService | quote }}
+            - name: OUT_OF_SERVICE_AFTER_SECONDS
+              value: {{ .Values.nodeWatch.outOfServiceAfterSeconds | quote }}
             - name: PYTHONUNBUFFERED
               value: "1"
           volumeMounts:

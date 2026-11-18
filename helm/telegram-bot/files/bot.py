@@ -37,6 +37,9 @@ TZ = timezone(timedelta(hours=float(os.environ.get("TZ_OFFSET_HOURS", "3"))))
 CHECK_INTERVAL = int(os.environ.get("NODE_CHECK_INTERVAL", "30"))
 DEBOUNCE_CHECKS = max(1, int(os.environ.get("NODE_DEBOUNCE_CHECKS", "2")))
 HOURLY_REPORT = os.environ.get("HOURLY_REPORT", "true").lower() in {"1", "true", "yes"}
+AUTO_OUT_OF_SERVICE = os.environ.get("AUTO_OUT_OF_SERVICE", "true").lower() in {"1", "true", "yes"}
+OUT_OF_SERVICE_AFTER_SECONDS = max(30, int(os.environ.get("OUT_OF_SERVICE_AFTER_SECONDS", "90")))
+OUT_OF_SERVICE_KEY = "node.kubernetes.io/out-of-service"
 
 SA_DIR = "/var/run/secrets/kubernetes.io/serviceaccount"
 K8S_HOST = os.environ["KUBERNETES_SERVICE_HOST"]
@@ -112,6 +115,21 @@ def kitems(path: str) -> list:
     except Exception as exc:
         log(f"kget {path} failed: {exc}")
         return []
+
+
+def kpatch_node_taints(name: str, taints: list[dict]) -> None:
+    body = json.dumps({"spec": {"taints": taints}}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{K8S_BASE}/api/v1/nodes/{urllib.parse.quote(name)}",
+        data=body,
+        method="PATCH",
+        headers={
+            "Authorization": f"Bearer {sa_token()}",
+            "Content-Type": "application/merge-patch+json",
+        },
+    )
+    with urllib.request.urlopen(req, context=SSL_CTX, timeout=20) as resp:
+        resp.read()
 
 
 def now_tr() -> str:
@@ -811,6 +829,46 @@ class NodeWatcher:
         items = kitems(f"/api/v1/pods?fieldSelector=spec.nodeName%3D{urllib.parse.quote(name)}")
         return sum(1 for p in items if (p.get("status") or {}).get("phase") not in {"Succeeded", "Failed"})
 
+    def _reconcile_out_of_service(self, node: dict, now: float) -> None:
+        if not AUTO_OUT_OF_SERVICE:
+            return
+        roles = node_roles(node)
+        if "control-plane" in roles:
+            return
+
+        name = node_name(node)
+        taints = list((node.get("spec") or {}).get("taints") or [])
+        has_oos = any(t.get("key") == OUT_OF_SERVICE_KEY for t in taints)
+
+        if node_ready(node):
+            if has_oos:
+                new_taints = [t for t in taints if t.get("key") != OUT_OF_SERVICE_KEY]
+                kpatch_node_taints(name, new_taints)
+                log(f"out-of-service taint removed from {name} (Ready)")
+                send_message(CHAT_ID, f"🧹 {name} tekrar Ready olduğu için out-of-service taint'i kaldırıldı.\n🕐 {now_tr()}")
+            return
+
+        cond = node_condition(node, "Ready")
+        since = parse_ts(cond.get("lastTransitionTime"))
+        if not since:
+            return
+        down_seconds = now - since.timestamp()
+        if down_seconds < OUT_OF_SERVICE_AFTER_SECONDS:
+            return
+
+        if not has_oos:
+            new_taints = taints + [{
+                "key": OUT_OF_SERVICE_KEY,
+                "value": "nodeshutdown",
+                "effect": "NoExecute",
+            }]
+            kpatch_node_taints(name, new_taints)
+            log(f"out-of-service taint added to {name} (down for {fmt_duration(down_seconds)})")
+            send_message(
+                CHAT_ID,
+                f"🧹 {name} {fmt_duration(down_seconds)} süredir kapalı olduğu için out-of-service uygulandı (takılı Terminating podlar temizleniyor).\n🕐 {now_tr()}",
+            )
+
     def check(self) -> None:
         nodes = kget("/api/v1/nodes").get("items", [])
         now = time.time()
@@ -822,9 +880,18 @@ class NodeWatcher:
                 self.state[name] = {"ready": node_ready(node), "since": since.timestamp() if since else now}
             self.initialized = True
             log("watcher initialized: " + ", ".join(f"{n}={'Ready' if s['ready'] else 'NotReady'}" for n, s in self.state.items()))
+            for node in current.values():
+                try:
+                    self._reconcile_out_of_service(node, now)
+                except Exception as exc:
+                    log(f"out-of-service reconcile failed for {node_name(node)}: {exc}")
             return
 
         for name, node in current.items():
+            try:
+                self._reconcile_out_of_service(node, now)
+            except Exception as exc:
+                log(f"out-of-service reconcile failed for {name}: {exc}")
             ready = node_ready(node)
             known = self.state.get(name)
             if known is None:

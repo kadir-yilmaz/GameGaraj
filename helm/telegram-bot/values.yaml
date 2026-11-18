@@ -22,6 +22,8 @@ report:
 nodeWatch:
   intervalSeconds: 30   # kontrol araligi
   debounceChecks: 2     # durum degisikligi kac ardisik kontrolde dogrulanacak (sahte alarm onler)
+  autoOutOfService: true        # kapali/ulasilamaz worker'larda Terminating pod temizligi
+  outOfServiceAfterSeconds: 90  # NotReady/Unknown olduktan kac sn sonra out-of-service taint eklensin
 
 nodeSelector:
   kubernetes.io/hostname: kadirserver
