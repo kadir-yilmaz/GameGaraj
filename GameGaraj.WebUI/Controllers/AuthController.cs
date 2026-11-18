@@ -287,17 +287,24 @@ namespace GameGaraj.WebUI.Controllers
         }
 
         [HttpGet]
+        [HttpGet]
         [Microsoft.AspNetCore.Authorization.Authorize]
-        public async Task<IActionResult> Profile()
+        public IActionResult Profile()
         {
             var userId = _identityService.GetUserId();
-            var email = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value 
-                        ?? User.Claims.FirstOrDefault(c => c.Type == "email")?.Value 
-                        ?? User.Identity?.Name ?? "";
-            var name = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.GivenName)?.Value 
-                       ?? User.Claims.FirstOrDefault(c => c.Type == "name")?.Value 
-                       ?? User.Identity?.Name ?? "";
-            var surname = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Surname)?.Value ?? "";
+            var email = GetClaimValue(System.Security.Claims.ClaimTypes.Email, "email") ?? User.Identity?.Name ?? "";
+            var name = GetClaimValue(System.Security.Claims.ClaimTypes.GivenName, "given_name") ?? "";
+            var surname = GetClaimValue(System.Security.Claims.ClaimTypes.Surname, "family_name") ?? "";
+
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
+            {
+                var fullName = GetClaimValue("name") ?? User.Identity?.Name ?? "";
+                var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (string.IsNullOrWhiteSpace(name) && parts.Length > 0)
+                    name = parts[0];
+                if (string.IsNullOrWhiteSpace(surname) && parts.Length > 1)
+                    surname = string.Join(' ', parts.Skip(1));
+            }
 
             var model = new ProfileViewModel
             {
@@ -305,10 +312,77 @@ namespace GameGaraj.WebUI.Controllers
                 Email = email,
                 Name = name,
                 Surname = surname,
-                Roles = User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role").Select(c => c.Value).Distinct().ToList()
+                Roles = User.Claims
+                    .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role")
+                    .Select(c => c.Value)
+                    .Distinct()
+                    .ToList()
             };
 
             return View(model);
+        }
+
+        [HttpPost]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileModel model)
+        {
+            var firstName = model?.FirstName?.Trim() ?? string.Empty;
+            var lastName = model?.LastName?.Trim() ?? string.Empty;
+
+            if (firstName.Length < 2 || lastName.Length < 2)
+            {
+                return Json(new { success = false, message = "Ad ve soyad en az 2 karakter olmalıdır." });
+            }
+
+            var userId = _identityService.GetUserId();
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Json(new { success = false, message = "Kullanıcı oturumu bulunamadı." });
+            }
+
+            var (success, message) = await _identityService.UpdateUserProfileAsync(userId, firstName, lastName);
+            if (!success)
+            {
+                return Json(new { success = false, message });
+            }
+
+            await RefreshSessionNameClaimsAsync(firstName, lastName);
+            return Json(new { success = true, message, fullName = $"{firstName} {lastName}" });
+        }
+
+        private string? GetClaimValue(params string[] claimTypes) =>
+            claimTypes
+                .Select(t => User.Claims.FirstOrDefault(c => c.Type == t)?.Value)
+                .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+
+        private async Task RefreshSessionNameClaimsAsync(string firstName, string lastName)
+        {
+            if (User.Identity is not System.Security.Claims.ClaimsIdentity identity)
+            {
+                return;
+            }
+
+            var replacedTypes = new HashSet<string>
+            {
+                System.Security.Claims.ClaimTypes.GivenName,
+                "given_name",
+                System.Security.Claims.ClaimTypes.Surname,
+                "family_name",
+                "name"
+            };
+
+            var keptClaims = identity.Claims.Where(c => !replacedTypes.Contains(c.Type)).ToList();
+            keptClaims.Add(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.GivenName, firstName));
+            keptClaims.Add(new System.Security.Claims.Claim("given_name", firstName));
+            keptClaims.Add(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Surname, lastName));
+            keptClaims.Add(new System.Security.Claims.Claim("family_name", lastName));
+            keptClaims.Add(new System.Security.Claims.Claim("name", $"{firstName} {lastName}"));
+
+            var newIdentity = new System.Security.Claims.ClaimsIdentity(keptClaims, identity.AuthenticationType, identity.NameClaimType, identity.RoleClaimType);
+            await Microsoft.AspNetCore.Authentication.AuthenticationHttpContextExtensions.SignInAsync(
+                HttpContext,
+                Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme,
+                new System.Security.Claims.ClaimsPrincipal(newIdentity));
         }
 
         [HttpGet]
@@ -351,5 +425,11 @@ namespace GameGaraj.WebUI.Controllers
     {
         public string NewPassword { get; set; } = string.Empty;
         public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+    public class UpdateProfileModel
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
     }
 }

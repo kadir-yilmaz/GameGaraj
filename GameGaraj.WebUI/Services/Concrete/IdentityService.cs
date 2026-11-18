@@ -546,6 +546,41 @@ namespace GameGaraj.WebUI.Services.Concrete
             }
         }
 
+        public async Task<(bool Success, string? Message)> UpdateUserProfileAsync(string userId, string firstName, string lastName)
+        {
+            try
+            {
+                var accessToken = await GetAdminAccessTokenAsync();
+                if (string.IsNullOrEmpty(accessToken))
+                    return (false, "Admin yetkisi alınamadı.");
+
+                var endpoint = $"{GetKeycloakRootUrl()}/admin/realms/GameGaraj/users/{userId}";
+                using var request = new HttpRequestMessage(HttpMethod.Put, endpoint);
+                request.Headers.Add("Authorization", $"Bearer {accessToken}");
+                request.Content = new StringContent(
+                    JsonSerializer.Serialize(new
+                    {
+                        firstName = firstName.Trim(),
+                        lastName = lastName.Trim()
+                    }),
+                    System.Text.Encoding.UTF8,
+                    "application/json");
+
+                var response = await _httpClient.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    return (true, "Profil bilgileriniz güncellendi.");
+                }
+
+                return (false, "Profil güncellenirken bir hata oluştu.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UpdateUserProfileAsync Error] {ex.Message}");
+                return (false, "İşlem sırasında bir hata meydana geldi.");
+            }
+        }
+
         public async Task<(bool Success, string? Message)> SendPasswordResetOtpAsync(string email)
         {
             try

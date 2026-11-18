@@ -24,5 +24,6 @@ namespace GameGaraj.WebUI.Services.Abstract
         Task<(bool Success, string? Message)> SendPasswordResetOtpAsync(string email);
         Task<(bool Success, string? Message)> ResetPasswordWithOtpAsync(string email, string otpCode, string newPassword);
         Task<(bool Success, string? Message)> ChangePasswordAsync(string userId, string newPassword);
+        Task<(bool Success, string? Message)> UpdateUserProfileAsync(string userId, string firstName, string lastName);
     }
 }
