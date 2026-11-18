@@ -709,12 +709,17 @@ namespace GameGaraj.WebUI.Services.Concrete
 
         private async Task SendOtpEmailAsync(string toEmail, string name, string otpCode)
         {
-            string host = _configuration["SMTP_HOST"] ?? _configuration["EmailSettings:SmtpHost"] ?? "smtp.gmail.com";
-            int port = int.TryParse(_configuration["SMTP_PORT"] ?? _configuration["EmailSettings:SmtpPort"], out int p) ? p : 587;
-            string user = _configuration["SMTP_USER"] ?? _configuration["EmailSettings:SmtpUsername"] ?? "";
-            string pass = _configuration["SMTP_PASSWORD"] ?? _configuration["EmailSettings:SmtpPassword"] ?? "";
-            string from = _configuration["SMTP_FROM_EMAIL"] ?? user;
-            string fromName = _configuration["SMTP_FROM_NAME"] ?? "GameGaraj";
+            string host = GetFirstNonEmptyConfig("SMTP_HOST", "EmailSettings:SmtpHost") ?? "smtp.gmail.com";
+            int port = int.TryParse(GetFirstNonEmptyConfig("SMTP_PORT", "EmailSettings:SmtpPort"), out int p) ? p : 587;
+            string user = GetFirstNonEmptyConfig("SMTP_USERNAME", "SMTP_USER", "EmailSettings:SmtpUsername") ?? "";
+            string pass = GetFirstNonEmptyConfig("SMTP_PASSWORD", "EmailSettings:SmtpPassword") ?? "";
+            string from = GetFirstNonEmptyConfig("SMTP_FROM_EMAIL") ?? user;
+            string fromName = GetFirstNonEmptyConfig("SMTP_FROM_NAME") ?? "GameGaraj";
+
+            if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(pass))
+            {
+                throw new InvalidOperationException("SMTP ayarları (SMTP_USERNAME / SMTP_PASSWORD) tanımlı değil.");
+            }
 
             using var client = new System.Net.Mail.SmtpClient(host, port)
             {
@@ -774,5 +779,8 @@ namespace GameGaraj.WebUI.Services.Concrete
 
             await client.SendMailAsync(mail);
         }
+
+        private string? GetFirstNonEmptyConfig(params string[] keys) =>
+            keys.Select(k => _configuration[k]).FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
     }
 }
