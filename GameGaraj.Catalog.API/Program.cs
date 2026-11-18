@@ -20,7 +20,8 @@ System.Threading.ThreadPool.SetMinThreads(1000, 1000);
 
 // Serilog Ekle
 
-// OpenTelemetry (Tracing + Metrics)
+// Tracing (sadece siparis akisi -> Jaeger)
+builder.AddOrderTracing("GameGaraj.Catalog");
 
 // Custom Business Metrics
 builder.Services.AddSingleton<CatalogMetrics>();

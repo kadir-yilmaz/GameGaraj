@@ -27,6 +27,9 @@ System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Tracing (sadece siparis akisi -> Jaeger)
+builder.AddOrderTracing("GameGaraj.WebUI");
+
 // Serilog Ekle
 
 // Options Pattern - appsettings.json'dan ayarlarÄ± okuma

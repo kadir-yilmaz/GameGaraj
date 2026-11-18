@@ -85,3 +85,6 @@ notes/
 
 
 
+
+# NuGet/dotnet HOME artifacts (yanlislikla proje klasorune yazilanlar)
+.local/

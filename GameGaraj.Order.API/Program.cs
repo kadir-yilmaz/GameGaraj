@@ -22,7 +22,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Ekle
 
-// OpenTelemetry (Tracing + Metrics)
+// Tracing (sadece siparis akisi -> Jaeger)
+builder.AddOrderTracing("GameGaraj.Order");
 
 // Custom Business Metrics
 builder.Services.AddSingleton<OrderMetrics>();

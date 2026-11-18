@@ -42,7 +42,6 @@ namespace GameGaraj.Order.API.Services.Hosted
 
         private async Task CheckExpiredOrdersAsync(CancellationToken cancellationToken)
         {
-            using (var activity = AppDiagnostics.StartActivity("Cancel Expired Orders"))
             {
                 using var scope = _scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
@@ -58,6 +57,8 @@ namespace GameGaraj.Order.API.Services.Hosted
 
                 if (expiredOrders.Any())
                 {
+                    // Span sadece iptal edilecek sipariş varsa açılır (her dakika boş trace üretmesin)
+                    using var activity = AppDiagnostics.StartActivity("Cancel Expired Orders");
                     activity?.SetTag("cancelled.orders.count", expiredOrders.Count);
                     _logger.LogWarning($"[OrderExpirationWorker] Found {expiredOrders.Count} expired orders to cancel.");
 

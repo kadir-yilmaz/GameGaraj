@@ -43,7 +43,8 @@ void LoadDotEnv()
 
 // Serilog Ekle
 
-// OpenTelemetry (Tracing + Metrics)
+// Tracing (sadece siparis akisi -> Jaeger)
+builder.AddOrderTracing("GameGaraj.Payment");
 
 // Custom Business Metrics
 builder.Services.AddSingleton<PaymentMetrics>();
