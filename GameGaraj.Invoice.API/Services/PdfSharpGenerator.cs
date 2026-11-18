@@ -1,306 +1,155 @@
-using PdfSharp.Pdf;
-using PdfSharp.Drawing;
-using PdfSharp.Fonts;
-using System;
-using System.IO;
 using System.Globalization;
 using GameGaraj.Invoice.API.Models;
+using PdfSharp.Drawing;
+using PdfSharp.Pdf;
 
-namespace GameGaraj.Invoice.API.Services
+namespace GameGaraj.Invoice.API.Services;
+
+/// <summary>
+/// Builds invoice PDF documents using PDFsharp.
+/// </summary>
+public sealed class PdfSharpGenerator : IPdfGenerator
 {
-    public interface IPdfGenerator
+    private const double Margin = 50;
+    private const double RowHeight = 28;
+    private static readonly CultureInfo TrCulture = new("tr-TR");
+
+    public byte[] GenerateInvoicePdf(InvoiceData invoice)
     {
-        byte[] GenerateInvoicePdf(InvoiceData invoice);
+        using var document = new PdfDocument();
+        document.Info.Title = $"GameGaraj Fatura #{invoice.OrderId}";
+
+        var page = document.AddPage();
+        page.Size = PdfSharp.PageSize.A4;
+
+        using var gfx = XGraphics.FromPdfPage(page);
+        var styles = new PdfStyles();
+
+        var left = Margin;
+        var right = page.Width.Point - Margin;
+        var width = page.Width.Point - (Margin * 2);
+
+        DrawHeader(gfx, styles, invoice, left, right);
+        DrawParties(gfx, styles, invoice, left);
+
+        var tableBottomY = DrawItemsTable(gfx, styles, invoice.Items, left, right, width);
+        DrawTotalBox(gfx, styles, invoice.TotalPrice, right, tableBottomY + 15);
+        DrawFooter(gfx, styles, left, right, page.Height.Point - Margin);
+
+        using var stream = new MemoryStream();
+        document.Save(stream);
+        return stream.ToArray();
     }
 
-    public class PdfSharpGenerator : IPdfGenerator
+    private static void DrawHeader(XGraphics gfx, PdfStyles s, InvoiceData invoice, double left, double right)
     {
-        private static bool _fontResolverRegistered = false;
-        private static readonly object _lock = new object();
+        gfx.DrawString("GAMEGARAJ", s.LogoFont, s.BrandBlueBrush, new XPoint(left, 55));
+        gfx.DrawString("Performansın Adresi", s.FooterFont, s.MutedBrush, new XPoint(left, 70));
 
-        public PdfSharpGenerator()
-        {
-            if (!_fontResolverRegistered)
-            {
-                lock (_lock)
-                {
-                    if (!_fontResolverRegistered)
-                    {
-                        try
-                        {
-                            GlobalFontSettings.FontResolver = new FileFontResolver();
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[PdfSharpGenerator] Font resolver registration error: {ex.Message}");
-                        }
-                        _fontResolverRegistered = true;
-                    }
-                }
-            }
-        }
+        gfx.DrawString("E-FATURA", s.TitleFont, s.DarkBrush, new XRect(right - 200, 35, 200, 20), XStringFormats.TopRight);
+        gfx.DrawString($"Fatura No: {invoice.InvoiceNumber}", s.MetaFont, s.TextBrush, new XRect(right - 200, 58, 200, 15), XStringFormats.TopRight);
+        gfx.DrawString($"Tarih: {invoice.OrderDate:dd.MM.yyyy HH:mm}", s.MetaFont, s.TextBrush, new XRect(right - 200, 71, 200, 15), XStringFormats.TopRight);
 
-        private string FormatTurkishLira(decimal amount)
-        {
-            return amount.ToString("N2", new CultureInfo("tr-TR")) + " TL";
-        }
-
-        public byte[] GenerateInvoicePdf(InvoiceData invoice)
-        {
-            // Register encoding provider for code pages (required by PDFsharp on .NET Core)
-            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-
-            // Create document
-            using var document = new PdfDocument();
-            document.Info.Title = $"GameGaraj Fatura #{invoice.OrderId}";
-
-            // Add page
-            var page = document.AddPage();
-            page.Size = PdfSharp.PageSize.A4;
-
-            // Get graphics for drawing
-            using var gfx = XGraphics.FromPdfPage(page);
-
-            // Define premium color palette
-            var brandBlue = XColor.FromArgb(13, 110, 253);     // #0d6efd (GameGaraj Blue)
-            var darkGray = XColor.FromArgb(28, 28, 28);        // #1c1c1c (Header / Brand Gray)
-            var textDark = XColor.FromArgb(33, 37, 41);        // #212529 (Main Text Dark)
-            var textMuted = XColor.FromArgb(108, 117, 125);    // #6c757d (Subtitles / Labels)
-            var lightBg = XColor.FromArgb(248, 249, 250);      // #f8f9fa (Zebra stripe bg)
-            var accentBg = XColor.FromArgb(240, 244, 255);     // Light blue bg for total box
-            var borderColor = XColor.FromArgb(233, 236, 239);  // #e9ecef
-
-            var brandBlueBrush = new XSolidBrush(brandBlue);
-            var darkGrayBrush = new XSolidBrush(darkGray);
-            var textDarkBrush = new XSolidBrush(textDark);
-            var textMutedBrush = new XSolidBrush(textMuted);
-            var lightBgBrush = new XSolidBrush(lightBg);
-            var accentBgBrush = new XSolidBrush(accentBg);
-
-            var borderPen = new XPen(borderColor, 1);
-            var blueAccentPen = new XPen(brandBlue, 3); // Thick accent line
-
-            // Define fonts (will be resolved via our FileFontResolver to DejaVuSans)
-            var logoFont = new XFont("Arial", 22, XFontStyleEx.Bold);
-            var titleFont = new XFont("Arial", 16, XFontStyleEx.Bold);
-            var sectionHeaderFont = new XFont("Arial", 11, XFontStyleEx.Bold);
-            var boldFont = new XFont("Arial", 9, XFontStyleEx.Bold);
-            var regularFont = new XFont("Arial", 9, XFontStyleEx.Regular);
-            var footerFont = new XFont("Arial", 8, XFontStyleEx.Italic);
-
-            double leftMargin = 50;
-            double rightMargin = page.Width.Point - 50;
-            double contentWidth = page.Width.Point - 100;
-
-            // 1. HEADER SECTION
-            // Logo / Brand
-            gfx.DrawString("GAMEGARAJ", logoFont, brandBlueBrush, new XPoint(leftMargin, 55));
-            gfx.DrawString("Performansın Adresi", footerFont, textMutedBrush, new XPoint(leftMargin, 70));
-
-            // Document Title & Metadata (Right side)
-            var titleRect = new XRect(rightMargin - 200, 35, 200, 20);
-            gfx.DrawString("E-FATURA", titleFont, darkGrayBrush, titleRect, XStringFormats.TopRight);
-
-            var metaFont = new XFont("Arial", 8, XFontStyleEx.Regular);
-            var metaRect1 = new XRect(rightMargin - 200, 58, 200, 15);
-            var metaRect2 = new XRect(rightMargin - 200, 71, 200, 15);
-            gfx.DrawString($"Fatura No: {invoice.InvoiceNumber}", metaFont, textDarkBrush, metaRect1, XStringFormats.TopRight);
-            gfx.DrawString($"Tarih: {invoice.OrderDate:dd.MM.yyyy HH:mm}", metaFont, textDarkBrush, metaRect2, XStringFormats.TopRight);
-
-            // Accent Divider Line
-            gfx.DrawLine(blueAccentPen, leftMargin, 90, rightMargin, 90);
-
-            // 2. BILLING & COMPANY DETAILS (Two Columns)
-            double detailsY = 110;
-            
-            // Left Column: Bill To
-            gfx.DrawString("FATURA ALICISI", sectionHeaderFont, darkGrayBrush, new XPoint(leftMargin, detailsY));
-            gfx.DrawString(invoice.CustomerName, boldFont, textDarkBrush, new XPoint(leftMargin, detailsY + 18));
-            gfx.DrawString(invoice.CustomerEmail, regularFont, textDarkBrush, new XPoint(leftMargin, detailsY + 32));
-
-            // Right Column: Seller Info
-            double rightColX = leftMargin + 260;
-            gfx.DrawString("FİRMA BİLGİLERİ", sectionHeaderFont, darkGrayBrush, new XPoint(rightColX, detailsY));
-            gfx.DrawString("GameGaraj Teknoloji A.Ş.", boldFont, textDarkBrush, new XPoint(rightColX, detailsY + 18));
-            gfx.DrawString("info@gamegaraj.com | 0850 222 5555", regularFont, textDarkBrush, new XPoint(rightColX, detailsY + 32));
-
-            // 3. ITEMS TABLE
-            double y = 175;
-            double rowHeight = 28;
-
-            // Table Header Bar (Dark background)
-            gfx.DrawRectangle(darkGrayBrush, leftMargin, y, contentWidth, 24);
-            
-            // Header Labels
-            gfx.DrawString("Ürün Açıklaması", boldFont, XBrushes.White, new XPoint(leftMargin + 10, y + 15));
-            var headerPriceRect = new XRect(rightMargin - 130, y, 120, 24);
-            gfx.DrawString("Fiyat", boldFont, XBrushes.White, headerPriceRect, XStringFormats.CenterRight);
-
-            y += 24;
-
-            // Draw Items
-            int index = 0;
-            foreach (var item in invoice.Items)
-            {
-                // Zebra striping background
-                if (index % 2 == 1)
-                {
-                    gfx.DrawRectangle(lightBgBrush, leftMargin, y, contentWidth, rowHeight);
-                }
-                
-                // Border bottom
-                gfx.DrawLine(borderPen, leftMargin, y + rowHeight, rightMargin, y + rowHeight);
-
-                // Handle product name wrapping / truncation to avoid overlapping
-                string name = item.ProductName;
-                double maxNameWidth = contentWidth - 140; // Allow 130pt for price column
-                
-                // Measure string width and wrap to 2 lines if needed
-                if (name.Length > 55)
-                {
-                    string line1 = name.Substring(0, 55);
-                    string line2 = name.Substring(55);
-                    if (line2.Length > 55) line2 = line2.Substring(0, 52) + "...";
-
-                    gfx.DrawString(line1, regularFont, textDarkBrush, new XPoint(leftMargin + 10, y + 11));
-                    gfx.DrawString(line2, regularFont, textMutedBrush, new XPoint(leftMargin + 10, y + 22));
-                }
-                else
-                {
-                    gfx.DrawString(name, regularFont, textDarkBrush, new XPoint(leftMargin + 10, y + 17));
-                }
-
-                // Price (Right Aligned using XRect)
-                var itemPriceRect = new XRect(rightMargin - 130, y, 120, rowHeight);
-                gfx.DrawString(FormatTurkishLira(item.Price), regularFont, textDarkBrush, itemPriceRect, XStringFormats.CenterRight);
-
-                y += rowHeight;
-                index++;
-            }
-
-            // 4. SUMMARY BOX (TOTAL)
-            y += 15;
-            double totalBoxWidth = 220;
-            double totalBoxHeight = 40;
-            double totalBoxX = rightMargin - totalBoxWidth;
-
-            // Draw total box background & border
-            gfx.DrawRectangle(accentBgBrush, totalBoxX, y, totalBoxWidth, totalBoxHeight);
-            gfx.DrawRectangle(new XPen(brandBlue, 1), totalBoxX, y, totalBoxWidth, totalBoxHeight);
-
-            // Total Text
-            var totalLabelRect = new XRect(totalBoxX + 15, y, 100, totalBoxHeight);
-            var totalPriceRect = new XRect(rightMargin - 130, y, 120, totalBoxHeight);
-            
-            gfx.DrawString("TOPLAM TUTAR:", boldFont, textDarkBrush, totalLabelRect, XStringFormats.CenterLeft);
-            gfx.DrawString(FormatTurkishLira(invoice.TotalPrice), titleFont, brandBlueBrush, totalPriceRect, XStringFormats.CenterRight);
-
-            // 5. FOOTER SECTION
-            double footerY = page.Height.Point - 50;
-            gfx.DrawLine(borderPen, leftMargin, footerY, rightMargin, footerY);
-            
-            gfx.DrawString("Bu fatura 5070 sayılı Elektronik İmza Kanunu uyarınca e-imza ile imzalanmıştır.", footerFont, textMutedBrush, new XPoint(leftMargin, footerY + 15));
-            gfx.DrawString("© 2026 GameGaraj - www.gamegaraj.com", footerFont, textMutedBrush, new XRect(rightMargin - 200, footerY + 15, 200, 15), XStringFormats.TopRight);
-
-            using var memoryStream = new MemoryStream();
-            document.Save(memoryStream);
-            return memoryStream.ToArray();
-        }
+        gfx.DrawLine(s.BlueAccentPen, left, 90, right, 90);
     }
 
-    public class FileFontResolver : IFontResolver
+    private static void DrawParties(XGraphics gfx, PdfStyles s, InvoiceData invoice, double left)
     {
-        public FontResolverInfo? ResolveTypeface(string familyName, bool bold, bool italic)
+        const double y = 110;
+        var rightCol = left + 260;
+
+        gfx.DrawString("FATURA ALICISI", s.SectionFont, s.DarkBrush, new XPoint(left, y));
+        gfx.DrawString(invoice.CustomerName, s.BoldFont, s.TextBrush, new XPoint(left, y + 18));
+        gfx.DrawString(invoice.CustomerEmail, s.RegularFont, s.TextBrush, new XPoint(left, y + 32));
+
+        gfx.DrawString("FİRMA BİLGİLERİ", s.SectionFont, s.DarkBrush, new XPoint(rightCol, y));
+        gfx.DrawString("GameGaraj Teknoloji A.Ş.", s.BoldFont, s.TextBrush, new XPoint(rightCol, y + 18));
+        gfx.DrawString("info@gamegaraj.com | 0850 222 5555", s.RegularFont, s.TextBrush, new XPoint(rightCol, y + 32));
+    }
+
+    private static double DrawItemsTable(XGraphics gfx, PdfStyles s, IReadOnlyList<InvoiceItem> items, double left, double right, double width)
+    {
+        double y = 175;
+
+        gfx.DrawRectangle(s.DarkBrush, left, y, width, 24);
+        gfx.DrawString("Ürün Açıklaması", s.BoldFont, XBrushes.White, new XPoint(left + 10, y + 15));
+        gfx.DrawString("Fiyat", s.BoldFont, XBrushes.White, new XRect(right - 130, y, 120, 24), XStringFormats.CenterRight);
+        y += 24;
+
+        for (var i = 0; i < items.Count; i++)
         {
-            string styleSuffix = bold && italic ? "bi" : bold ? "b" : italic ? "i" : "r";
-            return new FontResolverInfo($"{familyName}#{styleSuffix}");
+            var item = items[i];
+            if (i % 2 == 1)
+            {
+                gfx.DrawRectangle(s.LightBgBrush, left, y, width, RowHeight);
+            }
+
+            gfx.DrawLine(s.BorderPen, left, y + RowHeight, right, y + RowHeight);
+            DrawProductName(gfx, s, item.ProductName, left + 10, y);
+            gfx.DrawString(FormatTl(item.Price), s.RegularFont, s.TextBrush, new XRect(right - 130, y, 120, RowHeight), XStringFormats.CenterRight);
+
+            y += RowHeight;
         }
 
-        public byte[]? GetFont(string faceName)
+        return y;
+    }
+
+    private static void DrawProductName(XGraphics gfx, PdfStyles s, string name, double x, double y)
+    {
+        if (name.Length <= 55)
         {
-            var parts = faceName.Split('#');
-            string style = parts.Length > 1 ? parts[1] : "r";
-            bool isBold = style.Contains("b");
-            bool isItalic = style.Contains("i");
-
-            // 1. Try Windows Fonts Directory
-            string winFontsDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
-            if (string.IsNullOrEmpty(winFontsDir))
-            {
-                winFontsDir = @"C:\Windows\Fonts";
-            }
-
-            if (Directory.Exists(winFontsDir))
-            {
-                var winCandidates = new List<string>();
-                if (isBold && isItalic)
-                    winCandidates.AddRange(new[] { "arialbi.ttf", "segoeuiz.ttf", "calibriz.ttf", "tahomabd.ttf" });
-                else if (isBold)
-                    winCandidates.AddRange(new[] { "arialbd.ttf", "segoeuib.ttf", "calibrib.ttf", "tahomabd.ttf" });
-                else if (isItalic)
-                    winCandidates.AddRange(new[] { "ariali.ttf", "segoeuii.ttf", "calibrii.ttf" });
-                else
-                    winCandidates.AddRange(new[] { "arial.ttf", "segoeui.ttf", "calibri.ttf", "tahoma.ttf" });
-
-                foreach (var fontFile in winCandidates)
-                {
-                    string fullPath = Path.Combine(winFontsDir, fontFile);
-                    if (File.Exists(fullPath))
-                    {
-                        try
-                        {
-                            return File.ReadAllBytes(fullPath);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[FileFontResolver] Error reading Windows font {fullPath}: {ex.Message}");
-                        }
-                    }
-                }
-            }
-
-            // 2. Try Linux / Docker Container Fonts Directory
-            var linuxCandidates = new List<string>();
-            if (isBold && isItalic)
-                linuxCandidates.AddRange(new[] { "DejaVuSans-BoldOblique.ttf", "DejaVuSans-Bold.ttf", "FreeSansBoldOblique.ttf" });
-            else if (isBold)
-                linuxCandidates.AddRange(new[] { "DejaVuSans-Bold.ttf", "FreeSansBold.ttf" });
-            else if (isItalic)
-                linuxCandidates.AddRange(new[] { "DejaVuSans-Oblique.ttf", "FreeSansOblique.ttf" });
-            else
-                linuxCandidates.AddRange(new[] { "DejaVuSans.ttf", "FreeSans.ttf" });
-
-            var linuxDirs = new[]
-            {
-                "/usr/share/fonts/truetype/dejavu",
-                "/usr/share/fonts/dejavu",
-                "/usr/share/fonts/truetype/freefont",
-                "/usr/share/fonts/truetype",
-                "/usr/share/fonts",
-                "."
-            };
-
-            foreach (var dir in linuxDirs)
-            {
-                foreach (var fontFile in linuxCandidates)
-                {
-                    string fullPath = Path.Combine(dir, fontFile);
-                    if (File.Exists(fullPath))
-                    {
-                        try
-                        {
-                            return File.ReadAllBytes(fullPath);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[FileFontResolver] Error reading Linux font {fullPath}: {ex.Message}");
-                        }
-                    }
-                }
-            }
-
-            Console.WriteLine($"[FileFontResolver] Font NOT found: {faceName}");
-            return null;
+            gfx.DrawString(name, s.RegularFont, s.TextBrush, new XPoint(x, y + 17));
+            return;
         }
+
+        var line1 = name[..55];
+        var line2 = name.Length > 110 ? $"{name[55..107]}..." : name[55..];
+        gfx.DrawString(line1, s.RegularFont, s.TextBrush, new XPoint(x, y + 11));
+        gfx.DrawString(line2, s.RegularFont, s.MutedBrush, new XPoint(x, y + 22));
+    }
+
+    private static void DrawTotalBox(XGraphics gfx, PdfStyles s, decimal totalPrice, double right, double y)
+    {
+        const double boxWidth = 220;
+        const double boxHeight = 40;
+        var boxX = right - boxWidth;
+
+        gfx.DrawRectangle(s.AccentBgBrush, boxX, y, boxWidth, boxHeight);
+        gfx.DrawRectangle(s.BlueBorderPen, boxX, y, boxWidth, boxHeight);
+        gfx.DrawString("TOPLAM TUTAR:", s.BoldFont, s.TextBrush, new XRect(boxX + 15, y, 100, boxHeight), XStringFormats.CenterLeft);
+        gfx.DrawString(FormatTl(totalPrice), s.TitleFont, s.BrandBlueBrush, new XRect(right - 130, y, 120, boxHeight), XStringFormats.CenterRight);
+    }
+
+    private static void DrawFooter(XGraphics gfx, PdfStyles s, double left, double right, double y)
+    {
+        gfx.DrawLine(s.BorderPen, left, y, right, y);
+        gfx.DrawString("Bu fatura 5070 sayılı Elektronik İmza Kanunu uyarınca e-imza ile imzalanmıştır.", s.FooterFont, s.MutedBrush, new XPoint(left, y + 15));
+        gfx.DrawString("© 2026 GameGaraj - www.gamegaraj.com", s.FooterFont, s.MutedBrush, new XRect(right - 200, y + 15, 200, 15), XStringFormats.TopRight);
+    }
+
+    private static string FormatTl(decimal amount) => $"{amount.ToString("N2", TrCulture)} TL";
+
+    private sealed class PdfStyles
+    {
+        private static readonly XColor BrandBlue = XColor.FromArgb(13, 110, 253);
+
+        public XSolidBrush BrandBlueBrush { get; } = new(BrandBlue);
+        public XSolidBrush DarkBrush { get; } = new(XColor.FromArgb(28, 28, 28));
+        public XSolidBrush TextBrush { get; } = new(XColor.FromArgb(33, 37, 41));
+        public XSolidBrush MutedBrush { get; } = new(XColor.FromArgb(108, 117, 125));
+        public XSolidBrush LightBgBrush { get; } = new(XColor.FromArgb(248, 249, 250));
+        public XSolidBrush AccentBgBrush { get; } = new(XColor.FromArgb(240, 244, 255));
+
+        public XPen BorderPen { get; } = new(XColor.FromArgb(233, 236, 239), 1);
+        public XPen BlueBorderPen { get; } = new(BrandBlue, 1);
+        public XPen BlueAccentPen { get; } = new(BrandBlue, 3);
+
+        public XFont LogoFont { get; } = new("Arial", 22, XFontStyleEx.Bold);
+        public XFont TitleFont { get; } = new("Arial", 16, XFontStyleEx.Bold);
+        public XFont SectionFont { get; } = new("Arial", 11, XFontStyleEx.Bold);
+        public XFont BoldFont { get; } = new("Arial", 9, XFontStyleEx.Bold);
+        public XFont RegularFont { get; } = new("Arial", 9, XFontStyleEx.Regular);
+        public XFont FooterFont { get; } = new("Arial", 8, XFontStyleEx.Italic);
+        public XFont MetaFont { get; } = new("Arial", 8, XFontStyleEx.Regular);
     }
 }

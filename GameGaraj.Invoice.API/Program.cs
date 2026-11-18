@@ -1,4 +1,4 @@
-﻿using MassTransit;
+using MassTransit;
 using GameGaraj.Invoice.API.Consumers;
 using GameGaraj.Invoice.API.Services;
 using GameGaraj.Shared.Observability;
@@ -66,7 +66,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// PDF Generator Service
+// PDF Generator Service (Encoding & FontResolver registered once at startup)
+System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+PdfSharp.Fonts.GlobalFontSettings.FontResolver ??= new SystemFontResolver();
 builder.Services.AddScoped<IPdfGenerator, PdfSharpGenerator>();
 
 // Storage Service (MinIO or LocalStorage)
