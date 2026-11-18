@@ -197,7 +197,7 @@ services:
   # Notification API (Go + Gin)
   # ---------------------------------------------------------------------------
   notification-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/notification-api:c5af4a1-148-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/notification-api:1274a76-158-1"
     replicas: 3
     port: 5025
     env:
