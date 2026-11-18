@@ -498,7 +498,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label asp-for="CVV" class="form-label small">CVV</label>
-                                    <input asp-for="CVV" class="form-control" id="cardCvvInput" maxlength="3" autocomplete="off" required placeholder="000">
+                                    <input asp-for="CVV" class="form-control" id="cardCvvInput" maxlength="4" inputmode="numeric" autocomplete="off" required placeholder="000">
                                     <span asp-validation-for="CVV" class="text-danger small"></span>
                                 </div>
                             </div>
@@ -902,7 +902,11 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/card-validation.js" asp-append-version="true"></script>
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.CardValidator?.attach('checkoutForm');
+        });
         function applyCouponDirectly(code) {
             const couponInput = document.querySelector('input[name="couponCode"]');
             if (couponInput) {
@@ -1027,8 +1031,9 @@
                 vExpiry.textContent = val || "AA/YY";
             });
 
-            // CVV Sync & Flip
+            // CVV Sync & Flip (digits only)
             cardCvvInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
                 vCvv.textContent = e.target.value || "***";
             });
 

@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Elasticsearch Logging (tek sabit index: gamegaraj-review-api-logs)
+builder.AddSimpleElasticLogging("review-api");
+
 // OpenTelemetry (Tracing + Metrics)
 
 // Custom Business Metrics

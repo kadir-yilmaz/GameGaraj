@@ -6,7 +6,8 @@ using GameGaraj.PhotoStock.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Serilog Ekle
+// Elasticsearch Logging (tek sabit index: gamegaraj-photostock-api-logs)
+builder.AddSimpleElasticLogging("photostock-api");
 
 // OpenTelemetry (Tracing + Metrics)
 

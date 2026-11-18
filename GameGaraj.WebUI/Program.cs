@@ -30,7 +30,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Tracing (sadece siparis akisi -> Jaeger)
 builder.AddOrderTracing("GameGaraj.WebUI");
 
-// Serilog Ekle
+// Elasticsearch Logging (tek sabit index: gamegaraj-webui-logs)
+builder.AddSimpleElasticLogging("webui");
 
 // Options Pattern - appsettings.json'dan ayarlarÄ± okuma
 builder.Services.Configure<ServiceApiSettings>(builder.Configuration.GetSection("ServiceApiSettings"));

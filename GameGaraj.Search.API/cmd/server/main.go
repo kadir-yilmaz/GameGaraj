@@ -20,6 +20,7 @@ import (
 	"github.com/kadir-yilmaz/gamegaraj-search-api/internal/config"
 	"github.com/kadir-yilmaz/gamegaraj-search-api/internal/consumer"
 	"github.com/kadir-yilmaz/gamegaraj-search-api/internal/handler"
+	"github.com/kadir-yilmaz/gamegaraj-search-api/internal/logging"
 	"github.com/kadir-yilmaz/gamegaraj-search-api/internal/repository"
 	"github.com/kadir-yilmaz/gamegaraj-search-api/internal/service"
 )
@@ -31,15 +32,18 @@ import (
 // @host localhost:5082
 // @BasePath /
 func main() {
-	// Logger
-	logConfig := zap.NewProductionConfig()
-	logConfig.EncoderConfig.TimeKey = "timestamp"
-	logConfig.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	logger, err := logConfig.Build()
-	if err != nil {
-		fmt.Printf("Failed to create logger: %v\n", err)
-		os.Exit(1)
+	logCtx, logCancel := context.WithCancel(context.Background())
+	defer logCancel()
+
+	// Logger (stdout + gamegaraj-search-api-logs)
+	encCfg := zap.NewProductionEncoderConfig()
+	encCfg.TimeKey = "@timestamp"
+	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	syncers := []zapcore.WriteSyncer{zapcore.AddSync(os.Stdout)}
+	if esSyncer := logging.NewElasticSyncer(logCtx, "search-api"); esSyncer != nil {
+		syncers = append(syncers, esSyncer)
 	}
+	logger := zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(encCfg), zapcore.NewMultiWriteSyncer(syncers...), zap.InfoLevel))
 	defer logger.Sync()
 
 	fmt.Println("=====================================================")

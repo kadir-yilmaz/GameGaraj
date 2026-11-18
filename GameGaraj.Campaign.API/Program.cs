@@ -9,7 +9,8 @@ using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Serilog Ekle
+// Elasticsearch Logging (tek sabit index: gamegaraj-campaign-api-logs)
+builder.AddSimpleElasticLogging("campaign-api");
 
 // OpenTelemetry (Tracing + Metrics)
 

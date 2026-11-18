@@ -22,7 +22,8 @@ var builder = WebApplication.CreateBuilder(args);
 // YÃ¼ksek anlÄ±k yÃ¼k testleri (Load Test) iÃ§in ThreadPool'u baÅŸtan geniÅŸletiyoruz
 System.Threading.ThreadPool.SetMinThreads(1000, 1000);
 
-// Serilog Ekle
+// Elasticsearch Logging (tek sabit index: gamegaraj-basket-api-logs)
+builder.AddSimpleElasticLogging("basket-api");
 
 // OpenTelemetry (Tracing + Metrics)
 

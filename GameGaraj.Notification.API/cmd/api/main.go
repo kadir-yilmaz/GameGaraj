@@ -13,6 +13,7 @@ import (
 
 	_ "gamegaraj-notification-api/docs"
 	"gamegaraj-notification-api/internal/config"
+	"gamegaraj-notification-api/internal/logging"
 	"gamegaraj-notification-api/internal/queue"
 	"gamegaraj-notification-api/internal/service"
 	"gamegaraj-notification-api/internal/storage"
@@ -61,6 +62,8 @@ func main() {
 	// 2. Initialize context with cancel support for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	logging.Setup(ctx, "notification-api")
 
 	// 3. Initialize OpenTelemetry Tracing
 	otelShutdown, err := telemetry.InitTracer(ctx, cfg)

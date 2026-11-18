@@ -18,7 +18,8 @@ var builder = WebApplication.CreateBuilder(args);
 // BÃ¶ylece anlÄ±k 1000 RPS geldiÄŸinde StackExchange.Redis timeout'a dÃ¼ÅŸmez.
 System.Threading.ThreadPool.SetMinThreads(1000, 1000);
 
-// Serilog Ekle
+// Elasticsearch Logging (tek sabit index: gamegaraj-catalog-api-logs)
+builder.AddSimpleElasticLogging("catalog-api");
 
 // Tracing (sadece siparis akisi -> Jaeger)
 builder.AddOrderTracing("GameGaraj.Catalog");

@@ -5,6 +5,7 @@ using GameGaraj.Discussion.API.Consumers;
 using GameGaraj.Discussion.API.Data;
 using GameGaraj.Discussion.API.Hubs;
 using GameGaraj.Discussion.API.Services;
+using GameGaraj.Shared.Observability;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -12,7 +13,8 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Serilog Ekle
+// Elasticsearch Logging (tek sabit index: gamegaraj-discussion-api-logs)
+builder.AddSimpleElasticLogging("discussion-api");
 
 // PostgreSQL
 builder.Services.AddDbContext<DiscussionDbContext>(options =>

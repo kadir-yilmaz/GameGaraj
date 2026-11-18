@@ -41,7 +41,8 @@ void LoadDotEnv()
     }
 }
 
-// Serilog Ekle
+// Elasticsearch Logging (tek sabit index: gamegaraj-payment-api-logs)
+builder.AddSimpleElasticLogging("payment-api");
 
 // Tracing (sadece siparis akisi -> Jaeger)
 builder.AddOrderTracing("GameGaraj.Payment");

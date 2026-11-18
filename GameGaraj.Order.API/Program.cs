@@ -20,7 +20,8 @@ using GameGaraj.Shared.Chaos;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Serilog Ekle
+// Elasticsearch Logging (tek sabit index: gamegaraj-order-api-logs)
+builder.AddSimpleElasticLogging("order-api");
 
 // Tracing (sadece siparis akisi -> Jaeger)
 builder.AddOrderTracing("GameGaraj.Order");
