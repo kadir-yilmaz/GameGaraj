@@ -73,14 +73,6 @@ on:
         required: false
         default: false
         type: boolean
-      architecture:
-        description: Build Architecture (Normal = Intel only, Multiarch = Intel + ARM)
-        required: true
-        default: normal
-        type: choice
-        options:
-          - normal
-          - multiarch
       runner:
         description: Choose the build server (ubuntu-latest = GitHub, self-hosted = 16GB Homeserver)
         required: true
@@ -190,13 +182,10 @@ jobs:
           set -euo pipefail
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and Push Multi-Arch Images
+      - name: Build and Push Images (linux/amd64)
         run: |
           set -euo pipefail
 
@@ -227,11 +216,7 @@ jobs:
             echo "No services changed or selected. Skipping docker build."
             echo "SKIP_TAG_UPDATE=true" >> "$GITHUB_ENV"
           else
-            if [ "${{ github.event.inputs.architecture }}" = "multiarch" ]; then
-              TARGET_PLATFORMS="linux/amd64,linux/arm64"
-            else
-              TARGET_PLATFORMS="linux/amd64"
-            fi
+            TARGET_PLATFORMS="linux/amd64"
             echo "Building services ($TARGET_PLATFORMS): $SERVICES_TO_BUILD"
             IMAGE_REPOSITORY="$IMAGE_REPOSITORY" IMAGE_TAG="$DEPLOY_TAG" docker buildx bake -f docker-compose.build.yml --set "*.platform=$TARGET_PLATFORMS" --push $SERVICES_TO_BUILD
             echo "SERVICES_BUILT=$SERVICES_TO_BUILD" >> "$GITHUB_ENV"
