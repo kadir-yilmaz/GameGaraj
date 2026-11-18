@@ -35,15 +35,18 @@ func main() {
 	logCtx, logCancel := context.WithCancel(context.Background())
 	defer logCancel()
 
-	// Logger (stdout + gamegaraj-search-api-logs)
+	// Logger (stdout: Info+, Elasticsearch gamegaraj-search-api-logs: sadece Warn/Error+)
 	encCfg := zap.NewProductionEncoderConfig()
 	encCfg.TimeKey = "@timestamp"
 	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-	syncers := []zapcore.WriteSyncer{zapcore.AddSync(os.Stdout)}
-	if esSyncer := logging.NewElasticSyncer(logCtx, "search-api"); esSyncer != nil {
-		syncers = append(syncers, esSyncer)
+	jsonEncoder := zapcore.NewJSONEncoder(encCfg)
+	cores := []zapcore.Core{
+		zapcore.NewCore(jsonEncoder, zapcore.AddSync(os.Stdout), zap.InfoLevel),
 	}
-	logger := zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(encCfg), zapcore.NewMultiWriteSyncer(syncers...), zap.InfoLevel))
+	if esSyncer := logging.NewElasticSyncer(logCtx, "search-api"); esSyncer != nil {
+		cores = append(cores, zapcore.NewCore(jsonEncoder, esSyncer, zap.WarnLevel))
+	}
+	logger := zap.New(zapcore.NewTee(cores...))
 	defer logger.Sync()
 
 	fmt.Println("=====================================================")

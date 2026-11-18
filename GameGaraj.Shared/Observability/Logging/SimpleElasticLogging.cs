@@ -147,14 +147,10 @@ internal sealed class ElasticsearchLogger : ILogger
     {
         if (logLevel == LogLevel.None) return false;
 
-        // Avoid noisy ASP.NET/EF/MassTransit info logs; keep Warning+ for framework, Information+ for app code.
-        if (_category.StartsWith("Microsoft.", StringComparison.Ordinal) ||
-            _category.StartsWith("System.", StringComparison.Ordinal))
-        {
-            return logLevel >= LogLevel.Warning;
-        }
-
-        return logLevel >= LogLevel.Information;
+        // Sadece hata ve uyarılar: Kendi kodumuzda Warning+, 3. parti kütüphanelerde (MassTransit, Microsoft vb.) sadece Error+.
+        return _category.StartsWith("GameGaraj.", StringComparison.Ordinal)
+            ? logLevel >= LogLevel.Warning
+            : logLevel >= LogLevel.Error;
     }
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)

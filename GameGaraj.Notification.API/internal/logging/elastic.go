@@ -47,11 +47,15 @@ func newElasticWriter(ctx context.Context, esURI, indexName, service string) *el
 
 func (w *elasticWriter) Write(p []byte) (int, error) {
 	msg := strings.TrimSpace(string(p))
-	if msg != "" {
+	if msg != "" && isHighSignal(msg) {
+		level := "Warning"
+		if strings.Contains(msg, "❌") || strings.Contains(strings.ToLower(msg), "failed") || strings.Contains(strings.ToLower(msg), "error") {
+			level = "Error"
+		}
 		doc, _ := json.Marshal(map[string]any{
 			"@timestamp": time.Now().UTC().Format(time.RFC3339Nano),
 			"service":    w.service,
-			"level":      "Information",
+			"level":      level,
 			"message":    msg,
 		})
 		select {
@@ -60,6 +64,16 @@ func (w *elasticWriter) Write(p []byte) (int, error) {
 		}
 	}
 	return len(p), nil
+}
+
+func isHighSignal(msg string) bool {
+	lower := strings.ToLower(msg)
+	return strings.Contains(msg, "❌") ||
+		strings.Contains(msg, "⚠️") ||
+		strings.Contains(lower, "error") ||
+		strings.Contains(lower, "failed") ||
+		strings.Contains(lower, "fault") ||
+		strings.Contains(lower, "panic")
 }
 
 func (w *elasticWriter) flushLoop(ctx context.Context) {
