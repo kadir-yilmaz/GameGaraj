@@ -181,7 +181,7 @@ services:
   # Invoice API (PDF & MinIO)
   # ---------------------------------------------------------------------------
   invoice-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/invoice-api:da02629-155-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/invoice-api:4c29010-157-1"
     replicas: 3
     env:
       IdentityOption__Audience: "invoice.api"
