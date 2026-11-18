@@ -75,16 +75,10 @@ namespace GameGaraj.WebUI.Controllers
             
             if (User.Identity?.IsAuthenticated == true)
             {
-                model.CustomerName = User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.GivenName)?.Value 
-                                     ?? User.Claims.FirstOrDefault(x => x.Type == "name")?.Value ?? "";
-                
-                model.CustomerSurname = User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Surname)?.Value ?? "";
-                
-                model.CustomerEmail = User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value 
-                                      ?? User.Claims.FirstOrDefault(x => x.Type == "email")?.Value ?? "";
-                
-                model.CustomerPhone = User.Claims.FirstOrDefault(x => x.Type == "phone")?.Value 
-                                      ?? User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.MobilePhone)?.Value ?? "";
+                model.CustomerName = GetClaimValue(ClaimTypes.GivenName, "given_name", "name") ?? string.Empty;
+                model.CustomerSurname = GetClaimValue(ClaimTypes.Surname, "family_name") ?? string.Empty;
+                model.CustomerEmail = GetClaimValue(ClaimTypes.Email, "email") ?? string.Empty;
+                model.CustomerPhone = GetClaimValue("phone", "phone_number", ClaimTypes.MobilePhone) ?? string.Empty;
             }
 
             return View(model);
@@ -95,28 +89,7 @@ namespace GameGaraj.WebUI.Controllers
         {
             _logger.LogInformation("[OrderController] ========== CHECKOUT POST STARTED ==========");
 
-            // Auto-fill CustomerEmail if not populated from form
-            if (string.IsNullOrWhiteSpace(checkoutInfoInput.CustomerEmail))
-            {
-                checkoutInfoInput.CustomerEmail = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value 
-                                                ?? User.Claims.FirstOrDefault(c => c.Type == "email")?.Value 
-                                                ?? User.Identity?.Name 
-                                                ?? "kadiryilmaz.dev@gmail.com";
-                ModelState.Remove(nameof(checkoutInfoInput.CustomerEmail));
-            }
-
-            if (string.IsNullOrWhiteSpace(checkoutInfoInput.CustomerName))
-            {
-                checkoutInfoInput.CustomerName = User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.GivenName)?.Value 
-                                               ?? User.Claims.FirstOrDefault(x => x.Type == "name")?.Value ?? "Kadir";
-                ModelState.Remove(nameof(checkoutInfoInput.CustomerName));
-            }
-
-            if (string.IsNullOrWhiteSpace(checkoutInfoInput.CustomerSurname))
-            {
-                checkoutInfoInput.CustomerSurname = User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Surname)?.Value ?? "Yılmaz";
-                ModelState.Remove(nameof(checkoutInfoInput.CustomerSurname));
-            }
+            FillMissingCustomerInfoFromClaims(checkoutInfoInput);
 
             _logger.LogInformation($"[OrderController] ModelState.IsValid: {ModelState.IsValid}");
 
@@ -373,11 +346,9 @@ namespace GameGaraj.WebUI.Controllers
                     ExpireYear = expiration.Length > 1 ? "20" + expiration[1] : "2029",
                     CVV = checkoutInfo.CVV,
                     TotalPrice = pricingSnapshot.TotalPaidAmount,
-                    CustomerName = checkoutInfo.CustomerName,
-                    CustomerSurname = checkoutInfo.CustomerSurname,
-                    CustomerEmail = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value 
-                                    ?? User.Claims.FirstOrDefault(c => c.Type == "email")?.Value 
-                                    ?? checkoutInfo.CustomerEmail,
+                    CustomerName = GetClaimValue(ClaimTypes.GivenName, "given_name", "name") ?? checkoutInfo.CustomerName,
+                    CustomerSurname = GetClaimValue(ClaimTypes.Surname, "family_name") ?? checkoutInfo.CustomerSurname,
+                    CustomerEmail = GetClaimValue(ClaimTypes.Email, "email") ?? checkoutInfo.CustomerEmail,
                     CustomerPhone = checkoutInfo.CustomerPhone,
                     AddressDetail = $"{checkoutInfo.Street} {checkoutInfo.Line}",
                     City = checkoutInfo.Province,
@@ -766,5 +737,40 @@ namespace GameGaraj.WebUI.Controllers
             var success = await _campaignService.MarkAllNotificationsAsReadAsync(userId);
             return Json(new { success });
         }
+
+        private void FillMissingCustomerInfoFromClaims(CheckoutInfoInput input)
+        {
+            FillIfBlank(
+                input.CustomerEmail,
+                val => input.CustomerEmail = val,
+                nameof(input.CustomerEmail),
+                GetClaimValue(ClaimTypes.Email, "email") ?? User.Identity?.Name);
+
+            FillIfBlank(
+                input.CustomerName,
+                val => input.CustomerName = val,
+                nameof(input.CustomerName),
+                GetClaimValue(ClaimTypes.GivenName, "given_name", "name"));
+
+            FillIfBlank(
+                input.CustomerSurname,
+                val => input.CustomerSurname = val,
+                nameof(input.CustomerSurname),
+                GetClaimValue(ClaimTypes.Surname, "family_name"));
+        }
+
+        private void FillIfBlank(string currentValue, Action<string> assign, string fieldName, string? fallback)
+        {
+            if (string.IsNullOrWhiteSpace(currentValue) && !string.IsNullOrWhiteSpace(fallback))
+            {
+                assign(fallback);
+                ModelState.Remove(fieldName);
+            }
+        }
+
+        private string? GetClaimValue(params string[] claimTypes) =>
+            claimTypes
+                .Select(type => User.FindFirstValue(type))
+                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
     }
 }
