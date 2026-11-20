@@ -53,6 +53,77 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
             return Json(new { success = true, rules });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetDbSnapshot([FromQuery] string? productId, [FromQuery] int orderId = 0)
+        {
+            object? catalogState = null;
+            object? orderState = null;
+
+            if (!string.IsNullOrWhiteSpace(productId) && !string.Equals(productId, "custom", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var product = await _catalogService.GetProductByIdAsync(productId);
+                    catalogState = product != null
+                        ? new
+                        {
+                            available = true,
+                            productId = product.Id,
+                            productName = product.Name,
+                            stock = product.Stock,
+                            reservedStock = product.ReservedStock,
+                            availableStock = product.AvailableStock
+                        }
+                        : new { available = false, reason = "Ürün bulunamadı veya Catalog.API yanıt vermedi." };
+                }
+                catch (Exception ex)
+                {
+                    catalogState = new { available = false, reason = ex.Message };
+                }
+            }
+
+            if (orderId > 0)
+            {
+                try
+                {
+                    var page = await _orderService.GetAdminOrdersPageAsync(query: orderId.ToString(), page: 1, pageSize: 10);
+                    var order = page?.Items?.FirstOrDefault(o => o.Id == orderId);
+                    if (order != null)
+                    {
+                        var statusText = order.Status switch
+                        {
+                            0 => "Pending (Beklemede)",
+                            1 => "Completed (Onaylandı)",
+                            2 => "Failed (İptal / Rollback)",
+                            3 => "Processing (Hazırlanıyor)",
+                            4 => "Shipped (Kargoda)",
+                            5 => "Delivered (Teslim Edildi)",
+                            _ => $"Bilinmiyor ({order.Status})"
+                        };
+
+                        orderState = new
+                        {
+                            available = true,
+                            orderId = order.Id,
+                            status = order.Status,
+                            statusText,
+                            totalPaidAmount = order.TotalPaidAmount
+                        };
+                    }
+                    else
+                    {
+                        orderState = new { available = false, reason = $"Sipariş #{orderId} henüz bulunamadı." };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    orderState = new { available = false, reason = ex.Message };
+                }
+            }
+
+            return Json(new { success = true, catalog = catalogState, order = orderState });
+        }
+
         [HttpPost]
         public async Task<IActionResult> SetRule([FromBody] ChaosRule rule)
         {
