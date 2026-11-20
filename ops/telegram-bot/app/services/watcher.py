@@ -5,6 +5,7 @@ import re
 import threading
 import time
 import urllib.parse
+from datetime import datetime, timedelta
 
 from app.config import Settings
 from app.db.repositories import IncidentRepository, SettingsRepository
@@ -136,7 +137,7 @@ class BotRunner:
         self.telegram = telegram
         self.watcher = NodeWatcher(k8s, reporter, oncall, settings.node_debounce_checks)
         self._stop = threading.Event()
-        self._last_report_ts = time.time()
+        self._last_report_slot: datetime | None = None
         self._threads: list[threading.Thread] = []
 
     def start(self) -> None:
@@ -150,7 +151,18 @@ class BotRunner:
     def stop(self) -> None:
         self._stop.set()
 
-    def next_report_seconds(self) -> int | None:
+    @staticmethod
+    def _current_report_slot(hours: int, now: datetime) -> datetime:
+        if hours <= 24:
+            slot_hour = (now.hour // hours) * hours
+            return now.replace(hour=slot_hour, minute=0, second=0, microsecond=0)
+        epoch_slot = int(now.timestamp() // (hours * 3600))
+        return datetime.fromtimestamp(epoch_slot * hours * 3600, tz=now.tzinfo)
+
+    def _next_report_dt(self, hours: int, now: datetime) -> datetime:
+        return self._current_report_slot(hours, now) + timedelta(hours=hours)
+
+    def next_report_seconds(self, now: datetime | None = None) -> int | None:
         cfg = self.app_settings.get_all()
         try:
             hours = int(cfg.get("report_interval_hours", "6"))
@@ -158,8 +170,36 @@ class BotRunner:
             hours = 0
         if hours <= 0:
             return None
-        elapsed = time.time() - self._last_report_ts
-        return max(0, int(hours * 3600 - elapsed))
+        local_now = now or datetime.now(self.settings.tz)
+        next_dt = self._next_report_dt(hours, local_now)
+        return max(0, int((next_dt - local_now).total_seconds()))
+
+    def _maybe_send_scheduled_report(self, now: datetime | None = None) -> bool:
+        cfg = self.app_settings.get_all()
+        try:
+            hours = int(cfg.get("report_interval_hours", "6"))
+        except ValueError:
+            hours = 0
+        if hours <= 0:
+            return False
+
+        local_now = now or datetime.now(self.settings.tz)
+        current_slot = self._current_report_slot(hours, local_now)
+        if self._last_report_slot is None:
+            self._last_report_slot = current_slot
+            return False
+        if current_slot <= self._last_report_slot:
+            return False
+
+        self._last_report_slot = current_slot
+        if self.k8s.available:
+            try:
+                report = self.reporter.node_report(f"🕐 {hours} Saatlik Node Raporu")
+                self.oncall.dispatch_general_report(report)
+                return True
+            except Exception as exc:
+                log.warning("scheduled report failed: %s", exc)
+        return False
 
     def _watcher_loop(self) -> None:
         while not self._stop.is_set():
@@ -173,20 +213,7 @@ class BotRunner:
             except Exception as exc:
                 log.warning("escalation check failed: %s", exc)
 
-            cfg = self.app_settings.get_all()
-            try:
-                hours = int(cfg.get("report_interval_hours", "6"))
-            except ValueError:
-                hours = 0
-
-            if hours > 0 and (time.time() - self._last_report_ts) >= hours * 3600:
-                self._last_report_ts = time.time()
-                if self.k8s.available:
-                    try:
-                        report = self.reporter.node_report(f"🕐 {hours} Saatlik Node Raporu")
-                        self.oncall.dispatch_general_report(report)
-                    except Exception as exc:
-                        log.warning("scheduled report failed: %s", exc)
+            self._maybe_send_scheduled_report()
 
             self._stop.wait(self.settings.node_check_interval)
 

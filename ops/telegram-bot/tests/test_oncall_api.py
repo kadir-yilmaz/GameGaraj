@@ -100,6 +100,32 @@ class TestOnCallApi(unittest.TestCase):
         self.assertEqual(res.json()["report_interval_hours"], "12")
         self.assertFalse(oncall.is_night_window(datetime(2026, 11, 20, 22, 30, tzinfo=tz)))
 
+    def test_clock_aligned_report_schedule(self) -> None:
+        tz = timezone(timedelta(hours=3))
+        runner = self.app.state.container.runner
+
+        self.client.put("/api/settings", json={"report_interval_hours": "1"})
+        self.assertEqual(runner.next_report_seconds(datetime(2026, 11, 20, 12, 30, 0, tzinfo=tz)), 1800)
+
+        self.client.put("/api/settings", json={"report_interval_hours": "3"})
+        self.assertEqual(runner.next_report_seconds(datetime(2026, 11, 20, 13, 20, 0, tzinfo=tz)), 6000)
+
+        self.client.put("/api/settings", json={"report_interval_hours": "0"})
+        self.assertIsNone(runner.next_report_seconds(datetime(2026, 11, 20, 13, 20, 0, tzinfo=tz)))
+
+        # Verify slot triggering fires at the top of the hour and only once per slot
+        self.client.put("/api/settings", json={"report_interval_hours": "1"})
+        sent: list[str] = []
+        runner.k8s.available = True
+        runner.reporter.node_report = lambda title: f"{title}: ok"
+        runner.oncall.dispatch_general_report = lambda body: sent.append(body) or True
+
+        self.assertFalse(runner._maybe_send_scheduled_report(datetime(2026, 11, 20, 11, 59, 30, tzinfo=tz)))
+        self.assertTrue(runner._maybe_send_scheduled_report(datetime(2026, 11, 20, 12, 0, 10, tzinfo=tz)))
+        self.assertFalse(runner._maybe_send_scheduled_report(datetime(2026, 11, 20, 12, 5, 0, tzinfo=tz)))
+        self.assertEqual(len(sent), 1)
+        self.assertIn("1 Saatlik Node Raporu", sent[0])
+
 
 if __name__ == "__main__":
     unittest.main()
