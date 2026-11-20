@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS incidents (
     summary TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'open',
     assigned_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    acked_by TEXT NOT NULL DEFAULT '',
     escalated INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     acked_at TEXT,
@@ -112,6 +113,9 @@ class Database:
                 conn.execute("ALTER TABLE users ADD COLUMN ntfy_topic TEXT NOT NULL DEFAULT ''")
             if "notify_ntfy" not in cols:
                 conn.execute("ALTER TABLE users ADD COLUMN notify_ntfy INTEGER NOT NULL DEFAULT 1")
+            inc_cols = {r["name"] for r in conn.execute("PRAGMA table_info(incidents)").fetchall()}
+            if "acked_by" not in inc_cols:
+                conn.execute("ALTER TABLE incidents ADD COLUMN acked_by TEXT NOT NULL DEFAULT ''")
 
             for dow in range(7):
                 conn.execute(

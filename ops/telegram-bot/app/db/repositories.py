@@ -289,11 +289,11 @@ class IncidentRepository:
         with self.db.session() as conn:
             conn.execute("UPDATE incidents SET escalated = 1 WHERE id = ?", (incident_id,))
 
-    def ack(self, incident_id: int) -> dict | None:
+    def ack(self, incident_id: int, acked_by: str = "") -> dict | None:
         with self.db.session() as conn:
             conn.execute(
-                "UPDATE incidents SET status = 'acked', acked_at = ? WHERE id = ? AND status = 'open'",
-                (utc_now(), incident_id),
+                "UPDATE incidents SET status = 'acked', acked_at = ?, acked_by = ? WHERE id = ? AND status = 'open'",
+                (utc_now(), acked_by.strip(), incident_id),
             )
             row = conn.execute("SELECT * FROM incidents WHERE id = ?", (incident_id,)).fetchone()
             return dict(row) if row else None

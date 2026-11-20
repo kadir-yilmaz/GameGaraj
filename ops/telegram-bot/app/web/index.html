@@ -28,6 +28,15 @@
     <!-- Summary Cards -->
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="summary-cards"></section>
 
+    <!-- Recent Incidents (Always visible on main screen) -->
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-2">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-200">Son Olaylar</h2>
+        <span class="text-xs text-slate-500">Üstlenmek için grupta: ack &lt;olay_id&gt;</span>
+      </div>
+      <div id="main-recent-incidents" class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs"></div>
+    </section>
+
     <!-- Navigation Tabs -->
     <nav class="flex flex-wrap gap-2 border-b border-slate-800 pb-2 text-sm">
       <button onclick="showTab('oncall')" data-tab="oncall" class="tab-btn px-4 py-2 rounded-lg bg-sky-600 text-white font-medium">Nöbet Takvimi</button>
@@ -345,7 +354,7 @@
     }
 
     function renderStatus() {
-      const { cluster, oncall, active_incidents = [], next_report_seconds, smtp_configured, telegram_configured } = state.status;
+      const { cluster, oncall, active_incidents = [], recent_incidents = [], next_report_seconds, smtp_configured, telegram_configured } = state.status;
       const banner = document.getElementById("active-incidents-banner");
       if (active_incidents.length) {
         banner.classList.remove("hidden");
@@ -354,19 +363,20 @@
           const boxCls = isAcked
             ? "bg-amber-950/60 border-2 border-amber-500/80 text-amber-100"
             : "bg-rose-950/75 border-2 border-rose-500 text-rose-100";
-          const backupTxt = oncall.backup ? ` · Yedek: ${oncall.backup.name}` : "";
-          const whoTxt = inc.assigned_name ? `${inc.assigned_name} (${inc.assigned_email || ""})${backupTxt}` : "Gece nöbetçisi atanmamış (Genel gruba bildirildi)";
+          const primaryTxt = inc.assigned_name || "Atanmamış";
+          const backupTxt = oncall.backup ? oncall.backup.name : "Atanmamış";
+          const ackTxt = isAcked ? `Evet (${inc.acked_by || primaryTxt})` : "Hayır";
           return `
             <div class="${boxCls} rounded-xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg">
               <div class="space-y-1">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                   <span class="px-2 py-0.5 rounded text-xs font-semibold uppercase ${isAcked ? "bg-amber-800 text-amber-100" : "bg-rose-600 text-white"}">
                     ${isAcked ? "Üstlenildi" : (inc.escalated ? "Üstlenilmedi - Dikkat!" : "Aktif Olay")}
                   </span>
-                  <span class="font-semibold text-base">#${inc.id} · ${inc.summary}</span>
+                  <span class="font-semibold text-base">Olay #${inc.id} · ${inc.summary}</span>
                 </div>
-                <div class="text-xs opacity-90">
-                  İlgilenen: <span class="font-medium">${whoTxt}</span> · Başlangıç: ${inc.created_at.slice(0, 16).replace("T", " ")} UTC${inc.escalated && !isAcked ? " · Eskalasyon süresi doldu, yedek nöbetçi ve gruba bildirildi" : ""}
+                <div class="text-xs opacity-95">
+                  Görevli: <span class="font-medium">${primaryTxt}</span> · Yedek: <span class="font-medium">${backupTxt}</span> · Üstlendi mi: <span class="font-semibold">${ackTxt}</span> · Başlangıç: ${inc.created_at.slice(0, 16).replace("T", " ")} UTC${inc.escalated && !isAcked ? " · Eskalasyon yapıldı" : ""}
                 </div>
               </div>
             </div>`;
@@ -375,6 +385,24 @@
         banner.classList.add("hidden");
         banner.innerHTML = "";
       }
+
+      const recentEl = document.getElementById("main-recent-incidents");
+      const statusLabels = {
+        open: { text: "Açık", cls: "bg-rose-950 text-rose-300 border-rose-800" },
+        acked: { text: "Üstlenildi", cls: "bg-amber-950 text-amber-300 border-amber-800" },
+        resolved: { text: "Çözüldü", cls: "bg-emerald-950 text-emerald-300 border-emerald-800" }
+      };
+      recentEl.innerHTML = recent_incidents.length ? recent_incidents.map(i => {
+        const st = statusLabels[i.status] || { text: i.status, cls: "bg-slate-800 text-slate-300 border-slate-700" };
+        return `
+          <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+            <div class="min-w-0">
+              <div class="font-medium truncate">Olay #${i.id} · ${i.summary}</div>
+              <div class="text-slate-400 truncate">Görevli: ${i.assigned_name || "-"} · Üstlenen: ${i.acked_by || "-"} · ${i.created_at.slice(0, 16).replace("T", " ")}</div>
+            </div>
+            <span class="ml-2 shrink-0 px-2 py-0.5 rounded border text-[11px] font-medium ${st.cls}">${st.text}</span>
+          </div>`;
+      }).join("") : `<div class="text-slate-500">Henüz kayıtlı olay yok.</div>`;
       const moonIcon = `<svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>`;
       const sunIcon = `<svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/></svg>`;
       const modeBadge = oncall.is_night

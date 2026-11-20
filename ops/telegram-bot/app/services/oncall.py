@@ -189,25 +189,25 @@ class OnCallService:
 
     def ack_incident(self, incident_id: int | None = None, actor_name: str = "") -> list[dict]:
         """Marks one incident (or all open incidents) as acked and notifies group + email."""
+        cfg = self.app_settings.get_all()
+        oncall = self.get_active_oncall()
+        who = actor_name.strip() or (oncall["primary"]["name"] if oncall["primary"] else "Nöbetçi")
         acked: list[dict] = []
         if incident_id is not None:
-            inc = self.incidents.ack(incident_id)
+            inc = self.incidents.ack(incident_id, acked_by=who)
             if inc and inc.get("status") == "acked":
                 acked.append(inc)
         else:
             for inc in self.incidents.list_active():
                 if inc.get("status") == "open":
-                    res = self.incidents.ack(inc["id"])
+                    res = self.incidents.ack(inc["id"], acked_by=who)
                     if res:
                         acked.append(res)
 
         if not acked:
             return []
 
-        cfg = self.app_settings.get_all()
         group_id = self._group_chat_id(cfg)
-        oncall = self.get_active_oncall()
-        who = actor_name.strip() or (oncall["primary"]["name"] if oncall["primary"] else "Nöbetçi")
 
         for inc in acked:
             msg = f"✅ {who}: Buradayım, #{inc['id']} ({inc['summary']}) olayıyla ilgileniyorum."
