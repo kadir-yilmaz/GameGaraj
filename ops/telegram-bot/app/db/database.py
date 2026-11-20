@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS users (
     telegram_chat_id TEXT NOT NULL DEFAULT '',
     color TEXT NOT NULL DEFAULT '#3b82f6',
     active INTEGER NOT NULL DEFAULT 1,
+    notify_email INTEGER NOT NULL DEFAULT 1,
+    notify_telegram INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL
 );
 
@@ -99,6 +101,12 @@ class Database:
             conn.execute("PRAGMA journal_mode = WAL;")
             conn.executescript(SCHEMA_SQL)
 
+            cols = {r["name"] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
+            if "notify_email" not in cols:
+                conn.execute("ALTER TABLE users ADD COLUMN notify_email INTEGER NOT NULL DEFAULT 1")
+            if "notify_telegram" not in cols:
+                conn.execute("ALTER TABLE users ADD COLUMN notify_telegram INTEGER NOT NULL DEFAULT 1")
+
             for dow in range(7):
                 conn.execute(
                     "INSERT OR IGNORE INTO schedule (day_of_week, primary_user_id, backup_user_id, updated_at) VALUES (?, NULL, NULL, ?)",
@@ -114,6 +122,15 @@ class Database:
                 "notify_oncall_email": "true",
                 "notify_oncall_telegram": "true",
                 "escalation_minutes": "15",
+                "telegram_group_enabled": "true",
+                "telegram_group_chat_id": self.settings.telegram_chat_id,
+                "node_alerts_enabled": "true",
+                "smtp_host": self.settings.smtp_host,
+                "smtp_port": str(self.settings.smtp_port),
+                "smtp_user": self.settings.smtp_user,
+                "smtp_pass": self.settings.smtp_pass,
+                "smtp_from": self.settings.smtp_from,
+                "smtp_tls": "true" if self.settings.smtp_tls else "false",
             }
             for key, value in defaults.items():
                 conn.execute(

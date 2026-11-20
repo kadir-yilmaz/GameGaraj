@@ -23,25 +23,82 @@ class UserRepository:
             row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
             return dict(row) if row else None
 
-    def create(self, name: str, email: str, telegram_chat_id: str = "", color: str = "#3b82f6") -> dict:
+    def create(
+        self,
+        name: str,
+        email: str,
+        telegram_chat_id: str = "",
+        color: str = "#3b82f6",
+        notify_email: bool = True,
+        notify_telegram: bool = True,
+    ) -> dict:
         with self.db.session() as conn:
             cur = conn.execute(
-                "INSERT INTO users (name, email, telegram_chat_id, color, active, created_at) VALUES (?, ?, ?, ?, 1, ?)",
-                (name.strip(), email.strip().lower(), telegram_chat_id.strip(), color, utc_now()),
+                """
+                INSERT INTO users (name, email, telegram_chat_id, color, active, notify_email, notify_telegram, created_at)
+                VALUES (?, ?, ?, ?, 1, ?, ?, ?)
+                """,
+                (
+                    name.strip(),
+                    email.strip().lower(),
+                    telegram_chat_id.strip(),
+                    color,
+                    1 if notify_email else 0,
+                    1 if notify_telegram else 0,
+                    utc_now(),
+                ),
             )
             row = conn.execute("SELECT * FROM users WHERE id = ?", (cur.lastrowid,)).fetchone()
             return dict(row)
 
-    def update(self, user_id: int, name: str, email: str, telegram_chat_id: str, color: str, active: bool) -> dict | None:
+    def update(
+        self,
+        user_id: int,
+        name: str,
+        email: str,
+        telegram_chat_id: str,
+        color: str,
+        active: bool,
+        notify_email: bool = True,
+        notify_telegram: bool = True,
+    ) -> dict | None:
         with self.db.session() as conn:
             conn.execute(
                 """
                 UPDATE users
-                SET name = ?, email = ?, telegram_chat_id = ?, color = ?, active = ?
+                SET name = ?, email = ?, telegram_chat_id = ?, color = ?, active = ?, notify_email = ?, notify_telegram = ?
                 WHERE id = ?
                 """,
-                (name.strip(), email.strip().lower(), telegram_chat_id.strip(), color, 1 if active else 0, user_id),
+                (
+                    name.strip(),
+                    email.strip().lower(),
+                    telegram_chat_id.strip(),
+                    color,
+                    1 if active else 0,
+                    1 if notify_email else 0,
+                    1 if notify_telegram else 0,
+                    user_id,
+                ),
             )
+            row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+            return dict(row) if row else None
+
+    def set_toggles(self, user_id: int, active: bool | None = None, notify_email: bool | None = None, notify_telegram: bool | None = None) -> dict | None:
+        updates, params = [], []
+        if active is not None:
+            updates.append("active = ?")
+            params.append(1 if active else 0)
+        if notify_email is not None:
+            updates.append("notify_email = ?")
+            params.append(1 if notify_email else 0)
+        if notify_telegram is not None:
+            updates.append("notify_telegram = ?")
+            params.append(1 if notify_telegram else 0)
+        if not updates:
+            return self.get(user_id)
+        params.append(user_id)
+        with self.db.session() as conn:
+            conn.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = ?", tuple(params))
             row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
             return dict(row) if row else None
 

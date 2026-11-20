@@ -98,57 +98,68 @@ class OnCallService:
         self.logs.add(level=level, channel=channel, recipient=recipient, message=f"{subject}\n{body}".strip(), success=ok, error=err)
         return ok, err
 
+    def _group_chat_id(self, cfg: dict) -> str:
+        if cfg.get("telegram_group_enabled", "true") != "true":
+            return ""
+        return (cfg.get("telegram_group_chat_id") or self.settings.telegram_chat_id).strip()
+
     def _notify_user(self, level: str, user: dict, subject: str, body: str, cfg: dict) -> None:
-        if cfg.get("notify_oncall_email", "true") == "true" and user.get("email"):
+        if cfg.get("notify_oncall_email", "true") == "true" and user.get("notify_email", 1) and user.get("email"):
             self._send_and_log(level, "email", user["email"], subject, body)
-        if cfg.get("notify_oncall_telegram", "true") == "true" and user.get("telegram_chat_id"):
+        if cfg.get("notify_oncall_telegram", "true") == "true" and user.get("notify_telegram", 1) and user.get("telegram_chat_id"):
             self._send_and_log(level, "telegram", user["telegram_chat_id"], subject, body)
 
     def dispatch_general_report(self, body: str) -> bool:
         cfg = self.app_settings.get_all()
         if self.is_night_window() and cfg.get("mute_general_at_night", "true") == "true":
             return False
-        if not self.settings.telegram_chat_id:
+        group_id = self._group_chat_id(cfg)
+        if not group_id:
             return False
-        ok, _ = self._send_and_log("info", "telegram", self.settings.telegram_chat_id, "", body)
+        ok, _ = self._send_and_log("info", "telegram", group_id, "", body)
         return ok
 
     def dispatch_critical_alert(self, node_name: str, summary: str, detail: str) -> dict:
         cfg = self.app_settings.get_all()
+        if cfg.get("node_alerts_enabled", "true") != "true":
+            return {"id": 0, "summary": summary, "status": "muted"}
         oncall = self.get_active_oncall()
         primary = oncall["primary"]
         incident = self.incidents.create(node_name, summary, primary["id"] if primary else None)
+        group_id = self._group_chat_id(cfg)
 
         if oncall["is_night"] and primary:
-            subject = f"🚨 [NÖBET #{incident['id']}] {summary}"
-            oncall_note = f"\n\n👤 Nöbetçi: {primary['name']}\n✅ Üzerine almak için Telegram'da /ack veya Web UI kullanın."
+            subject = f"[NOBET #{incident['id']}] {summary}"
+            oncall_note = f"\n\nNöbetçi: {primary['name']}\nÜzerine almak için Telegram'da /ack veya Web UI kullanın."
             self._notify_user("critical", primary, subject, detail + oncall_note, cfg)
-            if cfg.get("notify_group_on_critical", "true") == "true" and self.settings.telegram_chat_id:
+            if cfg.get("notify_group_on_critical", "true") == "true" and group_id:
                 self._send_and_log(
                     "critical",
                     "telegram",
-                    self.settings.telegram_chat_id,
+                    group_id,
                     "",
-                    f"{detail}\n\n🌙 Gece nöbetçisi bilgilendirildi: {primary['name']}",
+                    f"{detail}\n\nGece nöbetçisi bilgilendirildi: {primary['name']}",
                 )
         else:
-            if self.settings.telegram_chat_id:
-                self._send_and_log("critical", "telegram", self.settings.telegram_chat_id, "", detail)
+            if group_id:
+                self._send_and_log("critical", "telegram", group_id, "", detail)
         return incident
 
     def resolve_node_incident(self, node_name: str, detail: str) -> None:
+        cfg = self.app_settings.get_all()
         resolved_count = self.incidents.resolve_by_node(node_name)
-        if self.settings.telegram_chat_id:
-            self._send_and_log("resolved", "telegram", self.settings.telegram_chat_id, "", detail)
+        group_id = self._group_chat_id(cfg)
+        if cfg.get("node_alerts_enabled", "true") == "true" and group_id:
+            self._send_and_log("resolved", "telegram", group_id, "", detail)
         if resolved_count and self.is_night_window():
             oncall = self.get_active_oncall()
             if oncall["primary"]:
                 self._notify_user(
                     "resolved",
                     oncall["primary"],
-                    f"✅ [ÇÖZÜLDÜ] {node_name} Ready",
+                    f"[COZULDU] {node_name} Ready",
                     detail,
-                    self.app_settings.get_all(),
+                    cfg,
                 )
 
     def check_escalations(self) -> None:
@@ -176,11 +187,15 @@ class OnCallService:
                 target = backup["name"] if backup else "Tüm Ekip"
                 self._send_and_log("escalation", "telegram", self.settings.telegram_chat_id, subject, f"{body}\nYönlendirilen: {target}")
 
-    def send_test_notification(self, user_id: int | None, channel: str) -> tuple[bool, str]:
-        subject = "🧪 GameGaraj Nöbet Sistemi Test Bildirimi"
+    def send_test_notification(self, user_id: int | None, channel: str, email_override: str = "") -> tuple[bool, str]:
+        subject = "GameGaraj Nobet Sistemi Test Bildirimi"
         body = "Bu mesaj bildirim kanalının çalıştığını doğrulamak için gönderildi."
+        cfg = self.app_settings.get_all()
         if channel == "telegram_group":
-            return self._send_and_log("test", "telegram", self.settings.telegram_chat_id, subject, body)
+            group_id = (cfg.get("telegram_group_chat_id") or self.settings.telegram_chat_id).strip()
+            return self._send_and_log("test", "telegram", group_id, subject, body)
+        if channel == "email" and email_override.strip():
+            return self._send_and_log("test", "email", email_override.strip(), subject, body)
         if not user_id:
             return False, "Kullanıcı seçilmedi"
         user = self.users.get(user_id)

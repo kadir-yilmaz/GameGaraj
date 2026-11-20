@@ -8,40 +8,40 @@
   <style>
     .drop-active { outline: 2px dashed #38bdf8; background-color: rgba(56, 189, 248, 0.08); }
     .dragging { opacity: 0.45; }
+    .toggle-checkbox:checked { background-color: #0284c7; border-color: #0284c7; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
   <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
     <!-- Header -->
     <header class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <span>🤖</span> GameGaraj Cluster Bot & Nöbet Paneli
-        </h1>
-        <p class="text-sm text-slate-400">Sürükle-bırak nöbet takvimi, dinamik rapor zamanlayıcı ve canlı cluster durumu</p>
+        <h1 class="text-xl font-semibold tracking-tight text-slate-100">GameGaraj Cluster Bot & Nöbet Yönetimi</h1>
+        <p class="text-xs text-slate-400 mt-0.5">Nöbet takvimi, genel Telegram grubu ve SMTP bildirim ayarları</p>
       </div>
       <div id="status-badges" class="flex flex-wrap items-center gap-2 text-xs"></div>
     </header>
 
-    <!-- Top Summary Cards -->
-    <section class="grid grid-cols-1 md:grid-cols-4 gap-4" id="summary-cards"></section>
+    <!-- Summary Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="summary-cards"></section>
 
-    <!-- Tabs -->
-    <nav class="flex gap-2 border-b border-slate-800 pb-2 text-sm">
-      <button onclick="showTab('oncall')" data-tab="oncall" class="tab-btn px-4 py-2 rounded-lg bg-sky-600 text-white font-medium">📅 Nöbet Takvimi</button>
-      <button onclick="showTab('settings')" data-tab="settings" class="tab-btn px-4 py-2 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800">⚙️ Bildirim & Gece Ayarları</button>
-      <button onclick="showTab('incidents')" data-tab="incidents" class="tab-btn px-4 py-2 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800">🚨 Olaylar & Loglar</button>
+    <!-- Navigation Tabs -->
+    <nav class="flex flex-wrap gap-2 border-b border-slate-800 pb-2 text-sm">
+      <button onclick="showTab('oncall')" data-tab="oncall" class="tab-btn px-4 py-2 rounded-lg bg-sky-600 text-white font-medium">Nöbet Takvimi</button>
+      <button onclick="showTab('group')" data-tab="group" class="tab-btn px-4 py-2 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800">Genel Telegram Grubu</button>
+      <button onclick="showTab('smtp')" data-tab="smtp" class="tab-btn px-4 py-2 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800">SMTP & Nöbet Ayarları</button>
+      <button onclick="showTab('incidents')" data-tab="incidents" class="tab-btn px-4 py-2 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800">Olaylar & Loglar</button>
     </nav>
 
     <!-- TAB 1: ONCALL & DRAG DROP -->
     <section id="tab-oncall" class="tab-panel grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- Users Pool -->
-      <div class="lg:col-span-4 bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+      <!-- Users Pool (Collapsible) -->
+      <div class="lg:col-span-4 bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="font-semibold text-base">👥 Kullanıcı Havuzu</h2>
-          <button onclick="openUserModal()" class="text-xs px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 font-medium">+ Kullanıcı Ekle</button>
+          <h2 class="font-semibold text-sm text-slate-200">Kullanıcı Havuzu</h2>
+          <button onclick="openUserModal()" class="text-xs px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 font-medium text-white">Kullanıcı Ekle</button>
         </div>
-        <p class="text-xs text-slate-400">Kullanıcıyı tutup sağdaki günlerin <b>Birincil</b> veya <b>Yedek</b> alanına sürükleyin.</p>
+        <p class="text-xs text-slate-400">Kullanıcıyı sağdaki günlerin Birincil veya Yedek alanına sürükleyin. Detay ve bildirim anahtarları için kullanıcı adına tıklayın.</p>
         <div id="user-pool" class="space-y-2"></div>
       </div>
 
@@ -49,7 +49,7 @@
       <div class="lg:col-span-8 space-y-4">
         <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
           <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-base">🗓 Haftalık Nöbet Planı</h2>
+            <h2 class="font-semibold text-sm text-slate-200">Haftalık Nöbet Planı</h2>
             <span class="text-xs text-slate-400">Günler arası sürükleyerek yer değiştirebilirsiniz</span>
           </div>
           <div id="weekly-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3"></div>
@@ -57,27 +57,38 @@
 
         <!-- Date Overrides -->
         <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
-          <h3 class="font-semibold text-sm">📌 Tarih Bazlı Özel Nöbet (Override)</h3>
+          <h3 class="font-semibold text-sm text-slate-200">Tarih Bazlı Özel Nöbet</h3>
           <form onsubmit="saveOverride(event)" class="grid grid-cols-1 sm:grid-cols-5 gap-2 text-xs">
             <input type="date" id="ov-date" required class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2" />
             <select id="ov-primary" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2"></select>
             <select id="ov-backup" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2"></select>
-            <input type="text" id="ov-note" placeholder="Not (ör. izin değişimi)" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2" />
-            <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-3 py-2 font-medium">Ekle</button>
+            <input type="text" id="ov-note" placeholder="Not (isteğe bağlı)" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2" />
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-3 py-2 font-medium text-white">Ekle</button>
           </form>
           <div id="override-list" class="space-y-1.5 text-xs"></div>
         </div>
       </div>
     </section>
 
-    <!-- TAB 2: SETTINGS -->
-    <section id="tab-settings" class="tab-panel hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <form onsubmit="saveSettings(event)" class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
-        <h2 class="font-semibold text-base">⏰ Genel Bildirim & Gece Penceresi</h2>
+    <!-- TAB 2: GENEL TELEGRAM GRUBU -->
+    <section id="tab-group" class="tab-panel hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <form onsubmit="saveGroupSettings(event)" class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <h2 class="font-semibold text-sm text-slate-200">Genel Telegram Grubu Ayarları</h2>
+          <label class="inline-flex items-center gap-2 text-xs cursor-pointer">
+            <input type="checkbox" id="grp-enabled" class="rounded bg-slate-950 border-slate-700" />
+            <span class="font-medium text-slate-300">Grup Bildirimleri Açık</span>
+          </label>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Grup Chat ID</label>
+          <input type="text" id="grp-chat-id" placeholder="-100xxxxxxxxxx" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+        </div>
 
         <div>
           <label class="block text-xs text-slate-400 mb-1">Genel Node Raporu Sıklığı</label>
-          <select id="set-interval" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+          <select id="grp-interval" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
             <option value="0">Kapalı (sadece anlık alarmlar)</option>
             <option value="1">Her 1 saatte bir</option>
             <option value="3">Her 3 saatte bir</option>
@@ -87,13 +98,99 @@
           </select>
         </div>
 
+        <div class="space-y-2.5 pt-1 text-sm">
+          <label class="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" id="grp-node-alerts" class="rounded bg-slate-950 border-slate-700" />
+            <span>Node Ready / NotReady anlık bildirimleri açık</span>
+          </label>
+          <label class="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" id="grp-mute-night" class="rounded bg-slate-950 border-slate-700" />
+            <span>Gece penceresinde genel raporu sustur</span>
+          </label>
+          <label class="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" id="grp-critical" class="rounded bg-slate-950 border-slate-700" />
+            <span>Gece kritik olaylarda genel gruba da bilgi yaz</span>
+          </label>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="flex-1 bg-sky-600 hover:bg-sky-500 rounded-lg py-2.5 font-medium text-sm text-white">Grup Ayarlarını Kaydet</button>
+          <button type="button" onclick="sendGroupTest()" class="px-4 bg-slate-800 hover:bg-slate-700 rounded-lg py-2.5 font-medium text-sm text-slate-200">Gruba Test Gönder</button>
+        </div>
+      </form>
+
+      <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-3 text-xs text-slate-400">
+        <h3 class="font-semibold text-sm text-slate-200">Telegram Komutları</h3>
+        <div class="space-y-2 bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-slate-300">
+          <div>cluster info · özet durum</div>
+          <div>cluster info nodes · node ve pod dağılımı</div>
+          <div>cluster info gamegaraj · servisler</div>
+          <div>cluster info argocd · ArgoCD uygulamaları</div>
+          <div>cluster info events · son 1 saat warning</div>
+          <div>logs &lt;servis&gt; · son 30 satır log</div>
+          <div>/ack · açık nöbet olayını üstlen</div>
+          <div>/oncall · aktif nöbetçiyi gör</div>
+          <div>/myid · kişisel Telegram Chat ID öğren</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: SMTP & NOBET AYARLARI -->
+    <section id="tab-smtp" class="tab-panel hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <form onsubmit="saveSmtpSettings(event)" class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
+        <h2 class="font-semibold text-sm text-slate-200 border-b border-slate-800 pb-3">SMTP Sunucu Ayarları</h2>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="block text-xs text-slate-400 mb-1">SMTP Host</label>
+            <input type="text" id="smtp-host" placeholder="smtp.gmail.com" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Port</label>
+            <input type="number" id="smtp-port" placeholder="587" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs text-slate-400 mb-1">Gece Nöbeti Başlangıcı</label>
+            <label class="block text-xs text-slate-400 mb-1">SMTP Kullanıcı Adı</label>
+            <input type="text" id="smtp-user" placeholder="mail@domain.com" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">SMTP Şifre / App Password</label>
+            <input type="password" id="smtp-pass" placeholder="Değiştirmek için yazın" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 items-end">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Gönderen Adres (From)</label>
+            <input type="text" id="smtp-from" placeholder="noreply@gamegaraj.local" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <label class="flex items-center gap-2 pb-2 text-sm cursor-pointer">
+            <input type="checkbox" id="smtp-tls" class="rounded bg-slate-950 border-slate-700" />
+            <span>STARTTLS Kullan</span>
+          </label>
+        </div>
+
+        <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 rounded-lg py-2.5 font-medium text-sm text-white">SMTP Ayarlarını Kaydet</button>
+
+        <div class="pt-3 border-t border-slate-800 flex gap-2">
+          <input type="email" id="test-email-addr" placeholder="Test e-posta adresi" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          <button type="button" onclick="sendEmailTest()" class="px-4 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium text-white">Test Maili At</button>
+        </div>
+      </form>
+
+      <form onsubmit="saveOncallSettings(event)" class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
+        <h2 class="font-semibold text-sm text-slate-200 border-b border-slate-800 pb-3">Gece Nöbeti & Eskalasyon Ayarları</h2>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Gece Başlangıcı</label>
             <input type="time" id="set-night-start" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
           </div>
           <div>
-            <label class="block text-xs text-slate-400 mb-1">Gece Nöbeti Bitişi</label>
+            <label class="block text-xs text-slate-400 mb-1">Gece Bitişi</label>
             <input type="time" id="set-night-end" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
           </div>
         </div>
@@ -103,60 +200,29 @@
           <input type="number" min="0" max="180" id="set-escalation" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
         </div>
 
-        <div class="space-y-2.5 pt-2 text-sm">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="set-mute-night" class="rounded bg-slate-950 border-slate-700" />
-            <span>Gece penceresinde genel raporu (6 saatlik vb.) sustur</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="set-group-critical" class="rounded bg-slate-950 border-slate-700" />
-            <span>Gece kritik olaylarda genel Telegram grubuna da bilgi yaz</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
+        <div class="space-y-2.5 pt-1 text-sm">
+          <label class="flex items-center gap-2.5 cursor-pointer">
             <input type="checkbox" id="set-email" class="rounded bg-slate-950 border-slate-700" />
-            <span>Nöbetçiye E-posta ile bildir</span>
+            <span>Nöbetçiye E-posta ile bildir (global)</span>
           </label>
-          <label class="flex items-center gap-2 cursor-pointer">
+          <label class="flex items-center gap-2.5 cursor-pointer">
             <input type="checkbox" id="set-tg-dm" class="rounded bg-slate-950 border-slate-700" />
-            <span>Nöbetçiye kişisel Telegram DM ile bildir (Chat ID tanımlıysa)</span>
+            <span>Nöbetçiye Telegram DM ile bildir (global)</span>
           </label>
         </div>
 
-        <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 rounded-lg py-2.5 font-medium text-sm">Ayarları Kaydet</button>
+        <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 rounded-lg py-2.5 font-medium text-sm text-white">Nöbet Ayarlarını Kaydet</button>
       </form>
-
-      <!-- Test Notification -->
-      <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
-        <h2 class="font-semibold text-base">🧪 Bildirim Kanalı Testi</h2>
-        <p class="text-xs text-slate-400">
-          Kişisel Telegram DM için kullanıcının bota bir kez <code>/myid</code> yazıp çıkan numarayı profiline eklemesi gerekir.
-        </p>
-        <div class="space-y-3 text-sm">
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Kanal</label>
-            <select id="test-channel" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
-              <option value="telegram_group">Genel Telegram Grubu</option>
-              <option value="email">Kullanıcı E-postası (SMTP)</option>
-              <option value="telegram_dm">Kullanıcı Telegram DM</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Kullanıcı (DM / E-posta için)</label>
-            <select id="test-user" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"></select>
-          </div>
-          <button onclick="sendTest()" class="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg py-2.5 font-medium">Test Bildirimi Gönder</button>
-        </div>
-      </div>
     </section>
 
-    <!-- TAB 3: INCIDENTS & LOGS -->
+    <!-- TAB 4: INCIDENTS & LOGS -->
     <section id="tab-incidents" class="tab-panel hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
-        <h2 class="font-semibold text-base">🚨 Son Nöbet Olayları</h2>
+        <h2 class="font-semibold text-sm text-slate-200">Son Nöbet Olayları</h2>
         <div id="incidents-list" class="space-y-2 text-xs"></div>
       </div>
       <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
-        <h2 class="font-semibold text-base">📜 Gönderim Logları</h2>
+        <h2 class="font-semibold text-sm text-slate-200">Gönderim Logları</h2>
         <div id="logs-list" class="space-y-2 text-xs max-h-[520px] overflow-y-auto"></div>
       </div>
     </section>
@@ -177,7 +243,7 @@
       </div>
       <div class="grid grid-cols-3 gap-3">
         <div class="col-span-2">
-          <label class="block text-xs text-slate-400 mb-1">Telegram Chat ID (opsiyonel)</label>
+          <label class="block text-xs text-slate-400 mb-1">Telegram Chat ID</label>
           <input type="text" id="u-tg" placeholder="Bota /myid yazın" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
         </div>
         <div>
@@ -185,9 +251,19 @@
           <input type="color" id="u-color" value="#38bdf8" class="w-full h-10 bg-slate-950 border border-slate-700 rounded-lg p-1" />
         </div>
       </div>
+      <div class="flex flex-wrap gap-4 pt-1 text-xs">
+        <label class="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" id="u-notify-email" checked class="rounded bg-slate-950 border-slate-700" />
+          <span>E-posta Açık</span>
+        </label>
+        <label class="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" id="u-notify-tg" checked class="rounded bg-slate-950 border-slate-700" />
+          <span>Telegram DM Açık</span>
+        </label>
+      </div>
       <div class="flex justify-end gap-2 pt-2">
         <button type="button" onclick="closeUserModal()" class="px-4 py-2 rounded-lg bg-slate-800 text-sm">İptal</button>
-        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-sm font-medium">Kaydet</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-sm font-medium text-white">Kaydet</button>
       </div>
     </form>
   </div>
@@ -197,7 +273,7 @@
 
   <script>
     const DAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
-    let state = { users: [], weekly: [], overrides: [], settings: {}, status: null };
+    let state = { users: [], weekly: [], overrides: [], settings: {}, status: null, expandedUsers: new Set() };
     let dragPayload = null;
 
     function toast(msg, isErr = false) {
@@ -245,16 +321,12 @@
 
     function renderStatus() {
       const { cluster, oncall, next_report_seconds, smtp_configured, telegram_configured } = state.status;
-      const badges = document.getElementById("status-badges");
-      badges.innerHTML = `
-        <span class="px-2.5 py-1 rounded-full ${oncall.is_night ? "bg-indigo-950 text-indigo-300 border border-indigo-800" : "bg-amber-950 text-amber-300 border border-amber-800"}">
-          ${oncall.is_night ? "🌙 Gece Nöbeti Aktif" : "☀️ Gündüz Modu"}
+      document.getElementById("status-badges").innerHTML = `
+        <span class="px-2.5 py-1 rounded-md border ${telegram_configured ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-rose-950/60 text-rose-300 border-rose-800"}">
+          Telegram: ${telegram_configured ? "Bağlı" : "Yok"}
         </span>
-        <span class="px-2.5 py-1 rounded-full ${telegram_configured ? "bg-emerald-950 text-emerald-300 border border-emerald-800" : "bg-rose-950 text-rose-300 border border-rose-800"}">
-          Telegram ${telegram_configured ? "Bağlı" : "Yok"}
-        </span>
-        <span class="px-2.5 py-1 rounded-full ${smtp_configured ? "bg-emerald-950 text-emerald-300 border border-emerald-800" : "bg-slate-900 text-slate-400 border border-slate-700"}">
-          SMTP ${smtp_configured ? "Hazır" : "Ayarlı Değil"}
+        <span class="px-2.5 py-1 rounded-md border ${smtp_configured ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-slate-900 text-slate-400 border-slate-700"}">
+          SMTP: ${smtp_configured ? "Hazır" : "Ayarlı Değil"}
         </span>
       `;
 
@@ -264,48 +336,84 @@
       document.getElementById("summary-cards").innerHTML = `
         <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
           <div class="text-xs text-slate-400">Aktif Birincil Nöbetçi</div>
-          <div class="text-lg font-semibold mt-1">${oncall.primary ? oncall.primary.name : "Atanmamış"}</div>
-          <div class="text-xs text-slate-500 mt-0.5">${oncall.primary ? oncall.primary.email : "Takvimden sürükleyip atayın"}</div>
+          <div class="text-base font-semibold mt-1">${oncall.primary ? oncall.primary.name : "Atanmamış"}</div>
+          <div class="text-xs text-slate-500 mt-0.5">${oncall.primary ? oncall.primary.email : "Takvimden atayın"}</div>
         </div>
         <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
           <div class="text-xs text-slate-400">Yedek Nöbetçi</div>
-          <div class="text-lg font-semibold mt-1">${oncall.backup ? oncall.backup.name : "Atanmamış"}</div>
-          <div class="text-xs text-slate-500 mt-0.5">Kaynak: ${oncall.source}</div>
+          <div class="text-base font-semibold mt-1">${oncall.backup ? oncall.backup.name : "Atanmamış"}</div>
+          <div class="text-xs text-slate-500 mt-0.5">${oncall.is_night ? "Gece nöbeti penceresinde" : "Gündüz saatlerinde"}</div>
         </div>
         <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
-          <div class="text-xs text-slate-400">Cluster Sağlığı</div>
-          <div class="text-lg font-semibold mt-1">${nodeTxt}</div>
+          <div class="text-xs text-slate-400">Cluster Durumu</div>
+          <div class="text-base font-semibold mt-1">${nodeTxt}</div>
           <div class="text-xs text-slate-500 mt-0.5">${podTxt} pod</div>
         </div>
         <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
           <div class="text-xs text-slate-400">Sonraki Genel Rapor</div>
-          <div class="text-lg font-semibold mt-1">${nextTxt}</div>
+          <div class="text-base font-semibold mt-1">${nextTxt}</div>
           <div class="text-xs text-slate-500 mt-0.5">Gece: ${state.settings.night_start} - ${state.settings.night_end}</div>
         </div>
       `;
     }
 
+    function toggleExpandUser(id) {
+      if (state.expandedUsers.has(id)) state.expandedUsers.delete(id);
+      else state.expandedUsers.add(id);
+      renderUsers();
+    }
+
+    async function patchUserToggle(id, field, val) {
+      try {
+        await api(`/api/users/${id}/toggles`, { method: "PATCH", body: JSON.stringify({ [field]: val }) });
+        await loadAll();
+      } catch (err) { toast(err.message, true); }
+    }
+
     function renderUsers() {
       const pool = document.getElementById("user-pool");
-      pool.innerHTML = state.users.length ? state.users.map(u => `
+      pool.innerHTML = state.users.length ? state.users.map(u => {
+        const open = state.expandedUsers.has(u.id);
+        return `
         <div draggable="true" ondragstart="onDragStartUser(event, ${u.id})" ondragend="onDragEnd(event)"
-             class="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-600 cursor-grab active:cursor-grabbing">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <span class="w-3 h-3 rounded-full shrink-0" style="background:${u.color}"></span>
-            <div class="truncate">
-              <div class="text-sm font-medium truncate">${u.name}</div>
-              <div class="text-xs text-slate-400 truncate">${u.email}${u.telegram_chat_id ? " · TG✓" : ""}</div>
+             class="rounded-lg bg-slate-950 border ${u.active ? "border-slate-800" : "border-slate-900 opacity-60"} hover:border-slate-600">
+          <div class="flex items-center justify-between p-2.5 cursor-grab active:cursor-grabbing" onclick="toggleExpandUser(${u.id})">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${u.color}"></span>
+              <div class="truncate">
+                <div class="text-sm font-medium truncate">${u.name}</div>
+                <div class="text-xs text-slate-400 truncate">${u.email}</div>
+              </div>
             </div>
+            <span class="text-xs text-slate-400 px-1.5 select-none">${open ? "Gizle" : "Aç"}</span>
           </div>
-          <div class="flex gap-1 shrink-0">
-            <button onclick="openUserModal(${u.id})" class="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">Düzenle</button>
-            <button onclick="deleteUser(${u.id})" class="text-xs px-2 py-1 rounded bg-rose-950 text-rose-300 hover:bg-rose-900">Sil</button>
-          </div>
-        </div>
-      `).join("") : `<div class="text-xs text-slate-500 py-4 text-center">Henüz kullanıcı yok.</div>`;
+          ${open ? `
+          <div class="px-3 pb-3 pt-2 border-t border-slate-800/80 space-y-2 text-xs">
+            <div class="text-slate-400">Telegram ID: <span class="text-slate-200 font-mono">${u.telegram_chat_id || "Tanımlı değil"}</span></div>
+            <div class="flex flex-wrap gap-3">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" ${u.active ? "checked" : ""} onchange="patchUserToggle(${u.id}, 'active', this.checked)" />
+                <span>Aktif</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" ${u.notify_email ? "checked" : ""} onchange="patchUserToggle(${u.id}, 'notify_email', this.checked)" />
+                <span>Mail</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" ${u.notify_telegram ? "checked" : ""} onchange="patchUserToggle(${u.id}, 'notify_telegram', this.checked)" />
+                <span>Telegram</span>
+              </label>
+            </div>
+            <div class="flex gap-2 pt-1">
+              <button onclick="openUserModal(${u.id})" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">Düzenle</button>
+              <button onclick="deleteUser(${u.id})" class="px-2.5 py-1 rounded bg-rose-950 text-rose-300 hover:bg-rose-900">Sil</button>
+            </div>
+          </div>` : ""}
+        </div>`;
+      }).join("") : `<div class="text-xs text-slate-500 py-4 text-center">Henüz kullanıcı yok.</div>`;
 
       const opts = `<option value="">-- Seçiniz --</option>` + state.users.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
-      ["ov-primary", "ov-backup", "test-user"].forEach(id => {
+      ["ov-primary", "ov-backup"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = opts;
       });
@@ -314,7 +422,7 @@
     function renderSlot(day, role, name, color, userId) {
       if (!userId) {
         return `<div ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropSlot(event, ${day}, '${role}')"
-                     class="min-h-[42px] rounded-lg border border-dashed border-slate-700 flex items-center justify-center text-xs text-slate-500 transition">
+                     class="min-h-[40px] rounded-lg border border-dashed border-slate-700 flex items-center justify-center text-xs text-slate-500 transition">
                   ${role === "primary" ? "Birincil bırak" : "Yedek bırak"}
                 </div>`;
       }
@@ -323,10 +431,10 @@
                    ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropSlot(event, ${day}, '${role}')"
                    class="flex items-center justify-between px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700 cursor-grab text-xs">
                 <span class="flex items-center gap-1.5 truncate">
-                  <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${color || "#38bdf8"}"></span>
+                  <span class="w-2 h-2 rounded-full shrink-0" style="background:${color || "#38bdf8"}"></span>
                   <span class="truncate font-medium">${name}</span>
                 </span>
-                <button onclick="clearSlot(${day}, '${role}')" class="text-slate-400 hover:text-rose-400 ml-1">✕</button>
+                <button onclick="clearSlot(${day}, '${role}')" class="text-slate-400 hover:text-rose-400 ml-1">Sil</button>
               </div>`;
     }
 
@@ -360,13 +468,8 @@
       e.currentTarget.classList.remove("dragging");
       document.querySelectorAll(".drop-active").forEach(el => el.classList.remove("drop-active"));
     }
-    function onDragOver(e) {
-      e.preventDefault();
-      e.currentTarget.classList.add("drop-active");
-    }
-    function onDragLeave(e) {
-      e.currentTarget.classList.remove("drop-active");
-    }
+    function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add("drop-active"); }
+    function onDragLeave(e) { e.currentTarget.classList.remove("drop-active"); }
 
     async function onDropSlot(e, targetDay, targetRole) {
       e.preventDefault();
@@ -381,11 +484,12 @@
           toast("Günler arası nöbet yer değiştirildi");
         } else {
           const dayObj = state.weekly.find(d => d.day_of_week === targetDay);
-          const primary_user_id = targetRole === "primary" ? dragPayload.userId : dayObj.primary_user_id;
-          const backup_user_id = targetRole === "backup" ? dragPayload.userId : dayObj.backup_user_id;
           await api(`/api/schedule/day/${targetDay}`, {
             method: "PUT",
-            body: JSON.stringify({ primary_user_id, backup_user_id })
+            body: JSON.stringify({
+              primary_user_id: targetRole === "primary" ? dragPayload.userId : dayObj.primary_user_id,
+              backup_user_id: targetRole === "backup" ? dragPayload.userId : dayObj.backup_user_id
+            })
           });
           toast(`${DAYS[targetDay]} güncellendi`);
         }
@@ -440,47 +544,96 @@
 
     function renderSettings() {
       const s = state.settings;
-      document.getElementById("set-interval").value = s.report_interval_hours || "6";
+      document.getElementById("grp-enabled").checked = s.telegram_group_enabled !== "false";
+      document.getElementById("grp-chat-id").value = s.telegram_group_chat_id || "";
+      document.getElementById("grp-interval").value = s.report_interval_hours || "6";
+      document.getElementById("grp-node-alerts").checked = s.node_alerts_enabled !== "false";
+      document.getElementById("grp-mute-night").checked = s.mute_general_at_night === "true";
+      document.getElementById("grp-critical").checked = s.notify_group_on_critical === "true";
+
+      document.getElementById("smtp-host").value = s.smtp_host || "";
+      document.getElementById("smtp-port").value = s.smtp_port || "587";
+      document.getElementById("smtp-user").value = s.smtp_user || "";
+      document.getElementById("smtp-pass").value = "";
+      document.getElementById("smtp-pass").placeholder = s.smtp_pass_set === "true" ? "Kayıtlı (değiştirmek için yazın)" : "SMTP şifre";
+      document.getElementById("smtp-from").value = s.smtp_from || "";
+      document.getElementById("smtp-tls").checked = s.smtp_tls !== "false";
+
       document.getElementById("set-night-start").value = s.night_start || "22:00";
       document.getElementById("set-night-end").value = s.night_end || "08:00";
       document.getElementById("set-escalation").value = s.escalation_minutes || "15";
-      document.getElementById("set-mute-night").checked = s.mute_general_at_night === "true";
-      document.getElementById("set-group-critical").checked = s.notify_group_on_critical === "true";
       document.getElementById("set-email").checked = s.notify_oncall_email === "true";
       document.getElementById("set-tg-dm").checked = s.notify_oncall_telegram === "true";
     }
 
-    async function saveSettings(e) {
+    async function saveGroupSettings(e) {
       e.preventDefault();
       try {
         await api("/api/settings", {
           method: "PUT",
           body: JSON.stringify({
-            report_interval_hours: document.getElementById("set-interval").value,
-            night_start: document.getElementById("set-night-start").value,
-            night_end: document.getElementById("set-night-end").value,
-            escalation_minutes: document.getElementById("set-escalation").value,
-            mute_general_at_night: String(document.getElementById("set-mute-night").checked),
-            notify_group_on_critical: String(document.getElementById("set-group-critical").checked),
-            notify_oncall_email: String(document.getElementById("set-email").checked),
-            notify_oncall_telegram: String(document.getElementById("set-tg-dm").checked)
+            telegram_group_enabled: String(document.getElementById("grp-enabled").checked),
+            telegram_group_chat_id: document.getElementById("grp-chat-id").value.trim(),
+            report_interval_hours: document.getElementById("grp-interval").value,
+            node_alerts_enabled: String(document.getElementById("grp-node-alerts").checked),
+            mute_general_at_night: String(document.getElementById("grp-mute-night").checked),
+            notify_group_on_critical: String(document.getElementById("grp-critical").checked)
           })
         });
-        toast("Ayarlar kaydedildi");
+        toast("Genel Telegram Grubu ayarları kaydedildi");
         await loadAll();
       } catch (err) { toast(err.message, true); }
     }
 
-    async function sendTest() {
+    async function saveSmtpSettings(e) {
+      e.preventDefault();
       try {
-        await api("/api/test-notify", {
-          method: "POST",
+        const payload = {
+          smtp_host: document.getElementById("smtp-host").value.trim(),
+          smtp_port: document.getElementById("smtp-port").value.trim() || "587",
+          smtp_user: document.getElementById("smtp-user").value.trim(),
+          smtp_from: document.getElementById("smtp-from").value.trim(),
+          smtp_tls: String(document.getElementById("smtp-tls").checked)
+        };
+        const pass = document.getElementById("smtp-pass").value;
+        if (pass) payload.smtp_pass = pass;
+        await api("/api/settings", { method: "PUT", body: JSON.stringify(payload) });
+        toast("SMTP ayarları kaydedildi");
+        await loadAll();
+      } catch (err) { toast(err.message, true); }
+    }
+
+    async function saveOncallSettings(e) {
+      e.preventDefault();
+      try {
+        await api("/api/settings", {
+          method: "PUT",
           body: JSON.stringify({
-            channel: document.getElementById("test-channel").value,
-            user_id: Number(document.getElementById("test-user").value) || null
+            night_start: document.getElementById("set-night-start").value,
+            night_end: document.getElementById("set-night-end").value,
+            escalation_minutes: document.getElementById("set-escalation").value,
+            notify_oncall_email: String(document.getElementById("set-email").checked),
+            notify_oncall_telegram: String(document.getElementById("set-tg-dm").checked)
           })
         });
-        toast("Test bildirimi gönderildi");
+        toast("Nöbet ayarları kaydedildi");
+        await loadAll();
+      } catch (err) { toast(err.message, true); }
+    }
+
+    async function sendGroupTest() {
+      try {
+        await api("/api/test-notify", { method: "POST", body: JSON.stringify({ channel: "telegram_group" }) });
+        toast("Gruba test mesajı gönderildi");
+      } catch (err) { toast(err.message, true); }
+    }
+
+    async function sendEmailTest() {
+      const addr = document.getElementById("test-email-addr").value.trim();
+      if (!addr) { toast("Test e-posta adresi girin", true); return; }
+      try {
+        await api("/api/test-notify", { method: "POST", body: JSON.stringify({ channel: "email", email_override: addr }) });
+        toast("Test e-postası gönderildi");
       } catch (err) { toast(err.message, true); }
     }
 
@@ -492,6 +645,8 @@
       document.getElementById("u-email").value = u ? u.email : "";
       document.getElementById("u-tg").value = u ? u.telegram_chat_id : "";
       document.getElementById("u-color").value = u ? u.color : "#38bdf8";
+      document.getElementById("u-notify-email").checked = u ? !!u.notify_email : true;
+      document.getElementById("u-notify-tg").checked = u ? !!u.notify_telegram : true;
       document.getElementById("user-modal").classList.remove("hidden");
     }
     function closeUserModal() { document.getElementById("user-modal").classList.add("hidden"); }
@@ -499,12 +654,15 @@
     async function saveUser(e) {
       e.preventDefault();
       const id = document.getElementById("u-id").value;
+      const existing = id ? state.users.find(x => x.id === Number(id)) : null;
       const body = {
         name: document.getElementById("u-name").value,
         email: document.getElementById("u-email").value,
         telegram_chat_id: document.getElementById("u-tg").value,
         color: document.getElementById("u-color").value,
-        active: true
+        notify_email: document.getElementById("u-notify-email").checked,
+        notify_telegram: document.getElementById("u-notify-tg").checked,
+        active: existing ? !!existing.active : true
       };
       try {
         await api(id ? `/api/users/${id}` : "/api/users", { method: id ? "PUT" : "POST", body: JSON.stringify(body) });
@@ -529,14 +687,14 @@
             <div class="font-medium">#${i.id} · ${i.summary} <span class="ml-1 px-1.5 py-0.5 rounded bg-slate-800">${i.status}</span></div>
             <div class="text-slate-400">Nöbetçi: ${i.assigned_name || "-"} · ${i.created_at.slice(0, 16).replace("T", " ")}</div>
           </div>
-          ${i.status === "open" ? `<button onclick="ackIncident(${i.id})" class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white">Ack</button>` : ""}
+          ${i.status === "open" ? `<button onclick="ackIncident(${i.id})" class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white">Üstlen</button>` : ""}
         </div>
       `).join("") : `<div class="text-slate-500">Kayıtlı olay yok.</div>`;
 
       document.getElementById("logs-list").innerHTML = logs.length ? logs.map(l => `
         <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5">
           <div class="flex justify-between">
-            <span class="font-medium">${l.success ? "✅" : "❌"} [${l.channel}] ${l.recipient}</span>
+            <span class="font-medium ${l.success ? "text-emerald-400" : "text-rose-400"}">[${l.success ? "OK" : "HATA"}] [${l.channel}] ${l.recipient}</span>
             <span class="text-slate-500">${l.created_at.slice(0, 16).replace("T", " ")}</span>
           </div>
           ${l.error ? `<div class="text-rose-400 mt-1">${l.error}</div>` : ""}

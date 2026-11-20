@@ -221,7 +221,8 @@ class BotRunner:
             self.telegram.send(chat_id, "", f"✅ {count} açık olay üzerine alındı (Ack)." if count else "Açık olay yok.")
             return
 
-        if chat_id != self.settings.telegram_chat_id:
+        group_id = (self.app_settings.get_all().get("telegram_group_chat_id") or self.settings.telegram_chat_id).strip()
+        if chat_id != group_id:
             return
 
         try:

@@ -14,10 +14,18 @@ class UserCreate(BaseModel):
     email: str = Field(min_length=3, max_length=120)
     telegram_chat_id: str = ""
     color: str = "#3b82f6"
+    notify_email: bool = True
+    notify_telegram: bool = True
 
 
 class UserUpdate(UserCreate):
     active: bool = True
+
+
+class UserTogglesUpdate(BaseModel):
+    active: bool | None = None
+    notify_email: bool | None = None
+    notify_telegram: bool | None = None
 
 
 class DayScheduleUpdate(BaseModel):
@@ -39,19 +47,29 @@ class OverrideRequest(BaseModel):
 
 
 class SettingsUpdate(BaseModel):
-    report_interval_hours: str
-    night_start: str = Field(pattern=r"^\d{2}:\d{2}$")
-    night_end: str = Field(pattern=r"^\d{2}:\d{2}$")
-    mute_general_at_night: str
-    notify_group_on_critical: str
-    notify_oncall_email: str
-    notify_oncall_telegram: str
-    escalation_minutes: str
+    report_interval_hours: str | None = None
+    night_start: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    night_end: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    mute_general_at_night: str | None = None
+    notify_group_on_critical: str | None = None
+    notify_oncall_email: str | None = None
+    notify_oncall_telegram: str | None = None
+    escalation_minutes: str | None = None
+    telegram_group_enabled: str | None = None
+    telegram_group_chat_id: str | None = None
+    node_alerts_enabled: str | None = None
+    smtp_host: str | None = None
+    smtp_port: str | None = None
+    smtp_user: str | None = None
+    smtp_pass: str | None = None
+    smtp_from: str | None = None
+    smtp_tls: str | None = None
 
 
 class TestNotifyRequest(BaseModel):
     user_id: int | None = None
     channel: str = Field(pattern="^(email|telegram_dm|telegram_group)$")
+    email_override: str = ""
 
 
 def create_router() -> APIRouter:
@@ -88,6 +106,8 @@ def create_router() -> APIRouter:
                 email=payload.email,
                 telegram_chat_id=payload.telegram_chat_id,
                 color=payload.color,
+                notify_email=payload.notify_email,
+                notify_telegram=payload.notify_telegram,
             )
         except Exception as exc:
             raise HTTPException(status_code=400, detail=f"Kullanıcı eklenemedi: {exc}") from exc
@@ -101,6 +121,20 @@ def create_router() -> APIRouter:
             telegram_chat_id=payload.telegram_chat_id,
             color=payload.color,
             active=payload.active,
+            notify_email=payload.notify_email,
+            notify_telegram=payload.notify_telegram,
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        return updated
+
+    @router.patch("/api/users/{user_id}/toggles")
+    def toggle_user(user_id: int, payload: UserTogglesUpdate, request: Request) -> dict:
+        updated = request.app.state.container.users.set_toggles(
+            user_id=user_id,
+            active=payload.active,
+            notify_email=payload.notify_email,
+            notify_telegram=payload.notify_telegram,
         )
         if not updated:
             raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
@@ -144,11 +178,19 @@ def create_router() -> APIRouter:
 
     @router.get("/api/settings")
     def get_settings(request: Request) -> dict:
-        return request.app.state.container.app_settings.get_all()
+        cfg = dict(request.app.state.container.app_settings.get_all())
+        has_pass = bool(cfg.get("smtp_pass") or request.app.state.container.settings.smtp_pass)
+        cfg["smtp_pass"] = ""
+        cfg["smtp_pass_set"] = "true" if has_pass else "false"
+        return cfg
 
     @router.put("/api/settings")
     def update_settings(payload: SettingsUpdate, request: Request) -> dict:
-        return request.app.state.container.app_settings.update_many(payload.model_dump())
+        updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+        if updates.get("smtp_pass") in {"", "__UNCHANGED__"}:
+            updates.pop("smtp_pass", None)
+        request.app.state.container.app_settings.update_many(updates)
+        return get_settings(request)
 
     @router.get("/api/incidents")
     def list_incidents(request: Request) -> list[dict]:
@@ -167,7 +209,9 @@ def create_router() -> APIRouter:
 
     @router.post("/api/test-notify")
     def test_notify(payload: TestNotifyRequest, request: Request) -> dict:
-        ok, err = request.app.state.container.oncall.send_test_notification(payload.user_id, payload.channel)
+        ok, err = request.app.state.container.oncall.send_test_notification(
+            payload.user_id, payload.channel, payload.email_override
+        )
         if not ok:
             raise HTTPException(status_code=400, detail=err)
         return {"sent": True}

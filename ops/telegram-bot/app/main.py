@@ -57,7 +57,7 @@ def build_container(settings: Settings | None = None, start_runner: bool = True)
     k8s = K8sClient()
     reporter = ClusterReporter(k8s, cfg.gamegaraj_namespace, cfg.argocd_namespace, cfg.tz)
     telegram = TelegramNotifier(cfg.read_bot_token())
-    email = EmailNotifier(cfg)
+    email = EmailNotifier(cfg, app_settings)
     oncall = OnCallService(cfg, users, schedule, app_settings, incidents, logs, telegram, email)
     runner = BotRunner(cfg, k8s, reporter, app_settings, incidents, oncall, telegram)
     if start_runner:
