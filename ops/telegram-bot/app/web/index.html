@@ -369,7 +369,6 @@
                   İlgilenen: <span class="font-medium">${whoTxt}</span> · Başlangıç: ${inc.created_at.slice(0, 16).replace("T", " ")} UTC${inc.escalated && !isAcked ? " · Eskalasyon süresi doldu, yedek nöbetçi ve gruba bildirildi" : ""}
                 </div>
               </div>
-              ${!isAcked ? `<button onclick="ackIncident(${inc.id})" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shrink-0">Üstlen (Ack)</button>` : ""}
             </div>`;
         }).join("");
       } else {
@@ -780,7 +779,6 @@
             <div class="font-medium">#${i.id} · ${i.summary} <span class="ml-1 px-1.5 py-0.5 rounded bg-slate-800">${i.status}</span></div>
             <div class="text-slate-400">Nöbetçi: ${i.assigned_name || "-"} · ${i.created_at.slice(0, 16).replace("T", " ")}</div>
           </div>
-          ${i.status === "open" ? `<button onclick="ackIncident(${i.id})" class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white">Üstlen</button>` : ""}
         </div>
       `).join("") : `<div class="text-slate-500">Kayıtlı olay yok.</div>`;
 
