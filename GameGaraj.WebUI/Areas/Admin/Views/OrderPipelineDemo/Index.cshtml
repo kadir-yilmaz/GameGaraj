@@ -5,16 +5,11 @@
 }
 
 <div class="container-fluid px-2 px-md-4 py-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary border-opacity-25 gap-2">
-        <div>
-            <h2 class="h4 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
-                <i class="fa-solid fa-diagram-project text-primary"></i>
-                <span>Sipariş Pipeline &amp; Chaos Senaryoları</span>
-            </h2>
-            <p class="text-muted mb-0 small">
-                Test etmek istediğiniz senaryoyu seçin. Her senaryoda amacını, beklenen DB davranışını ve canlı akışı inceleyebilirsiniz.
-            </p>
-        </div>
+    <div class="mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+        <h2 class="h4 fw-bold text-dark mb-1">Sipariş Pipeline &amp; Chaos Senaryoları</h2>
+        <p class="text-muted mb-0 small">
+            Test etmek istediğiniz senaryoyu seçin. Her senaryoda amacını, beklenen DB davranışını ve canlı akışı inceleyebilirsiniz.
+        </p>
     </div>
 
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
@@ -24,15 +19,13 @@
                 <a asp-area="Admin" asp-controller="OrderPipelineDemo" asp-action="Scenario" asp-route-key="@item.Key"
                    class="card h-100 text-decoration-none border border-secondary border-opacity-25 shadow-sm rounded-3 scenario-card bg-white">
                     <div class="card-body p-4 d-flex flex-column">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="mb-3">
                             <span class="badge @item.BadgeClass px-2 py-1 small fw-semibold">@item.Category</span>
-                            <i class="fa-solid @item.Icon text-muted fs-5"></i>
                         </div>
                         <h5 class="fw-bold text-dark mb-2">@item.Title</h5>
                         <p class="text-muted small mb-4 flex-grow-1">@item.Summary</p>
-                        <div class="d-flex align-items-center justify-content-between pt-2 border-top border-secondary border-opacity-10">
-                            <span class="text-primary small fw-semibold">Senaryoyu Aç</span>
-                            <i class="fa-solid fa-arrow-right text-primary small"></i>
+                        <div class="pt-2 border-top border-secondary border-opacity-10">
+                            <span class="text-primary small fw-semibold">Senaryoyu Aç &rarr;</span>
                         </div>
                     </div>
                 </a>

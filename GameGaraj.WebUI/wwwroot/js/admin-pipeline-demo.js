@@ -414,6 +414,7 @@ async function stepPipeline() {
 
             if (step.key === 'order_create' && result.payload && result.payload.orderId) {
                 testOrderData.orderId = result.payload.orderId;
+                setTimeout(() => refreshDbSnapshot(true, false), 900);
             }
 
             currentStep++;
@@ -469,9 +470,11 @@ async function startFullPipeline() {
     logMessage('Pipeline', `Otomatik akış başlatıldı: ${testOrderData.productName}`, 'info');
 
     while (currentStep < steps.length) {
+        const executedKey = steps[currentStep].key;
         const success = await stepPipeline();
         if (!success) break;
-        await new Promise(r => setTimeout(r, 700));
+        const delayMs = executedKey === 'order_create' ? 1300 : 700;
+        await new Promise(r => setTimeout(r, delayMs));
     }
 
     isRunning = false;

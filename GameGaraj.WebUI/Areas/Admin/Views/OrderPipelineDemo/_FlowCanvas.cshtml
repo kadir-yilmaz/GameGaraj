@@ -1,16 +1,13 @@
 <div class="card bg-white border border-secondary border-opacity-25 shadow-sm rounded-3 mb-3 overflow-hidden">
     <div class="card-header bg-light border-bottom border-secondary border-opacity-25 py-2 px-3 d-flex justify-content-between align-items-center">
-        <span class="fw-bold text-dark small d-flex align-items-center gap-2">
-            <i class="fa-solid fa-wave-square text-primary"></i>
-            <span>Boru Hattı Akışı</span>
-        </span>
+        <span class="fw-bold text-dark small">Boru Hattı Akışı</span>
         <div id="pipeline-status-text" class="badge bg-secondary px-3 py-1">Beklemede</div>
     </div>
-    <div class="card-body p-4 bg-dark bg-opacity-95 position-relative" style="min-height: 220px;">
+    <div class="card-body p-4 bg-dark bg-opacity-95 position-relative" style="min-height: 210px;">
         <div class="pipeline-flow-deck d-flex flex-wrap align-items-center justify-content-between position-relative py-2">
             <div class="pipeline-node text-center" id="node-webui">
-                <div class="node-icon bg-primary text-white shadow"><i class="fa-solid fa-cart-shopping"></i></div>
-                <div class="node-title text-light mt-2 small fw-bold">1. WebUI</div>
+                <div class="node-icon bg-primary text-white shadow fw-bold">1</div>
+                <div class="node-title text-light mt-2 small fw-bold">WebUI</div>
                 <div class="node-sub text-secondary extra-small">Test Sepeti</div>
                 <div class="node-badge mt-1"><span class="badge bg-secondary">Hazır</span></div>
             </div>
@@ -20,8 +17,8 @@
             </div>
 
             <div class="pipeline-node text-center" id="node-catalog">
-                <div class="node-icon bg-dark border border-secondary text-info shadow"><i class="fa-solid fa-cubes-stacked"></i></div>
-                <div class="node-title text-light mt-2 small fw-bold">2. Catalog.API</div>
+                <div class="node-icon bg-dark border border-secondary text-secondary shadow fw-bold">2</div>
+                <div class="node-title text-light mt-2 small fw-bold">Catalog.API</div>
                 <div class="node-sub text-secondary extra-small">Stok Rezerve</div>
                 <div class="node-badge mt-1"><span class="badge bg-secondary">Bekliyor</span></div>
             </div>
@@ -31,8 +28,8 @@
             </div>
 
             <div class="pipeline-node text-center" id="node-order">
-                <div class="node-icon bg-dark border border-secondary text-warning shadow"><i class="fa-solid fa-file-invoice"></i></div>
-                <div class="node-title text-light mt-2 small fw-bold">3. Order.API</div>
+                <div class="node-icon bg-dark border border-secondary text-secondary shadow fw-bold">3</div>
+                <div class="node-title text-light mt-2 small fw-bold">Order.API</div>
                 <div class="node-sub text-secondary extra-small">DB + Outbox</div>
                 <div class="node-badge mt-1"><span class="badge bg-secondary">Bekliyor</span></div>
             </div>
@@ -42,8 +39,8 @@
             </div>
 
             <div class="pipeline-node text-center" id="node-payment">
-                <div class="node-icon bg-dark border border-secondary text-success shadow"><i class="fa-solid fa-credit-card"></i></div>
-                <div class="node-title text-light mt-2 small fw-bold">4. Payment.API</div>
+                <div class="node-icon bg-dark border border-secondary text-secondary shadow fw-bold">4</div>
+                <div class="node-title text-light mt-2 small fw-bold">Payment.API</div>
                 <div class="node-sub text-secondary extra-small">İyzico Gateway</div>
                 <div class="node-badge mt-1"><span class="badge bg-secondary">Bekliyor</span></div>
             </div>
@@ -53,8 +50,8 @@
             </div>
 
             <div class="pipeline-node text-center" id="node-rabbitmq">
-                <div class="node-icon bg-dark border border-warning text-warning shadow"><i class="fa-solid fa-arrows-split-up-and-left"></i></div>
-                <div class="node-title text-light mt-2 small fw-bold">5. RabbitMQ</div>
+                <div class="node-icon bg-dark border border-secondary text-secondary shadow fw-bold">5</div>
+                <div class="node-title text-light mt-2 small fw-bold">RabbitMQ</div>
                 <div class="node-sub text-secondary extra-small">MassTransit</div>
                 <div class="node-badge mt-1"><span class="badge bg-secondary">Bekliyor</span></div>
             </div>
@@ -64,8 +61,8 @@
             </div>
 
             <div class="pipeline-node text-center" id="node-downstream">
-                <div class="node-icon bg-dark border border-success text-success shadow"><i class="fa-solid fa-check-double"></i></div>
-                <div class="node-title text-light mt-2 small fw-bold">6. Tamamlandı</div>
+                <div class="node-icon bg-dark border border-secondary text-secondary shadow fw-bold">6</div>
+                <div class="node-title text-light mt-2 small fw-bold">Tamamlandı</div>
                 <div class="node-sub text-secondary extra-small">Stok/Fatura/Mail</div>
                 <div class="node-badge mt-1"><span class="badge bg-secondary">Bekliyor</span></div>
             </div>
