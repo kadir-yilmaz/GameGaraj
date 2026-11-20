@@ -177,7 +177,7 @@ services:
   # Payment API (Iyzico)
   # ---------------------------------------------------------------------------
   payment-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/payment-api:8c8d3fe-163-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/payment-api:ce6ed55-166-1"
     replicas: 3
     env:
       Iyzipay__BaseUrl: "https://sandbox-api.iyzipay.com"
@@ -189,7 +189,7 @@ services:
   # Invoice API (PDF & MinIO)
   # ---------------------------------------------------------------------------
   invoice-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/invoice-api:8c8d3fe-163-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/invoice-api:ce6ed55-166-1"
     replicas: 3
     env:
       IdentityOption__Audience: "invoice.api"
@@ -249,7 +249,7 @@ services:
   # WebUI (MVC — routes through Gateway internally)
   # ---------------------------------------------------------------------------
   webui:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:2aec726-165-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:ce6ed55-166-1"
     serviceType: NodePort
     nodePort: 30075
     replicas: 3
@@ -262,7 +262,7 @@ services:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
-      APP_VERSION: "2aec726-165-1"
+      APP_VERSION: "ce6ed55-166-1"
       ObservabilitySettings__ElasticSearchUri: "http://192.168.1.56:9201"
       ObservabilitySettings__Services__Gateway: "http://gateway:8080"
       ObservabilitySettings__Services__CatalogAPI: "http://catalog-api:8080"
