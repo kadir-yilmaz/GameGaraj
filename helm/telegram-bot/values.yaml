@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/kadir-yilmaz/gamegaraj/telegram-bot
-  tag: "latest"
+  tag: "89956f1-1"
   pullPolicy: IfNotPresent
 
 replicaCount: 1
