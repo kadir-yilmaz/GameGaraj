@@ -1,0 +1,48 @@
+name: Telegram Bot Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ops/telegram-bot/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-update:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+
+      - name: Build and Push Image
+        id: meta
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${GITHUB_SHA::7}"
+          TAG="${SHORT_SHA}-${GITHUB_RUN_NUMBER}"
+          REPO="ghcr.io/${GITHUB_REPOSITORY,,}/telegram-bot"
+          docker build -t "${REPO}:${TAG}" -t "${REPO}:latest" ops/telegram-bot
+          docker push "${REPO}:${TAG}"
+          docker push "${REPO}:latest"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Update Helm Tag
+        run: |
+          set -euo pipefail
+          sed -i -E "s|^  tag: \".*\"|  tag: \"${{ steps.meta.outputs.tag }}\"|" helm/telegram-bot/values.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm/telegram-bot/values.yaml
+          if ! git diff --cached --quiet; then
+            git commit -m "ci(telegram-bot): update image tag to ${{ steps.meta.outputs.tag }} [skip ci]"
+            git push
+          fi

@@ -1,9 +1,19 @@
 image:
-  repository: python
-  tag: "3.12-alpine"
+  repository: ghcr.io/kadir-yilmaz/gamegaraj/telegram-bot
+  tag: "latest"
   pullPolicy: IfNotPresent
 
 replicaCount: 1
+
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30500
+
+persistence:
+  enabled: true
+  storageClassName: local-path
+  size: 1Gi
 
 telegram:
   chatId: "8628590221"
@@ -13,17 +23,27 @@ telegram:
 gamegarajNamespace: gamegaraj
 argocdNamespace: argocd
 
-# Her saat basi sadece node saglik raporu
+# Ilk kurulum varsayilanlari (Web UI'dan degistirilenler PVC/SQLite'ta saklanir)
 report:
-  hourly: true
+  intervalHours: 6
   tzOffsetHours: 3   # Europe/Istanbul (UTC+3)
+
+oncall:
+  nightStart: "22:00"
+  nightEnd: "08:00"
+
+smtp:
+  existingSecret: ""
+
+webAuth:
+  existingSecret: ""
 
 # Node cokme / acilma bildirimi
 nodeWatch:
-  intervalSeconds: 30   # kontrol araligi
-  debounceChecks: 2     # durum degisikligi kac ardisik kontrolde dogrulanacak (sahte alarm onler)
-  autoOutOfService: true        # kapali/ulasilamaz worker'larda Terminating pod temizligi
-  outOfServiceAfterSeconds: 90  # NotReady/Unknown olduktan kac sn sonra out-of-service taint eklensin
+  intervalSeconds: 30
+  debounceChecks: 2
+  autoOutOfService: true
+  outOfServiceAfterSeconds: 90
 
 nodeSelector:
   kubernetes.io/hostname: kadirserver
@@ -35,8 +55,8 @@ tolerations:
 
 resources:
   requests:
-    cpu: 20m
-    memory: 64Mi
+    cpu: 30m
+    memory: 96Mi
   limits:
-    cpu: 200m
-    memory: 128Mi
+    cpu: 300m
+    memory: 256Mi

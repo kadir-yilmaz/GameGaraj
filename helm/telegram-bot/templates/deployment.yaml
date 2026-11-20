@@ -6,6 +6,8 @@ metadata:
     {{- include "telegram-bot.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "telegram-bot.name" . }}
@@ -13,8 +15,6 @@ spec:
     metadata:
       labels:
         {{- include "telegram-bot.labels" . | nindent 8 }}
-      annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ include "telegram-bot.name" . }}
       {{- with .Values.nodeSelector }}
@@ -29,7 +29,21 @@ spec:
         - name: bot
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["python", "/app/bot.py"]
+          ports:
+            - name: http
+              containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
           env:
             - name: TELEGRAM_CHAT_ID
               value: {{ .Values.telegram.chatId | quote }}
@@ -41,8 +55,12 @@ spec:
               value: {{ .Values.argocdNamespace | quote }}
             - name: TZ_OFFSET_HOURS
               value: {{ .Values.report.tzOffsetHours | quote }}
-            - name: HOURLY_REPORT
-              value: {{ .Values.report.hourly | quote }}
+            - name: DEFAULT_REPORT_INTERVAL_HOURS
+              value: {{ .Values.report.intervalHours | quote }}
+            - name: DEFAULT_NIGHT_START
+              value: {{ .Values.oncall.nightStart | quote }}
+            - name: DEFAULT_NIGHT_END
+              value: {{ .Values.oncall.nightEnd | quote }}
             - name: NODE_CHECK_INTERVAL
               value: {{ .Values.nodeWatch.intervalSeconds | quote }}
             - name: NODE_DEBOUNCE_CHECKS
@@ -51,24 +69,40 @@ spec:
               value: {{ .Values.nodeWatch.autoOutOfService | quote }}
             - name: OUT_OF_SERVICE_AFTER_SECONDS
               value: {{ .Values.nodeWatch.outOfServiceAfterSeconds | quote }}
+            - name: DB_PATH
+              value: /data/bot.db
             - name: PYTHONUNBUFFERED
               value: "1"
+          {{- if or .Values.smtp.existingSecret .Values.webAuth.existingSecret }}
+          envFrom:
+            {{- if .Values.smtp.existingSecret }}
+            - secretRef:
+                name: {{ .Values.smtp.existingSecret }}
+            {{- end }}
+            {{- if .Values.webAuth.existingSecret }}
+            - secretRef:
+                name: {{ .Values.webAuth.existingSecret }}
+            {{- end }}
+          {{- end }}
           volumeMounts:
-            - name: bot
-              mountPath: /app
-              readOnly: true
             - name: telegram
               mountPath: /telegram
               readOnly: true
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /data
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
-        - name: bot
-          configMap:
-            name: {{ include "telegram-bot.name" . }}
         - name: telegram
           secret:
             secretName: {{ .Values.telegram.existingSecret }}
             items:
               - key: {{ .Values.telegram.existingSecretKey }}
                 path: token
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "telegram-bot.name" . }}-data
+        {{- end }}
