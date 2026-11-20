@@ -94,6 +94,7 @@ def create_router() -> APIRouter:
         return {
             "cluster": c.reporter.cluster_snapshot(),
             "oncall": c.oncall.get_active_oncall(),
+            "active_incidents": c.incidents.list_active(),
             "next_report_seconds": c.runner.next_report_seconds(),
             "smtp_configured": c.email.is_configured(),
             "telegram_configured": c.telegram.is_configured(),

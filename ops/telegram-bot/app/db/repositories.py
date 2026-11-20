@@ -255,13 +255,26 @@ class IncidentRepository:
         with self.db.session() as conn:
             rows = conn.execute(
                 """
-                SELECT i.*, u.name AS assigned_name
+                SELECT i.*, u.name AS assigned_name, u.email AS assigned_email
                 FROM incidents i
                 LEFT JOIN users u ON u.id = i.assigned_user_id
                 ORDER BY i.id DESC
                 LIMIT ?
                 """,
                 (limit,),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def list_active(self) -> list[dict]:
+        with self.db.session() as conn:
+            rows = conn.execute(
+                """
+                SELECT i.*, u.name AS assigned_name, u.email AS assigned_email
+                FROM incidents i
+                LEFT JOIN users u ON u.id = i.assigned_user_id
+                WHERE i.status IN ('open', 'acked')
+                ORDER BY i.id DESC
+                """
             ).fetchall()
             return [dict(r) for r in rows]
 
