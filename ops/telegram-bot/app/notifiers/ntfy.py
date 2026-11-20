@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import urllib.parse
+import json
 import urllib.request
 
 from app.db.repositories import SettingsRepository
 
 
 class NtfyNotifier:
-    """Sends urgent (priority=5) mobile alarm notifications via ntfy."""
+    """Sends mobile notifications via ntfy JSON API (full UTF-8 Turkish support)."""
 
     channel = "ntfy"
 
@@ -21,22 +21,30 @@ class NtfyNotifier:
     def is_configured(self) -> bool:
         return bool(self._server_url())
 
-    def send(self, recipient: str, subject: str, body: str) -> tuple[bool, str]:
+    def send(
+        self,
+        recipient: str,
+        subject: str,
+        body: str,
+        priority: int = 5,
+        tags: list[str] | None = None,
+    ) -> tuple[bool, str]:
         topic = (recipient or "").strip().lstrip("/")
         if not topic:
             return False, "Kullanıcının ntfy topic alanı boş"
-        url = f"{self._server_url()}/{urllib.parse.quote(topic)}"
-        title = (subject or "GameGaraj Kritik Alarm").encode("ascii", errors="ignore").decode("ascii") or "GameGaraj Alarm"
+
+        payload = {
+            "topic": topic,
+            "title": (subject or "GameGaraj Bildirimi")[:150],
+            "message": body.strip(),
+            "priority": priority,
+            "tags": tags or (["rotating_light"] if priority >= 5 else ["white_check_mark"]),
+        }
         req = urllib.request.Request(
-            url,
-            data=body.encode("utf-8"),
+            self._server_url(),
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
             method="POST",
-            headers={
-                "Title": title,
-                "Priority": "urgent",
-                "Tags": "rotating_light",
-                "Content-Type": "text/plain; charset=utf-8",
-            },
+            headers={"Content-Type": "application/json; charset=utf-8"},
         )
         try:
             with urllib.request.urlopen(req, timeout=15):

@@ -91,13 +91,22 @@ class OnCallService:
             "backup": backup,
         }
 
-    def _send_and_log(self, level: str, channel: str, recipient: str, subject: str, body: str) -> tuple[bool, str]:
+    def _send_and_log(
+        self,
+        level: str,
+        channel: str,
+        recipient: str,
+        subject: str,
+        body: str,
+        priority: int = 5,
+        tags: list[str] | None = None,
+    ) -> tuple[bool, str]:
         if channel == "email":
             ok, err = self.email.send(recipient, subject, body)
         elif channel == "telegram":
             ok, err = self.telegram.send(recipient, subject, body)
         elif channel == "ntfy":
-            ok, err = self.ntfy.send(recipient, subject, body)
+            ok, err = self.ntfy.send(recipient, subject, body, priority=priority, tags=tags)
         else:
             ok, err = False, f"Bilinmeyen kanal: {channel}"
         self.logs.add(level=level, channel=channel, recipient=recipient, message=f"{subject}\n{body}".strip(), success=ok, error=err)
@@ -113,8 +122,17 @@ class OnCallService:
             self._send_and_log(level, "email", user["email"], subject, body)
         if cfg.get("notify_oncall_telegram", "true") == "true" and user.get("notify_telegram", 1) and user.get("telegram_chat_id"):
             self._send_and_log(level, "telegram", user["telegram_chat_id"], subject, body)
-        if level in {"critical", "escalation"} and cfg.get("notify_oncall_ntfy", "true") == "true" and user.get("notify_ntfy", 1) and user.get("ntfy_topic"):
-            self._send_and_log(level, "ntfy", user["ntfy_topic"], subject, body)
+        if cfg.get("notify_oncall_ntfy", "true") == "true" and user.get("notify_ntfy", 1) and user.get("ntfy_topic"):
+            is_urgent = level in {"critical", "escalation", "test"}
+            self._send_and_log(
+                level,
+                "ntfy",
+                user["ntfy_topic"],
+                subject,
+                body,
+                priority=5 if is_urgent else 3,
+                tags=["rotating_light"] if is_urgent else ["white_check_mark"],
+            )
 
     def dispatch_general_report(self, body: str) -> bool:
         cfg = self.app_settings.get_all()
