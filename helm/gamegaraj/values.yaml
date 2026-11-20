@@ -94,7 +94,7 @@ services:
   # Catalog API (PostgreSQL)
   # ---------------------------------------------------------------------------
   catalog-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/catalog-api:8c8d3fe-163-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/catalog-api:01f30ec-170-1"
     replicas: 3
     skipCommonRabbit: true
     env:
@@ -168,7 +168,7 @@ services:
   # Order API (SQL Server)
   # ---------------------------------------------------------------------------
   order-api:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/order-api:8c8d3fe-163-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/order-api:01f30ec-170-1"
     replicas: 3
     secretEnv:
       ConnectionStrings__DefaultConnection: order-sqlserver-connection
