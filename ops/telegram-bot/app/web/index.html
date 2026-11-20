@@ -310,6 +310,17 @@
     let state = { users: [], weekly: [], overrides: [], settings: {}, status: null, expandedUsers: new Set() };
     let dragPayload = null;
 
+    function fmtTime(iso) {
+      if (!iso) return "-";
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso.slice(0, 16).replace("T", " ");
+      return d.toLocaleString("tr-TR", {
+        timeZone: "Europe/Istanbul",
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      });
+    }
+
     function toast(msg, isErr = false) {
       const el = document.getElementById("toast");
       el.textContent = msg;
@@ -376,7 +387,7 @@
                   <span class="font-semibold text-base">Olay #${inc.id} · ${inc.summary}</span>
                 </div>
                 <div class="text-xs opacity-95">
-                  Görevli: <span class="font-medium">${primaryTxt}</span> · Yedek: <span class="font-medium">${backupTxt}</span> · Üstlendi mi: <span class="font-semibold">${ackTxt}</span> · Başlangıç: ${inc.created_at.slice(0, 16).replace("T", " ")} UTC${inc.escalated && !isAcked ? " · Eskalasyon yapıldı" : ""}
+                  Görevli: <span class="font-medium">${primaryTxt}</span> · Yedek: <span class="font-medium">${backupTxt}</span> · Üstlendi mi: <span class="font-semibold">${ackTxt}</span> · Başlangıç: ${fmtTime(inc.created_at)}${inc.escalated && !isAcked ? " · Eskalasyon yapıldı" : ""}
                 </div>
               </div>
             </div>`;
@@ -398,7 +409,7 @@
           <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
             <div class="min-w-0">
               <div class="font-medium truncate">Olay #${i.id} · ${i.summary}</div>
-              <div class="text-slate-400 truncate">Görevli: ${i.assigned_name || "-"} · Üstlenen: ${i.acked_by || "-"} · ${i.created_at.slice(0, 16).replace("T", " ")}</div>
+              <div class="text-slate-400 truncate">Görevli: ${i.assigned_name || "-"} · Üstlenen: ${i.acked_by || "-"} · ${fmtTime(i.created_at)}</div>
             </div>
             <span class="ml-2 shrink-0 px-2 py-0.5 rounded border text-[11px] font-medium ${st.cls}">${st.text}</span>
           </div>`;
@@ -805,7 +816,7 @@
         <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg p-2.5">
           <div>
             <div class="font-medium">#${i.id} · ${i.summary} <span class="ml-1 px-1.5 py-0.5 rounded bg-slate-800">${i.status}</span></div>
-            <div class="text-slate-400">Nöbetçi: ${i.assigned_name || "-"} · ${i.created_at.slice(0, 16).replace("T", " ")}</div>
+            <div class="text-slate-400">Nöbetçi: ${i.assigned_name || "-"} · ${fmtTime(i.created_at)}</div>
           </div>
         </div>
       `).join("") : `<div class="text-slate-500">Kayıtlı olay yok.</div>`;
@@ -814,7 +825,7 @@
         <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5">
           <div class="flex justify-between">
             <span class="font-medium ${l.success ? "text-emerald-400" : "text-rose-400"}">[${l.success ? "OK" : "HATA"}] [${l.channel}] ${l.recipient}</span>
-            <span class="text-slate-500">${l.created_at.slice(0, 16).replace("T", " ")}</span>
+            <span class="text-slate-500">${fmtTime(l.created_at)}</span>
           </div>
           ${l.error ? `<div class="text-rose-400 mt-1">${l.error}</div>` : ""}
         </div>
