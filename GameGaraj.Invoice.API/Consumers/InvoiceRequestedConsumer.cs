@@ -88,7 +88,8 @@ namespace GameGaraj.Invoice.API.Consumers
                     Items = context.Message.Items.Select(x => new InvoiceItem
                     {
                         ProductName = x.ProductName,
-                        Price = x.Price
+                        Price = x.Price,
+                        ImageUrl = x.ImageUrl
                     }).ToList()
                 };
 
@@ -147,11 +148,23 @@ namespace GameGaraj.Invoice.API.Consumers
 
         private string GenerateInvoiceEmailBody(InvoiceData invoice, string relativePath)
         {
-            var itemsHtml = string.Join("", invoice.Items.Select(item => $@"
+            var itemsHtml = string.Join("", invoice.Items.Select(item =>
+            {
+                var encodedName = System.Net.WebUtility.HtmlEncode(item.ProductName);
+                var hasAbsoluteImage = !string.IsNullOrWhiteSpace(item.ImageUrl)
+                    && item.ImageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase);
+                var imageHtml = hasAbsoluteImage
+                    ? $@"<img src=""{System.Net.WebUtility.HtmlEncode(item.ImageUrl)}"" alt=""{encodedName}"" width=""48"" height=""48"" style=""width: 48px; height: 48px; object-fit: contain; border-radius: 4px; border: 1px solid #e0e0e0; background-color: #ffffff; vertical-align: middle; margin-right: 12px;"" />"
+                    : string.Empty;
+
+                return $@"
                 <tr>
-                    <td style=""padding: 12px; border-bottom: 1px solid #e0e0e0; color: #333;"">{item.ProductName}</td>
-                    <td style=""padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right; color: #333;"">{FormatTurkishLira(item.Price)}</td>
-                </tr>"));
+                    <td style=""padding: 12px; border-bottom: 1px solid #e0e0e0; color: #333; vertical-align: middle;"">
+                        {imageHtml}<span style=""vertical-align: middle;"">{encodedName}</span>
+                    </td>
+                    <td style=""padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right; color: #333; vertical-align: middle;"">{FormatTurkishLira(item.Price)}</td>
+                </tr>";
+            }));
 
             return $@"
 <!DOCTYPE html>

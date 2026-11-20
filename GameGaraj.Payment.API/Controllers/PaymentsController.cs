@@ -218,7 +218,8 @@ namespace GameGaraj.Payment.API.Controllers
                 Items = paymentDto.Items.Select(x => new InvoiceItemMessage
                 {
                     ProductName = x.ProductName,
-                    Price = x.Price
+                    Price = x.Price,
+                    ImageUrl = x.ImageUrl
                 }).ToList()
             };
 

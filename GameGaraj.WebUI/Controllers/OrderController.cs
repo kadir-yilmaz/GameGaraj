@@ -357,7 +357,8 @@ namespace GameGaraj.WebUI.Controllers
                     {
                         ProductId = x.ProductId,
                         ProductName = x.ProductName,
-                        Price = x.Price * x.Quantity
+                        Price = x.Price * x.Quantity,
+                        ImageUrl = x.ImageUrl
                     }).ToList()
                 };
 
@@ -681,6 +682,14 @@ namespace GameGaraj.WebUI.Controllers
                 if (string.IsNullOrWhiteSpace(r.Item.Brand) && !string.IsNullOrWhiteSpace(r.Product.Brand))
                 {
                     r.Item.Brand = r.Product.Brand;
+                    needsSave = true;
+                }
+
+                if ((string.IsNullOrWhiteSpace(r.Item.ImageUrl) || r.Item.ImageUrl == Models.Products.ProductViewModel.DefaultImageUrl)
+                    && !string.IsNullOrWhiteSpace(r.Product.FirstImageUrl)
+                    && r.Product.FirstImageUrl != Models.Products.ProductViewModel.DefaultImageUrl)
+                {
+                    r.Item.ImageUrl = r.Product.FirstImageUrl;
                     needsSave = true;
                 }
             }
