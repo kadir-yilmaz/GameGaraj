@@ -183,6 +183,9 @@ namespace GameGaraj.Order.Application.Handlers
                         Quantity = x.Quantity
                     }).ToList()
                 }, cancellationToken);
+
+                // MassTransit BusOutbox: OutboxMessage kaydını DB'ye yazmak için SaveChanges şart
+                await _context.SaveChangesAsync(cancellationToken);
             }
 
             using (var activity = AppDiagnostics.StartActivity("Record OrderCreated Metric"))

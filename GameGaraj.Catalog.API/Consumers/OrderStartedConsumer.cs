@@ -93,6 +93,7 @@ namespace GameGaraj.Catalog.API.Consumers
                     activity?.SetTag("saga.status", "Success");
                     _logger.LogInformation($"[OrderStartedConsumer] All items reserved for OrderId: {context.Message.OrderId}");
                     await _publishEndpoint.Publish(new StockReserved { OrderId = context.Message.OrderId });
+                    await _context.SaveChangesAsync();
                 }
                 else
                 {
@@ -153,6 +154,7 @@ namespace GameGaraj.Catalog.API.Consumers
                         OrderId = context.Message.OrderId,
                         Reason = failReason
                     });
+                    await _context.SaveChangesAsync();
                 }
             }
         }

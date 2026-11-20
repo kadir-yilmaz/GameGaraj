@@ -68,6 +68,7 @@ namespace GameGaraj.Order.Application.Consumers
                         Amount = order.TotalPaidAmount,
                         PurchaseDate = order.CreatedDate
                     });
+                    await _context.SaveChangesAsync();
                     Console.WriteLine($"[PaymentCompletedConsumer] 📤 CouponRewardTriggered event published for OrderId: {order.Id}, User: {order.BuyerId}, Amount: {order.TotalPaidAmount}");
                 }
                 catch (Exception ex)
