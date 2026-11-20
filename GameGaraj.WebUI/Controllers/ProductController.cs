@@ -58,7 +58,7 @@ namespace GameGaraj.WebUI.Controllers
 
             var categoryTask = _catalogService.GetCategoryByIdAsync(categoryId);
             var categoriesTask = _catalogService.GetAllCategoriesAsync();
-            var productsTask = _catalogService.GetAllProductsAsync(categoryId, sortBy, minFiyat, maxFiyat, specs, marka);
+            var productsTask = GetFilteredProductsFromSearchWithFallbackAsync(categoryId, sortBy, minFiyat, maxFiyat, specs, marka);
 
             await Task.WhenAll(categoryTask, categoriesTask, productsTask);
 
@@ -130,7 +130,7 @@ namespace GameGaraj.WebUI.Controllers
             }
             else
             {
-                var productsTask = _catalogService.GetAllProductsAsync(categoryId, sortBy, minFiyat, maxFiyat, specs, marka);
+                var productsTask = GetFilteredProductsFromSearchWithFallbackAsync(categoryId, sortBy, minFiyat, maxFiyat, specs, marka);
                 await Task.WhenAll(categoryTask, categoriesTask, productsTask);
                 products = productsTask.Result ?? new List<ProductViewModel>();
             }
@@ -159,15 +159,9 @@ namespace GameGaraj.WebUI.Controllers
             if (string.IsNullOrEmpty(productId))
                 return NotFound();
 
-            // Önce süper hızlı olan Elasticsearch'ten (Search API) okumayı deniyoruz
-            var product = await _searchService.GetProductByIdAsync(productId);
-            
-            // Eğer Elasticsearch çöktüyse, bağlanılamadıysa veya ürün henüz ES'ye senkronize olmadıysa (null döner)
-            if (product == null)
-            {
-                _logger.LogWarning($"[Fallback] Ürün (ID: {productId}) Elasticsearch'ten çekilemedi. Veritabanına (PostgreSQL) istek atılıyor...");
-                product = await _catalogService.GetProductByIdAsync(productId);
-            }
+            // PDP (Product Detail Page) reads from authoritative primary store (Catalog.API / PostgreSQL)
+            // for real-time stock & price consistency (Trendyol Split-Datastore PDP pattern)
+            var product = await _catalogService.GetProductByIdAsync(productId);
 
             if (product == null)
                 return NotFound();
@@ -369,9 +363,22 @@ namespace GameGaraj.WebUI.Controllers
             }
         }
 
+        private async Task<List<ProductViewModel>> GetFilteredProductsFromSearchWithFallbackAsync(
+            string? categoryId, string? sortBy, decimal? minPrice, decimal? maxPrice,
+            Dictionary<string, string[]>? specs, string? brand)
+        {
+            var products = await _searchService.GetFilteredProductsAsync(categoryId, sortBy, minPrice, maxPrice, specs, brand);
+            if (products != null && products.Count > 0)
+            {
+                return products;
+            }
+            return await _catalogService.GetAllProductsAsync(categoryId, sortBy, minPrice, maxPrice, specs, brand);
+        }
+
         private async Task<IActionResult> RedirectToProductDetail(string productId)
         {
-            var product = await _catalogService.GetProductByIdAsync(productId);
+            var product = await _searchService.GetProductByIdAsync(productId)
+                          ?? await _catalogService.GetProductByIdAsync(productId);
             if (product != null && !string.IsNullOrEmpty(product.Slug))
             {
                 return Redirect(SlugHelper.BuildProductUrl(product.Slug, product.Id));

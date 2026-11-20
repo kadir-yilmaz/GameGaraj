@@ -400,7 +400,10 @@ func (s *SearchService) ReindexFromCatalog(ctx context.Context, catalogURL strin
 		docs = append(docs, *doc)
 	}
 
+	// Trendyol-style bulk ingestion optimization: disable refresh & replicas, use async translog during bulk load
+	s.repo.PrepareIndexForBulk(ctx)
 	succeeded, bulkErr := s.repo.BulkIndex(ctx, docs)
+	s.repo.RestoreIndexAfterBulk(ctx)
 	var errors []string
 	if bulkErr != nil {
 		errors = append(errors, bulkErr.Error())

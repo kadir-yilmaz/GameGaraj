@@ -8,15 +8,18 @@ namespace GameGaraj.WebUI.Controllers
     {
         private readonly ICampaignService _campaignService;
         private readonly ICatalogService _catalogService;
+        private readonly ISearchService _searchService;
         private readonly ILogger<CampaignController> _logger;
 
         public CampaignController(
             ICampaignService campaignService, 
             ICatalogService catalogService,
+            ISearchService searchService,
             ILogger<CampaignController> logger)
         {
             _campaignService = campaignService;
             _catalogService = catalogService;
+            _searchService = searchService;
             _logger = logger;
         }
 
@@ -41,7 +44,8 @@ namespace GameGaraj.WebUI.Controllers
                 {
                     if (!string.IsNullOrEmpty(rule.ProductId) && !ruleProducts.ContainsKey(rule.ProductId))
                     {
-                        var product = await _catalogService.GetProductByIdAsync(rule.ProductId);
+                        var product = await _searchService.GetProductByIdAsync(rule.ProductId)
+                                      ?? await _catalogService.GetProductByIdAsync(rule.ProductId);
                         if (product != null)
                         {
                             ruleProducts[rule.ProductId] = product;
@@ -79,7 +83,8 @@ namespace GameGaraj.WebUI.Controllers
 
                 if (!string.IsNullOrEmpty(rule.ProductId))
                 {
-                    var product = await _catalogService.GetProductByIdAsync(rule.ProductId);
+                    var product = await _searchService.GetProductByIdAsync(rule.ProductId)
+                                  ?? await _catalogService.GetProductByIdAsync(rule.ProductId);
                     ViewBag.Product = product;
                 }
 

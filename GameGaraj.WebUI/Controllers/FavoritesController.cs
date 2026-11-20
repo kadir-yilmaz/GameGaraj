@@ -8,13 +8,15 @@ namespace GameGaraj.WebUI.Controllers
     {
         private readonly IFavoritesService _favoritesService;
         private readonly ICatalogService _catalogService;
+        private readonly ISearchService _searchService;
         private readonly IReviewService _reviewService;
         private readonly ILogger<FavoritesController> _logger;
 
-        public FavoritesController(IFavoritesService favoritesService, ICatalogService catalogService, IReviewService reviewService, ILogger<FavoritesController> logger)
+        public FavoritesController(IFavoritesService favoritesService, ICatalogService catalogService, ISearchService searchService, IReviewService reviewService, ILogger<FavoritesController> logger)
         {
             _favoritesService = favoritesService;
             _catalogService = catalogService;
+            _searchService = searchService;
             _reviewService = reviewService;
             _logger = logger;
         }
@@ -30,7 +32,11 @@ namespace GameGaraj.WebUI.Controllers
             }
 
             // Get all products and filter by favorite IDs
-            var allProducts = await _catalogService.GetAllProductsAsync(null, null, null, null, null);
+            var allProducts = await _searchService.GetFilteredProductsAsync();
+            if (allProducts == null || allProducts.Count == 0)
+            {
+                allProducts = await _catalogService.GetAllProductsAsync(null, null, null, null, null);
+            }
             var favoriteProducts = allProducts
                 .Where(p => favoriteIds.Contains(p.Id))
                 .ToList();

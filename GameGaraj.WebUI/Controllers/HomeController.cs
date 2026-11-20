@@ -9,6 +9,7 @@ namespace GameGaraj.WebUI.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly ICatalogService _catalogService;
+        private readonly ISearchService _searchService;
         private readonly IBasketService _basketService;
         private readonly IFavoritesService _favoritesService;
         private readonly ICampaignService _campaignService;
@@ -16,6 +17,7 @@ namespace GameGaraj.WebUI.Controllers
 
         public HomeController(ILogger<HomeController> logger, 
             ICatalogService catalogService, 
+            ISearchService searchService,
             IBasketService basketService, 
             IFavoritesService favoritesService,
             ICampaignService campaignService,
@@ -23,6 +25,7 @@ namespace GameGaraj.WebUI.Controllers
         {
             _logger = logger;
             _catalogService = catalogService;
+            _searchService = searchService;
             _basketService = basketService;
             _favoritesService = favoritesService;
             _campaignService = campaignService;
@@ -31,7 +34,7 @@ namespace GameGaraj.WebUI.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var featuredTask = _catalogService.GetFeaturedProductsAsync();
+            var featuredTask = GetFeaturedProductsFromSearchWithFallbackAsync();
             var categoriesTask = _catalogService.GetAllCategoriesAsync();
             var rulesTask = _campaignService.GetAllRulesAsync();
             var couponsTask = _campaignService.GetPublicCouponsAsync();
@@ -85,7 +88,8 @@ namespace GameGaraj.WebUI.Controllers
                 var ruleProductTasks = uniqueProductIds.Select(async id => new
                 {
                     Id = id,
-                    Product = await _catalogService.GetProductByIdAsync(id!)
+                    Product = await _searchService.GetProductByIdAsync(id!)
+                              ?? await _catalogService.GetProductByIdAsync(id!)
                 });
 
                 var ruleProductResults = await Task.WhenAll(ruleProductTasks);
@@ -120,15 +124,28 @@ namespace GameGaraj.WebUI.Controllers
                 return BadRequest();
             }
 
-            var products = (await _catalogService.GetProductsByCategoryAsync(categoryId))
-                .Take(5)
-                .ToList();
+            var products = await _searchService.GetFilteredProductsAsync(categoryId: categoryId);
+            if (products == null || products.Count == 0)
+            {
+                products = await _catalogService.GetProductsByCategoryAsync(categoryId);
+            }
+            products = products.Take(5).ToList();
 
             await ApplyUserProductStateAsync(products);
             await ApplyReviewSummariesAsync(products);
 
             ViewBag.ShowFeaturedBadge = false;
             return PartialView("_HomeCategoryProducts", products);
+        }
+
+        private async Task<List<GameGaraj.WebUI.Models.Products.ProductViewModel>> GetFeaturedProductsFromSearchWithFallbackAsync()
+        {
+            var featured = await _searchService.GetFeaturedProductsAsync();
+            if (featured != null && featured.Count > 0)
+            {
+                return featured;
+            }
+            return await _catalogService.GetFeaturedProductsAsync();
         }
 
         private async Task ApplyUserProductStateAsync(List<GameGaraj.WebUI.Models.Products.ProductViewModel> products)

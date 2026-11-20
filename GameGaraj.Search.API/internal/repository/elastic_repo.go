@@ -824,6 +824,64 @@ func (r *ElasticRepo) refreshIndex(ctx context.Context) {
 	resp.Body.Close()
 }
 
+// PrepareIndexForBulk applies high-throughput ingestion settings before bulk reindexing:
+// disables periodic refresh, sets replicas to 0, and switches translog to async.
+func (r *ElasticRepo) PrepareIndexForBulk(ctx context.Context) {
+	settings := map[string]interface{}{
+		"index": map[string]interface{}{
+			"refresh_interval":               "-1",
+			"number_of_replicas":             0,
+			"translog.durability":            "async",
+			"translog.sync_interval":         "30s",
+			"translog.flush_threshold_size":  "512mb",
+		},
+	}
+	if err := r.updateIndexSettings(ctx, settings); err != nil {
+		r.logger.Warn("Failed to apply bulk index settings", zap.Error(err))
+	}
+}
+
+// RestoreIndexAfterBulk refreshes the index and restores normal search/durability settings after bulk reindexing.
+func (r *ElasticRepo) RestoreIndexAfterBulk(ctx context.Context) {
+	r.refreshIndex(ctx)
+	settings := map[string]interface{}{
+		"index": map[string]interface{}{
+			"refresh_interval":       "1s",
+			"translog.durability":    "request",
+			"translog.sync_interval": "5s",
+		},
+	}
+	if err := r.updateIndexSettings(ctx, settings); err != nil {
+		r.logger.Warn("Failed to restore index settings after bulk", zap.Error(err))
+	}
+}
+
+func (r *ElasticRepo) updateIndexSettings(ctx context.Context, settings map[string]interface{}) error {
+	body, err := json.Marshal(settings)
+	if err != nil {
+		return err
+	}
+
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, r.esURI+"/"+indexName+"/_settings", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("update settings failed (%s): %s", resp.Status, string(respBody))
+	}
+	return nil
+}
+
 // getIndexDefinition returns the Elasticsearch index mapping definition
 // This is an exact mirror of the C# GetIndexDefinitionJson in ProductIndexService.cs
 func getIndexDefinition() map[string]interface{} {
