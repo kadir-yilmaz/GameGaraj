@@ -1,0 +1,270 @@
+@model GameGaraj.WebUI.Areas.Admin.Models.PipelineScenarioViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var catalogProducts = ViewBag.Products as List<GameGaraj.WebUI.Models.Products.ProductViewModel> ?? new List<GameGaraj.WebUI.Models.Products.ProductViewModel>();
+    var services = new[]
+    {
+        new { Key = "catalog", Name = "Catalog.API", Icon = "fa-cubes text-info" },
+        new { Key = "order", Name = "Order.API", Icon = "fa-file-invoice text-warning" },
+        new { Key = "payment", Name = "Payment.API", Icon = "fa-credit-card text-success" },
+        new { Key = "invoice", Name = "Invoice.API", Icon = "fa-receipt text-info" },
+        new { Key = "notification", Name = "Notification", Icon = "fa-envelope text-primary" },
+        new { Key = "campaign", Name = "Campaign.API", Icon = "fa-gift text-danger" }
+    };
+}
+
+<div id="scenario-root" data-scenario="@Model.Key" class="container-fluid px-2 px-md-4 py-3">
+
+    <!-- 1. Üst Bar -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-3 border-bottom border-secondary border-opacity-25 gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <a asp-area="Admin" asp-controller="OrderPipelineDemo" asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-2">
+                <i class="fa-solid fa-arrow-left me-1"></i>Senaryolar
+            </a>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h2 class="h5 fw-bold text-dark mb-0">@Model.Title</h2>
+                    <span class="badge @Model.BadgeClass extra-small">@Model.Category</span>
+                </div>
+                <p class="text-muted mb-0 extra-small mt-1">@Model.Summary</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            @if (!Model.ShowValveControlsByDefault)
+            {
+                <button class="btn btn-outline-secondary btn-sm rounded-2" type="button" data-bs-toggle="collapse" data-bs-target="#valve-collapse">
+                    <i class="fa-solid fa-sliders me-1"></i>Vanalar
+                </button>
+            }
+            <button class="btn btn-outline-danger btn-sm px-3 rounded-2 fw-semibold" onclick="resetAllChaos()">
+                <i class="fa-solid fa-rotate-left me-1"></i>Vanaları Sıfırla
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. Senaryo Rehberi (Önemi & Beklenen Davranış) -->
+    <div class="card bg-white border border-secondary border-opacity-25 shadow-sm rounded-3 mb-3">
+        <div class="card-body p-3">
+            <div class="row g-3">
+                <div class="col-lg-5 border-end-lg">
+                    <div class="extra-small fw-bold text-uppercase text-primary mb-1">Senaryonun Önemi</div>
+                    <p class="small text-dark mb-0">@Model.Importance</p>
+                </div>
+                <div class="col-lg-7">
+                    <div class="extra-small fw-bold text-uppercase text-success mb-1">Bu Testte Ne Beklenmeli?</div>
+                    <ul class="small text-dark mb-0 ps-3">
+                        @foreach (var exp in Model.Expectations)
+                        {
+                            <li>@exp</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Servis Vanaları (Serbest Modda Açık, Diğerlerinde İsteğe Bağlı) -->
+    <div class="collapse @(Model.ShowValveControlsByDefault ? "show" : "")" id="valve-collapse">
+        <div class="card bg-white border border-secondary border-opacity-25 shadow-sm rounded-3 mb-3">
+            <div class="card-header bg-light border-bottom border-secondary border-opacity-25 py-2 px-3">
+                <span class="fw-bold text-dark small"><i class="fa-solid fa-sliders text-primary me-2"></i>Servis Vanaları</span>
+            </div>
+            <div class="card-body p-3">
+                <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-2">
+                    @foreach (var svc in services)
+                    {
+                        <div class="col">
+                            <div class="valve-box p-2 rounded-3 border border-secondary border-opacity-25 bg-white h-100">
+                                <div class="d-flex align-items-center gap-1 mb-2">
+                                    <i class="fa-solid @svc.Icon extra-small"></i>
+                                    <span class="text-dark fw-bold extra-small text-truncate">@svc.Name</span>
+                                </div>
+                                <div class="btn-group btn-group-sm w-100" role="group">
+                                    <input type="radio" class="btn-check" name="radio-@svc.Key" id="radio-@svc.Key-normal" value="normal" checked onchange="updateServiceChaosRadio('@svc.Key', 'normal')">
+                                    <label class="btn btn-outline-success extra-small py-1 px-1 fw-semibold" for="radio-@svc.Key-normal">Aktif</label>
+
+                                    <input type="radio" class="btn-check" name="radio-@svc.Key" id="radio-@svc.Key-retry" value="retry" onchange="updateServiceChaosRadio('@svc.Key', 'retry')">
+                                    <label class="btn btn-outline-warning extra-small py-1 px-1 fw-semibold" for="radio-@svc.Key-retry">Retry</label>
+
+                                    <input type="radio" class="btn-check" name="radio-@svc.Key" id="radio-@svc.Key-latency" value="latency" onchange="updateServiceChaosRadio('@svc.Key', 'latency')">
+                                    <label class="btn btn-outline-primary extra-small py-1 px-1 fw-semibold" for="radio-@svc.Key-latency">3sn</label>
+
+                                    <input type="radio" class="btn-check" name="radio-@svc.Key" id="radio-@svc.Key-blocked" value="blocked" onchange="updateServiceChaosRadio('@svc.Key', 'blocked')">
+                                    <label class="btn btn-outline-danger extra-small py-1 px-1 fw-semibold" for="radio-@svc.Key-blocked">Uykuda</label>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Test Verisi & Çalıştırma Kontrolleri -->
+    <div class="card bg-white border border-secondary border-opacity-25 shadow-sm rounded-3 mb-3">
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-6">
+                    <label class="text-muted extra-small fw-bold text-uppercase mb-1 d-block">Test Ürünü (Catalog DB)</label>
+                    <select id="select-catalog-product" class="form-select form-select-sm" onchange="onCatalogProductChanged()">
+                        @foreach (var p in catalogProducts)
+                        {
+                            <option value="@p.Id"
+                                    data-name="@p.Name"
+                                    data-price="@p.Price"
+                                    data-stock="@p.AvailableStock"
+                                    data-img="@p.FirstImageUrl"
+                                    selected="@(p.Name.Contains("14700K", StringComparison.OrdinalIgnoreCase))">
+                                @p.Name — ₺@p.Price.ToString("N0") (Mevcut Stok: @p.AvailableStock)
+                            </option>
+                        }
+                        <option value="custom" data-name="Olmayan / Silinmiş Ürün" data-price="5000" data-stock="0" data-img="/default.jpg">
+                            Özel / Silinmiş Ürün (GUID Hata Testi)
+                        </option>
+                    </select>
+
+                    <div id="custom-product-panel" class="p-2 mt-2 rounded bg-light border border-secondary border-opacity-25 d-none">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted extra-small mb-1">Product ID (GUID)</label>
+                                <input type="text" id="custom-prod-id" class="form-control form-control-sm font-monospace" value="00000000-0000-0000-0000-000000000000" oninput="syncCustomProduct()" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted extra-small mb-1">Ürün Adı</label>
+                                <input type="text" id="custom-prod-name" class="form-control form-control-sm" value="Silinmiş Test Ürünü" oninput="syncCustomProduct()" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label text-muted extra-small mb-1">Fiyat</label>
+                                <input type="number" id="custom-prod-price" class="form-control form-control-sm" value="5000" oninput="syncCustomProduct()" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3">
+                    <label class="text-muted extra-small fw-bold text-uppercase mb-1 d-block">Ödeme Kartı</label>
+                    <select id="select-card-quick" class="form-select form-select-sm" onchange="updateDemoCard()">
+                        <option value="5528790000000008">Geçerli Kart (5528 ... 0008)</option>
+                        <option value="5528790000000001">Yetersiz Bakiye (Compensate Testi)</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-3 d-flex gap-2 justify-content-lg-end">
+                    <button id="btn-play" class="btn btn-warning btn-sm fw-bold px-3 rounded-2 flex-grow-1 flex-lg-grow-0" onclick="startFullPipeline()">
+                        <i class="fa-solid fa-play me-1"></i>Otomatik
+                    </button>
+                    <button id="btn-step" class="btn btn-primary btn-sm fw-bold px-3 rounded-2 flex-grow-1 flex-lg-grow-0" onclick="stepPipeline()">
+                        <i class="fa-solid fa-forward-step me-1"></i>Adım
+                    </button>
+                    <button id="btn-reset" class="btn btn-outline-secondary btn-sm px-3 rounded-2" onclick="resetPipelineUI()" title="Akışı Sıfırla">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Boru Hattı Akışı -->
+    <partial name="_FlowCanvas" />
+
+    <!-- 6. Canlı Veritabanı Durumu -->
+    <div class="card bg-white border border-secondary border-opacity-25 shadow-sm rounded-3 mb-3">
+        <div class="card-header bg-light border-bottom border-secondary border-opacity-25 py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-dark small d-flex align-items-center gap-2">
+                <i class="fa-solid fa-database text-success"></i>
+                <span>Canlı Veritabanı Durumu</span>
+            </span>
+            <button class="btn btn-outline-secondary btn-sm extra-small py-0 px-2" onclick="refreshDbSnapshot(true)">
+                <i class="fa-solid fa-arrows-rotate me-1"></i>DB Yenile
+            </button>
+        </div>
+        <div class="card-body p-3">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-2 px-3 rounded-3 border bg-light bg-opacity-50 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <div class="extra-small fw-bold text-muted text-uppercase">Catalog DB (MongoDB) — Stok</div>
+                            <div id="db-catalog-values" class="small fw-semibold text-dark mt-1">Yükleniyor...</div>
+                        </div>
+                        <span id="db-catalog-delta" class="badge bg-secondary extra-small">Başlangıç</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2 px-3 rounded-3 border bg-light bg-opacity-50 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <div class="extra-small fw-bold text-muted text-uppercase">Order DB (MSSQL) — Sipariş</div>
+                            <div id="db-order-values" class="small fw-semibold text-dark mt-1">Henüz sipariş oluşturulmadı</div>
+                        </div>
+                        <span id="db-order-badge" class="badge bg-secondary extra-small">Bekliyor</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. Sekmeli Konsol -->
+    <div class="card bg-white border border-secondary border-opacity-25 shadow-sm rounded-3">
+        <div class="card-header bg-light border-bottom border-secondary border-opacity-25 py-2 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <ul class="nav nav-pills gap-1" id="console-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-1 px-3 extra-small fw-semibold" id="tab-sim-btn" data-bs-toggle="pill" data-bs-target="#tab-sim" type="button" role="tab">
+                        Simülasyon &amp; Polly <span class="badge bg-secondary ms-1" id="badge-demo-count">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1 px-3 extra-small fw-semibold d-flex align-items-center gap-1" id="tab-live-btn" data-bs-toggle="pill" data-bs-target="#tab-live" type="button" role="tab">
+                        <span id="signalr-dot" class="pulse-dot bg-secondary"></span>
+                        <span>Gerçek Site</span>
+                        <span class="badge bg-success ms-1" id="badge-live-count">0</span>
+                    </button>
+                </li>
+            </ul>
+            <button class="btn btn-link btn-sm text-secondary text-decoration-none p-0 extra-small" onclick="clearActiveConsole()">
+                <i class="fa-solid fa-trash-can me-1"></i>Temizle
+            </button>
+        </div>
+        <div class="card-body p-0 bg-black">
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="tab-sim" role="tabpanel">
+                    <div id="log-console-demo" class="p-3 font-monospace small text-light terminal-box">
+                        <div class="text-secondary">[Sistem] Senaryo hazır. 'Otomatik' veya 'Adım' ile testi başlatabilirsiniz.</div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="tab-live" role="tabpanel">
+                    <div id="log-console-live" class="p-3 font-monospace small text-light terminal-box">
+                        <div class="text-secondary">[SignalR] Gerçek siteden (/order/checkout) gelen sipariş olayları burada listelenir.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .valve-box { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+    .valve-box:hover { border-color: #3b82f6 !important; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); }
+    .pulse-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+    .pulse-dot.connected { background-color: #10b981 !important; box-shadow: 0 0 6px #10b981; animation: pulseDot 1.5s infinite; }
+    @@keyframes pulseDot { 0%, 100% { transform: scale(0.95); opacity: 0.7; } 50% { transform: scale(1.25); opacity: 1; } }
+    .extra-small { font-size: 0.72rem; }
+    .pipeline-node { width: 95px; z-index: 2; }
+    .node-icon { width: 46px; height: 46px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; transition: all 0.3s ease; }
+    .node-icon.active { box-shadow: 0 0 18px #00f0ff !important; transform: scale(1.12); border-color: #00f0ff !important; }
+    .node-icon.success { background-color: #10b981 !important; border-color: #10b981 !important; box-shadow: 0 0 16px rgba(16, 185, 129, 0.7) !important; }
+    .node-icon.failed { background-color: #ef4444 !important; border-color: #ef4444 !important; box-shadow: 0 0 20px rgba(239, 68, 68, 0.85) !important; animation: pulseFailed 1s infinite alternate; }
+    .pipeline-tube { height: 8px; margin: 0 5px; top: -15px; min-width: 50px; }
+    .tube-track { position: absolute; inset: 0; background: #1e293b; border-radius: 4px; border: 1px solid #334155; }
+    .tube-fluid { position: absolute; top: 1px; left: 0; width: 0%; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #3b82f6, #00f0ff); box-shadow: 0 0 10px #00f0ff; transition: width 0.5s ease; }
+    .tube-fluid.flowing { width: 100%; }
+    .tube-fluid.blocked { width: 50% !important; background: linear-gradient(90deg, #ef4444, #f97316) !important; box-shadow: 0 0 14px #ef4444 !important; }
+    .tube-label { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: #94a3b8; white-space: nowrap; }
+    .terminal-box { height: 240px; overflow-y: auto; font-size: 0.81rem; line-height: 1.5; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+    @@keyframes pulseFailed { from { transform: scale(1); } to { transform: scale(1.12); } }
+</style>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="~/js/admin-pipeline-demo.js" asp-append-version="true"></script>
+}

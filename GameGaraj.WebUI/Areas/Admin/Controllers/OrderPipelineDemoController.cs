@@ -2,6 +2,7 @@ using System.Diagnostics;
 using GameGaraj.Shared.Chaos;
 using GameGaraj.Shared.Dtos;
 using GameGaraj.Shared.Observability;
+using GameGaraj.WebUI.Areas.Admin.Models;
 using GameGaraj.WebUI.Models.Orders;
 using GameGaraj.WebUI.Services.Abstract;
 using Microsoft.AspNetCore.Authorization;
@@ -37,13 +38,19 @@ namespace GameGaraj.WebUI.Areas.Admin.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public IActionResult Index()
         {
-            var rules = await _chaosManager.GetAllRulesAsync();
+            var scenarios = PipelineScenarioViewModel.GetAll();
+            return View(scenarios);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Scenario(string key = "normal")
+        {
+            var scenario = PipelineScenarioViewModel.GetByKey(key);
             var products = await _catalogService.GetAllProductsAsync();
-            ViewBag.Rules = rules;
             ViewBag.Products = products ?? new List<GameGaraj.WebUI.Models.Products.ProductViewModel>();
-            return View();
+            return View(scenario);
         }
 
         [HttpGet]
