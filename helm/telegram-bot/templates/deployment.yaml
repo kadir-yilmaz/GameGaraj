@@ -8,6 +8,7 @@ spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
     type: Recreate
+    rollingUpdate: null
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "telegram-bot.name" . }}
