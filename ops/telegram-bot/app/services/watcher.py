@@ -200,12 +200,12 @@ class BotRunner:
             "• cluster info events - son 1sa Warning event'leri\n"
             "• nodes - sadece node sağlığı\n"
             "• logs <servis> - pod'un son 30 satır logu\n"
-            "• /ack - açık nöbet olaylarını üzerine al\n"
+            "• /ack <olay_id> - olayı üzerine al ve gruba/maile bildir\n"
             "• /myid - kişisel Telegram Chat ID'ni öğren\n"
             "• /oncall - aktif nöbetçiyi gör"
         )
 
-    def _handle_command(self, chat_id: str, text: str) -> None:
+    def _handle_command(self, chat_id: str, text: str, sender_name: str = "") -> None:
         if text == "/myid":
             self.telegram.send(chat_id, "", f"🆔 Chat ID'niz: `{chat_id}`\nBu ID'yi Web UI'daki kullanıcı profilinize ekleyebilirsiniz.")
             return
@@ -216,9 +216,14 @@ class BotRunner:
             mode = "🌙 Gece Nöbeti Aktif" if info["is_night"] else "☀️ Gündüz Modu"
             self.telegram.send(chat_id, "", f"{mode}\n👤 Birincil: {p}\n🛡 Yedek: {b}")
             return
-        if text == "/ack":
-            count = self.incidents.ack_all_open()
-            self.telegram.send(chat_id, "", f"✅ {count} açık olay üzerine alındı (Ack)." if count else "Açık olay yok.")
+        if text in {"/ack", "ack"} or text.startswith("/ack ") or text.startswith("ack "):
+            parts = text.split(maxsplit=1)
+            inc_id = None
+            if len(parts) == 2 and parts[1].lstrip("#").isdigit():
+                inc_id = int(parts[1].lstrip("#"))
+            acked = self.oncall.ack_incident(incident_id=inc_id, actor_name=sender_name)
+            if not acked:
+                self.telegram.send(chat_id, "", "Üstlenilecek açık olay bulunamadı.")
             return
 
         group_id = (self.app_settings.get_all().get("telegram_group_chat_id") or self.settings.telegram_chat_id).strip()
@@ -266,8 +271,10 @@ class BotRunner:
                     offset = int(update["update_id"]) + 1
                     msg = update.get("message") or {}
                     chat = str((msg.get("chat") or {}).get("id", ""))
+                    sender = msg.get("from") or {}
+                    sender_name = sender.get("first_name") or sender.get("username") or ""
                     if chat:
-                        self._handle_command(chat, normalize_cmd(msg.get("text") or ""))
+                        self._handle_command(chat, normalize_cmd(msg.get("text") or ""), sender_name)
             except Exception as exc:
                 log.warning("telegram poll error: %s", exc)
                 self._stop.wait(5)

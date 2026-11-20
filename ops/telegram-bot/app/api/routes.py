@@ -211,10 +211,10 @@ def create_router() -> APIRouter:
 
     @router.post("/api/incidents/{incident_id}/ack")
     def ack_incident(incident_id: int, request: Request) -> dict:
-        inc = request.app.state.container.incidents.ack(incident_id)
-        if not inc:
-            raise HTTPException(status_code=404, detail="Olay bulunamadı")
-        return inc
+        acked = request.app.state.container.oncall.ack_incident(incident_id=incident_id, actor_name="Web Panel")
+        if not acked:
+            raise HTTPException(status_code=404, detail="Açık olay bulunamadı")
+        return acked[0]
 
     @router.get("/api/logs")
     def list_logs(request: Request) -> list[dict]:

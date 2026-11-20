@@ -187,6 +187,44 @@ class OnCallService:
                     cfg,
                 )
 
+    def ack_incident(self, incident_id: int | None = None, actor_name: str = "") -> list[dict]:
+        """Marks one incident (or all open incidents) as acked and notifies group + email."""
+        acked: list[dict] = []
+        if incident_id is not None:
+            inc = self.incidents.ack(incident_id)
+            if inc and inc.get("status") == "acked":
+                acked.append(inc)
+        else:
+            for inc in self.incidents.list_active():
+                if inc.get("status") == "open":
+                    res = self.incidents.ack(inc["id"])
+                    if res:
+                        acked.append(res)
+
+        if not acked:
+            return []
+
+        cfg = self.app_settings.get_all()
+        group_id = self._group_chat_id(cfg)
+        oncall = self.get_active_oncall()
+        who = actor_name.strip() or (oncall["primary"]["name"] if oncall["primary"] else "Nöbetçi")
+
+        for inc in acked:
+            msg = f"✅ {who}: Buradayım, #{inc['id']} ({inc['summary']}) olayıyla ilgileniyorum."
+            if group_id:
+                self._send_and_log("info", "telegram", group_id, "", msg)
+            if cfg.get("notify_oncall_email", "true") == "true":
+                recipients = []
+                if inc.get("assigned_user_id"):
+                    u = self.users.get(inc["assigned_user_id"])
+                    if u and u.get("email"):
+                        recipients.append(u["email"])
+                if oncall["backup"] and oncall["backup"].get("email") and oncall["backup"]["email"] not in recipients:
+                    recipients.append(oncall["backup"]["email"])
+                for email_addr in recipients:
+                    self._send_and_log("info", "email", email_addr, f"[ÜSTLENİLDİ #{inc['id']}] {inc['summary']}", msg)
+        return acked
+
     def check_escalations(self) -> None:
         cfg = self.app_settings.get_all()
         try:
@@ -199,18 +237,23 @@ class OnCallService:
         now_utc = datetime.now(timezone.utc)
         oncall = self.get_active_oncall()
         backup = oncall["backup"]
+        group_id = self._group_chat_id(cfg)
         for inc in self.incidents.list_open_unescalated():
             created = datetime.fromisoformat(inc["created_at"])
             if (now_utc - created).total_seconds() < esc_mins * 60:
                 continue
             self.incidents.mark_escalated(inc["id"])
             subject = f"🆘 [ESKALASYON #{inc['id']}] {inc['summary']}"
-            body = f"Birincil nöbetçi {esc_mins} dk içinde /ack vermedi!\nOlay: {inc['summary']}"
+            body = (
+                f"DİKKAT: Birincil nöbetçi {esc_mins} dk içinde olayı üstlenmedi!\n"
+                f"Olay: #{inc['id']} · {inc['summary']}\n"
+                f"Üstlenmek için grupta: /ack {inc['id']}"
+            )
             if backup:
                 self._notify_user("escalation", backup, subject, body, cfg)
-            if self.settings.telegram_chat_id:
+            if group_id:
                 target = backup["name"] if backup else "Tüm Ekip"
-                self._send_and_log("escalation", "telegram", self.settings.telegram_chat_id, subject, f"{body}\nYönlendirilen: {target}")
+                self._send_and_log("escalation", "telegram", group_id, subject, f"{body}\nYönlendirilen Yedek: {target}")
 
     def send_test_notification(
         self,

@@ -361,12 +361,12 @@
               <div class="space-y-1">
                 <div class="flex items-center gap-2">
                   <span class="px-2 py-0.5 rounded text-xs font-semibold uppercase ${isAcked ? "bg-amber-800 text-amber-100" : "bg-rose-600 text-white"}">
-                    ${isAcked ? "Üstlenildi" : "Aktif Olay"}
+                    ${isAcked ? "Üstlenildi" : (inc.escalated ? "Üstlenilmedi - Dikkat!" : "Aktif Olay")}
                   </span>
                   <span class="font-semibold text-base">#${inc.id} · ${inc.summary}</span>
                 </div>
                 <div class="text-xs opacity-90">
-                  İlgilenen: <span class="font-medium">${whoTxt}</span> · Başlangıç: ${inc.created_at.slice(0, 16).replace("T", " ")} UTC${inc.escalated ? " · Yedeğe eskalasyon yapıldı" : ""}
+                  İlgilenen: <span class="font-medium">${whoTxt}</span> · Başlangıç: ${inc.created_at.slice(0, 16).replace("T", " ")} UTC${inc.escalated && !isAcked ? " · Eskalasyon süresi doldu, yedek nöbetçi ve gruba bildirildi" : ""}
                 </div>
               </div>
               ${!isAcked ? `<button onclick="ackIncident(${inc.id})" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shrink-0">Üstlen (Ack)</button>` : ""}
