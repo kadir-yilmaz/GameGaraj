@@ -212,7 +212,13 @@ class OnCallService:
                 target = backup["name"] if backup else "Tüm Ekip"
                 self._send_and_log("escalation", "telegram", self.settings.telegram_chat_id, subject, f"{body}\nYönlendirilen: {target}")
 
-    def send_test_notification(self, user_id: int | None, channel: str, email_override: str = "") -> tuple[bool, str]:
+    def send_test_notification(
+        self,
+        user_id: int | None,
+        channel: str,
+        email_override: str = "",
+        topic_override: str = "",
+    ) -> tuple[bool, str]:
         subject = "GameGaraj Nobet Sistemi Test Bildirimi"
         body = "Bu mesaj bildirim kanalının çalıştığını doğrulamak için gönderildi."
         cfg = self.app_settings.get_all()
@@ -221,6 +227,10 @@ class OnCallService:
             return self._send_and_log("test", "telegram", group_id, subject, body)
         if channel == "email" and email_override.strip():
             return self._send_and_log("test", "email", email_override.strip(), subject, body)
+        if channel == "ntfy" and topic_override.strip():
+            topic = topic_override.strip()
+            self.app_settings.update_many({"ntfy_test_topic": topic})
+            return self._send_and_log("test", "ntfy", topic, subject, body, priority=5, tags=["rotating_light"])
         if not user_id:
             return False, "Kullanıcı seçilmedi"
         user = self.users.get(user_id)

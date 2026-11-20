@@ -129,6 +129,7 @@ class Database:
                 "notify_oncall_telegram": "true",
                 "notify_oncall_ntfy": "true",
                 "ntfy_server_url": "https://ntfy.sh",
+                "ntfy_test_topic": "",
                 "escalation_minutes": "15",
                 "telegram_group_enabled": "true",
                 "telegram_group_chat_id": self.settings.telegram_chat_id,

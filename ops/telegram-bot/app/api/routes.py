@@ -59,6 +59,7 @@ class SettingsUpdate(BaseModel):
     notify_oncall_telegram: str | None = None
     notify_oncall_ntfy: str | None = None
     ntfy_server_url: str | None = None
+    ntfy_test_topic: str | None = None
     escalation_minutes: str | None = None
     telegram_group_enabled: str | None = None
     telegram_group_chat_id: str | None = None
@@ -75,6 +76,7 @@ class TestNotifyRequest(BaseModel):
     user_id: int | None = None
     channel: str = Field(pattern="^(email|telegram_dm|telegram_group|ntfy)$")
     email_override: str = ""
+    topic_override: str = ""
 
 
 def create_router() -> APIRouter:
@@ -221,7 +223,7 @@ def create_router() -> APIRouter:
     @router.post("/api/test-notify")
     def test_notify(payload: TestNotifyRequest, request: Request) -> dict:
         ok, err = request.app.state.container.oncall.send_test_notification(
-            payload.user_id, payload.channel, payload.email_override
+            payload.user_id, payload.channel, payload.email_override, payload.topic_override
         )
         if not ok:
             raise HTTPException(status_code=400, detail=err)

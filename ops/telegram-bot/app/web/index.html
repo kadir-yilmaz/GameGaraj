@@ -224,6 +224,11 @@
         </div>
 
         <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 rounded-lg py-2.5 font-medium text-sm text-white">Nöbet Ayarlarını Kaydet</button>
+
+        <div class="pt-3 border-t border-slate-800 flex gap-2">
+          <input type="text" id="test-ntfy-topic" placeholder="Test ntfy topic (ör. gamegaraj-kadir-9x7k)" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          <button type="button" onclick="sendNtfyTopicTest()" class="px-4 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium text-white">Test Alarmı At</button>
+        </div>
       </form>
     </section>
 
@@ -626,6 +631,7 @@
       document.getElementById("set-night-end").value = s.night_end || "08:00";
       document.getElementById("set-escalation").value = s.escalation_minutes || "15";
       document.getElementById("set-ntfy-url").value = s.ntfy_server_url || "https://ntfy.sh";
+      document.getElementById("test-ntfy-topic").value = s.ntfy_test_topic || "";
       document.getElementById("set-email").checked = s.notify_oncall_email === "true";
       document.getElementById("set-tg-dm").checked = s.notify_oncall_telegram === "true";
       document.getElementById("set-ntfy").checked = s.notify_oncall_ntfy !== "false";
@@ -701,6 +707,15 @@
       try {
         await api("/api/test-notify", { method: "POST", body: JSON.stringify({ channel: "email", email_override: addr }) });
         toast("Test e-postası gönderildi");
+      } catch (err) { toast(err.message, true); }
+    }
+
+    async function sendNtfyTopicTest() {
+      const topic = document.getElementById("test-ntfy-topic").value.trim();
+      if (!topic) { toast("Test ntfy topic girin", true); return; }
+      try {
+        await api("/api/test-notify", { method: "POST", body: JSON.stringify({ channel: "ntfy", topic_override: topic }) });
+        toast("Test alarmı gönderildi ve topic kaydedildi");
       } catch (err) { toast(err.message, true); }
     }
 
