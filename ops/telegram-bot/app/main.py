@@ -22,6 +22,7 @@ from app.db.repositories import (
 from app.k8s.client import K8sClient
 from app.k8s.reports import ClusterReporter
 from app.notifiers.email import EmailNotifier
+from app.notifiers.ntfy import NtfyNotifier
 from app.notifiers.telegram import TelegramNotifier
 from app.services.oncall import OnCallService
 from app.services.watcher import BotRunner
@@ -58,7 +59,8 @@ def build_container(settings: Settings | None = None, start_runner: bool = True)
     reporter = ClusterReporter(k8s, cfg.gamegaraj_namespace, cfg.argocd_namespace, cfg.tz)
     telegram = TelegramNotifier(cfg.read_bot_token())
     email = EmailNotifier(cfg, app_settings)
-    oncall = OnCallService(cfg, users, schedule, app_settings, incidents, logs, telegram, email)
+    ntfy = NtfyNotifier(app_settings)
+    oncall = OnCallService(cfg, users, schedule, app_settings, incidents, logs, telegram, email, ntfy)
     runner = BotRunner(cfg, k8s, reporter, app_settings, incidents, oncall, telegram)
     if start_runner:
         runner.start()

@@ -200,6 +200,11 @@
           <input type="number" min="0" max="180" id="set-escalation" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
         </div>
 
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">ntfy Sunucu URL</label>
+          <input type="text" id="set-ntfy-url" placeholder="https://ntfy.sh" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+        </div>
+
         <div class="space-y-2.5 pt-1 text-sm">
           <label class="flex items-center gap-2.5 cursor-pointer">
             <input type="checkbox" id="set-email" class="rounded bg-slate-950 border-slate-700" />
@@ -208,6 +213,10 @@
           <label class="flex items-center gap-2.5 cursor-pointer">
             <input type="checkbox" id="set-tg-dm" class="rounded bg-slate-950 border-slate-700" />
             <span>Nöbetçiye Telegram DM ile bildir (global)</span>
+          </label>
+          <label class="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" id="set-ntfy" class="rounded bg-slate-950 border-slate-700" />
+            <span>Nöbetçiye ntfy kritik alarm (arama/uyandırma) gönder (global)</span>
           </label>
         </div>
 
@@ -251,6 +260,10 @@
           <input type="color" id="u-color" value="#38bdf8" class="w-full h-10 bg-slate-950 border border-slate-700 rounded-lg p-1" />
         </div>
       </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">ntfy Topic (Telefonda kritik alarm / uyandırma için)</label>
+        <input type="text" id="u-ntfy" placeholder="ör. gamegaraj-ali-9f3k" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+      </div>
       <div class="flex flex-wrap gap-4 pt-1 text-xs">
         <label class="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" id="u-notify-email" checked class="rounded bg-slate-950 border-slate-700" />
@@ -259,6 +272,10 @@
         <label class="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" id="u-notify-tg" checked class="rounded bg-slate-950 border-slate-700" />
           <span>Telegram DM Açık</span>
+        </label>
+        <label class="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" id="u-notify-ntfy" checked class="rounded bg-slate-950 border-slate-700" />
+          <span>ntfy Alarm Açık</span>
         </label>
       </div>
       <div class="flex justify-end gap-2 pt-2">
@@ -390,6 +407,7 @@
           ${open ? `
           <div class="px-3 pb-3 pt-2 border-t border-slate-800/80 space-y-2 text-xs">
             <div class="text-slate-400">Telegram ID: <span class="text-slate-200 font-mono">${u.telegram_chat_id || "Tanımlı değil"}</span></div>
+            <div class="text-slate-400">ntfy Topic: <span class="text-slate-200 font-mono">${u.ntfy_topic || "Tanımlı değil"}</span></div>
             <div class="flex flex-wrap gap-3">
               <label class="flex items-center gap-1.5 cursor-pointer">
                 <input type="checkbox" ${u.active ? "checked" : ""} onchange="patchUserToggle(${u.id}, 'active', this.checked)" />
@@ -403,9 +421,14 @@
                 <input type="checkbox" ${u.notify_telegram ? "checked" : ""} onchange="patchUserToggle(${u.id}, 'notify_telegram', this.checked)" />
                 <span>Telegram</span>
               </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" ${u.notify_ntfy ? "checked" : ""} onchange="patchUserToggle(${u.id}, 'notify_ntfy', this.checked)" />
+                <span>ntfy Alarm</span>
+              </label>
             </div>
             <div class="flex gap-2 pt-1">
               <button onclick="openUserModal(${u.id})" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">Düzenle</button>
+              <button onclick="testNtfy(${u.id})" class="px-2.5 py-1 rounded bg-amber-950 text-amber-300 hover:bg-amber-900">Alarm Test</button>
               <button onclick="deleteUser(${u.id})" class="px-2.5 py-1 rounded bg-rose-950 text-rose-300 hover:bg-rose-900">Sil</button>
             </div>
           </div>` : ""}
@@ -562,8 +585,10 @@
       document.getElementById("set-night-start").value = s.night_start || "22:00";
       document.getElementById("set-night-end").value = s.night_end || "08:00";
       document.getElementById("set-escalation").value = s.escalation_minutes || "15";
+      document.getElementById("set-ntfy-url").value = s.ntfy_server_url || "https://ntfy.sh";
       document.getElementById("set-email").checked = s.notify_oncall_email === "true";
       document.getElementById("set-tg-dm").checked = s.notify_oncall_telegram === "true";
+      document.getElementById("set-ntfy").checked = s.notify_oncall_ntfy !== "false";
     }
 
     async function saveGroupSettings(e) {
@@ -612,8 +637,10 @@
             night_start: document.getElementById("set-night-start").value,
             night_end: document.getElementById("set-night-end").value,
             escalation_minutes: document.getElementById("set-escalation").value,
+            ntfy_server_url: document.getElementById("set-ntfy-url").value.trim() || "https://ntfy.sh",
             notify_oncall_email: String(document.getElementById("set-email").checked),
-            notify_oncall_telegram: String(document.getElementById("set-tg-dm").checked)
+            notify_oncall_telegram: String(document.getElementById("set-tg-dm").checked),
+            notify_oncall_ntfy: String(document.getElementById("set-ntfy").checked)
           })
         });
         toast("Nöbet ayarları kaydedildi");
@@ -644,12 +671,21 @@
       document.getElementById("u-name").value = u ? u.name : "";
       document.getElementById("u-email").value = u ? u.email : "";
       document.getElementById("u-tg").value = u ? u.telegram_chat_id : "";
+      document.getElementById("u-ntfy").value = u ? u.ntfy_topic : "";
       document.getElementById("u-color").value = u ? u.color : "#38bdf8";
       document.getElementById("u-notify-email").checked = u ? !!u.notify_email : true;
       document.getElementById("u-notify-tg").checked = u ? !!u.notify_telegram : true;
+      document.getElementById("u-notify-ntfy").checked = u ? !!u.notify_ntfy : true;
       document.getElementById("user-modal").classList.remove("hidden");
     }
     function closeUserModal() { document.getElementById("user-modal").classList.add("hidden"); }
+
+    async function testNtfy(userId) {
+      try {
+        await api("/api/test-notify", { method: "POST", body: JSON.stringify({ user_id: userId, channel: "ntfy" }) });
+        toast("Test alarmı gönderildi");
+      } catch (err) { toast(err.message, true); }
+    }
 
     async function saveUser(e) {
       e.preventDefault();
@@ -659,9 +695,11 @@
         name: document.getElementById("u-name").value,
         email: document.getElementById("u-email").value,
         telegram_chat_id: document.getElementById("u-tg").value,
+        ntfy_topic: document.getElementById("u-ntfy").value,
         color: document.getElementById("u-color").value,
         notify_email: document.getElementById("u-notify-email").checked,
         notify_telegram: document.getElementById("u-notify-tg").checked,
+        notify_ntfy: document.getElementById("u-notify-ntfy").checked,
         active: existing ? !!existing.active : true
       };
       try {

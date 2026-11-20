@@ -15,10 +15,12 @@ CREATE TABLE IF NOT EXISTS users (
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     telegram_chat_id TEXT NOT NULL DEFAULT '',
+    ntfy_topic TEXT NOT NULL DEFAULT '',
     color TEXT NOT NULL DEFAULT '#3b82f6',
     active INTEGER NOT NULL DEFAULT 1,
     notify_email INTEGER NOT NULL DEFAULT 1,
     notify_telegram INTEGER NOT NULL DEFAULT 1,
+    notify_ntfy INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL
 );
 
@@ -106,6 +108,10 @@ class Database:
                 conn.execute("ALTER TABLE users ADD COLUMN notify_email INTEGER NOT NULL DEFAULT 1")
             if "notify_telegram" not in cols:
                 conn.execute("ALTER TABLE users ADD COLUMN notify_telegram INTEGER NOT NULL DEFAULT 1")
+            if "ntfy_topic" not in cols:
+                conn.execute("ALTER TABLE users ADD COLUMN ntfy_topic TEXT NOT NULL DEFAULT ''")
+            if "notify_ntfy" not in cols:
+                conn.execute("ALTER TABLE users ADD COLUMN notify_ntfy INTEGER NOT NULL DEFAULT 1")
 
             for dow in range(7):
                 conn.execute(
@@ -121,6 +127,8 @@ class Database:
                 "notify_group_on_critical": "true",
                 "notify_oncall_email": "true",
                 "notify_oncall_telegram": "true",
+                "notify_oncall_ntfy": "true",
+                "ntfy_server_url": "https://ntfy.sh",
                 "escalation_minutes": "15",
                 "telegram_group_enabled": "true",
                 "telegram_group_chat_id": self.settings.telegram_chat_id,

@@ -11,6 +11,7 @@ from app.db.repositories import (
     UserRepository,
 )
 from app.notifiers.email import EmailNotifier
+from app.notifiers.ntfy import NtfyNotifier
 from app.notifiers.telegram import TelegramNotifier
 
 
@@ -37,6 +38,7 @@ class OnCallService:
         logs: AlertLogRepository,
         telegram: TelegramNotifier,
         email: EmailNotifier,
+        ntfy: NtfyNotifier,
     ) -> None:
         self.settings = settings
         self.users = users
@@ -46,6 +48,7 @@ class OnCallService:
         self.logs = logs
         self.telegram = telegram
         self.email = email
+        self.ntfy = ntfy
 
     def is_night_window(self, now: datetime | None = None) -> bool:
         cfg = self.app_settings.get_all()
@@ -93,6 +96,8 @@ class OnCallService:
             ok, err = self.email.send(recipient, subject, body)
         elif channel == "telegram":
             ok, err = self.telegram.send(recipient, subject, body)
+        elif channel == "ntfy":
+            ok, err = self.ntfy.send(recipient, subject, body)
         else:
             ok, err = False, f"Bilinmeyen kanal: {channel}"
         self.logs.add(level=level, channel=channel, recipient=recipient, message=f"{subject}\n{body}".strip(), success=ok, error=err)
@@ -108,6 +113,8 @@ class OnCallService:
             self._send_and_log(level, "email", user["email"], subject, body)
         if cfg.get("notify_oncall_telegram", "true") == "true" and user.get("notify_telegram", 1) and user.get("telegram_chat_id"):
             self._send_and_log(level, "telegram", user["telegram_chat_id"], subject, body)
+        if level in {"critical", "escalation"} and cfg.get("notify_oncall_ntfy", "true") == "true" and user.get("notify_ntfy", 1) and user.get("ntfy_topic"):
+            self._send_and_log(level, "ntfy", user["ntfy_topic"], subject, body)
 
     def dispatch_general_report(self, body: str) -> bool:
         cfg = self.app_settings.get_all()
@@ -205,4 +212,6 @@ class OnCallService:
             return self._send_and_log("test", "email", user["email"], subject, body)
         if channel == "telegram_dm":
             return self._send_and_log("test", "telegram", user["telegram_chat_id"], subject, body)
+        if channel == "ntfy":
+            return self._send_and_log("test", "ntfy", user["ntfy_topic"], subject, body)
         return False, "Geçersiz kanal"

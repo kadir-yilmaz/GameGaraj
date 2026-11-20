@@ -28,23 +28,27 @@ class UserRepository:
         name: str,
         email: str,
         telegram_chat_id: str = "",
+        ntfy_topic: str = "",
         color: str = "#3b82f6",
         notify_email: bool = True,
         notify_telegram: bool = True,
+        notify_ntfy: bool = True,
     ) -> dict:
         with self.db.session() as conn:
             cur = conn.execute(
                 """
-                INSERT INTO users (name, email, telegram_chat_id, color, active, notify_email, notify_telegram, created_at)
-                VALUES (?, ?, ?, ?, 1, ?, ?, ?)
+                INSERT INTO users (name, email, telegram_chat_id, ntfy_topic, color, active, notify_email, notify_telegram, notify_ntfy, created_at)
+                VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
                 """,
                 (
                     name.strip(),
                     email.strip().lower(),
                     telegram_chat_id.strip(),
+                    ntfy_topic.strip(),
                     color,
                     1 if notify_email else 0,
                     1 if notify_telegram else 0,
+                    1 if notify_ntfy else 0,
                     utc_now(),
                 ),
             )
@@ -57,33 +61,44 @@ class UserRepository:
         name: str,
         email: str,
         telegram_chat_id: str,
+        ntfy_topic: str,
         color: str,
         active: bool,
         notify_email: bool = True,
         notify_telegram: bool = True,
+        notify_ntfy: bool = True,
     ) -> dict | None:
         with self.db.session() as conn:
             conn.execute(
                 """
                 UPDATE users
-                SET name = ?, email = ?, telegram_chat_id = ?, color = ?, active = ?, notify_email = ?, notify_telegram = ?
+                SET name = ?, email = ?, telegram_chat_id = ?, ntfy_topic = ?, color = ?, active = ?, notify_email = ?, notify_telegram = ?, notify_ntfy = ?
                 WHERE id = ?
                 """,
                 (
                     name.strip(),
                     email.strip().lower(),
                     telegram_chat_id.strip(),
+                    ntfy_topic.strip(),
                     color,
                     1 if active else 0,
                     1 if notify_email else 0,
                     1 if notify_telegram else 0,
+                    1 if notify_ntfy else 0,
                     user_id,
                 ),
             )
             row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
             return dict(row) if row else None
 
-    def set_toggles(self, user_id: int, active: bool | None = None, notify_email: bool | None = None, notify_telegram: bool | None = None) -> dict | None:
+    def set_toggles(
+        self,
+        user_id: int,
+        active: bool | None = None,
+        notify_email: bool | None = None,
+        notify_telegram: bool | None = None,
+        notify_ntfy: bool | None = None,
+    ) -> dict | None:
         updates, params = [], []
         if active is not None:
             updates.append("active = ?")
@@ -94,6 +109,9 @@ class UserRepository:
         if notify_telegram is not None:
             updates.append("notify_telegram = ?")
             params.append(1 if notify_telegram else 0)
+        if notify_ntfy is not None:
+            updates.append("notify_ntfy = ?")
+            params.append(1 if notify_ntfy else 0)
         if not updates:
             return self.get(user_id)
         params.append(user_id)

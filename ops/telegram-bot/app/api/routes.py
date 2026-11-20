@@ -13,9 +13,11 @@ class UserCreate(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     email: str = Field(min_length=3, max_length=120)
     telegram_chat_id: str = ""
+    ntfy_topic: str = ""
     color: str = "#3b82f6"
     notify_email: bool = True
     notify_telegram: bool = True
+    notify_ntfy: bool = True
 
 
 class UserUpdate(UserCreate):
@@ -26,6 +28,7 @@ class UserTogglesUpdate(BaseModel):
     active: bool | None = None
     notify_email: bool | None = None
     notify_telegram: bool | None = None
+    notify_ntfy: bool | None = None
 
 
 class DayScheduleUpdate(BaseModel):
@@ -54,6 +57,8 @@ class SettingsUpdate(BaseModel):
     notify_group_on_critical: str | None = None
     notify_oncall_email: str | None = None
     notify_oncall_telegram: str | None = None
+    notify_oncall_ntfy: str | None = None
+    ntfy_server_url: str | None = None
     escalation_minutes: str | None = None
     telegram_group_enabled: str | None = None
     telegram_group_chat_id: str | None = None
@@ -68,7 +73,7 @@ class SettingsUpdate(BaseModel):
 
 class TestNotifyRequest(BaseModel):
     user_id: int | None = None
-    channel: str = Field(pattern="^(email|telegram_dm|telegram_group)$")
+    channel: str = Field(pattern="^(email|telegram_dm|telegram_group|ntfy)$")
     email_override: str = ""
 
 
@@ -105,9 +110,11 @@ def create_router() -> APIRouter:
                 name=payload.name,
                 email=payload.email,
                 telegram_chat_id=payload.telegram_chat_id,
+                ntfy_topic=payload.ntfy_topic,
                 color=payload.color,
                 notify_email=payload.notify_email,
                 notify_telegram=payload.notify_telegram,
+                notify_ntfy=payload.notify_ntfy,
             )
         except Exception as exc:
             raise HTTPException(status_code=400, detail=f"Kullanıcı eklenemedi: {exc}") from exc
@@ -119,10 +126,12 @@ def create_router() -> APIRouter:
             name=payload.name,
             email=payload.email,
             telegram_chat_id=payload.telegram_chat_id,
+            ntfy_topic=payload.ntfy_topic,
             color=payload.color,
             active=payload.active,
             notify_email=payload.notify_email,
             notify_telegram=payload.notify_telegram,
+            notify_ntfy=payload.notify_ntfy,
         )
         if not updated:
             raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
@@ -135,6 +144,7 @@ def create_router() -> APIRouter:
             active=payload.active,
             notify_email=payload.notify_email,
             notify_telegram=payload.notify_telegram,
+            notify_ntfy=payload.notify_ntfy,
         )
         if not updated:
             raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
