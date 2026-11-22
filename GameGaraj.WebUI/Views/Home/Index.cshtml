@@ -17,18 +17,125 @@
         position: relative;
         overflow: hidden;
         background: linear-gradient(135deg, #12131C 0%, #08090D 100%);
+        --hero-interval: 5500ms;
     }
-    .carousel-item {
+    .hero-carousel .carousel-item {
         height: 560px;
         background-size: cover;
         background-position: center;
         position: relative;
+        transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .carousel-overlay-bg {
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
-        background: radial-gradient(circle at 70% 50%, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.85) 100%);
+        background: linear-gradient(95deg, rgba(8, 9, 13, 0.88) 0%, rgba(8, 9, 13, 0.55) 55%, rgba(8, 9, 13, 0.3) 100%);
         z-index: 1;
+    }
+
+    /* Circular Outer-Edge Arrows (visible on hover) */
+    .hero-nav-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%) scale(0.92);
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        transition: opacity 0.25s ease, transform 0.25s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+    .hero-nav-prev { left: 18px; }
+    .hero-nav-next { right: 18px; }
+    .hero-carousel:hover .hero-nav-btn,
+    .hero-carousel:focus-within .hero-nav-btn {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(-50%) scale(1);
+    }
+    .hero-nav-btn:hover {
+        background: rgba(255, 255, 255, 0.95);
+        color: #0f172a;
+        border-color: rgba(255, 255, 255, 0.95);
+        transform: translateY(-50%) scale(1.06);
+    }
+    .hero-nav-btn:active {
+        transform: translateY(-50%) scale(0.96);
+    }
+
+    /* Clickable Pill Indicators with Progress Animation */
+    .hero-indicators {
+        position: absolute;
+        bottom: 22px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        margin: 0;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        z-index: 10;
+    }
+    .hero-indicators [data-bs-target] {
+        position: relative;
+        width: 28px;
+        height: 6px;
+        padding: 0;
+        margin: 0;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.28);
+        opacity: 1;
+        overflow: hidden;
+        cursor: pointer;
+        transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1), background 0.25s ease;
+    }
+    .hero-indicators [data-bs-target]:hover {
+        background: rgba(255, 255, 255, 0.55);
+    }
+    .hero-indicators [data-bs-target].active {
+        width: 60px;
+        background: rgba(255, 255, 255, 0.25);
+    }
+    .hero-indicators .indicator-progress {
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #ff6b00 0%, #ffb703 100%);
+        transform-origin: left center;
+        transform: scaleX(0);
+    }
+    .hero-indicators [data-bs-target].active .indicator-progress {
+        animation: heroProgressFill var(--hero-interval) linear forwards;
+    }
+    .hero-carousel:hover .hero-indicators [data-bs-target].active .indicator-progress {
+        animation-play-state: paused;
+    }
+    @@keyframes heroProgressFill {
+        from { transform: scaleX(0); }
+        to { transform: scaleX(1); }
+    }
+    @@media (max-width: 767px) {
+        .hero-nav-btn { opacity: 0.85; pointer-events: auto; width: 40px; height: 40px; }
+        .hero-nav-prev { left: 10px; }
+        .hero-nav-next { right: 10px; }
     }
     .fw-black {
         font-weight: 900;
@@ -291,11 +398,18 @@
         ? activeRules.Count + publicCoupons.Count + rewardRules.Count 
         : 3;
 }
-<div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel">
-    <div class="carousel-indicators">
+<div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="5500" data-bs-pause="hover">
+    <div class="carousel-indicators hero-indicators">
         @for (int i = 0; i < carouselItemsCount; i++)
         {
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="@i" class="@(i == 0 ? "active" : "")"></button>
+            <button type="button"
+                    data-bs-target="#heroCarousel"
+                    data-bs-slide-to="@i"
+                    aria-label="Slayt @(i + 1)"
+                    class="@(i == 0 ? "active" : "")"
+                    @(i == 0 ? "aria-current=\"true\"" : "")>
+                <span class="indicator-progress"></span>
+            </button>
         }
     </div>
     
@@ -624,11 +738,11 @@
         }
     </div>
     
-    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev" style="z-index: 5;">
-        <span class="carousel-control-prev-icon"></span>
+    <button class="hero-nav-btn hero-nav-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev" aria-label="Önceki slayt">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
     </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next" style="z-index: 5;">
-        <span class="carousel-control-next-icon"></span>
+    <button class="hero-nav-btn hero-nav-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next" aria-label="Sonraki slayt">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
 </div>
 
@@ -786,6 +900,39 @@
             } else {
                 pendingSections.push(...sections);
                 loadNextSection();
+            }
+            // Hero Carousel: indicator click + progress animation reset
+            const heroEl = document.getElementById('heroCarousel');
+            if (heroEl && typeof bootstrap !== 'undefined') {
+                const heroCarousel = bootstrap.Carousel.getOrCreateInstance(heroEl, {
+                    interval: 5500,
+                    pause: 'hover',
+                    ride: 'carousel'
+                });
+                const indicators = heroEl.querySelectorAll('.hero-indicators [data-bs-slide-to]');
+
+                function restartIndicatorProgress(activeIdx) {
+                    indicators.forEach((btn, idx) => {
+                        const bar = btn.querySelector('.indicator-progress');
+                        btn.classList.toggle('active', idx === activeIdx);
+                        if (bar) {
+                            bar.style.animation = 'none';
+                            void bar.offsetWidth;
+                            bar.style.animation = '';
+                        }
+                    });
+                }
+
+                indicators.forEach((btn, idx) => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        heroCarousel.to(idx);
+                    });
+                });
+
+                heroEl.addEventListener('slide.bs.carousel', (e) => {
+                    restartIndicatorProgress(e.to);
+                });
             }
         });
     </script>

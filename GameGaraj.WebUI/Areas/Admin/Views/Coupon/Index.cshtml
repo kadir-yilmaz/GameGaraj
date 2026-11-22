@@ -52,6 +52,9 @@
                                 <tr>
                                     <td class="ps-4">
                                         <span class="badge bg-secondary p-2">@item.Code</span>
+                                        <small class="d-block mt-1 @(item.IsSingleUse ? "text-muted" : "text-primary fw-semibold")">
+                                            @(item.IsSingleUse ? "Tek Kullanımlık" : "Çoklu Kullanım")
+                                        </small>
                                     </td>
                                     <td>@item.DiscountTypeDisplayName</td>
                                     <td>

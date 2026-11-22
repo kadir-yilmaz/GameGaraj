@@ -178,27 +178,122 @@
         }
 
         <!-- Add to Cart -->
+        @{
+            var maxStock = Model.AvailableStock > 0 ? Model.AvailableStock : Model.Stock;
+            var basketQty = ViewBag.BasketQuantity is int bq && bq > 0 ? bq : (Model.IsInBasket ? 1 : 0);
+        }
+        <style>
+            .detail-cart-slot {
+                flex: 1;
+                min-width: 0;
+            }
+            .detail-cart-slot .add-to-cart-btn {
+                height: 52px;
+                border-radius: 12px;
+                font-size: 0.96rem;
+                font-weight: 700;
+            }
+            .gg-qty-stepper {
+                height: 52px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 5px;
+                border-radius: 12px;
+                background: #ffffff;
+                border: 2px solid #ff6b00;
+                box-shadow: 0 4px 14px rgba(255, 107, 0, 0.12);
+                gap: 8px;
+                transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            }
+            .gg-qty-stepper.is-busy {
+                opacity: 0.7;
+                pointer-events: none;
+            }
+            .gg-qty-btn {
+                width: 42px;
+                height: 40px;
+                border: 0;
+                border-radius: 9px;
+                background: #fff3eb;
+                color: #ea580c;
+                font-size: 1.25rem;
+                font-weight: 700;
+                line-height: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
+            }
+            .gg-qty-btn:hover:not(:disabled) {
+                background: #ff6b00;
+                color: #ffffff;
+            }
+            .gg-qty-btn.is-remove:hover:not(:disabled) {
+                background: #ef4444;
+                color: #ffffff;
+            }
+            .gg-qty-btn:active:not(:disabled) {
+                transform: scale(0.94);
+            }
+            .gg-qty-btn:disabled {
+                opacity: 0.35;
+                cursor: not-allowed;
+            }
+            .gg-qty-center {
+                flex: 1;
+                text-align: center;
+                line-height: 1.15;
+                user-select: none;
+            }
+            .gg-qty-num {
+                display: block;
+                font-size: 1.05rem;
+                font-weight: 800;
+                color: #0f172a;
+            }
+            .gg-qty-label {
+                display: block;
+                font-size: 0.68rem;
+                font-weight: 600;
+                color: #16a34a;
+            }
+            .cart-actions-row .action-btn {
+                height: 52px;
+                width: 52px;
+                border-radius: 12px;
+            }
+        </style>
         <div class="cart-section">
-            <div class="cart-actions-row">
-                @if (Model.AvailableStock > 0 || (Model.AvailableStock == 0 && Model.Stock > 0))
+            <div class="cart-actions-row align-items-stretch">
+                @if (maxStock > 0)
                 {
-                    <form asp-controller="Basket" asp-action="AddItem" method="post" id="addToCartForm"
-                        class="js-add-to-cart-form">
-                        <input type="hidden" name="productId" value="@Model.Id" />
-                        <input type="hidden" name="quantity" value="1" id="quantityInput" />
-                        <button type="submit" class="add-to-cart-btn @(Model.IsInBasket ? "in-cart" : "")"
-                            @(Model.IsInBasket ? "disabled" : "")>
-                            <i class="fas @(Model.IsInBasket ? "fa-check" : "fa-cart-plus")"></i>
-                            <span>@(Model.IsInBasket ? "Sepete Eklendi" : "Sepete Ekle")</span>
-                        </button>
-                    </form>
+                    <div class="detail-cart-slot" id="detailCartControl" data-product-id="@Model.Id" data-max-stock="@maxStock" data-qty="@basketQty">
+                        <form asp-controller="Basket" asp-action="AddItem" method="post" id="addToCartForm"
+                              class="js-add-to-cart-form @(basketQty > 0 ? "d-none" : "")">
+                            <input type="hidden" name="productId" value="@Model.Id" />
+                            <input type="hidden" name="quantity" value="1" id="quantityInput" />
+                            <button type="submit" class="add-to-cart-btn">
+                                <span>Sepete Ekle</span>
+                            </button>
+                        </form>
+
+                        <div class="gg-qty-stepper @(basketQty > 0 ? "" : "d-none")" id="detailQtyStepper">
+                            <button type="button" class="gg-qty-btn js-detail-qty-dec @(basketQty == 1 ? "is-remove" : "")" aria-label="Azalt">&minus;</button>
+                            <div class="gg-qty-center">
+                                <span class="gg-qty-num" id="detailQtyValue">@(basketQty > 0 ? basketQty : 1)</span>
+                                <span class="gg-qty-label">Sepette</span>
+                            </div>
+                            <button type="button" class="gg-qty-btn js-detail-qty-inc" aria-label="Arttır" @(basketQty >= maxStock ? "disabled" : "")>+</button>
+                        </div>
+                    </div>
                 }
                 else
                 {
-                    <button class="add-to-cart-btn" disabled>
-                        <i class="fas fa-ban"></i>
-                        Stokta Yok
-                    </button>
+                    <div class="detail-cart-slot">
+                        <button class="add-to-cart-btn" disabled>Stokta Yok</button>
+                    </div>
                 }
 
                 <div class="action-buttons">

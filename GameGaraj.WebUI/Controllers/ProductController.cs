@@ -196,6 +196,8 @@ namespace GameGaraj.WebUI.Controllers
 
             product.IsInBasket = basketProductIds.Contains(pid);
             product.IsFavorite = favTask.Result;
+            ViewBag.BasketQuantity = basket?.Items?
+                .FirstOrDefault(x => string.Equals(x.ProductId?.Trim(), pid, StringComparison.OrdinalIgnoreCase))?.Quantity ?? 0;
 
             ViewBag.Reviews = reviewsTask.Result;
             ViewBag.Questions = questionsTask.Result;

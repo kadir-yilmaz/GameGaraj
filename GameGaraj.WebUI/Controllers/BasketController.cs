@@ -118,11 +118,13 @@ namespace GameGaraj.WebUI.Controllers
             // Fetch public and user-specific coupons
             try
             {
-                var publicCoupons = await _campaignService.GetPublicCouponsAsync() ?? new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>();
+                var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var publicCoupons = !string.IsNullOrEmpty(currentUserId)
+                    ? await _campaignService.GetPublicCouponsAsync(currentUserId) ?? new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>()
+                    : await _campaignService.GetPublicCouponsAsync() ?? new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>();
                 ViewBag.PublicCoupons = publicCoupons;
 
                 var userCoupons = new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>();
-                var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (!string.IsNullOrEmpty(currentUserId))
                 {
                     userCoupons = await _campaignService.GetUserCouponsAsync(currentUserId) ?? new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>();
@@ -194,19 +196,25 @@ namespace GameGaraj.WebUI.Controllers
         [HttpPost]
         public async Task<IActionResult> UpdateQuantity(string productId, int quantity)
         {
+            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
             if (quantity <= 0)
             {
                 await _basketService.RemoveItemAsync(productId);
+                quantity = 0;
             }
             else
             {
                 var product = await _catalogService.GetProductByIdAsync(productId);
                 if (product == null)
-                    return NotFound();
+                    return isAjax ? Json(new { success = false, message = "Ürün bulunamadı." }) : NotFound();
 
                 bool hasStock = (product.AvailableStock >= quantity) || (product.AvailableStock == 0 && product.Stock >= quantity);
                 if (!hasStock)
                 {
+                    if (isAjax)
+                        return Json(new { success = false, message = "İstediğiniz miktarda stok bulunmamaktadır." });
+
                     TempData["Error"] = "İstediğiniz miktarda stok bulunmamaktadır.";
                     return RedirectToAction(nameof(Index));
                 }
@@ -215,8 +223,8 @@ namespace GameGaraj.WebUI.Controllers
                 {
                     ProductId = product.Id,
                     ProductName = product.Name,
-                    CategoryId = product.CategoryId, // Map Category
-                    Brand = product.Brand, // Map Brand
+                    CategoryId = product.CategoryId,
+                    Brand = product.Brand,
                     Price = product.Price,
                     Quantity = quantity,
                     ImageUrl = product.FirstImageUrl,
@@ -224,6 +232,13 @@ namespace GameGaraj.WebUI.Controllers
                 };
 
                 await _basketService.AddItemAsync(item);
+            }
+
+            if (isAjax)
+            {
+                var basket = await _basketService.GetBasketAsync();
+                var totalCount = basket?.Items?.Sum(x => x.Quantity) ?? 0;
+                return Json(new { success = true, quantity, count = totalCount });
             }
 
             return RedirectToAction(nameof(Index));

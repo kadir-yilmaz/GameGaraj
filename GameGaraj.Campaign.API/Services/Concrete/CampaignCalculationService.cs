@@ -200,13 +200,14 @@ namespace GameGaraj.Campaign.API.Services.Concrete
                 {
                     finalResponse.CouponMessage = "Bu kuponu kullanmak icin giris yapmalisiniz.";
                 }
-                else if (string.IsNullOrEmpty(coupon.UserId)
+                else if (coupon.IsSingleUse
+                         && string.IsNullOrEmpty(coupon.UserId)
                          && !string.IsNullOrWhiteSpace(request.UserId)
                          && await _couponService.IsCouponUsedByUserAsync(coupon.Id, request.UserId))
                 {
-                    finalResponse.CouponMessage = "Bu kuponu daha once kullandiniz.";
+                    finalResponse.CouponMessage = "Bu kuponu daha önce kullandınız.";
                 }
-                else if (!string.IsNullOrEmpty(coupon.UserId) && coupon.IsUsed)
+                else if (coupon.IsSingleUse && !string.IsNullOrEmpty(coupon.UserId) && coupon.IsUsed)
                 {
                     finalResponse.CouponMessage = "Bu kupon daha önce kullanılmış.";
                 }

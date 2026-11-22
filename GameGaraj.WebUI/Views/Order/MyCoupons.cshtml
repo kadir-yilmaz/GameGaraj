@@ -1,116 +1,292 @@
 @model List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>
 @using GameGaraj.WebUI.Models.Campaigns
 @{
-    ViewData["Title"] = "Kuponlarim";
+    ViewData["Title"] = "Kuponlarım";
     var publicCoupons = ViewBag.PublicCoupons as List<CouponViewModel> ?? new();
     var privateCoupons = Model ?? new();
+    var activeCount = publicCoupons.Count(c => !c.IsUsed && (!c.ExpiryDate.HasValue || c.ExpiryDate.Value >= DateTime.Now))
+                    + privateCoupons.Count(c => !c.IsUsed && (!c.ExpiryDate.HasValue || c.ExpiryDate.Value >= DateTime.Now));
 }
 
 <style>
-    .coupon-card {
-        background: linear-gradient(135deg, #1e2235 0%, #151824 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        position: relative;
-        overflow: hidden;
-        color: #fff;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    .mc-page {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 36px 16px 64px;
     }
-
-    .coupon-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    .mc-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        padding-bottom: 20px;
+        margin-bottom: 28px;
+        border-bottom: 1px solid #e2e8f0;
     }
-
-    .coupon-card::before,
-    .coupon-card::after {
-        content: '';
-        position: absolute;
-        width: 20px;
-        height: 20px;
-        background-color: #0f111a;
-        border-radius: 50%;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 2;
+    .mc-title {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+        margin: 0;
     }
-
-    .coupon-card::before {
-        left: -10px;
+    .mc-subtitle {
+        font-size: 0.9rem;
+        color: #64748b;
+        margin: 4px 0 0;
     }
-
-    .coupon-card::after {
-        right: -10px;
-    }
-
-    .coupon-divider {
-        border-left: 2px dashed rgba(255, 255, 255, 0.15);
-        height: 80%;
-        margin-left: 10px;
-        margin-right: 20px;
-    }
-
-    .coupon-code-badge {
-        font-family: 'Courier New', Courier, monospace;
-        letter-spacing: 1px;
-        font-size: 1.1rem;
-        background-color: rgba(255, 255, 255, 0.07);
-        border: 1px dashed rgba(255, 255, 255, 0.3);
-        padding: 6px 12px;
-        border-radius: 6px;
-        color: #f1c40f;
-    }
-
-    .btn-copy-coupon {
-        background: transparent;
-        border: none;
-        color: rgba(255, 255, 255, 0.6);
-        transition: color 0.2s;
-    }
-
-    .btn-copy-coupon:hover {
-        color: #fff;
-    }
-
-    .coupon-tabs .nav-link {
-        color: rgba(255, 255, 255, 0.72);
-        border-color: transparent;
-    }
-
-    .coupon-tabs .nav-link.active {
-        color: #111;
-        background-color: #f1c40f;
-        border-color: #f1c40f;
+    .mc-stat-pill {
+        font-size: 0.8rem;
         font-weight: 700;
+        color: #ea580c;
+        background: #fff3eb;
+        border: 1px solid #fed7aa;
+        padding: 6px 14px;
+        border-radius: 999px;
+    }
+    .mc-tabs {
+        display: inline-flex;
+        gap: 6px;
+        padding: 5px;
+        background: #f1f5f9;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        border: 0;
+    }
+    .mc-tabs .nav-link {
+        border: 0;
+        border-radius: 9px;
+        padding: 8px 18px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #475569;
+        background: transparent;
+        transition: all 0.2s ease;
+    }
+    .mc-tabs .nav-link:hover {
+        color: #0f172a;
+    }
+    .mc-tabs .nav-link.active {
+        background: #ffffff;
+        color: #0f172a;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    }
+    .mc-tab-count {
+        display: inline-block;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        color: #334155;
+        margin-left: 6px;
+    }
+    .mc-tabs .nav-link.active .mc-tab-count {
+        background: #fff3eb;
+        color: #ea580c;
+    }
+    .mc-empty-card {
+        background: #ffffff;
+        border: 1.5px dashed #cbd5e1;
+        border-radius: 16px;
+        padding: 56px 24px;
+        text-align: center;
+    }
+    .mc-empty-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 8px;
+    }
+    .mc-empty-desc {
+        font-size: 0.9rem;
+        color: #64748b;
+        max-width: 440px;
+        margin: 0 auto 24px;
+    }
+    .mc-ticket {
+        display: flex;
+        align-items: stretch;
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 16px;
+        overflow: hidden;
+        height: 100%;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .mc-ticket:hover:not(.is-disabled) {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09);
+    }
+    .mc-ticket.is-disabled {
+        opacity: 0.65;
+        background: #f8fafc;
+    }
+    .mc-ticket-left {
+        width: 132px;
+        flex-shrink: 0;
+        padding: 20px 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: #ffffff;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        border-right: 2px dashed rgba(255, 255, 255, 0.25);
+    }
+    .mc-ticket.is-personal .mc-ticket-left {
+        background: linear-gradient(135deg, #ea580c 0%, #ff6b00 100%);
+    }
+    .mc-ticket.is-disabled .mc-ticket-left {
+        background: #94a3b8;
+    }
+    .mc-ticket-val {
+        font-size: 1.6rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+    .mc-ticket-sub {
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        opacity: 0.9;
+        margin-top: 4px;
+    }
+    .mc-ticket-max {
+        font-size: 0.66rem;
+        background: rgba(255, 255, 255, 0.16);
+        padding: 2px 8px;
+        border-radius: 999px;
+        margin-top: 8px;
+    }
+    .mc-ticket-body {
+        flex: 1;
+        min-width: 0;
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .mc-badge-active {
+        background: #dcfce7;
+        color: #15803d;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 999px;
+    }
+    .mc-badge-used {
+        background: #fee2e2;
+        color: #dc2626;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 999px;
+    }
+    .mc-badge-expired {
+        background: #e2e8f0;
+        color: #475569;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 999px;
+    }
+    .mc-code-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+    .mc-code-pill {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        color: #0f172a;
+        background: #f8fafc;
+        border: 1.5px dashed #cbd5e1;
+        padding: 6px 12px;
+        border-radius: 9px;
+    }
+    .mc-copy-btn {
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #334155;
+        font-size: 0.76rem;
+        font-weight: 700;
+        padding: 6px 12px;
+        border-radius: 9px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .mc-copy-btn:hover {
+        border-color: #0f172a;
+        color: #0f172a;
+    }
+    .mc-use-btn {
+        border: 0;
+        background: #ff6b00;
+        color: #ffffff;
+        font-size: 0.76rem;
+        font-weight: 700;
+        padding: 7px 14px;
+        border-radius: 9px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+    .mc-use-btn:hover {
+        background: #ea580c;
+    }
+    @@media (max-width: 575px) {
+        .mc-ticket-left { width: 100px; padding: 14px 8px; }
+        .mc-ticket-val { font-size: 1.25rem; }
     }
 </style>
 
-<div class="container py-5" style="background-color: #0f111a; min-height: 80vh; border-radius: 12px; color: #fff;">
-    <div class="d-flex align-items-center mb-5">
-        <i class="fas fa-ticket-alt text-warning fa-2x me-3"></i>
-        <h2 class="mb-0 fw-bold">Kuponlarim</h2>
+<div class="mc-page">
+    <div class="mc-header">
+        <div>
+            <h1 class="mc-title">Kuponlarım</h1>
+            <p class="mc-subtitle">Aktif indirim kodlarınızı görüntüleyin, kopyalayın veya doğrudan sepetinizde uygulayın.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            @if (activeCount > 0)
+            {
+                <span class="mc-stat-pill">@activeCount Aktif Kupon</span>
+            }
+            <a asp-controller="Basket" asp-action="Index" class="btn btn-outline-dark btn-sm rounded-3 fw-semibold px-3">Sepetime Git</a>
+        </div>
     </div>
 
     @if (!publicCoupons.Any() && !privateCoupons.Any())
     {
-        <div class="text-center py-5">
-            <i class="fas fa-ticket-alt text-muted fa-4x mb-4 opacity-30"></i>
-            <h4 class="text-muted">Aktif kuponunuz bulunmamaktadir.</h4>
-            <p class="text-muted small">Siparis vererek ve sadakat hedeflerini tamamlayarak yeni kuponlar kazanabilirsiniz.</p>
-            <a asp-controller="Home" asp-action="Index" class="btn btn-warning mt-3 px-4 py-2 fw-bold text-dark">Alisverise Basla</a>
+        <div class="mc-empty-card">
+            <h4 class="mc-empty-title">Aktif kuponunuz bulunmuyor</h4>
+            <p class="mc-empty-desc">
+                Sipariş vererek ve kampanya hedeflerini tamamlayarak hesabınıza özel indirim kuponları kazanabilirsiniz.
+            </p>
+            <div class="d-flex justify-content-center flex-wrap gap-2">
+                <a asp-controller="Home" asp-action="Index" class="btn btn-dark px-4 py-2 rounded-3 fw-semibold">Alışverişe Başla</a>
+                <a asp-controller="Campaign" asp-action="Index" class="btn btn-outline-secondary px-4 py-2 rounded-3 fw-semibold">Kampanyaları İncele</a>
+            </div>
         </div>
     }
     else
     {
-        <ul class="nav nav-tabs coupon-tabs border-secondary mb-4" role="tablist">
+        <ul class="nav mc-tabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="public-coupons-tab" data-bs-toggle="tab" data-bs-target="#public-coupons" type="button" role="tab">
-                    Herkese Acik <span class="badge bg-secondary ms-1">@publicCoupons.Count</span>
+                    Herkese Açık <span class="mc-tab-count">@publicCoupons.Count</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="private-coupons-tab" data-bs-toggle="tab" data-bs-target="#private-coupons" type="button" role="tab">
-                    Bana Ozel <span class="badge bg-secondary ms-1">@privateCoupons.Count</span>
+                    Bana Özel <span class="mc-tab-count">@privateCoupons.Count</span>
                 </button>
             </li>
         </ul>
@@ -118,13 +294,15 @@
         <div class="tab-content">
             <div class="tab-pane fade show active" id="public-coupons" role="tabpanel" aria-labelledby="public-coupons-tab">
                 @{
-                    ViewData["EmptyText"] = "Herkese acik kupon bulunmamaktadir.";
+                    ViewData["EmptyText"] = "Herkese açık aktif kupon bulunmuyor.";
+                    ViewData["IsPersonalTab"] = false;
                 }
                 <partial name="_CouponGrid" model="publicCoupons" />
             </div>
             <div class="tab-pane fade" id="private-coupons" role="tabpanel" aria-labelledby="private-coupons-tab">
                 @{
-                    ViewData["EmptyText"] = "Size ozel kupon bulunmamaktadir.";
+                    ViewData["EmptyText"] = "Hesabınıza tanımlı özel kupon bulunmuyor.";
+                    ViewData["IsPersonalTab"] = true;
                 }
                 <partial name="_CouponGrid" model="privateCoupons" />
             </div>
@@ -134,20 +312,17 @@
 
 @section Scripts {
     <script>
-        function copyCouponCode(code, id) {
+        function copyCouponCode(code, btn) {
             navigator.clipboard.writeText(code).then(() => {
-                const icon = document.getElementById('icon-' + id);
-                icon.className = 'fas fa-check text-success fa-lg';
-
-                if (typeof window.showNotification === 'function') {
-                    window.showNotification('Kupon kodu kopyalandi.', 'success');
-                } else {
-                    alert('Kupon kodu kopyalandi: ' + code);
-                }
-
+                const orig = btn.innerText;
+                btn.innerText = 'Kopyalandı';
+                btn.style.borderColor = '#16a34a';
+                btn.style.color = '#16a34a';
                 setTimeout(() => {
-                    icon.className = 'far fa-copy fa-lg';
-                }, 2000);
+                    btn.innerText = orig;
+                    btn.style.borderColor = '';
+                    btn.style.color = '';
+                }, 1800);
             });
         }
     </script>

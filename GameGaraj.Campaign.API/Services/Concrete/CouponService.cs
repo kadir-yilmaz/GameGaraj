@@ -20,7 +20,7 @@ namespace GameGaraj.Campaign.API.Services.Concrete
         public async Task<List<Coupon>> GetAllAsync()
         {
             const string query = @"SELECT Id, Code, UserId, CouponType, Amount, Rate, MaxDiscountAmount,
-                                    MinOrderAmount, IsUsed, IsActive, IsEarnedReward, RewardRuleId,
+                                    MinOrderAmount, IsUsed, IsSingleUse, IsActive, IsEarnedReward, RewardRuleId,
                                     ExpirationDate, AllowWithOtherCampaigns, CreatedTime
                                    FROM Coupons ORDER BY CreatedTime DESC";
 
@@ -32,7 +32,7 @@ namespace GameGaraj.Campaign.API.Services.Concrete
         public async Task<Coupon?> GetByIdAsync(int id)
         {
             const string query = @"SELECT Id, Code, UserId, CouponType, Amount, Rate, MaxDiscountAmount,
-                                    MinOrderAmount, IsUsed, IsActive, IsEarnedReward, RewardRuleId,
+                                    MinOrderAmount, IsUsed, IsSingleUse, IsActive, IsEarnedReward, RewardRuleId,
                                     ExpirationDate, AllowWithOtherCampaigns, CreatedTime
                                    FROM Coupons WHERE Id = @Id";
 
@@ -43,7 +43,7 @@ namespace GameGaraj.Campaign.API.Services.Concrete
         public async Task<Coupon?> GetByCodeAsync(string code)
         {
             const string query = @"SELECT Id, Code, UserId, CouponType, Amount, Rate, MaxDiscountAmount,
-                                    MinOrderAmount, IsUsed, IsActive, IsEarnedReward, RewardRuleId,
+                                    MinOrderAmount, IsUsed, IsSingleUse, IsActive, IsEarnedReward, RewardRuleId,
                                     ExpirationDate, AllowWithOtherCampaigns, CreatedTime
                                    FROM Coupons WHERE Code = @Code AND IsActive = 1";
 
@@ -54,7 +54,7 @@ namespace GameGaraj.Campaign.API.Services.Concrete
         public async Task<List<Coupon>> GetPublicCouponsAsync()
         {
             const string query = @"SELECT Id, Code, UserId, CouponType, Amount, Rate, MaxDiscountAmount,
-                                    MinOrderAmount, CAST(0 AS BIT) AS IsUsed, IsActive, IsEarnedReward, RewardRuleId,
+                                    MinOrderAmount, CAST(0 AS BIT) AS IsUsed, IsSingleUse, IsActive, IsEarnedReward, RewardRuleId,
                                     ExpirationDate, AllowWithOtherCampaigns, CreatedTime
                                    FROM Coupons 
                                    WHERE UserId IS NULL AND IsActive = 1
@@ -70,8 +70,8 @@ namespace GameGaraj.Campaign.API.Services.Concrete
         {
             const string query = @"SELECT c.Id, c.Code, c.UserId, c.CouponType, c.Amount, c.Rate, c.MaxDiscountAmount,
                                     c.MinOrderAmount,
-                                    CAST(CASE WHEN cu.Id IS NULL THEN 0 ELSE 1 END AS BIT) AS IsUsed,
-                                    c.IsActive, c.IsEarnedReward, c.RewardRuleId,
+                                    CAST(CASE WHEN c.IsSingleUse = 1 AND cu.Id IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsUsed,
+                                    c.IsSingleUse, c.IsActive, c.IsEarnedReward, c.RewardRuleId,
                                     c.ExpirationDate, c.AllowWithOtherCampaigns, c.CreatedTime
                                    FROM Coupons c
                                    LEFT JOIN CouponUsages cu ON cu.CouponId = c.Id AND cu.UserId = @UserId
@@ -87,7 +87,9 @@ namespace GameGaraj.Campaign.API.Services.Concrete
         public async Task<List<Coupon>> GetByUserIdAsync(string userId)
         {
             const string query = @"SELECT Id, Code, UserId, CouponType, Amount, Rate, MaxDiscountAmount,
-                                    MinOrderAmount, IsUsed, IsActive, IsEarnedReward, RewardRuleId,
+                                    MinOrderAmount,
+                                    CAST(CASE WHEN IsSingleUse = 1 AND IsUsed = 1 THEN 1 ELSE 0 END AS BIT) AS IsUsed,
+                                    IsSingleUse, IsActive, IsEarnedReward, RewardRuleId,
                                     ExpirationDate, AllowWithOtherCampaigns, CreatedTime
                                    FROM Coupons 
                                    WHERE UserId = @UserId AND IsActive = 1
@@ -113,10 +115,10 @@ namespace GameGaraj.Campaign.API.Services.Concrete
         {
             const string query = @"INSERT INTO Coupons 
                                     (Code, UserId, CouponType, Amount, Rate, MaxDiscountAmount,
-                                     MinOrderAmount, IsUsed, IsActive, IsEarnedReward, RewardRuleId, ExpirationDate)
+                                     MinOrderAmount, IsUsed, IsSingleUse, IsActive, IsEarnedReward, RewardRuleId, ExpirationDate)
                                    VALUES 
                                     (@Code, @UserId, @CouponType, @Amount, @Rate, @MaxDiscountAmount,
-                                     @MinOrderAmount, @IsUsed, @IsActive, @IsEarnedReward, @RewardRuleId, @ExpirationDate)";
+                                     @MinOrderAmount, @IsUsed, @IsSingleUse, @IsActive, @IsEarnedReward, @RewardRuleId, @ExpirationDate)";
 
             using var connection = CreateConnection();
             var affectedRows = await connection.ExecuteAsync(query, coupon);
@@ -134,6 +136,7 @@ namespace GameGaraj.Campaign.API.Services.Concrete
                                     MaxDiscountAmount = @MaxDiscountAmount,
                                     MinOrderAmount = @MinOrderAmount,
                                     IsUsed = @IsUsed,
+                                    IsSingleUse = @IsSingleUse,
                                     IsActive = @IsActive,
                                     IsEarnedReward = @IsEarnedReward,
                                     RewardRuleId = @RewardRuleId,
@@ -156,7 +159,7 @@ namespace GameGaraj.Campaign.API.Services.Concrete
 
         public async Task<bool> MarkAsUsedAsync(int id)
         {
-            const string query = "UPDATE Coupons SET IsUsed = 1 WHERE Id = @Id";
+            const string query = "UPDATE Coupons SET IsUsed = 1 WHERE Id = @Id AND IsSingleUse = 1";
 
             using var connection = CreateConnection();
             var affectedRows = await connection.ExecuteAsync(query, new { Id = id });
@@ -166,16 +169,19 @@ namespace GameGaraj.Campaign.API.Services.Concrete
         public async Task<bool> MarkAsUsedAsync(int id, string userId)
         {
             const string query = @"
-                IF EXISTS (SELECT 1 FROM Coupons WHERE Id = @Id AND UserId IS NULL)
+                IF EXISTS (SELECT 1 FROM Coupons WHERE Id = @Id AND IsSingleUse = 1)
                 BEGIN
-                    IF NOT EXISTS (SELECT 1 FROM CouponUsages WHERE CouponId = @Id AND UserId = @UserId)
+                    IF EXISTS (SELECT 1 FROM Coupons WHERE Id = @Id AND UserId IS NULL)
                     BEGIN
-                        INSERT INTO CouponUsages (CouponId, UserId) VALUES (@Id, @UserId);
+                        IF NOT EXISTS (SELECT 1 FROM CouponUsages WHERE CouponId = @Id AND UserId = @UserId)
+                        BEGIN
+                            INSERT INTO CouponUsages (CouponId, UserId) VALUES (@Id, @UserId);
+                        END
                     END
-                END
-                ELSE
-                BEGIN
-                    UPDATE Coupons SET IsUsed = 1 WHERE Id = @Id AND UserId = @UserId;
+                    ELSE
+                    BEGIN
+                        UPDATE Coupons SET IsUsed = 1 WHERE Id = @Id AND UserId = @UserId;
+                    END
                 END";
 
             using var connection = CreateConnection();

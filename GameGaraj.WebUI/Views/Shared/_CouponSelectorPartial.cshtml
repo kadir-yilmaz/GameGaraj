@@ -1,0 +1,466 @@
+@using GameGaraj.WebUI.Models.Campaigns
+@{
+    var appliedCoupon = ViewBag.AppliedCoupon as CouponViewModel;
+    var discountResult = ViewBag.DiscountResult as CalculateDiscountResponse;
+    var userCoupons = (ViewBag.UserCoupons as List<CouponViewModel> ?? new List<CouponViewModel>())
+        .Where(x => !x.IsUsed && (!x.ExpiryDate.HasValue || x.ExpiryDate.Value > DateTime.Now))
+        .ToList();
+    var publicCoupons = (ViewBag.PublicCoupons as List<CouponViewModel> ?? new List<CouponViewModel>())
+        .Where(x => !x.IsUsed && (!x.ExpiryDate.HasValue || x.ExpiryDate.Value > DateTime.Now))
+        .ToList();
+
+    var allCoupons = new List<(CouponViewModel Coupon, bool IsPersonal)>();
+    var seenCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    foreach (var c in userCoupons)
+    {
+        if (!string.IsNullOrWhiteSpace(c.Code) && seenCodes.Add(c.Code))
+            allCoupons.Add((c, true));
+    }
+    foreach (var c in publicCoupons)
+    {
+        if (!string.IsNullOrWhiteSpace(c.Code) && seenCodes.Add(c.Code))
+            allCoupons.Add((c, false));
+    }
+
+    var couponRule = discountResult?.AppliedRules?.FirstOrDefault(r => r.RuleName.StartsWith("Kupon (", StringComparison.OrdinalIgnoreCase));
+    decimal couponDiscAmount = couponRule?.DiscountAmount ?? 0m;
+    decimal basketTotal = ViewData["CouponBasketTotal"] is decimal bt ? bt : 0m;
+    string formClass = ViewData["CouponFormClass"]?.ToString() ?? string.Empty;
+
+    string FormatBenefit(CouponViewModel c) =>
+        c.DiscountType == "Percentage" ? $"%{c.DiscountRate:0.##}" :
+        c.DiscountType == "FixedAmount" ? $"{c.Amount:N0} TL" :
+        "Ücretsiz";
+
+    string FormatBenefitSub(CouponViewModel c) =>
+        c.DiscountType == "FreeShipping" ? "Kargo" : "İndirim";
+}
+
+<style>
+    .gg-coupon-box {
+        border-top: 1px solid #eef0f4;
+        padding-top: 14px;
+        margin-top: 14px;
+        margin-bottom: 14px;
+    }
+    .gg-coupon-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 11px 14px;
+        border-radius: 12px;
+        border: 1.5px dashed #cbd5e1;
+        background: #f8fafc;
+        color: #0f172a;
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .gg-coupon-trigger:hover {
+        background: #fff7ed;
+        border-color: #ff6b00;
+    }
+    .gg-coupon-count {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #ea580c;
+        background: #fff3eb;
+        padding: 3px 9px;
+        border-radius: 999px;
+    }
+    .gg-applied-compact {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: #f0fdf4;
+        border: 1px solid #86efac;
+    }
+    .gg-applied-code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.82rem;
+        font-weight: 800;
+        color: #15803d;
+        letter-spacing: 0.03em;
+    }
+    .gg-applied-savings {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #166534;
+    }
+    .gg-mini-btn {
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #334155;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 4px 9px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .gg-mini-btn:hover {
+        border-color: #0f172a;
+        color: #0f172a;
+    }
+    .gg-mini-btn.is-danger {
+        border-color: #fecaca;
+        color: #dc2626;
+    }
+    .gg-mini-btn.is-danger:hover {
+        background: #dc2626;
+        border-color: #dc2626;
+        color: #ffffff;
+    }
+    .gg-coupon-feedback {
+        font-size: 0.76rem;
+        font-weight: 600;
+        margin-top: 8px;
+        padding: 7px 10px;
+        border-radius: 8px;
+    }
+    .gg-coupon-feedback.is-error {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+    /* Modal Styles */
+    .gg-coupon-modal .modal-content {
+        border: 0;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+    }
+    .gg-coupon-modal .modal-header {
+        border-bottom: 1px solid #f1f5f9;
+        padding: 18px 22px;
+    }
+    .gg-coupon-modal .modal-body {
+        padding: 20px 22px 24px;
+    }
+    .gg-coupon-input-shell {
+        display: flex;
+        align-items: center;
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 4px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+    .gg-coupon-input-shell:focus-within {
+        background: #ffffff;
+        border-color: #ff6b00;
+        box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
+    }
+    .gg-coupon-input-shell input {
+        border: 0;
+        background: transparent;
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 0.86rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #0f172a;
+        outline: none;
+        min-width: 0;
+    }
+    .gg-coupon-input-shell input::placeholder {
+        text-transform: none;
+        letter-spacing: normal;
+        font-weight: 400;
+        color: #94a3b8;
+    }
+    .gg-coupon-apply-btn {
+        border: 0;
+        background: #0f172a;
+        color: #ffffff;
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 9px 18px;
+        border-radius: 9px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        white-space: nowrap;
+    }
+    .gg-coupon-apply-btn:hover {
+        background: #ff6b00;
+    }
+    .gg-ticket-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 16px;
+        max-height: 360px;
+        overflow-y: auto;
+        padding-right: 2px;
+    }
+    .gg-ticket-form { margin: 0; }
+    .gg-ticket {
+        width: 100%;
+        display: flex;
+        align-items: stretch;
+        text-align: left;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    .gg-ticket:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+    }
+    .gg-ticket.is-active {
+        border-color: #22c55e;
+        background: #f0fdf4;
+        cursor: default;
+    }
+    .gg-ticket.is-locked {
+        opacity: 0.65;
+        background: #f8fafc;
+        cursor: not-allowed;
+    }
+    .gg-ticket-left {
+        width: 96px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 8px;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #ffffff;
+        border-right: 1.5px dashed rgba(255, 255, 255, 0.25);
+    }
+    .gg-ticket.is-personal .gg-ticket-left {
+        background: linear-gradient(135deg, #ea580c 0%, #ff6b00 100%);
+    }
+    .gg-ticket.is-active .gg-ticket-left {
+        background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+    }
+    .gg-ticket-val {
+        font-size: 1rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+    .gg-ticket-sub {
+        font-size: 0.66rem;
+        font-weight: 600;
+        opacity: 0.88;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-top: 3px;
+    }
+    .gg-ticket-body {
+        flex: 1;
+        min-width: 0;
+        padding: 11px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .gg-ticket-code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.88rem;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: 0.03em;
+    }
+    .gg-ticket-meta {
+        font-size: 0.74rem;
+        color: #64748b;
+        margin-top: 3px;
+    }
+    .gg-ticket-tag {
+        display: inline-block;
+        font-size: 0.64rem;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 999px;
+        margin-left: 6px;
+        vertical-align: middle;
+    }
+    .gg-tag-personal { background: #fff3eb; color: #ea580c; }
+    .gg-tag-public { background: #eff6ff; color: #2563eb; }
+    .gg-ticket-cta {
+        flex-shrink: 0;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 6px 12px;
+        border-radius: 8px;
+        background: #f1f5f9;
+        color: #0f172a;
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+    .gg-ticket:hover:not(:disabled) .gg-ticket-cta {
+        background: #ff6b00;
+        color: #ffffff;
+    }
+    .gg-ticket.is-active .gg-ticket-cta {
+        background: #dcfce7;
+        color: #15803d;
+    }
+    .gg-ticket.is-locked .gg-ticket-cta {
+        background: #e2e8f0;
+        color: #64748b;
+        font-size: 0.68rem;
+    }
+</style>
+
+<div class="gg-coupon-box">
+    @if (appliedCoupon != null)
+    {
+        <div class="gg-applied-compact">
+            <div style="min-width: 0;">
+                <div class="gg-applied-code">@appliedCoupon.Code</div>
+                <div class="gg-applied-savings">
+                    @(couponDiscAmount > 0 ? $"-{couponDiscAmount:N2} TL indirim" : $"{FormatBenefit(appliedCoupon)} {FormatBenefitSub(appliedCoupon)}")
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                <button type="button" class="gg-mini-btn" data-bs-toggle="modal" data-bs-target="#ggCouponModal">Değiştir</button>
+                <form asp-action="RemoveCoupon" method="post" class="m-0 @formClass">
+                    <button type="submit" class="gg-mini-btn is-danger">Kaldır</button>
+                </form>
+            </div>
+        </div>
+    }
+    else
+    {
+        <button type="button" class="gg-coupon-trigger" data-bs-toggle="modal" data-bs-target="#ggCouponModal">
+            <span>Kupon Seç / Ekle</span>
+            @if (allCoupons.Any())
+            {
+                <span class="gg-coupon-count">@allCoupons.Count Kupon</span>
+            }
+            else
+            {
+                <span class="text-muted small fw-semibold">Kod Gir</span>
+            }
+        </button>
+    }
+
+    @if (TempData["CouponError"] != null)
+    {
+        <div class="gg-coupon-feedback is-error">@TempData["CouponError"]</div>
+    }
+</div>
+
+<!-- Kupon Seçim Modalı -->
+<div class="modal fade gg-coupon-modal" id="ggCouponModal" tabindex="-1" aria-labelledby="ggCouponModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark mb-0" id="ggCouponModalLabel">Kupon &amp; İndirim Kodu</h5>
+                    <div class="text-muted small">Kodunuzu yazın veya mevcut kuponlardan birini seçin.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <form asp-action="ApplyCoupon" method="post" class="m-0 @formClass">
+                    <div class="gg-coupon-input-shell">
+                        <input type="text"
+                               name="couponCode"
+                               placeholder="Kupon kodunu yazın"
+                               autocomplete="off"
+                               oninput="this.value = this.value.toUpperCase()" />
+                        <button type="submit" class="gg-coupon-apply-btn">Uygula</button>
+                    </div>
+                </form>
+
+                @if (allCoupons.Any())
+                {
+                    <div class="d-flex justify-content-between align-items-center mt-3 mb-1">
+                        <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.04em; font-size: 0.72rem;">Kullanılabilir Kuponlar</span>
+                        <span class="gg-coupon-count">@allCoupons.Count Adet</span>
+                    </div>
+                    <div class="gg-ticket-list">
+                        @foreach (var item in allCoupons)
+                        {
+                            var c = item.Coupon;
+                            decimal minPurchase = c.MinPurchaseAmount ?? 0m;
+                            bool isApplied = appliedCoupon != null && string.Equals(appliedCoupon.Code, c.Code, StringComparison.OrdinalIgnoreCase);
+                            bool isEligible = minPurchase <= 0 || basketTotal <= 0 || basketTotal >= minPurchase;
+                            decimal remaining = Math.Max(0m, minPurchase - basketTotal);
+
+                            <form asp-action="ApplyCoupon" method="post" class="gg-ticket-form @formClass">
+                                <input type="hidden" name="couponCode" value="@c.Code" />
+                                <button type="submit"
+                                        class="gg-ticket @(item.IsPersonal ? "is-personal" : "") @(isApplied ? "is-active" : "") @(!isEligible && !isApplied ? "is-locked" : "")"
+                                        @(isApplied || !isEligible ? "disabled" : "")>
+                                    <div class="gg-ticket-left">
+                                        <span class="gg-ticket-val">@FormatBenefit(c)</span>
+                                        <span class="gg-ticket-sub">@FormatBenefitSub(c)</span>
+                                    </div>
+                                    <div class="gg-ticket-body">
+                                        <div style="min-width: 0;">
+                                            <div>
+                                                <span class="gg-ticket-code">@c.Code</span>
+                                                <span class="gg-ticket-tag @(item.IsPersonal ? "gg-tag-personal" : "gg-tag-public")">
+                                                    @(item.IsPersonal ? "Özel" : "Genel")
+                                                </span>
+                                            </div>
+                                            <div class="gg-ticket-meta">
+                                                @if (minPurchase > 0)
+                                                {
+                                                    <span>Min. @minPurchase.ToString("N0") TL</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Alt limitsiz geçerli</span>
+                                                }
+                                                @if (c.ExpiryDate.HasValue)
+                                                {
+                                                    <span> &middot; Son: @c.ExpiryDate.Value.ToString("dd.MM.yyyy")</span>
+                                                }
+                                            </div>
+                                        </div>
+                                        <span class="gg-ticket-cta">
+                                            @if (isApplied)
+                                            {
+                                                @:Seçili
+                                            }
+                                            else if (!isEligible)
+                                            {
+                                                @:+@remaining.ToString("N0") TL
+                                            }
+                                            else
+                                            {
+                                                @(appliedCoupon != null ? "Değiştir" : "Seç")
+                                            }
+                                        </span>
+                                    </div>
+                                </button>
+                            </form>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted small py-4">
+                        Şu an hesabınız için tanımlı aktif kupon bulunmuyor.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('ggCouponModal');
+        if (modal && modal.parentElement !== document.body) {
+            document.body.appendChild(modal);
+        }
+    });
+</script>

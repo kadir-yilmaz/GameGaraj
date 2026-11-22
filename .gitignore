@@ -30,6 +30,7 @@ go.work.sum
 ## [Environment Variables]
 .env
 .env.*
+!.env.example
 
 ## [Configuration Files - Sensitive Data]
 # Ignore actual appsettings files (contain sensitive data)

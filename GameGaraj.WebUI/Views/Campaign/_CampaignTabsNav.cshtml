@@ -1,0 +1,84 @@
+@{
+    var activeTab = ViewData["ActiveCampaignTab"]?.ToString() ?? "Index";
+}
+
+<div class="d-flex gap-2 mb-4 flex-wrap border-bottom pb-3">
+    <a asp-controller="Campaign" asp-action="Index"
+       class="btn @(activeTab == "Index" ? "btn-primary" : "btn-outline-secondary") rounded-pill px-4 js-campaign-tab">Kampanyalar</a>
+    <a asp-controller="Campaign" asp-action="Coupons"
+       class="btn @(activeTab == "Coupons" ? "btn-primary" : "btn-outline-secondary") rounded-pill px-4 js-campaign-tab">Herkese Açık Kuponlar</a>
+    <a asp-controller="Campaign" asp-action="Rewards"
+       class="btn @(activeTab == "Rewards" ? "btn-primary" : "btn-outline-secondary") rounded-pill px-4 js-campaign-tab">Kupon Kazan</a>
+</div>
+
+<script>
+    if (!window.copyCouponCode) {
+        window.copyCouponCode = function (code, btn) {
+            navigator.clipboard.writeText(code).then(function () {
+                if (typeof window.showAppToast === 'function') {
+                    window.showAppToast('success', 'Kupon kodu kopyalandı: ' + code);
+                }
+            });
+        };
+    }
+
+    if (!window.__ggCampaignTabsInit) {
+        window.__ggCampaignTabsInit = true;
+
+        async function loadCampaignTab(url, pushState) {
+            const shell = document.getElementById('campaignPageShell');
+            if (!shell) {
+                window.location.href = url;
+                return;
+            }
+
+            shell.style.transition = 'opacity 0.15s ease';
+            shell.style.opacity = '0.55';
+
+            try {
+                const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const html = await res.text();
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const nextShell = doc.getElementById('campaignPageShell');
+                const nextStyle = doc.getElementById('campaignPageStyle');
+
+                if (!nextShell) {
+                    window.location.href = url;
+                    return;
+                }
+
+                const curStyle = document.getElementById('campaignPageStyle');
+                if (curStyle && nextStyle) {
+                    curStyle.textContent = nextStyle.textContent;
+                }
+
+                shell.innerHTML = nextShell.innerHTML;
+                document.title = doc.title || document.title;
+
+                if (pushState) {
+                    history.pushState({ campaignUrl: url }, '', url);
+                }
+            } catch {
+                window.location.href = url;
+                return;
+            } finally {
+                shell.style.opacity = '1';
+            }
+        }
+
+        document.addEventListener('click', function (e) {
+            const link = e.target.closest('a.js-campaign-tab');
+            if (!link || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            if (link.href === window.location.href) return;
+            loadCampaignTab(link.href, true);
+        });
+
+        window.addEventListener('popstate', function () {
+            if (document.getElementById('campaignPageShell')) {
+                loadCampaignTab(window.location.href, false);
+            }
+        });
+    }
+</script>

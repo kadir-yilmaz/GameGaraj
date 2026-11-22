@@ -93,6 +93,26 @@
                             </div>
                         </div>
 
+                        <div class="mb-4 p-3 rounded-3 bg-light border">
+                            <label class="form-label fw-bold mb-2 d-block">Kullanım Hakkı</label>
+                            <div class="d-flex flex-wrap gap-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="IsSingleUse" id="singleUseTrue" value="true" @(Model.IsSingleUse ? "checked" : "") />
+                                    <label class="form-check-label fw-semibold" for="singleUseTrue">
+                                        Tek Kullanımlık
+                                        <span class="d-block text-muted small fw-normal">Kullanıcı bu kuponu 1 kez kullandıktan sonra tekrar göremez ve kullanamaz.</span>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="IsSingleUse" id="singleUseFalse" value="false" @(!Model.IsSingleUse ? "checked" : "") />
+                                    <label class="form-check-label fw-semibold" for="singleUseFalse">
+                                        Çoklu Kullanım
+                                        <span class="d-block text-muted small fw-normal">Son kullanma tarihine kadar aynı kullanıcı tekrar kullanabilir.</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
                         <button type="submit" class="btn btn-primary px-4 py-2">
                             <i class="fas fa-save me-2"></i>Kuponu Kaydet
                         </button>

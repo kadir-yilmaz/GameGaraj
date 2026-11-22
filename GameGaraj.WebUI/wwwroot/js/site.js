@@ -129,8 +129,18 @@ $(document).ready(function () {
                     if ($form.closest('.product-card').length) {
                         $form.replaceWith(buildGoToBasketButton(true));
                     } else if ($form.attr('id') === 'addToCartForm') {
-                        var detailButtonClasses = ($button.attr('class') || 'add-to-cart-btn') + ' in-cart';
-                        $form.replaceWith(buildGoToBasketButton(false));
+                        $button.prop('disabled', false).html(originalContent);
+                        var $slot = $('#detailCartControl');
+                        var $stepper = $('#detailQtyStepper');
+                        if ($slot.length && $stepper.length) {
+                            $slot.attr('data-qty', 1);
+                            $('#detailQtyValue').text(1);
+                            $stepper.find('.js-detail-qty-dec').addClass('is-remove');
+                            var maxStock = parseInt($slot.attr('data-max-stock') || '99', 10);
+                            $stepper.find('.js-detail-qty-inc').prop('disabled', 1 >= maxStock);
+                            $form.addClass('d-none');
+                            $stepper.removeClass('d-none');
+                        }
                     } else {
                         $button.prop('disabled', false).html(originalContent);
                         $button.addClass('in-cart');
@@ -156,6 +166,59 @@ $(document).ready(function () {
             error: function () {
                 window.showAppToast('danger', 'Bir hata olu&#351;tu.');
                 $button.prop('disabled', false).html(originalContent);
+            }
+        });
+    });
+
+    // Product Detail Page Quantity Stepper (+/-)
+    $(document).on('click', '.js-detail-qty-inc, .js-detail-qty-dec', function () {
+        var $btn = $(this);
+        var $slot = $('#detailCartControl');
+        var $stepper = $('#detailQtyStepper');
+        if (!$slot.length || $stepper.hasClass('is-busy')) return;
+
+        var productId = $slot.attr('data-product-id');
+        var currentQty = parseInt($slot.attr('data-qty') || '1', 10);
+        var maxStock = parseInt($slot.attr('data-max-stock') || '99', 10);
+        var nextQty = $btn.hasClass('js-detail-qty-inc') ? currentQty + 1 : currentQty - 1;
+
+        if (nextQty > maxStock) {
+            window.showAppToast('warning', 'Maksimum stok miktarına ulaşıldı.');
+            return;
+        }
+
+        $stepper.addClass('is-busy');
+
+        $.ajax({
+            url: '/Basket/UpdateQuantity',
+            method: 'POST',
+            data: { productId: productId, quantity: nextQty },
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+            success: function (res) {
+                if (res && res.success) {
+                    if (res.count !== undefined) {
+                        window.updateBasketBadge(res.count);
+                    }
+                    if (res.quantity <= 0) {
+                        $slot.attr('data-qty', 0);
+                        $stepper.addClass('d-none');
+                        $('#addToCartForm').removeClass('d-none');
+                        window.showAppToast('info', 'Ürün sepetten çıkarıldı.');
+                    } else {
+                        $slot.attr('data-qty', res.quantity);
+                        $('#detailQtyValue').text(res.quantity);
+                        $stepper.find('.js-detail-qty-dec').toggleClass('is-remove', res.quantity === 1);
+                        $stepper.find('.js-detail-qty-inc').prop('disabled', res.quantity >= maxStock);
+                    }
+                } else {
+                    window.showAppToast('danger', (res && res.message) || 'Adet güncellenemedi.');
+                }
+            },
+            error: function () {
+                window.showAppToast('danger', 'Adet güncellenirken hata oluştu.');
+            },
+            complete: function () {
+                $stepper.removeClass('is-busy');
             }
         });
     });

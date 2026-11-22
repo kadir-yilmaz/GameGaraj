@@ -22,6 +22,7 @@ namespace GameGaraj.WebUI.Models.Campaigns
 
         public string? UserId { get; set; }
         public bool IsUsed { get; set; }
+        public bool IsSingleUse { get; set; } = true;
         public DateTime? UsedDate { get; set; }
 
         [JsonPropertyName("ExpirationDate")]
@@ -58,6 +59,8 @@ namespace GameGaraj.WebUI.Models.Campaigns
         public decimal? MinPurchaseAmount { get; set; }
 
         public string? UserId { get; set; }
+
+        public bool IsSingleUse { get; set; } = true;
 
         [JsonPropertyName("ExpirationDate")]
         public DateTime? ExpiryDate { get; set; }

@@ -30,8 +30,11 @@ namespace GameGaraj.Campaign.API.Models
         /// <summary>Minimum sepet tutarı (alt limit)</summary>
         public decimal? MinOrderAmount { get; set; }
 
-        /// <summary>Kupon kullanıldı mı? Bir kupon yalnızca 1 kez kullanılabilir.</summary>
+        /// <summary>Kupon kullanıldı mı?</summary>
         public bool IsUsed { get; set; } = false;
+
+        /// <summary>Tek kullanımlık mı? true = kullanıcı başına 1 kez, false = tekrar kullanılabilir</summary>
+        public bool IsSingleUse { get; set; } = true;
 
         /// <summary>Kuponun aktif olup olmadığı</summary>
         public bool IsActive { get; set; } = true;

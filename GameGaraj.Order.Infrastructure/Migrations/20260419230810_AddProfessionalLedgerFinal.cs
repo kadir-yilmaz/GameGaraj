@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -39,6 +39,9 @@ namespace GameGaraj.Order.Infrastructure.Migrations
                 nullable: false,
                 oldClrType: typeof(string),
                 oldType: "nvarchar(450)");
+
+            migrationBuilder.Sql(
+                "UPDATE [ordering].[Orders] SET [InvoiceAddressId] = [DeliveryAddressId] WHERE [InvoiceAddressId] IS NULL;");
 
             migrationBuilder.AlterColumn<int>(
                 name: "InvoiceAddressId",

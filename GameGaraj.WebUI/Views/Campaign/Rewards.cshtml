@@ -3,7 +3,7 @@
     ViewData["Title"] = "Kupon Kazan Fırsatları";
 }
 
-<style>
+<style id="campaignPageStyle">
     .campaign-list-header {
         background: linear-gradient(135deg, #1e1e2f 0%, #111119 100%);
         color: white;
@@ -75,7 +75,7 @@
     }
 </style>
 
-<div class="container my-4">
+<div class="container my-4" id="campaignPageShell">
     <div class="campaign-list-header text-center text-md-start px-5">
         <div class="row align-items-center">
             <div class="col-md-8">
@@ -89,11 +89,8 @@
     </div>
 
     <!-- Sub Navigation for Promotions -->
-    <div class="d-flex gap-2 mb-4 flex-wrap border-bottom pb-3">
-        <a asp-controller="Campaign" asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Kampanyalar</a>
-        <a asp-controller="Campaign" asp-action="Coupons" class="btn btn-outline-secondary rounded-pill px-4">Herkese Açık Kuponlar</a>
-        <a asp-controller="Campaign" asp-action="Rewards" class="btn btn-primary rounded-pill px-4">Kupon Kazan</a>
-    </div>
+    @{ ViewData["ActiveCampaignTab"] = "Rewards"; }
+    <partial name="_CampaignTabsNav" />
 
     @if (Model != null && Model.Any())
     {

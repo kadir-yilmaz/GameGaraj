@@ -1,87 +1,82 @@
 @model List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>
 @{
-    var emptyText = ViewData["EmptyText"] as string ?? "Kupon bulunmamaktadir.";
+    var emptyText = ViewData["EmptyText"] as string ?? "Kupon bulunmuyor.";
+    var isPersonal = ViewData["IsPersonalTab"] is bool b && b;
 }
 
 @if (!Model.Any())
 {
-    <div class="text-center py-5">
-        <i class="fas fa-ticket-alt text-muted fa-3x mb-3 opacity-30"></i>
-        <p class="text-muted mb-0">@emptyText</p>
+    <div class="mc-empty-card">
+        <h5 class="mc-empty-title mb-1">@emptyText</h5>
+        <p class="mc-empty-desc mb-0">Yeni kampanyalar yayınlandığında kuponlarınız burada listelenecektir.</p>
     </div>
 }
 else
 {
-    <div class="row g-4">
+    <div class="row g-3">
         @foreach (var coupon in Model)
         {
             var isExpired = coupon.ExpiryDate.HasValue && coupon.ExpiryDate.Value < DateTime.Now;
-            var statusText = coupon.IsUsed ? "Kullanildi" : (isExpired ? "Suresi Doldu" : "Kullanilabilir");
-            var statusClass = coupon.IsUsed ? "bg-danger" : (isExpired ? "bg-secondary text-dark" : "bg-success");
+            var isDisabled = coupon.IsUsed || isExpired;
+            var statusText = coupon.IsUsed ? "Kullanıldı" : (isExpired ? "Süresi Doldu" : "Kullanılabilir");
+            var statusClass = coupon.IsUsed ? "mc-badge-used" : (isExpired ? "mc-badge-expired" : "mc-badge-active");
+            decimal minPurchase = coupon.MinPurchaseAmount ?? 0m;
 
-            <div class="col-md-6">
-                <div class="coupon-card p-4 d-flex align-items-center h-100 @(coupon.IsUsed || isExpired ? "opacity-60" : "")">
-                    <div class="text-center pe-3 d-flex flex-column justify-content-center align-items-center" style="min-width: 120px;">
+            <div class="col-lg-6">
+                <div class="mc-ticket @(isPersonal ? "is-personal" : "") @(isDisabled ? "is-disabled" : "")">
+                    <div class="mc-ticket-left">
                         @if (coupon.DiscountType == "Percentage")
                         {
-                            <h2 class="fw-extrabold text-success mb-0" style="font-size: 2.2rem;">%@coupon.DiscountRate</h2>
-                            <span class="small text-muted">Indirim</span>
+                            <div class="mc-ticket-val">%@((coupon.DiscountRate ?? 0m).ToString("0.##"))</div>
+                            <div class="mc-ticket-sub">İndirim</div>
                             @if (coupon.MaxDiscountAmount > 0)
                             {
-                                <span class="badge bg-dark mt-1" style="font-size: 0.65rem;">Max @coupon.MaxDiscountAmount TL</span>
+                                <div class="mc-ticket-max">Maks. @coupon.MaxDiscountAmount.Value.ToString("N0") TL</div>
                             }
                         }
                         else if (coupon.DiscountType == "FixedAmount")
                         {
-                            <h2 class="fw-extrabold text-success mb-0" style="font-size: 2rem;">@coupon.Amount</h2>
-                            <span class="small text-muted">TL Indirim</span>
+                            <div class="mc-ticket-val">@((coupon.Amount ?? 0m).ToString("N0")) TL</div>
+                            <div class="mc-ticket-sub">İndirim</div>
                         }
-                        else if (coupon.DiscountType == "FreeShipping")
+                        else
                         {
-                            <i class="fas fa-truck text-info fa-2x mb-2"></i>
-                            <span class="small text-muted fw-bold">Ucretsiz Kargo</span>
+                            <div class="mc-ticket-val" style="font-size: 1.15rem;">Ücretsiz</div>
+                            <div class="mc-ticket-sub">Kargo</div>
                         }
                     </div>
 
-                    <div class="coupon-divider"></div>
-
-                    <div class="flex-grow-1">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <span class="badge @statusClass px-2 py-1" style="font-size: 0.7rem;">@statusText</span>
-                            @if (coupon.ExpiryDate.HasValue)
-                            {
-                                <small class="text-muted"><i class="far fa-clock me-1"></i>Sure: @coupon.ExpiryDate.Value.ToString("dd.MM.yyyy")</small>
-                            }
-                            else
-                            {
-                                <small class="text-muted"><i class="far fa-clock me-1"></i>Suresiz</small>
-                            }
+                    <div class="mc-ticket-body">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                <span class="@statusClass">@statusText</span>
+                                <span class="text-muted" style="font-size: 0.76rem;">
+                                    @(coupon.ExpiryDate.HasValue ? $"Son: {coupon.ExpiryDate.Value:dd.MM.yyyy}" : "Süresiz")
+                                </span>
+                            </div>
+                            <div class="text-muted" style="font-size: 0.82rem;">
+                                @if (minPurchase > 0)
+                                {
+                                    <span>Minimum sepet tutarı: <strong class="text-dark">@minPurchase.ToString("N0") TL</strong></span>
+                                }
+                                else
+                                {
+                                    <span>Alt limitsiz tüm sepetlerde geçerli</span>
+                                }
+                            </div>
                         </div>
 
-                        @if (coupon.MinPurchaseAmount > 0)
-                        {
-                            <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1 text-warning"></i>Minimum sepet tutari: <strong>@coupon.MinPurchaseAmount TL</strong></p>
-                        }
-                        else
-                        {
-                            <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1 text-success"></i>Tum sepetlerde gecerli</p>
-                        }
-
-                        @if (!coupon.IsUsed && !isExpired)
-                        {
-                            <div class="d-flex align-items-center gap-2 mt-3">
-                                <span class="coupon-code-badge" id="code-@coupon.Id">@coupon.Code</span>
-                                <button class="btn btn-copy-coupon" onclick="copyCouponCode('@coupon.Code', @coupon.Id)" title="Kodu Kopyala">
-                                    <i class="far fa-copy fa-lg" id="icon-@coupon.Id"></i>
-                                </button>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="d-flex align-items-center gap-2 mt-3">
-                                <span class="coupon-code-badge text-decoration-line-through text-muted" style="border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3) !important;">@coupon.Code</span>
-                            </div>
-                        }
+                        <div class="mc-code-row">
+                            <span class="mc-code-pill @(isDisabled ? "text-decoration-line-through text-muted" : "")">@coupon.Code</span>
+                            @if (!isDisabled)
+                            {
+                                <button type="button" class="mc-copy-btn" onclick="copyCouponCode('@coupon.Code', this)">Kopyala</button>
+                                <form asp-controller="Basket" asp-action="ApplyCoupon" method="post" class="m-0">
+                                    <input type="hidden" name="couponCode" value="@coupon.Code" />
+                                    <button type="submit" class="mc-use-btn">Sepette Kullan</button>
+                                </form>
+                            }
+                        </div>
                     </div>
                 </div>
             </div>

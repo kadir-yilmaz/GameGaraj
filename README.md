@@ -1,60 +1,79 @@
 # GameGaraj - Microservices E-Commerce Platform
 
-GameGaraj, modern mikroservis mimarisi, polyglot yaklaşımı (.NET 8 & Go) ve dağıtık sistem prensipleri üzerine inşa edilmiş, yüksek performanslı bir e-ticaret platformudur.
+GameGaraj, modern mikroservis mimarisi, polyglot yaklaşımı (.NET 8 & Go) ve dağıtık sistem prensipleri üzerine inşa edilmiş bir e-ticaret platformudur.
 
 ---
 
-## 🚀 Hızlı Başlangıç
+## Hızlı Kurulum (Local Development)
 
-### 1. Konfigürasyon Dosyalarını Hazırlayın
+### Gereksinimler
+- **.NET 8 SDK**
+- **Go 1.23+** (`brew install go`)
+- **Docker Desktop**
+- *(macOS kullanıcıları için)* Gateway `:5000` portunu kullandığından **Sistem Ayarları -> Genel -> AirDrop ve Handoff -> AirPlay Alıcısı** kapalı olmalıdır.
 
-Proje, hassas bilgileri korumak için `appsettings.example.json` dosyaları kullanır. Başlamadan önce:
-
+### 1. Ortam Değişkenlerini (`.env`) Oluşturun
 ```bash
-# Her API klasöründe:
-cp appsettings.example.json appsettings.json
+cp .env.example .env
+```
+`.env` içindeki `SA_PASSWORD`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SMTP_USER` ve `SMTP_PASSWORD` alanlarını kendi değerlerinizle güncelleyin.
 
-# Veya PowerShell ile:
+### 2. Tüm `appsettings.json` Dosyalarını Kopyalayın
+Her servisin klasöründeki `appsettings.example.json` şablonları local Docker portlarına göre hazırdır.
+
+**macOS / Linux:**
+```bash
+for f in GameGaraj.*/appsettings.example.json; do
+  cp -n "$f" "${f%.example.json}.json"
+done
+```
+
+**Windows (PowerShell):**
+```powershell
 Get-ChildItem -Recurse -Filter "appsettings.example.json" | ForEach-Object {
     Copy-Item $_.FullName ($_.FullName -replace ".example.json", ".json")
 }
 ```
+Kopyalama sonrası `Order.API`, `Campaign.API` (SQL Server `SA_PASSWORD`) ve `Payment.API` (`Iyzipay` sandbox anahtarları) içindeki placeholder değerleri doldurun.
 
-### 2. Environment Variables (.env)
-
-`.env` dosyasını oluşturun ve aşağıdaki değişkenleri doldurun:
-
-```env
-# Admin User Settings
-ADMIN_EMAIL=your-email@example.com
-ADMIN_PASSWORD=YourSecurePassword123
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# Email Settings
-EmailSettings__SmtpUsername=your-email@gmail.com
-EmailSettings__SmtpPassword=your-app-password
-
-# Iyzico Settings
-Iyzipay__ApiKey=your-iyzipay-api-key
-Iyzipay__SecretKey=your-iyzipay-secret-key
-```
-
-### 3. Docker Containerları Başlatın
-
+### 3. Altyapı Container'larını Başlatın
 ```bash
-docker-compose up -d
+docker compose up -d
+```
+Keycloak ilk kez ayağa kalkarken `config/keycloak/realm-init.json` üzerinden `GameGaraj` realm'ini, Google OAuth sağlayıcısını ve `.env` içindeki admin kullanıcısını otomatik oluşturur.
+
+### 4. Uygulama Servislerini Başlatın
+
+**macOS (11 .NET + 2 Go servisi — interaktif menü veya CLI):**
+```bash
+# 11 .NET servisi (WebUI HTTPS :7050, diğerleri HTTP)
+./dotnet-services.sh          # İnteraktif menü
+./dotnet-services.sh start    # Tümünü başlat
+./dotnet-services.sh stop     # Tümünü durdur
+
+# 2 Go servisi (Search :5082, Notification :5025)
+./go-services.sh              # İnteraktif menü
+./go-services.sh start        # Tümünü başlat
+./go-services.sh stop         # Tümünü durdur
 ```
 
-### 4. Uygulamayı Çalıştırın
+**Windows (PowerShell):**
+```powershell
+.\go-services.ps1 start
+```
 
-Keycloak ilk kez realm import ederken `.env` dosyasındaki `ADMIN_EMAIL` ve `ADMIN_PASSWORD` değerleriyle admin kullanıcısını oluşturur.
+### 5. Erişim Adresleri
+- **WebUI:** `https://localhost:7050`
+- **YARP Gateway:** `http://localhost:5000`
+- **Keycloak Admin:** `http://localhost:8080`
+- **RabbitMQ Management:** `http://localhost:15672`
+- **Jaeger Tracing:** `http://localhost:16686`
 
 ---
 
-## 🏛️ Mimari Özeti ve Temel Prensipler
+## Mimari Özeti ve Temel Prensipler
 
-Bu proje, sadece bir e-ticaret uygulaması değil; yüksek trafik, veri tutarlılığı (consistency), yatay ölçeklenebilirlik (scalability) ve SEO gereksinimlerine getirilmiş modern mimari çözümler bütünüdür.
+Bu proje; yüksek trafik, veri tutarlılığı (consistency), yatay ölçeklenebilirlik (scalability) ve gözlemlenebilirlik gereksinimlerine yönelik modern mikroservis desenlerini uygular.
 
 ```
                          ┌─────────────────────────┐
@@ -86,18 +105,18 @@ Bu proje, sadece bir e-ticaret uygulaması değil; yüksek trafik, veri tutarlı
 
 ---
 
-## 💎 Dağıtık İşlem Mimarisi: Saga Choreography & Transactional Outbox
+## Dağıtık İşlem Mimarisi: Saga Choreography & Transactional Outbox
 
-GameGaraj sipariş akışında dağıtık veri tutarlılığı (**Eventual Consistency**) ve sıfır veri kaybı garantisi sağlamak için **Saga Choreography Pattern** ve **Transactional Outbox Pattern** mimarisi uygulanmıştır.
+Sipariş akışında dağıtık veri tutarlılığı (**Eventual Consistency**) ve sıfır veri kaybı garantisi sağlamak için **Saga Choreography Pattern** ve **Transactional Outbox Pattern** uygulanmıştır.
 
 ```
 [ Kullanıcı Sipariş Verdi ]
             │
             ▼ (Faz 1: Senkron Doğrulama & Ödeme)
  ┌─────────────────────────────────────────────────────────────┐
- │ 1. Catalog.API  ──► Stok Kontrolü & Rezervasyonu           │
- │ 2. Payment.API  ──► İyzico Kredi Kartı Tahsilatı            │
- │ 3. Order.API    ──► Sipariş Kaydı (Transactional Outbox)   │
+ │ 1. Catalog.API  ──► Stok Doğrulama                         │
+ │ 2. Order.API    ──► Sipariş Kaydı + Outbox (OrderStarted)   │
+ │ 3. Payment.API  ──► İyzico Kredi Kartı Tahsilatı            │
  └──────────────────────────────┬──────────────────────────────┘
                                 │
                                 ▼ (Faz 2: Asenkron Event Dağıtımı)
@@ -107,7 +126,7 @@ GameGaraj sipariş akışında dağıtık veri tutarlılığı (**Eventual Consi
          ▼                      ▼                      ▼
 ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
 │   Invoice.API    │  │ Notification.API │  │   Campaign.API   │
-│   (.NET 8)       │  │ (Go 1.23 + Gin)  │  │   (.NET 8)       │
+│   (.NET 8)       │  │ (Go + Gin)       │  │   (.NET 8)       │
 │                  │  │                  │  │                  │
 │ • PDF Üretimi    │  │ • Gmail SMTP     │  │ • Hediye Kupon   │
 │ • MinIO / Disk   │  │ • PDF Eki E-posta│  │ • Sadakat Puanı  │
@@ -116,93 +135,58 @@ GameGaraj sipariş akışında dağıtık veri tutarlılığı (**Eventual Consi
          └──────────────────────► Notification.API (Fatura Maili)
 ```
 
-### 1. 2-Aşamalı Sipariş Yaşam Döngüsü (2-Phase Lifecycle)
-* **Faz 1 (Senkron / Pre-Payment):** Stoksuz ürün satışını ve mükerrer çekimleri engellemek için `Catalog.API` (Stok Rezervasyonu) ve `Payment.API` (İyzico Gateway) senkron doğrulanır.
-* **Faz 2 (Asenkron / Post-Payment Choreography):** Ödeme onaylandığı anda `OrderPaymentCompletedEvent` fırlatılır. `Invoice.API`, `Notification.API` ve `Campaign.API` tamamen bağımsız ve paralel olarak çalışarak faturayı basar, maili atar ve hediye kuponları hesaba tanımlar.
+### 1. Transactional Outbox Pattern
+**MassTransit EF Core Outbox** kullanılarak sipariş kaydı ve domain event'leri `OutboxMessages` tablosuna aynı SQL transaction'ı içinde atomik olarak yazılır. RabbitMQ geçici olarak erişilemez olsa bile mesaj kaybolmaz; kuyruk hazır olduğunda arka plan worker'ı mesajları iletir (At-least-once delivery).
 
-### 2. Transactional Outbox Pattern (Dual-Write Çözümü)
-* **Problem:** Veritabanına sipariş yazılırken tam o anda RabbitMQ'nun erişilemez olması durumunda para çekilmiş ama sipariş/event kaybolmuş olabilirdi (Dual-Write Inconsistency).
-* **Çözüm:** **MassTransit EF Core Outbox** kullanılarak sipariş kaydı ve mesaj `OutboxMessages` tablosuna **aynı SQL transaction'ı içinde atomik olarak** yazılır. RabbitMQ gelse de gelmese de veritabanı bütünlüğü korunur; kuyruk hazır olduğunda arka plan worker'ı mesajları kayıpsız iletir (At-least-once delivery).
-
-### 3. Chaos Engineering & Admin Pipeline Simülatörü
-Admin panelde yer alan **Boru Hattı & Chaos Simülatörü** (`/Admin/OrderPipelineDemo`) üzerinden mikroservislerin dayanıklılığı canlı test edilebilir:
-* **Canlı Vana Kontrolleri:** 7 mikroservisin her biri tek tıkla `🟢 Aktif`, `💤 Uykuda (503)` veya `⏱️ 3sn Gecikmeli` modlarına alınabilir.
-* **Canlı Kurtarma (Self-Healing):** `Invoice.API` uykudayken sipariş verilse bile işlem çökmeyip MassTransit Retry kuyruğunda bekletilir; vana tekrar açıldığı anda fatura otomatik basılır ve mail gönderilir.
-* **Çift Konsol & SignalR Telemetri:** Hem simülasyon adımları hem de gerçek site üzerinden gelen siparişlerin boru hattı akışı eşzamanlı olarak izlenir.
+### 2. Chaos Engineering & Admin Pipeline Simülatörü
+Admin paneldeki **Sipariş Pipeline & Chaos Senaryoları** (`/Admin/OrderPipelineDemo`) üzerinden mikroservis dayanıklılığı senaryo bazlı test edilebilir:
+- **Senaryo Kartları:** Normal Akış, Polly Retry (Geçici Hata Kurtarma), Saga Compensate / Rollback, Stok Yok Koruması (Fail-Fast), 3sn Gecikme ve Serbest Chaos Lab.
+- **Canlı Vana Kontrolleri:** Her mikroservis için `Aktif`, `Retry`, `3sn` ve `Uykuda (503)` modları.
+- **Canlı Veritabanı Durumu:** Her adımdan sonra Catalog DB (`Stok`, `Rezerve`, `Kullanılabilir`) ve Order DB (`Pending`, `Completed`, `Failed`) durumları gerçek veritabanından okunarak gösterilir.
 
 ---
 
-## 🔄 Catalog API & Search API Ayrımı (CQRS & Read/Write Mimarisi)
+## Catalog API & Search API Ayrımı (CQRS)
 
-Sistemde okuma ve yazma operasyonları net bir sorumluluk ayrımı (Separation of Concerns) ile iki farklı servise paylaştırılmıştır:
+### 1. Catalog API (.NET 8 & EF Core) — Write & Domain Model
+- Ürün, kategori, dinamik özellikler ve stok rezervasyonu **PostgreSQL** üzerinde tutulur.
+- Ürün ve stok değişikliklerinde MassTransit aracılığıyla RabbitMQ'ya event yayınlanır (`ProductCreatedForSearch`, `ProductUpdatedForSearch`, `ProductDeletedForSearch`).
 
-### 1. Catalog API (.NET 8 & EF Core) — *Yazma (Write) ve Domain Okuma Modeli*
-- **Ana Doğruluk Kaynağı (Single Source of Truth):** Ürün, kategori, dinamik kategori özellikleri (Attributes) ve ilişkisel veriler **PostgreSQL** üzerinde `JSONB` destekli olarak tutulur.
-- **Transactional Bütünlük:** Ürün oluşturma, güncelleme, silme, stok rezervasyonu ve kategori hiyerarşisi işlemleri bu servis üzerinden yürütülür.
-- **Event Yayınlama (Publishing):** Bir ürün üzerinde CRUD işlemi yapıldığında veya stok durumu değiştiğinde, MassTransit aracılığıyla RabbitMQ'ya domain event'leri fırlatır (`ProductCreatedForSearch`, `ProductUpdatedForSearch`, `ProductDeletedForSearch`).
-
-### 2. Search API (Go + Gin + Elasticsearch) — *Yüksek Performanslı Arama & Read Modeli*
-- **Polyglot Yaklaşım:** Düşük bellek tüketimi, yüksek eşzamanlılık (concurrency) ve mikro-saniye seviyesinde yanıt süreleri için **Go (Golang)** ve **Gin Web Framework** ile geliştirilmiştir.
-- **Arama ve İndeksleme:** Çoklu alan araması (`Multi-match`), typo toleransı (Fuzziness), `Edge-NGram` tabanlı otomatik tamamlama (`Autocomplete/Suggestions`), fiyat/marka kırılımları (`Facets/Aggregations`) ve öne çıkan ürünler (`Featured`) sorgularını **Elasticsearch** üzerinden yönetir.
-- **Asenkron Senkronizasyon (Consumer):** RabbitMQ üzerinden gelen ürün olaylarını dinleyerek Elasticsearch indeksini ve Redis önbelleğini eşzamanlı olarak günceller (Eventually Consistent).
-- **Admin Reindex & İzleme:** Admin panelden veya doğrudan API'den tek tıkla PostgreSQL'deki tüm ürünleri Elasticsearch'e aktarma (`POST /api/search/reindex`), doküman önizleme ve indeks sağlık durumunu (`/api/search/status`) sunar.
+### 2. Search API (Go + Gin + Elasticsearch) — Read & Arama Modeli
+- Çoklu alan araması (`Multi-match`), typo toleransı, `Edge-NGram` otomatik tamamlama ve facet/filtreleme sorgularını **Elasticsearch** üzerinden sunar.
+- RabbitMQ event'lerini dinleyerek Elasticsearch indeksini ve Redis önbelleğini asenkron günceller.
 
 ---
 
-## ⚡ Redis Dağıtık Önbellekleme (Distributed Cache) & Invalidation Stratejisi
+## Redis Dağıtık Önbellekleme & Invalidation
 
-Tüm read akışlarında veritabanı ve arama motoru yükünü minimuma indirmek amacıyla **Cache-Aside (Lazy Loading)** ve **Event-Driven Cache Invalidation** mimarisi uygulanmıştır.
-
-### 1. Cache İzolasyonu ve Key Yapısı
-Farklı servislerin aynı Redis kümesini anahtar çakışması olmadan güvenle kullanabilmesi için prefix bazlı izolasyon uygulanır:
 - **Search API:** `search-cache:query_{hash}`, `search-cache:sugg_{hash}`, `search-cache:featured`
-- **Catalog API:** `catalog-cache:category_{id}`, `catalog-cache:tree`
+- **Catalog API:** `product_{id}`, `catalog-cache:category_{id}`, `catalog-cache:tree`
 - **Basket API:** `basket_{userId}`
 
-### 2. Okuma Akışı (Cache-Aside Pattern)
-1. İstemci bir arama veya öne çıkan ürün isteği attığında Search API ilk olarak **Redis Cache** kontrolü yapar.
-2. **Cache HIT:** Veri Redis'te mevcutsa, doğrudan çözümlenerek mikro-saniyeler içinde istemciye dönülür (Elasticsearch'e hiçbir sorgu atılmaz).
-3. **Cache MISS:** Veri Redis'te yoksa, Elasticsearch'ten sorgulanır, sonuç istemciye iletilirken arka planda belirlenen TTL (örn. 5 dakika) ile Redis'e kaydedilir.
-
-### 3. Akıllı Önbellek Temizleme (Event-Driven Invalidation)
-Ürün verisi güncellendiğinde bayat veri (stale data) sunulmaması için şu akış işletilir:
-```
-[Admin / Catalog API] ──(Ürün Güncellendi)──► [PostgreSQL]
-                                │
-                                └──► [RabbitMQ Event: ProductUpdatedForSearch]
-                                             │
-                                             ▼
-                             [Search API Consumer (Go)]
-                                  │                │
-                                  ▼                ▼
-                         [Elasticsearch]    [Redis Cache]
-                         (Update Document)  (SCAN search-cache:* & DEL)
-```
-- Go Search API, RabbitMQ'dan `ProductUpdatedForSearch` veya `ProductDeletedForSearch` event'ini aldığı anda:
-  1. Elasticsearch üzerindeki ilgili dokümanı anında günceller / siler.
-  2. Redis üzerindeki ilgili sorgu ve öne çıkanlar önbelleklerini non-blocking `SCAN` + `DEL` mekanizmasıyla anında geçersiz kılar (Invalidate).
+Ürün güncellendiğinde `ProductUpdatedForSearch` / `ProductDeletedForSearch` event'leri ile Elasticsearch güncellenir ve ilgili Redis anahtarları non-blocking `SCAN` + `DEL` ile geçersiz kılınır.
 
 ---
 
-## 🛠️ Servisler ve Port Listesi
+## Servisler ve Port Listesi
 
 ### Uygulama Servisleri
 
 | Servis | Dil / Framework | Port | Swagger / OpenAPI Adresi | Veritabanı / Altyapı |
 | :--- | :--- | :--- | :--- | :--- |
 | **Yarp Gateway** | .NET 8 / YARP | `5000` | - | Reverse Proxy |
-| **WebUI** | ASP.NET Core MVC | `7050` | - | MVC / Razor View |
-| **Catalog API** | .NET 8 / WebAPI | `5011` | `http://localhost:5011/swagger` | PostgreSQL (`5434`) |
-| **Search API** | Go 1.23 / Gin | `5082` | `http://localhost:5082/swagger/index.html` | Elasticsearch (`9201`), Redis (`6380`) |
-| **Notification API** | Go 1.23 / Gin | `5025` | `http://localhost:5025/swagger/index.html` | RabbitMQ, MinIO, SMTP |
-| **PhotoStock API** | .NET 8 / WebAPI | `5012` | `http://localhost:5012/swagger` | Local Storage |
-| **Basket API** | .NET 8 / WebAPI | `5013` | `http://localhost:5013/swagger` | Redis Sentinel Cluster (`6380`) |
-| **Discount API** | .NET 8 / Dapper | `5014` | `http://localhost:5014/swagger` | PostgreSQL (`5432`) |
-| **Order API** | .NET 8 / EF Core | `5015` | `http://localhost:5015/swagger` | SQL Server (`1433`), RabbitMQ |
-| **Payment API** | .NET 8 / MassTransit| `5016` | `http://localhost:5016/swagger` | Iyzico Entegrasyonu |
-| **Invoice API** | .NET 8 / MassTransit| `5017` | `http://localhost:5017/swagger` | RabbitMQ |
+| **WebUI** | ASP.NET Core MVC | `7050` (HTTPS) / `5050` | - | MVC / Razor View |
+| **Catalog API** | .NET 8 / WebAPI | `5011` | `http://localhost:5011/swagger` | PostgreSQL (`5434`), Redis |
+| **PhotoStock API** | .NET 8 / WebAPI | `5012` | `http://localhost:5012/swagger` | MinIO / Local Storage |
+| **Basket API** | .NET 8 / WebAPI | `5013` | `http://localhost:5013/swagger` | Redis Sentinel (`6380`) |
+| **Order API** | .NET 8 / EF Core | `5015` | `http://localhost:5015/swagger` | SQL Server (`1433`), Outbox |
+| **Payment API** | .NET 8 / MassTransit | `5016` | `http://localhost:5016/swagger` | Iyzico Sandbox |
+| **Invoice API** | .NET 8 / MassTransit | `5017` | `http://localhost:5017/swagger` | MinIO / Local Storage |
 | **Campaign API** | .NET 8 / Dapper | `5018` | `http://localhost:5018/swagger` | SQL Server (`1434`) |
-| **Review API** | .NET 8 / EF Core | `5221` | `http://localhost:5221/swagger` | PostgreSQL (`5435`) |
+| **Review API** | .NET 8 / EF Core | `5221` | `http://localhost:5221/swagger` | PostgreSQL (`5435`), Redis |
+| **Discussion API** | .NET 8 / EF Core | `5023` | `http://localhost:5023/swagger` | PostgreSQL (`5436`), Redis |
+| **Search API** | Go / Gin | `5082` | `http://localhost:5082/swagger/index.html` | Elasticsearch (`9201`), Redis |
+| **Notification API** | Go / Gin | `5025` | `http://localhost:5025/swagger/index.html` | RabbitMQ, MinIO, SMTP |
 
 ### Altyapı ve Destek Servisleri
 
@@ -212,18 +196,17 @@ Farklı servislerin aynı Redis kümesini anahtar çakışması olmadan güvenle
 | **RabbitMQ** | `5672`, `15672` | Servisler arası asenkron mesajlaşma broker'ı |
 | **Elasticsearch** | `9201` | Ürün arama indeksi ve analitik veriler |
 | **Kibana** | `5601` | Elasticsearch görselleştirme ve indeks yönetimi |
+| **Jaeger** | `16686`, `4317`, `4318` | Dağıtık tracing (OpenTelemetry OTLP) |
 | **Redis Master** | `6380` | Dağıtık önbellek ve sepet veritabanı |
-| **Redis Sentinels**| `26379, 26380, 26381` | Yüksek erişilebilirlik (HA) ve otomatik failover |
+| **Redis Sentinels** | `26379`, `26380`, `26381` | Yüksek erişilebilirlik (HA) ve otomatik failover |
 | **Prometheus** | `9090` | Mikroservislerden metrik toplama (`/metrics`) |
 | **Grafana** | `30300` | Sistem performans ve metrik dashboard'ları |
 | **ArgoCD** | `30580` | GitOps tabanlı Continuous Deployment |
 
 ---
 
-## 🔒 Güvenlik Notları
+## Güvenlik Notları
 
-- **Hassas bilgiler** `.env` dosyasında saklanır ve Git'e commit edilmez.
-- **appsettings.json** dosyaları `.gitignore`'da listelenmiştir.
-- **Example dosyaları** yeni geliştiriciler için şablon olarak kullanılır.
-- **Admin kullanıcısı** Keycloak realm import sırasında otomatik oluşturulur.
-- **GitHub Secrets** tarafında prod/stage için gerekli connection string ve anahtarlar saklanır.
+- `.env` ve tüm `appsettings.json` dosyaları `.gitignore` içindedir; Git'e commit edilmez.
+- `.env.example` ve `appsettings.example.json` dosyaları yalnızca şablon olarak kullanılır, gerçek şifre veya API anahtarı içermez.
+- Production ve staging ortamları için gizli anahtarlar GitHub Secrets / Kubernetes Secrets üzerinden yönetilir.

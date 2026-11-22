@@ -609,126 +609,35 @@
                         }
 
                         <!-- Coupon Code Section -->
-                        <div class="mt-4 mb-4 border-top pt-3">
-                            <h6 class="fw-bold mb-2 small"><i class="fas fa-ticket-alt me-1 text-primary"></i>Kupon Kodu</h6>
-                            
-                            @if (ViewBag.AppliedCoupon is GameGaraj.WebUI.Models.Campaigns.CouponViewModel coupon)
-                            {
-                                var couponRule = discountResult?.AppliedRules?.FirstOrDefault(r => r.RuleName.StartsWith("Kupon (", StringComparison.OrdinalIgnoreCase));
-                                decimal couponDiscAmount = couponRule?.DiscountAmount ?? 0;
+                        @{
+                            ViewData["CouponBasketTotal"] = Model.TotalPrice;
+                            ViewData["CouponFormClass"] = "";
+                        }
+                        <partial name="_CouponSelectorPartial" />
 
-                                <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center">
-                                    <span class="text-success fw-bold small">
-                                        <i class="fas fa-check-circle me-1"></i>@coupon.Code 
-                                        (@(coupon.DiscountType == "Percentage" ? $"%{coupon.DiscountRate}" : (coupon.DiscountType == "FixedAmount" ? $"{coupon.Amount} TL" : "Kargo Bedava")))
-                                    </span>
-                                    <form asp-action="RemoveCoupon" method="post" class="m-0">
-                                        <button type="submit" class="btn btn-sm text-danger p-0"><i class="fas fa-times"></i></button>
-                                    </form>
-                                </div>
-                                
-                                <div class="d-flex justify-content-between mt-2 text-success">
-                                    <span class="small">Kupon İndirimi</span>
-                                    <span class="fw-bold">-@couponDiscAmount.ToString("N2") TL</span>
-                                </div>
-                            }
-                            else
-                            {
-                                <form asp-action="ApplyCoupon" method="post" class="input-group input-group-sm">
-                                    <input type="text" name="couponCode" class="form-control" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()" placeholder="Kupon kodunuz">
-                                    <button class="btn btn-primary" type="submit">Uygula</button>
-                                </form>
-                                
-                                @if ((ViewBag.UserCoupons as List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>)?.Any(c => !c.IsUsed) == true || 
-                                     (ViewBag.PublicCoupons as List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>)?.Any() == true)
-                                {
-                                    <div class="mt-2">
-                                        <button class="btn btn-sm btn-outline-secondary w-100 d-flex align-items-center justify-content-between text-decoration-none collapsed" 
-                                           type="button"
-                                           data-bs-toggle="collapse" 
-                                           data-bs-target="#availableCouponsList" 
-                                           aria-expanded="false" 
-                                           aria-controls="availableCouponsList"
-                                           style="font-size: 0.78rem; border-style: dashed; padding: 6px 12px; border-width: 1px; border-radius: 6px;">
-                                            <span><i class="fas fa-ticket-alt me-1 text-primary"></i> Kullanılabilir Kuponlar</span>
-                                            <i class="fas fa-chevron-down ms-1" style="font-size: 0.7rem;"></i>
-                                        </button>
-                                        
-                                        <div class="collapse mt-2" id="availableCouponsList">
-                                            <div class="card card-body p-2 border bg-light rounded" style="max-height: 250px; overflow-y: auto; font-size: 0.75rem;">
-                                                @{
-                                                    var userCoupons = ViewBag.UserCoupons as List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>;
-                                                    var publicCoupons = ViewBag.PublicCoupons as List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>;
-                                                }
-                                                
-                                                @if (userCoupons != null && userCoupons.Any(c => !c.IsUsed))
-                                                {
-                                                    <div class="fw-bold text-secondary mb-2 border-bottom pb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">
-                                                        <i class="fas fa-user-tag me-1"></i> BANA ÖZEL KUPONLAR
-                                                    </div>
-                                                    @foreach (var c in userCoupons.Where(x => !x.IsUsed && (!x.ExpiryDate.HasValue || x.ExpiryDate.Value > DateTime.Now)))
-                                                    {
-                                                        <div class="d-flex align-items-center justify-content-between p-2 mb-2 bg-white rounded border shadow-sm">
-                                                            <div class="text-start">
-                                                                <span class="badge bg-success text-white fw-bold me-1" style="font-size: 0.7rem; padding: 3px 6px;">@c.Code</span>
-                                                                <div class="text-dark fw-bold mt-1" style="font-size: 0.8rem;">
-                                                                    @(c.DiscountType == "Percentage" ? $"%{c.DiscountRate} İndirim" : (c.DiscountType == "FixedAmount" ? $"{c.Amount} TL İndirim" : "Kargo Bedava"))
-                                                                </div>
-                                                                @if (c.MinPurchaseAmount > 0)
-                                                                {
-                                                                    <div class="text-muted mt-1" style="font-size: 0.68rem;">Min. Sepet: <strong>@c.MinPurchaseAmount TL</strong></div>
-                                                                }
-                                                            </div>
-                                                            <button type="button" class="btn btn-sm btn-primary py-1 px-2 fw-bold" onclick="applyCouponDirectly('@c.Code')" style="font-size: 0.68rem; border-radius: 4px;">Uygula</button>
-                                                        </div>
-                                                    }
-                                                }
-                                                
-                                                @if (publicCoupons != null && publicCoupons.Any())
-                                                {
-                                                    <div class="fw-bold text-secondary @(userCoupons != null && userCoupons.Any(c => !c.IsUsed) ? "mt-3" : "") mb-2 border-bottom pb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">
-                                                        <i class="fas fa-globe me-1"></i> HERKESE AÇIK KUPONLAR
-                                                    </div>
-                                                    @foreach (var c in publicCoupons.Where(x => !x.IsUsed && (!x.ExpiryDate.HasValue || x.ExpiryDate.Value > DateTime.Now)))
-                                                    {
-                                                        <div class="d-flex align-items-center justify-content-between p-2 mb-2 bg-white rounded border shadow-sm">
-                                                            <div class="text-start">
-                                                                <span class="badge bg-primary text-white fw-bold me-1" style="font-size: 0.7rem; padding: 3px 6px;">@c.Code</span>
-                                                                <div class="text-dark fw-bold mt-1" style="font-size: 0.8rem;">
-                                                                    @(c.DiscountType == "Percentage" ? $"%{c.DiscountRate} İndirim" : (c.DiscountType == "FixedAmount" ? $"{c.Amount} TL İndirim" : "Kargo Bedava"))
-                                                                </div>
-                                                                @if (c.MinPurchaseAmount > 0)
-                                                                {
-                                                                    <div class="text-muted mt-1" style="font-size: 0.68rem;">Min. Sepet: <strong>@c.MinPurchaseAmount TL</strong></div>
-                                                                }
-                                                            </div>
-                                                            <button type="button" class="btn btn-sm btn-primary py-1 px-2 fw-bold" onclick="applyCouponDirectly('@c.Code')" style="font-size: 0.68rem; border-radius: 4px;">Uygula</button>
-                                                        </div>
-                                                    }
-                                                }
-                                                
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                                
-                                @if (TempData["CouponError"] != null)
-                                {
-                                    <div class="text-danger x-small mt-1" style="font-size: 0.75rem;">
-                                        <i class="fas fa-exclamation-circle me-1"></i>@TempData["CouponError"]
-                                    </div>
-                                }
-                                @if (TempData["CouponSuccess"] != null)
-                                {
-                                    <div class="text-success x-small mt-1" style="font-size: 0.75rem;">
-                                        <i class="fas fa-check-circle me-1"></i>@TempData["CouponSuccess"]
-                                    </div>
-                                }
-                            }
-                        </div>
+                        @{
+                            decimal basketShippingFee = (shippingSetting != null && shippingSetting.IsActive) ? shippingSetting.DefaultShippingFee : 0m;
+                            decimal basketShippingSavings = isShippingFree ? basketShippingFee : 0m;
+                            decimal basketGrossPrice = Model.TotalPrice + basketShippingFee;
+                            decimal basketTotalSavings = (discountResult?.TotalDiscount ?? 0m) + basketShippingSavings;
+                        }
 
-                        <div class="summary-total">
-                            <span class="label">Toplam</span>
+                        @if (basketTotalSavings > 0)
+                        {
+                            <div class="pt-3 border-top">
+                                <div class="d-flex justify-content-between align-items-center mb-1" style="font-size: 0.86rem; color: #64748b;">
+                                    <span>Asıl Fiyat</span>
+                                    <span style="text-decoration: line-through;">@basketGrossPrice.ToString("N2") TL</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2" style="font-size: 0.88rem; color: #16a34a; font-weight: 700;">
+                                    <span>Toplam İndirim</span>
+                                    <span>-@basketTotalSavings.ToString("N2") TL</span>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="summary-total @(basketTotalSavings > 0 ? "pt-2 mt-1" : "")">
+                            <span class="label">Ödenecek Tutar</span>
                             <span class="value">@finalTotal.ToString("N2") TL</span>
                         </div>
 

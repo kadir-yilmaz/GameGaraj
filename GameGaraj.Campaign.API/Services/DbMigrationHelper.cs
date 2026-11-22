@@ -131,6 +131,7 @@ namespace GameGaraj.Campaign.API.Services
                         MaxDiscountAmount DECIMAL(18,2) NULL,
                         MinOrderAmount DECIMAL(18,2) NULL,
                         IsUsed BIT NOT NULL DEFAULT 0,
+                        IsSingleUse BIT NOT NULL DEFAULT 1,
                         IsActive BIT NOT NULL DEFAULT 1,
                         IsEarnedReward BIT NOT NULL DEFAULT 0,
                         RewardRuleId INT NULL,
@@ -144,6 +145,11 @@ namespace GameGaraj.Campaign.API.Services
                 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Coupons') AND name = 'AllowWithOtherCampaigns')
                 BEGIN
                     ALTER TABLE Coupons ADD AllowWithOtherCampaigns BIT NOT NULL DEFAULT 0;
+                END;
+
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Coupons') AND name = 'IsSingleUse')
+                BEGIN
+                    ALTER TABLE Coupons ADD IsSingleUse BIT NOT NULL DEFAULT 1;
                 END;
             ";
             connection.Execute(createCouponsSql, commandTimeout: 60);
