@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import ssl
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -52,3 +53,32 @@ class K8sClient:
         except Exception as exc:
             log.warning("kget %s failed: %s", path, exc)
             return []
+
+    def force_delete_pod(self, namespace: str, name: str, timeout: int = 15) -> bool:
+        """Force-delete a pod stuck in Terminating (gracePeriodSeconds=0)."""
+        if not self.available:
+            return False
+        ns_q = urllib.parse.quote(namespace)
+        name_q = urllib.parse.quote(name)
+        url = f"{self.base_url}/api/v1/namespaces/{ns_q}/pods/{name_q}?gracePeriodSeconds=0"
+        body = json.dumps({"gracePeriodSeconds": 0, "propagationPolicy": "Background"}).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=body,
+            method="DELETE",
+            headers={
+                "Authorization": f"Bearer {self._sa_token()}",
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, context=self.ssl_ctx, timeout=timeout):
+                return True
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                return True
+            log.warning("force_delete_pod %s/%s failed: HTTP %s", namespace, name, exc.code)
+            return False
+        except Exception as exc:
+            log.warning("force_delete_pod %s/%s failed: %s", namespace, name, exc)
+            return False

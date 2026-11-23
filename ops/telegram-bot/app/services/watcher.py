@@ -114,6 +114,38 @@ class NodeWatcher:
                 self.pending.pop(name, None)
                 self.oncall.dispatch_general_report(f"➖ {name} cluster'dan çıkarıldı\n🕐 {self.reporter.now_tr()}")
 
+        self._cleanup_stuck_terminating_pods(now)
+
+    def _cleanup_stuck_terminating_pods(self, now: float, min_stuck_seconds: int = 90) -> None:
+        not_ready_nodes = {name for name, info in self.state.items() if not info.get("ready")}
+        if not not_ready_nodes:
+            return
+
+        pods = self.k8s.items("/api/v1/pods")
+        cleaned_by_node: dict[str, int] = {}
+        for pod in pods:
+            meta = pod.get("metadata") or {}
+            del_ts = parse_ts(meta.get("deletionTimestamp"))
+            if not del_ts:
+                continue
+            node = (pod.get("spec") or {}).get("nodeName") or ""
+            if node not in not_ready_nodes:
+                continue
+            if (now - del_ts.timestamp()) < min_stuck_seconds:
+                continue
+
+            ns = meta.get("namespace") or "default"
+            pod_name = meta.get("name") or ""
+            if pod_name and self.k8s.force_delete_pod(ns, pod_name):
+                cleaned_by_node[node] = cleaned_by_node.get(node, 0) + 1
+
+        if cleaned_by_node:
+            summary = ", ".join(f"{node}: {cnt}" for node, cnt in sorted(cleaned_by_node.items()))
+            log.info("Force-deleted stuck Terminating pods on NotReady nodes: %s", summary)
+            self.oncall.dispatch_general_report(
+                f"🧹 NotReady node üzerinde Terminating'de takılan podlar temizlendi ({summary})\n🕐 {self.reporter.now_tr()}"
+            )
+
 
 class BotRunner:
     """Runs background node watcher, dynamic report scheduler, and Telegram polling."""
