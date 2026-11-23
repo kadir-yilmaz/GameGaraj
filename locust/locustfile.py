@@ -1,13 +1,15 @@
 import itertools
 import json
+import os
 import random
 import threading
 import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
-from locust import FastHttpUser, LoadTestShape, events, tag, task
+from locust import FastHttpUser, events, tag, task
 from locust.runners import MasterRunner, WorkerRunner
 
 DEFAULT_HOST = "http://100.67.37.25:30000"
@@ -15,6 +17,7 @@ DEFAULT_KEYWORDS = ["rtx", "asus", "msi", "gaming", "laptop", "ssd", "ram", "mon
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
 TARGET_ENV_HOSTS = {
+    "kadirserver-tailscale": ["http://100.100.32.3:30000"],
     "wk1-tailscale": ["http://100.67.37.25:30000"],
     "wk2-tailscale": ["http://100.120.194.97:30000"],
     "wk1+wk2-tailscale": ["http://100.67.37.25:30000", "http://100.120.194.97:30000"],
@@ -23,6 +26,7 @@ TARGET_ENV_HOSTS = {
         "http://100.120.194.97:30000",
         "http://100.100.32.3:30000",
     ],
+    "kadirserver-lan": ["http://192.168.1.56:30000"],
     "wk1+wk2-lan": ["http://192.168.1.5:30000", "http://192.168.1.200:30000"],
     "all3-lan": [
         "http://192.168.1.5:30000",
@@ -40,15 +44,6 @@ HOST_LABELS = {
     "http://192.168.1.200:30000": "wk2 (lan)",
     "http://192.168.1.56:30000": "kadirserver (lan)",
     "https://gateway.kadiryilmaz.online": "cloudflare",
-}
-
-# Preset profilleri: hedef_rps -> (otomatik_kullanici_sayisi, saniyede_artis_hizi)
-RPS_PROFILES = {
-    "500": (250, 50),
-    "1000": (500, 100),
-    "2000": (1000, 200),
-    "5000": (2500, 500),
-    "10000": (5000, 1000),
 }
 
 _PRODUCTS_LOCK = threading.Lock()
@@ -111,6 +106,65 @@ def _(request_type, name, response_time, response_length, exception, context, **
     _record_node_stat(node_label, exception is None, float(response_time or 0.0))
 
 
+def _collect_node_snapshot(name: str, host: str, user: str, password: str, extra_k8s: bool = False) -> str:
+    try:
+        import paramiko
+    except ImportError:
+        return ""
+
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        client.connect(
+            host,
+            username=user,
+            password=password,
+            timeout=5,
+            banner_timeout=5,
+            auth_timeout=5,
+            look_for_keys=True,
+        )
+        extra_cmd = ""
+        if extra_k8s:
+            extra_cmd = """
+export KUBECONFIG=/home/kadirserver/.kube/config
+echo ""
+echo "=== k3s Node Kaynaklari ==="
+kubectl top nodes 2>/dev/null || true
+echo ""
+echo "=== Dokploy DB/ES/Redis Stats ==="
+docker stats --no-stream --format "table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}\\t{{.MemPerc}}" 2>/dev/null | grep -i -E "NAME|elastic|redis|postgres|mssql|keycloak" || true
+"""
+        cmd = f"""
+echo "=== {name} ({host}) Uptime & RAM ==="
+uptime
+free -h
+echo ""
+echo "=== {name} Top CPU Processes (htop ozeti) ==="
+ps -eo pid,user,%cpu,%mem,comm --sort=-%cpu | head -n 13
+{extra_cmd}
+"""
+        _, stdout, _ = client.exec_command(cmd, timeout=10)
+        return stdout.read().decode("utf-8", errors="replace").strip()
+    except Exception as exc:
+        return f"[{name} ({host}) snapshot alinamadi: {exc}]"
+    finally:
+        client.close()
+
+
+def _collect_cluster_snapshots(target_env: str) -> str:
+    is_lan = "lan" in (target_env or "")
+    password = os.getenv("CLUSTER_SSH_PASS") or os.getenv("KADIRSERVER_SSH_PASS") or "1234"
+    nodes = [
+        ("kadirserver", "192.168.1.56" if is_lan else "100.100.32.3", os.getenv("KADIRSERVER_USER", "kadirserver"), True),
+        ("wk1", "192.168.1.5" if is_lan else "100.67.37.25", "wk1", False),
+        ("wk2", "192.168.1.200" if is_lan else "100.120.194.97", "wk2", False),
+    ]
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        results = list(pool.map(lambda n: _collect_node_snapshot(n[0], n[1], n[2], password, n[3]), nodes))
+    return "\n\n".join(r for r in results if r)
+
+
 @events.test_stop.add_listener
 def _(environment, **kwargs):
     if isinstance(environment.runner, WorkerRunner):
@@ -119,8 +173,7 @@ def _(environment, **kwargs):
     elapsed = max(time.perf_counter() - _TEST_STARTED_AT, 0.001) if _TEST_STARTED_AT else 1.0
     opts = getattr(environment, "parsed_options", None)
     target_env = getattr(opts, "target_env", "custom")
-    target_rps = getattr(opts, "target_rps", "manual")
-    intensity = getattr(opts, "intensity", "fast")
+    user_rps = getattr(opts, "user_rps", 1.0)
 
     # Local tek-process modda worker_report calismadigi icin _WORKER_NODE_STATS'i birlestir
     with _NODE_STATS_LOCK:
@@ -142,7 +195,7 @@ def _(environment, **kwargs):
         "=== GameGaraj Locust Test Sonucu ===",
         f"Tarih       : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         f"Target Env  : {target_env}",
-        f"Target RPS  : {target_rps} | Intensity: {intensity}",
+        f"User RPS    : {user_rps} (0 = max hiz)",
         f"Sure (sn)   : {elapsed:.1f}",
         f"Toplam Istek: {total_reqs} | Hata: {total_fails} ({fail_rate:.2f}%)",
         f"Ortalama RPS: {avg_rps:.1f} | Current RPS: {total_stats.current_rps:.1f}",
@@ -199,6 +252,10 @@ def _(environment, **kwargs):
             "p95_ms": round(e_p95, 2),
         }
 
+    cluster_snapshot = _collect_cluster_snapshots(target_env)
+    if cluster_snapshot:
+        lines.extend(["", cluster_snapshot])
+
     summary_text = "\n".join(lines) + "\n"
     run_dir = RESULTS_DIR / datetime.now().strftime("%Y%m%d-%H%M%S")
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -209,8 +266,7 @@ def _(environment, **kwargs):
             {
                 "timestamp": datetime.now().isoformat(),
                 "target_env": target_env,
-                "target_rps": target_rps,
-                "intensity": intensity,
+                "user_rps": user_rps,
                 "elapsed_s": round(elapsed, 2),
                 "total_requests": total_reqs,
                 "total_failures": total_fails,
@@ -235,10 +291,12 @@ def _(parser):
         default="wk1+wk2-tailscale",
         choices=[
             "custom",
+            "kadirserver-tailscale",
             "wk1-tailscale",
             "wk2-tailscale",
             "wk1+wk2-tailscale",
             "all3-tailscale",
+            "kadirserver-lan",
             "wk1+wk2-lan",
             "all3-lan",
             "cloudflare",
@@ -246,40 +304,11 @@ def _(parser):
         help="Hedef giris noktasi (custom = ustteki Host kutusunu kullanir)",
     )
     parser.add_argument(
-        "--target-rps",
-        type=str,
-        default="manual",
-        choices=["manual", "500", "1000", "2000", "5000", "10000"],
-        help="Hedef RPS profili (secilirse Users ve Ramp-up otomatik ayarlanir; manual = elle giris)",
+        "--user-rps",
+        type=float,
+        default=1.0,
+        help="1 kullanicinin saniyede atacagi istek sayisi (0 = beklemesiz max hiz; ornek: 0.5, 1, 2)",
     )
-    parser.add_argument(
-        "--intensity",
-        type=str,
-        default="fast",
-        choices=["realistic", "fast", "max"],
-        help="Manual modda istek siddeti: realistic (0.2-1.0s), fast (0.02-0.1s), max (0s bekleme)",
-    )
-
-
-class TargetRpsShape(LoadTestShape):
-    """
-    Target RPS secildiginde Users ve Ramp-up degerlerini otomatik yonetir.
-    'manual' secilirse Web UI'dan girilen Users ve Ramp-up kullanilir.
-    """
-
-    use_common_options = True
-
-    def tick(self):
-        opts = getattr(self.runner.environment, "parsed_options", None) if self.runner else None
-        target_rps = getattr(opts, "target_rps", "manual")
-
-        if target_rps in RPS_PROFILES:
-            users, spawn_rate = RPS_PROFILES[target_rps]
-            return (users, spawn_rate)
-
-        users = getattr(opts, "num_users", None) or 100
-        spawn_rate = getattr(opts, "spawn_rate", None) or 10
-        return (users, spawn_rate)
 
 
 def _normalize_product(raw: dict) -> dict | None:
@@ -333,9 +362,9 @@ class GameGarajUser(FastHttpUser):
     GameGaraj Locust load test user.
 
     Web UI'da:
-      - 'Target Env': wk1-tailscale, wk2-tailscale, wk1+wk2-tailscale, all3-tailscale, wk1+wk2-lan, all3-lan, cloudflare, custom
-      - 'Target RPS' (manual, 500, 1000, 2000, 5000, 10000): Secilirse Users/Ramp-up otomatik profil olarak uygulanir.
-      - 'Intensity' (realistic, fast, max): Manual modda kullanici basina bekleme suresini belirler.
+      - 'Number of users' & 'Ramp up': Kullanici sayisini sen belirlersin.
+      - 'User RPS': 1 kullanicinin saniyede atacagi istek sayisi (0 = max hiz).
+      - 'Target Env': kadirserver-tailscale, wk1-tailscale, wk2-tailscale, all3-tailscale, *-lan, cloudflare, custom
       - 'Tags': search, catalog, basket, e2e
     """
 
@@ -348,25 +377,17 @@ class GameGarajUser(FastHttpUser):
 
     def wait_time(self):
         opts = getattr(self.environment, "parsed_options", None)
-        target_rps = getattr(opts, "target_rps", "manual")
-        intensity = getattr(opts, "intensity", "fast")
-
-        if target_rps in RPS_PROFILES:
-            profile_users, _ = RPS_PROFILES[target_rps]
-            per_user_rps = int(target_rps) / profile_users
-            now = time.perf_counter()
-            last = getattr(self, "_last_pace_ts", None)
-            self._last_pace_ts = now
-            if last is None:
-                return 0
-            delay = (1.0 / per_user_rps) - (now - last)
-            return delay if delay > 0 else 0
-
-        if intensity == "max":
+        user_rps = float(getattr(opts, "user_rps", 1.0) or 0.0)
+        if user_rps <= 0:
             return 0
-        if intensity == "fast":
-            return random.uniform(0.02, 0.1)
-        return random.uniform(0.2, 1.0)
+
+        now = time.perf_counter()
+        last = getattr(self, "_last_pace_ts", None)
+        self._last_pace_ts = now
+        if last is None:
+            return 0
+        delay = (1.0 / user_rps) - (now - last)
+        return delay if delay > 0 else 0
 
     def on_start(self):
         seq = next(_USER_SEQ)
