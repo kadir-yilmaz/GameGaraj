@@ -1,10 +1,6 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    fontconfig \
-    fonts-dejavu-core \
-    && rm -rf /var/lib/apt/lists/*
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG TARGETARCH

@@ -1,22 +1,25 @@
+using System.Collections.Concurrent;
+using System.Reflection;
 using PdfSharp.Fonts;
 
 namespace GameGaraj.Invoice.API.Services;
 
 /// <summary>
-/// Resolves system TrueType fonts across Linux containers and Windows environments with safe fallbacks.
+/// Resolves embedded DejaVu Sans TrueType fonts without relying on host OS fonts.
 /// </summary>
 public sealed class SystemFontResolver : IFontResolver
 {
-    private static readonly IReadOnlyDictionary<string, string[]> StyleFontCandidates =
-        new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["bi"] = ["DejaVuSans-BoldOblique.ttf", "DejaVuSans-Bold.ttf", "DejaVuSans.ttf", "arialbi.ttf", "segoeuiz.ttf"],
-            ["b"]  = ["DejaVuSans-Bold.ttf", "DejaVuSans.ttf", "arialbd.ttf", "segoeuib.ttf", "tahomabd.ttf"],
-            ["i"]  = ["DejaVuSans-Oblique.ttf", "DejaVuSans.ttf", "ariali.ttf", "segoeuii.ttf"],
-            ["r"]  = ["DejaVuSans.ttf", "FreeSans.ttf", "arial.ttf", "segoeui.ttf", "tahoma.ttf"]
-        };
+    private static readonly Assembly CurrentAssembly = typeof(SystemFontResolver).Assembly;
+    private static readonly ConcurrentDictionary<string, byte[]> FontCache = new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly string[] SearchDirectories = BuildSearchDirectories();
+    private static readonly IReadOnlyDictionary<string, string> StyleResourceNames =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["bi"] = "GameGaraj.Invoice.API.Fonts.DejaVuSans-BoldOblique.ttf",
+            ["b"]  = "GameGaraj.Invoice.API.Fonts.DejaVuSans-Bold.ttf",
+            ["i"]  = "GameGaraj.Invoice.API.Fonts.DejaVuSans-Oblique.ttf",
+            ["r"]  = "GameGaraj.Invoice.API.Fonts.DejaVuSans.ttf"
+        };
 
     public FontResolverInfo? ResolveTypeface(string familyName, bool bold, bool italic)
     {
@@ -34,40 +37,15 @@ public sealed class SystemFontResolver : IFontResolver
     public byte[]? GetFont(string faceName)
     {
         var style = faceName.Split('#').ElementAtOrDefault(1) ?? "r";
-        var candidates = StyleFontCandidates.GetValueOrDefault(style, StyleFontCandidates["r"]);
+        var resourceName = StyleResourceNames.GetValueOrDefault(style, StyleResourceNames["r"]);
 
-        foreach (var dir in SearchDirectories)
+        return FontCache.GetOrAdd(resourceName, static name =>
         {
-            foreach (var fileName in candidates)
-            {
-                var fullPath = Path.Combine(dir, fileName);
-                if (File.Exists(fullPath))
-                {
-                    return File.ReadAllBytes(fullPath);
-                }
-            }
-        }
-
-        throw new FileNotFoundException($"No suitable TrueType font found for face '{faceName}'.");
-    }
-
-    private static string[] BuildSearchDirectories()
-    {
-        var dirs = new List<string>
-        {
-            "/usr/share/fonts/truetype/dejavu",
-            "/usr/share/fonts/dejavu",
-            "/usr/share/fonts/truetype/freefont",
-            "/usr/share/fonts/truetype",
-            "/usr/share/fonts"
-        };
-
-        var systemFonts = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
-        if (!string.IsNullOrWhiteSpace(systemFonts))
-        {
-            dirs.Add(systemFonts);
-        }
-
-        return dirs.Where(Directory.Exists).Distinct().ToArray();
+            using var stream = CurrentAssembly.GetManifestResourceStream(name)
+                ?? throw new FileNotFoundException($"Embedded font resource '{name}' was not found.");
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            return ms.ToArray();
+        });
     }
 }

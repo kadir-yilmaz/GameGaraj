@@ -224,6 +224,12 @@ start_one() {
   # Subshell icinde nohup + background: subshell hemen kapanir, process PID 1'e baglanir (zombie olusmaz)
   (
     cd "$proj_dir" || exit 1
+    if [[ -f "$ROOT_DIR/.env" ]]; then
+      set -a
+      # shellcheck disable=SC1091
+      source "$ROOT_DIR/.env"
+      set +a
+    fi
     ASPNETCORE_ENVIRONMENT=Development \
     ASPNETCORE_URLS="$urls" \
     DOTNET_CLI_TELEMETRY_OPTOUT=1 \

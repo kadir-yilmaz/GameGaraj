@@ -131,6 +131,8 @@ namespace GameGaraj.WebUI.Controllers
             var basket2 = await _basketService.GetBasketAsync();
             if (basket2 == null || basket2.Items == null || !basket2.Items.Any())
             {
+                ViewBag.DeliveryAddresses = await _orderService.GetUserAddressesAsync(Models.Addresses.AddressType.Delivery);
+                ViewBag.InvoiceAddresses = await _orderService.GetUserAddressesAsync(Models.Addresses.AddressType.Invoice);
                 ViewBag.Error = "Sipariş oluşturulurken sepet bulunamadı.";
                 return View(checkoutInfoInput);
             }
@@ -447,7 +449,11 @@ namespace GameGaraj.WebUI.Controllers
                     // Sepeti temizle
                     await _basketService.DeleteAsync();
 
-                    return RedirectToAction("Success", new { orderId });
+                    TempData["OrderSuccessId"] = orderId;
+                    TempData["OrderSuccessEmail"] = paymentRequest.CustomerEmail;
+                    TempData["OrderSuccessTotal"] = pricingSnapshot.TotalPaidAmount.ToString("N2", new System.Globalization.CultureInfo("tr-TR"));
+
+                    return RedirectToAction("Index", "Home");
                 }
                 else
                 {
@@ -476,8 +482,8 @@ namespace GameGaraj.WebUI.Controllers
 
         public IActionResult Success(int orderId)
         {
-            ViewBag.OrderId = orderId;
-            return View();
+            TempData["OrderSuccessId"] = orderId;
+            return RedirectToAction("Index", "Home");
         }
 
         public async Task<IActionResult> History()

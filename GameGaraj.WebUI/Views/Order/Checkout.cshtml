@@ -50,6 +50,75 @@
         display: flex;
     }
 
+    .checkout-processing-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .checkout-processing-overlay.active {
+        display: flex;
+        animation: checkoutFadeIn 0.2s ease-out;
+    }
+
+    .checkout-processing-card {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 2rem 2.25rem;
+        max-width: 420px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+    }
+
+    .checkout-spinner-ring {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 1.25rem;
+        border: 4px solid #e2e8f0;
+        border-top-color: #198754;
+        border-radius: 50%;
+        animation: checkoutSpin 0.8s linear infinite;
+    }
+
+    .checkout-step-pills {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1.25rem;
+    }
+
+    .checkout-step-pill {
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #64748b;
+        transition: all 0.25s ease;
+    }
+
+    .checkout-step-pill.active {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    @@keyframes checkoutSpin {
+        to { transform: rotate(360deg); }
+    }
+
+    @@keyframes checkoutFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
     .address-card .default-badge {
         position: absolute;
         top: 15px;
@@ -791,6 +860,21 @@
     </div>
 </div>
 
+<div id="checkoutProcessingOverlay" class="checkout-processing-overlay" role="status" aria-live="polite" aria-hidden="true">
+    <div class="checkout-processing-card">
+        <div class="checkout-spinner-ring"></div>
+        <h5 class="fw-bold text-dark mb-2">Ödemeniz İşleniyor</h5>
+        <p class="text-muted small mb-0">
+            Siparişiniz oluşturuluyor ve ödeme doğrulaması yapılıyor. Lütfen sayfayı kapatmayın.
+        </p>
+        <div class="checkout-step-pills">
+            <span class="checkout-step-pill active" data-step="0">Sipariş Kaydı</span>
+            <span class="checkout-step-pill" data-step="1">Stok Kontrolü</span>
+            <span class="checkout-step-pill" data-step="2">Güvenli Ödeme</span>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script src="~/js/card-validation.js" asp-append-version="true"></script>
     <script>
@@ -992,8 +1076,61 @@
                 titleGroup.style.display = saveCheck.checked ? 'block' : 'none';
             }
 
-            // Form Submit Cleanup (Remove spaces from card number)
-            document.getElementById('checkoutForm')?.addEventListener('submit', function (e) {
+            // Form Submit Cleanup, Double-Submit Guard & Processing Overlay
+            const checkoutFormEl = document.getElementById('checkoutForm');
+            const checkoutSubmitBtn = document.querySelector('button[type="submit"][form="checkoutForm"]');
+            const checkoutOverlay = document.getElementById('checkoutProcessingOverlay');
+            const defaultSubmitHtml = checkoutSubmitBtn ? checkoutSubmitBtn.innerHTML : '';
+            let stepTimer = null;
+
+            function resetCheckoutSubmitUi() {
+                if (checkoutFormEl) delete checkoutFormEl.dataset.submitting;
+                if (checkoutSubmitBtn) {
+                    checkoutSubmitBtn.disabled = false;
+                    checkoutSubmitBtn.innerHTML = defaultSubmitHtml;
+                }
+                if (checkoutOverlay) {
+                    checkoutOverlay.classList.remove('active');
+                    checkoutOverlay.setAttribute('aria-hidden', 'true');
+                }
+                if (stepTimer) {
+                    clearInterval(stepTimer);
+                    stepTimer = null;
+                }
+            }
+
+            window.addEventListener('pageshow', function (event) {
+                if (event.persisted) resetCheckoutSubmitUi();
+            });
+
+            checkoutFormEl?.addEventListener('submit', function (e) {
+                if (e.defaultPrevented) return;
+                if (this.dataset.submitting === 'true') {
+                    e.preventDefault();
+                    return;
+                }
+                this.dataset.submitting = 'true';
+
+                if (checkoutSubmitBtn) {
+                    checkoutSubmitBtn.disabled = true;
+                    checkoutSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Ödeme İşleniyor...';
+                }
+
+                if (checkoutOverlay) {
+                    checkoutOverlay.classList.add('active');
+                    checkoutOverlay.setAttribute('aria-hidden', 'false');
+                    const pills = checkoutOverlay.querySelectorAll('.checkout-step-pill');
+                    let stepIdx = 0;
+                    stepTimer = setInterval(() => {
+                        stepIdx = Math.min(stepIdx + 1, pills.length - 1);
+                        pills.forEach((p, i) => p.classList.toggle('active', i <= stepIdx));
+                        if (stepIdx >= pills.length - 1) {
+                            clearInterval(stepTimer);
+                            stepTimer = null;
+                        }
+                    }, 700);
+                }
+
                 const num = document.getElementById('cardNumberInput');
                 if (num) num.value = num.value.replace(/\s/g, '');
             });

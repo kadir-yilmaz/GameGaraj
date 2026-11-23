@@ -7,6 +7,9 @@
     var publicCoupons = ViewBag.PublicCoupons as List<CouponViewModel> ?? new List<CouponViewModel>();
     var ruleProducts = ViewBag.RuleProducts as Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel> ?? new Dictionary<string, GameGaraj.WebUI.Models.Products.ProductViewModel>();
     var homeCategories = ViewBag.HomeCategories as List<GameGaraj.WebUI.Models.Products.CategoryViewModel> ?? new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
+    var orderSuccessId = TempData["OrderSuccessId"];
+    var orderSuccessEmail = TempData["OrderSuccessEmail"] as string;
+    var orderSuccessTotal = TempData["OrderSuccessTotal"] as string;
 }
 
 @await Html.PartialAsync("_ProductCardStyles")
@@ -934,6 +937,178 @@
                     restartIndicatorProgress(e.to);
                 });
             }
+
+            const orderSuccessModalEl = document.getElementById('orderSuccessModal');
+            if (orderSuccessModalEl && typeof bootstrap !== 'undefined') {
+                bootstrap.Modal.getOrCreateInstance(orderSuccessModalEl).show();
+            }
         });
     </script>
+
+    @if (orderSuccessId != null)
+    {
+        <style>
+            .order-success-modal .modal-content {
+                border: 0;
+                border-radius: 22px;
+                overflow: hidden;
+                box-shadow: 0 28px 60px rgba(15, 23, 42, 0.24);
+            }
+
+            .order-success-accent {
+                height: 6px;
+                background: linear-gradient(90deg, #10b981 0%, #059669 50%, #0d6efd 100%);
+            }
+
+            .order-success-badge {
+                width: 72px;
+                height: 72px;
+                margin: 0 auto 1.25rem;
+                border-radius: 50%;
+                background: #ecfdf5;
+                color: #059669;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                animation: orderPopIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+            }
+
+            .order-success-badge::after {
+                content: '';
+                position: absolute;
+                inset: -6px;
+                border-radius: 50%;
+                border: 2px solid rgba(16, 185, 129, 0.22);
+            }
+
+            .order-success-meta {
+                display: flex;
+                justify-content: center;
+                gap: 0.6rem;
+                flex-wrap: wrap;
+                margin-bottom: 1.25rem;
+            }
+
+            .order-meta-chip {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 999px;
+                padding: 0.38rem 0.9rem;
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: #1e293b;
+            }
+
+            .order-success-info-box {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 14px;
+                padding: 1rem 1.15rem;
+                text-align: left;
+                font-size: 0.88rem;
+                color: #475569;
+            }
+
+            .order-success-info-box ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                display: grid;
+                gap: 0.45rem;
+            }
+
+            .order-success-info-box li {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.55rem;
+            }
+
+            .order-success-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: #10b981;
+                margin-top: 0.42rem;
+                flex-shrink: 0;
+            }
+
+            .order-success-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.75rem;
+                margin-top: 1.5rem;
+            }
+
+            @@keyframes orderPopIn {
+                0% { transform: scale(0.6); opacity: 0; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+
+            @@media (max-width: 575.98px) {
+                .order-success-actions {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+
+        <div class="modal fade order-success-modal" id="orderSuccessModal" tabindex="-1" aria-labelledby="orderSuccessModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="order-success-accent"></div>
+                    <div class="modal-body p-4 p-sm-5 text-center position-relative">
+                        <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Kapat"></button>
+
+                        <div class="order-success-badge">
+                            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+
+                        <h4 class="fw-bold text-dark mb-1" id="orderSuccessModalLabel">Siparişiniz Alındı</h4>
+                        <p class="text-muted small mb-3">Ödemeniz onaylandı, siparişiniz hazırlanmaya başlandı.</p>
+
+                        <div class="order-success-meta">
+                            <span class="order-meta-chip">Sipariş No: #@orderSuccessId</span>
+                            @if (!string.IsNullOrWhiteSpace(orderSuccessTotal))
+                            {
+                                <span class="order-meta-chip">Tutar: @orderSuccessTotal TL</span>
+                            }
+                        </div>
+
+                        <div class="order-success-info-box">
+                            <ul>
+                                <li>
+                                    <span class="order-success-dot"></span>
+                                    <span>
+                                        @if (!string.IsNullOrWhiteSpace(orderSuccessEmail))
+                                        {
+                                            <text>E-faturanız <strong>@orderSuccessEmail</strong> adresine gönderildi.</text>
+                                        }
+                                        else
+                                        {
+                                            <text>E-faturanız kayıtlı e-posta adresinize gönderildi.</text>
+                                        }
+                                    </span>
+                                </li>
+                                <li>
+                                    <span class="order-success-dot"></span>
+                                    <span>Sipariş durumunu ve detaylarını Siparişlerim ekranından takip edebilirsiniz.</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="order-success-actions">
+                            <a asp-controller="Order" asp-action="History" class="btn btn-primary fw-semibold py-2 rounded-3">
+                                Siparişlerime Git
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary fw-semibold py-2 rounded-3" data-bs-dismiss="modal">
+                                Alışverişe Devam Et
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 }

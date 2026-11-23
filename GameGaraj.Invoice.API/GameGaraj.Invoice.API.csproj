@@ -18,4 +18,8 @@
     <ProjectReference Include="..\GameGaraj.Shared\GameGaraj.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Fonts\*.ttf" />
+  </ItemGroup>
+
 </Project>

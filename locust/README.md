@@ -61,3 +61,16 @@ final_stats.json  Final snapshot
 ```
 
 `locust/logs/` ve eski kosulardan kalabilecek `locust/results/` git tarafindan ignore edilir.
+
+## Locust Web UI (`locustfile.py`)
+
+Tekil servis testleri (`search`, `catalog`, `basket`) ve ortalama kullanici deneyimi (`e2e`) icin Locust Web UI kullanimi:
+
+```bash
+pip install -r requirements.txt
+locust -f locustfile.py --processes 4 --host http://192.168.1.5:30000
+```
+
+Tarayicidan `http://localhost:8089` adresini acip:
+- **Tags** alanina `search`, `catalog` veya `basket` yazarak servisleri tek tek yuke sokabilirsin.
+- **Tags** alanini bos birakarak (veya `e2e` yazarak) ~%70 gezinme + ~%30 sepet oraninda ortalama kullanici senaryosu calistirabilirsin.
