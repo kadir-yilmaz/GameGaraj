@@ -65,7 +65,7 @@ services:
   # ---------------------------------------------------------------------------
   gateway:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/gateway:375f634-172-1"
-    replicas: 2
+    replicas: 3
     serviceType: NodePort
     nodePort: 30000
     env:
@@ -95,7 +95,7 @@ services:
   # ---------------------------------------------------------------------------
   catalog-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/catalog-api:375f634-172-1"
-    replicas: 2
+    replicas: 3
     skipCommonRabbit: true
     env:
       IdentityOption__Audience: "catalog.api"
@@ -116,7 +116,7 @@ services:
   # ---------------------------------------------------------------------------
   review-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/review-api:375f634-172-1"
-    replicas: 2
+    replicas: 3
     skipCommonRabbit: true
     env:
       IdentityOption__Audience: "review.api"
@@ -130,7 +130,7 @@ services:
   # ---------------------------------------------------------------------------
   discussion-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/discussion-api:375f634-172-1"
-    replicas: 2
+    replicas: 3
     env:
       IdentityOption__Audience: "discussion.api"
     secretEnv:
@@ -142,7 +142,7 @@ services:
   # ---------------------------------------------------------------------------
   photostock-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/photostock-api:375f634-172-1"
-    replicas: 2
+    replicas: 3
     env:
       IdentityOption__Audience: "photostock.api"
       Minio__UseLocalStorage: "false"
@@ -158,7 +158,7 @@ services:
   # ---------------------------------------------------------------------------
   basket-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/basket-api:375f634-172-1"
-    replicas: 2
+    replicas: 3
     env:
       IdentityOption__Audience: "basket.api"
     secretEnv:
@@ -169,7 +169,7 @@ services:
   # ---------------------------------------------------------------------------
   order-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/order-api:375f634-172-1"
-    replicas: 2
+    replicas: 3
     secretEnv:
       ConnectionStrings__DefaultConnection: order-sqlserver-connection
 
@@ -178,7 +178,7 @@ services:
   # ---------------------------------------------------------------------------
   payment-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/payment-api:375f634-172-1"
-    replicas: 2
+    replicas: 3
     env:
       Iyzipay__BaseUrl: "https://sandbox-api.iyzipay.com"
     secretEnv:
@@ -190,7 +190,7 @@ services:
   # ---------------------------------------------------------------------------
   invoice-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/invoice-api:375f634-172-1"
-    replicas: 2
+    replicas: 3
     env:
       IdentityOption__Audience: "invoice.api"
       Minio__UseLocalStorage: "false"
@@ -206,7 +206,7 @@ services:
   # ---------------------------------------------------------------------------
   notification-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/notification-api:375f634-172-1"
-    replicas: 2
+    replicas: 3
     port: 5025
     env:
       GIN_MODE: "release"
@@ -225,7 +225,7 @@ services:
   # ---------------------------------------------------------------------------
   campaign-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/campaign-api:375f634-172-1"
-    replicas: 2
+    replicas: 3
     secretEnv:
       ConnectionStrings__SqlServer: campaign-sqlserver-connection
 
@@ -234,7 +234,7 @@ services:
   # ---------------------------------------------------------------------------
   search-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/search-api:375f634-172-1"
-    replicas: 2
+    replicas: 3
     env:
       GIN_MODE: "release"
       SEARCH_SERVER_PORT: ":8080"
@@ -252,7 +252,7 @@ services:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:375f634-172-1"
     serviceType: NodePort
     nodePort: 30075
-    replicas: 2
+    replicas: 3
     sessionAffinity: "ClientIP"
     resources:
       requests:

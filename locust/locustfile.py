@@ -8,6 +8,14 @@ from locust import FastHttpUser, LoadTestShape, events, tag, task
 DEFAULT_HOST = "http://100.67.37.25:30000"
 DEFAULT_KEYWORDS = ["rtx", "asus", "msi", "gaming", "laptop", "ssd", "ram", "monitör"]
 
+TARGET_ENV_HOSTS = {
+    "wk1-tailscale": ["http://100.67.37.25:30000"],
+    "wk2-tailscale": ["http://100.120.194.97:30000"],
+    "wk1+wk2-tailscale": ["http://100.67.37.25:30000", "http://100.120.194.97:30000"],
+    "wk1+wk2-lan": ["http://192.168.1.5:30000", "http://192.168.1.200:30000"],
+    "cloudflare": ["https://gateway.kadiryilmaz.online"],
+}
+
 # Preset profilleri: hedef_rps -> (otomatik_kullanici_sayisi, saniyede_artis_hizi)
 RPS_PROFILES = {
     "500": (250, 50),
@@ -24,6 +32,13 @@ _USER_SEQ = itertools.count(1)
 
 @events.init_command_line_parser.add_listener
 def _(parser):
+    parser.add_argument(
+        "--target-env",
+        type=str,
+        default="wk1+wk2-tailscale",
+        choices=["custom", "wk1-tailscale", "wk2-tailscale", "wk1+wk2-tailscale", "wk1+wk2-lan", "cloudflare"],
+        help="Hedef giris noktasi (custom = ustteki Host kutusunu kullanir)",
+    )
     parser.add_argument(
         "--target-rps",
         type=str,
@@ -144,8 +159,16 @@ class GameGarajUser(FastHttpUser):
         return random.uniform(0.2, 1.0)
 
     def on_start(self):
-        self.user_id = f"guest-locust-{next(_USER_SEQ)}"
+        seq = next(_USER_SEQ)
+        self.user_id = f"guest-locust-{seq}"
         self.cart_items: list[dict] = []
+
+        opts = getattr(self.environment, "parsed_options", None)
+        target_env = getattr(opts, "target_env", "custom")
+        hosts = TARGET_ENV_HOSTS.get(target_env)
+        if hosts:
+            self.client.base_url = hosts[seq % len(hosts)]
+
         self._ensure_products_loaded()
 
     def _ensure_products_loaded(self):
