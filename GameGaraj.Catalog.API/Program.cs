@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using GameGaraj.Catalog.API.Data;
 using GameGaraj.Catalog.API.Services.Abstract;
 using GameGaraj.Catalog.API.Services.Concrete;
@@ -23,6 +23,7 @@ builder.AddSimpleElasticLogging("catalog-api");
 
 // Tracing (sadece siparis akisi -> Jaeger)
 builder.AddOrderTracing("GameGaraj.Catalog");
+builder.AddPrometheusMetrics("catalog-api");
 
 // Custom Business Metrics
 builder.Services.AddSingleton<CatalogMetrics>();
@@ -169,6 +170,7 @@ app.UseAuthorization();
 app.UseChaos("catalog");
 
 // OpenTelemetry Prometheus /metrics endpoint
+app.UsePrometheusMetrics();
 
 app.MapControllers();
 

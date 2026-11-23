@@ -6,10 +6,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
@@ -135,7 +139,11 @@ func main() {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(corsMiddleware())
+	router.Use(prometheusMetricsMiddleware())
 	router.Use(requestLogger(logger))
+
+	// Prometheus /metrics endpoint
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Swagger UI endpoint
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -245,6 +253,38 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
+// prometheusMetricsMiddleware records HTTP request duration/count in OpenTelemetry-compatible Prometheus format.
+func prometheusMetricsMiddleware() gin.HandlerFunc {
+	requestDuration := promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_server_request_duration_seconds",
+			Help:    "Duration of HTTP server requests in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"http_request_method", "http_route", "http_response_status_code"},
+	)
+
+	return func(c *gin.Context) {
+		if c.Request.URL.Path == "/metrics" {
+			c.Next()
+			return
+		}
+
+		start := time.Now()
+		c.Next()
+
+		route := c.FullPath()
+		if route == "" {
+			route = c.Request.URL.Path
+		}
+		requestDuration.WithLabelValues(
+			c.Request.Method,
+			route,
+			strconv.Itoa(c.Writer.Status()),
+		).Observe(time.Since(start).Seconds())
+	}
+}
+
 // requestLogger logs HTTP requests with structured fields
 func requestLogger(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -257,7 +297,7 @@ func requestLogger(logger *zap.Logger) gin.HandlerFunc {
 		duration := time.Since(start)
 		statusCode := c.Writer.Status()
 
-		if path == "/api/health" || path == "/swagger/index.html" {
+		if path == "/api/health" || path == "/metrics" || path == "/swagger/index.html" {
 			return
 		}
 

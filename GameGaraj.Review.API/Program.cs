@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddSimpleElasticLogging("review-api");
 
 // OpenTelemetry (Tracing + Metrics)
+builder.AddPrometheusMetrics("review-api");
 
 // Custom Business Metrics
 builder.Services.AddSingleton<ReviewMetrics>();
@@ -123,6 +124,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // OpenTelemetry Prometheus /metrics endpoint
+app.UsePrometheusMetrics();
 
 app.MapControllers();
 

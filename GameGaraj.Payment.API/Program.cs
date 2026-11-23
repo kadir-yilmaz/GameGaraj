@@ -1,4 +1,4 @@
-﻿using MassTransit;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -46,6 +46,7 @@ builder.AddSimpleElasticLogging("payment-api");
 
 // Tracing (sadece siparis akisi -> Jaeger)
 builder.AddOrderTracing("GameGaraj.Payment");
+builder.AddPrometheusMetrics("payment-api");
 
 // Custom Business Metrics
 builder.Services.AddSingleton<PaymentMetrics>();
@@ -125,6 +126,7 @@ app.UseAuthorization();
 app.UseChaos("payment");
 
 // OpenTelemetry Prometheus /metrics endpoint
+app.UsePrometheusMetrics();
 
 app.MapControllers();
 

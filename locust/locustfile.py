@@ -1,15 +1,34 @@
 import itertools
 import random
 import threading
+import time
 
-from locust import FastHttpUser, between, tag, task
+from locust import FastHttpUser, events, tag, task
 
-DEFAULT_HOST = "http://192.168.1.5:30000"
+DEFAULT_HOST = "http://100.67.37.25:30000"
 DEFAULT_KEYWORDS = ["rtx", "asus", "msi", "gaming", "laptop", "ssd", "ram", "monitör"]
 
 _PRODUCTS_LOCK = threading.Lock()
 _PRODUCTS: list[dict] = []
 _USER_SEQ = itertools.count(1)
+
+
+@events.init_command_line_parser.add_listener
+def _(parser):
+    parser.add_argument(
+        "--target-rps",
+        type=str,
+        default="manual",
+        choices=["manual", "500", "1000", "2000", "5000", "10000"],
+        help="Hedef RPS (manual = sadece Users + Intensity belirler; sayi secilirse o RPS'e sabitler/zorlar)",
+    )
+    parser.add_argument(
+        "--intensity",
+        type=str,
+        default="fast",
+        choices=["realistic", "fast", "max"],
+        help="Istek siddeti: realistic (0.2-1.0s), fast (0.02-0.1s), max (0s bekleme)",
+    )
 
 
 def _normalize_product(raw: dict) -> dict | None:
@@ -62,17 +81,38 @@ class GameGarajUser(FastHttpUser):
     """
     GameGaraj Locust load test user.
 
-    Web UI'da 'Tags' alanini kullanarak tekil servis veya karma E2E testi secilebilir:
-      - search  : Sadece Search API (Go + Elasticsearch + Redis)
-      - catalog : Sadece Catalog API (.NET + PostgreSQL + Redis)
-      - basket  : Sadece Basket API (.NET + Redis Sentinel)
-      - e2e     : Ortalama kullanici deneyimi (~%70 gezinme, ~%30 sepet)
+    Web UI'da:
+      - 'Target RPS' (manual, 500, 1000, 2000, 5000, 10000) ve 'Intensity' (realistic, fast, max) secilebilir.
+      - 'Tags' alani ile tekil servis veya karma E2E testi secilebilir:
+          search, catalog, basket, e2e
     """
 
     host = DEFAULT_HOST
-    wait_time = between(0.2, 1.0)
     connection_timeout = 10.0
     network_timeout = 30.0
+
+    def wait_time(self):
+        opts = getattr(self.environment, "parsed_options", None)
+        target_rps = getattr(opts, "target_rps", "manual")
+        intensity = getattr(opts, "intensity", "fast")
+
+        if target_rps and target_rps != "manual":
+            runner = self.environment.runner
+            user_count = max(runner.user_count if runner else 1, 1)
+            per_user_rps = int(target_rps) / user_count
+            now = time.perf_counter()
+            last = getattr(self, "_last_pace_ts", None)
+            self._last_pace_ts = now
+            if last is None:
+                return 0
+            delay = (1.0 / per_user_rps) - (now - last)
+            return delay if delay > 0 else 0
+
+        if intensity == "max":
+            return 0
+        if intensity == "fast":
+            return random.uniform(0.02, 0.1)
+        return random.uniform(0.2, 1.0)
 
     def on_start(self):
         self.user_id = f"guest-locust-{next(_USER_SEQ)}"

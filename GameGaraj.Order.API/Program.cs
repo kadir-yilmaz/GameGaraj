@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +25,7 @@ builder.AddSimpleElasticLogging("order-api");
 
 // Tracing (sadece siparis akisi -> Jaeger)
 builder.AddOrderTracing("GameGaraj.Order");
+builder.AddPrometheusMetrics("order-api");
 
 // Custom Business Metrics
 builder.Services.AddSingleton<OrderMetrics>();
@@ -163,6 +164,7 @@ app.UseAuthorization();
 app.UseChaos("order");
 
 // OpenTelemetry Prometheus /metrics endpoint
+app.UsePrometheusMetrics();
 
 app.MapControllers();
 

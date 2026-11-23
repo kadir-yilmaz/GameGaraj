@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using GameGaraj.Shared.Observability;
@@ -26,6 +26,7 @@ System.Threading.ThreadPool.SetMinThreads(1000, 1000);
 builder.AddSimpleElasticLogging("basket-api");
 
 // OpenTelemetry (Tracing + Metrics)
+builder.AddPrometheusMetrics("basket-api");
 
 // Custom Business Metrics
 builder.Services.AddSingleton<BasketMetrics>();
@@ -91,6 +92,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // OpenTelemetry Prometheus /metrics endpoint
+app.UsePrometheusMetrics();
 
 // Versioning Set
 var apiVersionSet = app.NewApiVersionSet()

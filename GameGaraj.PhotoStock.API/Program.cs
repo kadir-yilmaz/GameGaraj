@@ -1,4 +1,4 @@
-﻿using GameGaraj.Shared.Observability;
+using GameGaraj.Shared.Observability;
 using GameGaraj.Shared.Observability.Metrics;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Minio;
@@ -10,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddSimpleElasticLogging("photostock-api");
 
 // OpenTelemetry (Tracing + Metrics)
+builder.AddPrometheusMetrics("photostock-api");
 
 // Custom Business Metrics
 builder.Services.AddSingleton<PhotoStockMetrics>();
@@ -115,6 +116,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // OpenTelemetry Prometheus /metrics endpoint
+app.UsePrometheusMetrics();
 
 app.MapControllers();
 

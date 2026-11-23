@@ -15,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Elasticsearch Logging (tek sabit index: gamegaraj-discussion-api-logs)
 builder.AddSimpleElasticLogging("discussion-api");
+builder.AddPrometheusMetrics("discussion-api");
 
 // PostgreSQL
 builder.Services.AddDbContext<DiscussionDbContext>(options =>
@@ -217,6 +218,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseRateLimiter();
+
+app.UsePrometheusMetrics();
 
 app.MapControllers();
 

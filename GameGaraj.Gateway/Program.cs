@@ -13,6 +13,7 @@ builder.AddSimpleElasticLogging("gateway");
 
 // Tracing (sadece siparis akisi -> Jaeger)
 builder.AddOrderTracing("GameGaraj.Gateway");
+builder.AddPrometheusMetrics("gateway");
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
@@ -50,6 +51,7 @@ app.UseAuthorization();
 
 
 // OpenTelemetry Prometheus /metrics endpoint
+app.UsePrometheusMetrics();
 
 app.MapReverseProxy();
 

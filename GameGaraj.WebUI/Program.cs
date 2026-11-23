@@ -29,6 +29,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Tracing (sadece siparis akisi -> Jaeger)
 builder.AddOrderTracing("GameGaraj.WebUI");
+builder.AddPrometheusMetrics("webui");
 
 // Elasticsearch Logging (tek sabit index: gamegaraj-webui-logs)
 builder.AddSimpleElasticLogging("webui");
@@ -380,6 +381,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseNotyf();
+
+app.UsePrometheusMetrics();
 
 // Custom Request Logging Ekle
 

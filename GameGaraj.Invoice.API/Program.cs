@@ -44,6 +44,7 @@ builder.AddSimpleElasticLogging("invoice-api");
 
 // Tracing (sadece siparis akisi -> Jaeger)
 builder.AddOrderTracing("GameGaraj.Invoice");
+builder.AddPrometheusMetrics("invoice-api");
 
 // Custom Business Metrics
 builder.Services.AddSingleton<InvoiceMetrics>();
@@ -173,6 +174,7 @@ app.UseAuthorization();
 app.UseChaos("invoice");
 
 // OpenTelemetry Prometheus /metrics endpoint
+app.UsePrometheusMetrics();
 
 app.MapControllers();
 

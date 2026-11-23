@@ -1,4 +1,4 @@
-﻿using GameGaraj.Campaign.API.Rules;
+using GameGaraj.Campaign.API.Rules;
 using GameGaraj.Campaign.API.Services;
 using GameGaraj.Campaign.API.Services.Abstract;
 using GameGaraj.Campaign.API.Services.Concrete;
@@ -13,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddSimpleElasticLogging("campaign-api");
 
 // OpenTelemetry (Tracing + Metrics)
+builder.AddPrometheusMetrics("campaign-api");
 
 // Custom Business Metrics
 builder.Services.AddSingleton<CampaignMetrics>();
@@ -95,6 +96,7 @@ app.UseRouting();
 app.UseChaos("campaign");
 
 // OpenTelemetry Prometheus /metrics endpoint
+app.UsePrometheusMetrics();
 
 app.MapControllers();
 
