@@ -96,7 +96,9 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (!response.IsSuccessStatusCode) return new List<ProductViewModel>();
 
                 var content = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<List<ProductViewModel>>(content, _jsonOptions) ?? new List<ProductViewModel>();
+                var products = JsonSerializer.Deserialize<List<ProductViewModel>>(content, _jsonOptions) ?? new List<ProductViewModel>();
+                SetProductImageUrls(products);
+                return products;
             }
             catch (Exception ex)
             {
@@ -177,7 +179,9 @@ namespace GameGaraj.WebUI.Services.Concrete
                 if (!response.IsSuccessStatusCode) return new List<ProductViewModel>();
 
                 var content = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<List<ProductViewModel>>(content, _jsonOptions) ?? new List<ProductViewModel>();
+                var products = JsonSerializer.Deserialize<List<ProductViewModel>>(content, _jsonOptions) ?? new List<ProductViewModel>();
+                SetProductImageUrls(products);
+                return products;
             }
             catch (Exception ex)
             {
