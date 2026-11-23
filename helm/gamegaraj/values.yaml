@@ -41,7 +41,7 @@ global:
       cpu: "50m"
     limits:
       memory: "512Mi"
-      cpu: "500m"
+      cpu: "1500m"
 
   # Altyapı adresleri (192.168.1.56 = Dokploy host)
   rabbitmqUrl: "192.168.1.56"
@@ -109,7 +109,7 @@ services:
         cpu: "300m"
       limits:
         memory: "600Mi"
-        cpu: "1000m"
+        cpu: "2000m"
 
   # ---------------------------------------------------------------------------
   # Review API (PostgreSQL)
