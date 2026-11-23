@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/kadir-yilmaz/gamegaraj/telegram-bot
-  tag: "133c3d5-12"
+  tag: "95c0f5e-13"
   pullPolicy: IfNotPresent
 
 replicaCount: 1
