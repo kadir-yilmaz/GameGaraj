@@ -3,10 +3,19 @@ import random
 import threading
 import time
 
-from locust import FastHttpUser, events, tag, task
+from locust import FastHttpUser, LoadTestShape, events, tag, task
 
 DEFAULT_HOST = "http://100.67.37.25:30000"
 DEFAULT_KEYWORDS = ["rtx", "asus", "msi", "gaming", "laptop", "ssd", "ram", "monitör"]
+
+# Preset profilleri: hedef_rps -> (otomatik_kullanici_sayisi, saniyede_artis_hizi)
+RPS_PROFILES = {
+    "500": (250, 50),
+    "1000": (500, 100),
+    "2000": (1000, 200),
+    "5000": (2500, 500),
+    "10000": (5000, 1000),
+}
 
 _PRODUCTS_LOCK = threading.Lock()
 _PRODUCTS: list[dict] = []
@@ -20,15 +29,36 @@ def _(parser):
         type=str,
         default="manual",
         choices=["manual", "500", "1000", "2000", "5000", "10000"],
-        help="Hedef RPS (manual = sadece Users + Intensity belirler; sayi secilirse o RPS'e sabitler/zorlar)",
+        help="Hedef RPS profili (secilirse Users ve Ramp-up otomatik ayarlanir; manual = elle giris)",
     )
     parser.add_argument(
         "--intensity",
         type=str,
         default="fast",
         choices=["realistic", "fast", "max"],
-        help="Istek siddeti: realistic (0.2-1.0s), fast (0.02-0.1s), max (0s bekleme)",
+        help="Manual modda istek siddeti: realistic (0.2-1.0s), fast (0.02-0.1s), max (0s bekleme)",
     )
+
+
+class TargetRpsShape(LoadTestShape):
+    """
+    Target RPS secildiginde Users ve Ramp-up degerlerini otomatik yonetir.
+    'manual' secilirse Web UI'dan girilen Users ve Ramp-up kullanilir.
+    """
+
+    use_common_options = True
+
+    def tick(self):
+        opts = getattr(self.runner.environment, "parsed_options", None) if self.runner else None
+        target_rps = getattr(opts, "target_rps", "manual")
+
+        if target_rps in RPS_PROFILES:
+            users, spawn_rate = RPS_PROFILES[target_rps]
+            return (users, spawn_rate)
+
+        users = getattr(opts, "num_users", None) or 100
+        spawn_rate = getattr(opts, "spawn_rate", None) or 10
+        return (users, spawn_rate)
 
 
 def _normalize_product(raw: dict) -> dict | None:
@@ -82,9 +112,9 @@ class GameGarajUser(FastHttpUser):
     GameGaraj Locust load test user.
 
     Web UI'da:
-      - 'Target RPS' (manual, 500, 1000, 2000, 5000, 10000) ve 'Intensity' (realistic, fast, max) secilebilir.
-      - 'Tags' alani ile tekil servis veya karma E2E testi secilebilir:
-          search, catalog, basket, e2e
+      - 'Target RPS' (manual, 500, 1000, 2000, 5000, 10000): Secilirse Users/Ramp-up otomatik profil olarak uygulanir.
+      - 'Intensity' (realistic, fast, max): Manual modda kullanici basina bekleme suresini belirler.
+      - 'Tags': search, catalog, basket, e2e
     """
 
     host = DEFAULT_HOST
@@ -96,10 +126,9 @@ class GameGarajUser(FastHttpUser):
         target_rps = getattr(opts, "target_rps", "manual")
         intensity = getattr(opts, "intensity", "fast")
 
-        if target_rps and target_rps != "manual":
-            runner = self.environment.runner
-            user_count = max(runner.user_count if runner else 1, 1)
-            per_user_rps = int(target_rps) / user_count
+        if target_rps in RPS_PROFILES:
+            profile_users, _ = RPS_PROFILES[target_rps]
+            per_user_rps = int(target_rps) / profile_users
             now = time.perf_counter()
             last = getattr(self, "_last_pace_ts", None)
             self._last_pace_ts = now
