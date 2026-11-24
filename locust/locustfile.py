@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 import gevent
+from gevent.pool import Pool
 from locust import FastHttpUser, events, tag, task
 from locust.runners import MasterRunner, WorkerRunner
 
@@ -56,6 +57,7 @@ _WORKER_NODE_STATS: dict[str, dict] = defaultdict(lambda: {"count": 0, "fail": 0
 _MASTER_NODE_STATS: dict[str, dict] = defaultdict(lambda: {"count": 0, "fail": 0, "total_ms": 0.0, "max_ms": 0.0})
 _TEST_STARTED_AT: float = 0.0
 _AUTO_STOP_GREENLET = None
+_AGGRESSIVE_POOL = Pool(2000)
 
 
 def _cancel_auto_stop():
@@ -190,6 +192,7 @@ def _collect_cluster_snapshots(target_env: str) -> str:
 @events.test_stop.add_listener
 def _(environment, **kwargs):
     _cancel_auto_stop()
+    _AGGRESSIVE_POOL.kill(block=False)
     if isinstance(environment.runner, WorkerRunner):
         return
 
@@ -338,6 +341,13 @@ def _(parser):
         default=60,
         help="Test suresi (saniye). Varsayilan 60 sn, 0 = sinirsiz",
     )
+    parser.add_argument(
+        "--aggressive-mode",
+        type=str,
+        default="false",
+        choices=["false", "true"],
+        help="true = yanit beklemeden siradaki istegi atar (open-loop, gercek RPS baskisi)",
+    )
 
 
 def _normalize_product(raw: dict) -> dict | None:
@@ -468,6 +478,14 @@ class GameGarajUser(FastHttpUser):
             "Content-Type": "application/json",
         }
 
+    def _fire(self, fn, *args, **kwargs):
+        opts = getattr(self.environment, "parsed_options", None)
+        aggressive = str(getattr(opts, "aggressive_mode", "false")).lower() == "true"
+        if aggressive:
+            _AGGRESSIVE_POOL.spawn(fn, *args, **kwargs)
+        else:
+            fn(*args, **kwargs)
+
     # -------------------------------------------------------------------------
     # Search API (~%35 E2E agirligi)
     # -------------------------------------------------------------------------
@@ -475,7 +493,8 @@ class GameGarajUser(FastHttpUser):
     @task(20)
     def search_api_query(self):
         term = _search_term(self._pick_product())
-        self.client.get(
+        self._fire(
+            self.client.get,
             "/api/search",
             params={"q": term},
             name="search: /api/search?q=...",
@@ -485,7 +504,8 @@ class GameGarajUser(FastHttpUser):
     @task(10)
     def search_api_suggestions(self):
         term = _search_term(self._pick_product())[:3]
-        self.client.get(
+        self._fire(
+            self.client.get,
             "/api/search/suggestions",
             params={"q": term},
             name="search: /api/search/suggestions",
@@ -494,7 +514,8 @@ class GameGarajUser(FastHttpUser):
     @tag("search", "e2e")
     @task(5)
     def search_api_featured(self):
-        self.client.get(
+        self._fire(
+            self.client.get,
             "/api/search/products/featured",
             name="search: /api/search/products/featured",
         )
@@ -508,7 +529,8 @@ class GameGarajUser(FastHttpUser):
         product = self._pick_product()
         if not product:
             return
-        self.client.get(
+        self._fire(
+            self.client.get,
             f"/api/catalog/products/{product['id']}",
             name="catalog: /api/catalog/products/{id}",
         )
@@ -516,7 +538,8 @@ class GameGarajUser(FastHttpUser):
     @tag("catalog", "e2e")
     @task(10)
     def catalog_featured(self):
-        self.client.get(
+        self._fire(
+            self.client.get,
             "/api/catalog/products/featured",
             name="catalog: /api/catalog/products/featured",
         )
@@ -525,7 +548,8 @@ class GameGarajUser(FastHttpUser):
     @task(7)
     def catalog_search(self):
         term = _search_term(self._pick_product())
-        self.client.get(
+        self._fire(
+            self.client.get,
             "/api/catalog/products/search",
             params={"q": term},
             name="catalog: /api/catalog/products/search",
@@ -537,7 +561,8 @@ class GameGarajUser(FastHttpUser):
     @tag("basket", "e2e")
     @task(12)
     def basket_get(self):
-        self.client.get(
+        self._fire(
+            self.client.get,
             "/api/basket/baskets",
             headers=self._basket_headers(),
             name="basket: GET /api/basket/baskets",
@@ -550,19 +575,23 @@ class GameGarajUser(FastHttpUser):
         if not product:
             return
         payload = _to_basket_payload(product, quantity=1)
-        with self.client.post(
-            "/api/basket/baskets/items",
-            headers=self._basket_headers(),
-            json=payload,
-            name="basket: POST /api/basket/baskets/items",
-            catch_response=True,
-        ) as resp:
-            if resp.status_code in (200, 201, 204):
-                resp.success()
-                if len(self.cart_items) < 10:
-                    self.cart_items.append(payload)
-            else:
-                resp.failure(f"HTTP {resp.status_code}")
+
+        def _do_add():
+            with self.client.post(
+                "/api/basket/baskets/items",
+                headers=self._basket_headers(),
+                json=payload,
+                name="basket: POST /api/basket/baskets/items",
+                catch_response=True,
+            ) as resp:
+                if resp.status_code in (200, 201, 204):
+                    resp.success()
+                    if len(self.cart_items) < 10:
+                        self.cart_items.append(payload)
+                else:
+                    resp.failure(f"HTTP {resp.status_code}")
+
+        self._fire(_do_add)
 
     @tag("basket", "e2e")
     @task(5)
@@ -571,7 +600,8 @@ class GameGarajUser(FastHttpUser):
             return
         item = random.choice(self.cart_items)
         item["Quantity"] = min(item["Quantity"] + 1, 5)
-        self.client.post(
+        self._fire(
+            self.client.post,
             "/api/basket/baskets",
             headers=self._basket_headers(),
             json={"UserId": self.user_id, "Items": self.cart_items},
@@ -584,13 +614,17 @@ class GameGarajUser(FastHttpUser):
         if not self.cart_items:
             return
         removed = self.cart_items.pop(0)
-        with self.client.delete(
-            f"/api/basket/baskets/items/{removed['Id']}",
-            headers=self._basket_headers(),
-            name="basket: DELETE /api/basket/baskets/items/{id}",
-            catch_response=True,
-        ) as resp:
-            if resp.status_code in (200, 204, 400, 404):
-                resp.success()
-            else:
-                resp.failure(f"HTTP {resp.status_code}")
+
+        def _do_remove():
+            with self.client.delete(
+                f"/api/basket/baskets/items/{removed['Id']}",
+                headers=self._basket_headers(),
+                name="basket: DELETE /api/basket/baskets/items/{id}",
+                catch_response=True,
+            ) as resp:
+                if resp.status_code in (200, 204, 400, 404):
+                    resp.success()
+                else:
+                    resp.failure(f"HTTP {resp.status_code}")
+
+        self._fire(_do_remove)

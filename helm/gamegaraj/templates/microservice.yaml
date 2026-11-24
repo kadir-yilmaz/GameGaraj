@@ -55,10 +55,11 @@ spec:
         {{- toYaml $.Values.global.nodeSelector | nindent 8 }}
       {{- end }}
       {{- $ts := $.Values.global.topologySpread | default dict }}
+      {{- $whenUnsatisfiable := $svc.whenUnsatisfiable | default $ts.whenUnsatisfiable | default "ScheduleAnyway" }}
       topologySpreadConstraints:
         - maxSkew: {{ $ts.maxSkew | default 1 }}
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: {{ $svc.whenUnsatisfiable | default $ts.whenUnsatisfiable | default "ScheduleAnyway" }}
+          whenUnsatisfiable: {{ $whenUnsatisfiable }}
           labelSelector:
             matchLabels:
               app: {{ $name }}
@@ -68,6 +69,13 @@ spec:
           nodeTaintsPolicy: Honor
       affinity:
         podAntiAffinity:
+          {{- if eq $whenUnsatisfiable "DoNotSchedule" }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: {{ $name }}
+              topologyKey: kubernetes.io/hostname
+          {{- else }}
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
               podAffinityTerm:
@@ -75,6 +83,7 @@ spec:
                   matchLabels:
                     app: {{ $name }}
                 topologyKey: kubernetes.io/hostname
+          {{- end }}
       containers:
         - name: {{ $name }}
           image: {{ $svc.image }}

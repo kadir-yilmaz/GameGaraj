@@ -34,7 +34,7 @@ global:
   terminationGracePeriodSeconds: 30
   topologySpread:
     maxSkew: 1
-    whenUnsatisfiable: ScheduleAnyway
+    whenUnsatisfiable: DoNotSchedule
   defaultResources:
     requests:
       memory: "128Mi"
@@ -96,6 +96,7 @@ services:
   catalog-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/catalog-api:375f634-172-1"
     replicas: 3
+    whenUnsatisfiable: ScheduleAnyway
     hpa:
       enabled: true
       minReplicas: 3
