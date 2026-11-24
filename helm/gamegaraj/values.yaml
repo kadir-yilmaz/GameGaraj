@@ -96,6 +96,11 @@ services:
   catalog-api:
     image: "ghcr.io/kadir-yilmaz/gamegaraj/catalog-api:375f634-172-1"
     replicas: 3
+    hpa:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 70
     skipCommonRabbit: true
     env:
       IdentityOption__Audience: "catalog.api"

@@ -8,7 +8,9 @@ metadata:
     app: {{ $name }}
     {{- include "gamegaraj.labels" $ | nindent 4 }}
 spec:
+  {{- if not (and $svc.hpa $svc.hpa.enabled) }}
   replicas: {{ $svc.replicas | default 1 }}
+  {{- end }}
   revisionHistoryLimit: {{ $svc.revisionHistoryLimit | default 2 }}
   strategy:
     type: RollingUpdate
