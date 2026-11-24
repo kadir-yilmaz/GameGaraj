@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
+import gevent
 from locust import FastHttpUser, events, tag, task
 from locust.runners import MasterRunner, WorkerRunner
 
@@ -54,6 +55,14 @@ _NODE_STATS_LOCK = threading.Lock()
 _WORKER_NODE_STATS: dict[str, dict] = defaultdict(lambda: {"count": 0, "fail": 0, "total_ms": 0.0, "max_ms": 0.0})
 _MASTER_NODE_STATS: dict[str, dict] = defaultdict(lambda: {"count": 0, "fail": 0, "total_ms": 0.0, "max_ms": 0.0})
 _TEST_STARTED_AT: float = 0.0
+_AUTO_STOP_GREENLET = None
+
+
+def _cancel_auto_stop():
+    global _AUTO_STOP_GREENLET
+    if _AUTO_STOP_GREENLET is not None:
+        _AUTO_STOP_GREENLET.kill(block=False)
+        _AUTO_STOP_GREENLET = None
 
 
 def _record_node_stat(node_label: str, ok: bool, elapsed_ms: float):
@@ -69,11 +78,24 @@ def _record_node_stat(node_label: str, ok: bool, elapsed_ms: float):
 
 @events.test_start.add_listener
 def _(environment, **kwargs):
-    global _TEST_STARTED_AT
+    global _TEST_STARTED_AT, _AUTO_STOP_GREENLET
     _TEST_STARTED_AT = time.perf_counter()
+    _cancel_auto_stop()
     with _NODE_STATS_LOCK:
         _WORKER_NODE_STATS.clear()
         _MASTER_NODE_STATS.clear()
+
+    if isinstance(environment.runner, WorkerRunner):
+        return
+
+    opts = getattr(environment, "parsed_options", None)
+    duration = int(getattr(opts, "duration_seconds", 60) or 0)
+    if duration > 0:
+        def _stop_after_duration():
+            if environment.runner is not None:
+                environment.runner.stop()
+
+        _AUTO_STOP_GREENLET = gevent.spawn_later(duration, _stop_after_duration)
 
 
 @events.report_to_master.add_listener
@@ -167,6 +189,7 @@ def _collect_cluster_snapshots(target_env: str) -> str:
 
 @events.test_stop.add_listener
 def _(environment, **kwargs):
+    _cancel_auto_stop()
     if isinstance(environment.runner, WorkerRunner):
         return
 
@@ -308,6 +331,12 @@ def _(parser):
         type=float,
         default=1.0,
         help="1 kullanicinin saniyede atacagi istek sayisi (0 = beklemesiz max hiz; ornek: 0.5, 1, 2)",
+    )
+    parser.add_argument(
+        "--duration-seconds",
+        type=int,
+        default=60,
+        help="Test suresi (saniye). Varsayilan 60 sn, 0 = sinirsiz",
     )
 
 

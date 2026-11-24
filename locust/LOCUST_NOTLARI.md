@@ -1,5 +1,6 @@
 # GameGaraj Locust Yük Testi Notları ve Sonuç Özeti
-locust -f locustfile.py --processes -1
+./locust/.venv/bin/locust -f locust/locustfile.py --processes -1
+http://localhost:8089
 
 **Tarih:** 23 Kasım 2026  
 **Ortam:** k3s 3-Node Homelab (`kadirserver` bare-metal + `wk1`/`wk2` VirtualBox VM) — Yük Üretici: MacBook Air (Ofisten Tailscale / Cloudflare üzerinden)

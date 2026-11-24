@@ -55,7 +55,7 @@ services:
       - "6380:6379"
     volumes:
       - redis_master_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --replica-announce-ip 192.168.1.56 --replica-announce-port 6380
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -72,7 +72,7 @@ services:
       - "6381:6379"
     volumes:
       - redis_replica1_data:/data
-    command: redis-server --appendonly yes --replicaof redis-master 6379
+    command: redis-server --appendonly yes --replicaof 192.168.1.56 6380 --replica-announce-ip 192.168.1.56 --replica-announce-port 6381
     depends_on:
       redis-master:
         condition: service_healthy
@@ -92,7 +92,7 @@ services:
       - "6382:6379"
     volumes:
       - redis_replica2_data:/data
-    command: redis-server --appendonly yes --replicaof redis-master 6379
+    command: redis-server --appendonly yes --replicaof 192.168.1.56 6380 --replica-announce-ip 192.168.1.56 --replica-announce-port 6382
     depends_on:
       redis-master:
         condition: service_healthy
