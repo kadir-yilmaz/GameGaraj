@@ -7,6 +7,7 @@ const TARGET_RPS = Number(__ENV.TARGET_RPS || 3000);
 const DURATION = __ENV.DURATION || "60s";
 const PRE_ALLOCATED_VUS = Number(__ENV.PRE_ALLOCATED_VUS || 500);
 const MAX_VUS = Number(__ENV.MAX_VUS || 5000);
+const SKIP_BASKET = (__ENV.SKIP_BASKET || "true").toLowerCase() !== "false";
 
 const DEFAULT_KEYWORDS = ["rtx", "asus", "msi", "laptop", "ram", "ssd", "monitor", "klavye"];
 const httpErrors = new Counter("http_errors");
@@ -92,7 +93,7 @@ function track(res, name, allowedStatuses = [200]) {
 export default function (data) {
   const products = (data && data.products) || [];
   const product = pickProduct(products);
-  const roll = Math.random() * 100;
+  const roll = Math.random() * (SKIP_BASKET ? 70 : 100);
 
   if (roll < 20) {
     // 20%: search query
@@ -185,4 +186,59 @@ export default function (data) {
     });
     track(res, "basket_delete", [200, 204, 400, 404]);
   }
+}
+
+export function handleSummary(data) {
+  const m = data.metrics || {};
+  const reqs = (m.http_reqs && m.http_reqs.values) || {};
+  const fails = (m.http_req_failed && m.http_req_failed.values) || {};
+  const dur = (m.http_req_duration && m.http_req_duration.values) || {};
+  const vus = (m.vus_max && m.vus_max.values) || {};
+  const dropped = (m.dropped_iterations && m.dropped_iterations.values) || {};
+  const recv = (m.data_received && m.data_received.values) || {};
+  const sent = (m.data_sent && m.data_sent.values) || {};
+  const checks = (m.checks && m.checks.values) || {};
+
+  const summary = {
+    timestamp: new Date().toISOString(),
+    base_url: BASE_URL,
+    target_rps: TARGET_RPS,
+    duration_config: DURATION,
+    run_duration_ms: (data.state && data.state.testRunDurationMs) || 0,
+    total_requests: reqs.count || 0,
+    actual_rps: reqs.rate || 0,
+    failed_requests: fails.passes || 0,
+    fail_rate_pct: ((fails.rate || 0) * 100),
+    checks_passed: checks.passes || 0,
+    checks_failed: checks.fails || 0,
+    dropped_iterations: dropped.count || 0,
+    vus_max: vus.max || vus.value || 0,
+    latency_ms: {
+      avg: dur.avg || 0,
+      min: dur.min || 0,
+      med: dur.med || 0,
+      p90: dur["p(90)"] || 0,
+      p95: dur["p(95)"] || 0,
+      p99: dur["p(99)"] || 0,
+      max: dur.max || 0,
+    },
+    data_received_mb: (recv.count || 0) / (1024 * 1024),
+    data_sent_mb: (sent.count || 0) / (1024 * 1024),
+  };
+
+  const lines = [
+    "",
+    "=== k6 Test Ozeti ===",
+    `Hedef       : ${summary.base_url} (Target RPS: ${summary.target_rps}, Sure: ${summary.duration_config})`,
+    `Toplam Istek: ${summary.total_requests} | Basarisiz: ${summary.failed_requests} (${summary.fail_rate_pct.toFixed(2)}%) | Dropped: ${summary.dropped_iterations}`,
+    `Gercek RPS  : ${summary.actual_rps.toFixed(1)} | Max VU: ${summary.vus_max}`,
+    `Latency (ms): avg=${summary.latency_ms.avg.toFixed(1)} p50=${summary.latency_ms.med.toFixed(1)} p90=${summary.latency_ms.p90.toFixed(1)} p95=${summary.latency_ms.p95.toFixed(1)} max=${summary.latency_ms.max.toFixed(1)}`,
+    `Trafik      : Alinan=${summary.data_received_mb.toFixed(2)} MB | Gonderilen=${summary.data_sent_mb.toFixed(2)} MB`,
+    "",
+  ];
+
+  return {
+    stdout: lines.join("\n"),
+    "k6/results/last_summary.json": JSON.stringify(summary, null, 2),
+  };
 }

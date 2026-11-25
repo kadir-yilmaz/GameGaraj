@@ -1,0 +1,106 @@
+=== GameGaraj k6 Test Sonucu ===
+Tarih       : 2026-11-25 14:24:52
+Hedef URL   : http://192.168.1.199:30000
+Hedef RPS   : 10000 | Sure Ayari: 60s
+Gecen Sure  : 120.1 sn
+Toplam Istek: 115284 | Basarisiz: 13347 (11.58%)
+Dropped Iter: 442920 | Max VU: 10000
+Gercek RPS  : 959.5
+Latency (ms): avg=2180.9 p50=6.9 p90=125.9 p95=3876.0 max=60075.5
+Trafik      : Alinan=340.21 MB | Gonderilen=10.22 MB
+
+=== kadirserver (192.168.1.56) Uptime & RAM ===
+ 11:24:50 up  1:38,  4 users,  load average: 1.40, 1.50, 1.69
+               total        used        free      shared  buff/cache   available
+Mem:            15Gi        10Gi       1.2Gi       706Mi       4.4Gi       4.5Gi
+Swap:          4.0Gi        31Mi       4.0Gi
+
+=== kadirserver Top CPU Processes (htop ozeti) ===
+    PID USER     %CPU %MEM COMMAND
+  18602 root     20.6  9.1 k3s-server
+ 138326 root     19.2  1.9 dotnet
+ 111771 root      9.1  1.6 dotnet
+  19004 root      7.4  1.5 containerd
+   7659 kadirse+  6.8  7.6 java
+  87152 root      6.2  1.6 dotnet
+   4863 kadirse+  4.5  3.3 node
+  30085 kadirse+  4.2  5.7 prometheus
+ 100649 root      3.7  0.3 search-api
+  95078 root      3.5  1.0 dotnet
+  32851 dnsmasq   3.1  2.2 argocd-applicat
+   1651 root      3.1  0.2 tailscaled
+
+=== k3s Node Durumu ===
+NAME          STATUS     ROLES                AGE     VERSION        INTERNAL-IP     EXTERNAL-IP   OS-IMAGE                         KERNEL-VERSION                          CONTAINER-RUNTIME
+kadirserver   Ready      control-plane,etcd   163d    v1.37.2+k3s1   192.168.1.56    <none>        Ubuntu 26.04 LTS                 7.0.0-38-generic (amd64)                containerd://2.3.7-k3s1
+wk1           NotReady   <none>               9d      v1.37.2+k3s1   192.168.1.5     <none>        AlmaLinux 10.2 (Lavender Lion)   6.12.0-211.74.2.el10_2.x86_64 (amd64)   containerd://2.3.7-k3s1
+wk2           NotReady   <none>               4d23h   v1.37.2+k3s1   192.168.1.200   <none>        AlmaLinux 10.3 (Mauve Lion)      6.12.0-264.16.1.el10_3.x86_64 (amd64)   containerd://2.3.7-k3s1
+wk3           Ready      <none>               51m     v1.37.2+k3s1   192.168.1.199   <none>        Rocky Linux 10.3 (Red Quartz)    6.12.0-264.20.1.el10_3.x86_64 (amd64)   containerd://2.3.7-k3s1
+
+=== k3s Node Kaynaklari (kubectl top nodes) ===
+NAME          CPU(cores)   CPU(%)      MEMORY(bytes)   MEMORY(%)   
+kadirserver   896m         7%          10520Mi         68%         
+wk3           298m         1%          2679Mi          8%          
+wk1           <unknown>    <unknown>   <unknown>       <unknown>   
+wk2           <unknown>    <unknown>   <unknown>       <unknown>   
+
+=== k3s GameGaraj Pod Kaynaklari (Top 15 CPU) ===
+NAME                                CPU(cores)   MEMORY(bytes)   
+catalog-api-644b76dd74-8fnbd        169m         87Mi            
+catalog-api-644b76dd74-mrnf5        153m         102Mi           
+search-api-8675845c67-tl8vc         81m          33Mi            
+gateway-866d67c567-7vv2n            39m          407Mi           
+gateway-866d67c567-dd2mf            31m          255Mi           
+catalog-api-644b76dd74-jsrch        20m          156Mi           
+catalog-api-644b76dd74-b4fcg        18m          162Mi           
+order-api-d57f8f676-fl8h7           15m          121Mi           
+catalog-api-644b76dd74-bvxvh        12m          174Mi           
+search-api-8675845c67-flnsb         9m           92Mi            
+payment-api-74c4bf6989-7cwmj        9m           78Mi            
+discussion-api-657985c556-d8rrg     8m           80Mi            
+invoice-api-5d594bb4fd-kzlmg        7m           74Mi            
+campaign-api-7f58bb8795-jrq4z       7m           83Mi            
+order-api-d57f8f676-slw9k           5m           144Mi           
+
+=== k3s HPA Durumu ===
+NAME          REFERENCE                TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+catalog-api   Deployment/catalog-api   cpu: 5%/70%   3         5         5          27h
+
+=== Dokploy DB/ES/Redis Stats ===
+NAME                                                       CPU %     MEM USAGE / LIMIT     MEM %
+dokploy-postgres.1.s10fnl3rrley5mrgkgzkyniti               0.00%     26.96MiB / 15.06GiB   0.17%
+dokploy-redis.1.optl83xf1zf7jdytbtlxbdy9y                  0.54%     5.457MiB / 15.06GiB   0.04%
+gamegaraj-redis-sentinel-2                                 1.34%     4.219MiB / 128MiB     3.30%
+gamegaraj-redis-sentinel-3                                 1.25%     3.723MiB / 128MiB     2.91%
+gamegaraj-redis-sentinel-1                                 1.21%     4.223MiB / 128MiB     3.30%
+gamegaraj-redis-replica-2                                  3.40%     12.73MiB / 256MiB     4.97%
+gamegaraj-redis-replica-1                                  1.02%     13.16MiB / 256MiB     5.14%
+gamegaraj-redis-master                                     1.18%     13.63MiB / 256MiB     5.33%
+gamegaraj-elasticsearch                                    0.68%     1.209GiB / 1.5GiB     80.57%
+gamegaraj-discussion-postgres                              0.00%     21.64MiB / 512MiB     4.23%
+gamegaraj-review-postgres                                  0.00%     21.56MiB / 512MiB     4.21%
+gamegaraj-catalog-postgres                                 1.08%     48.75MiB / 512MiB     9.52%
+keycloak                                                   0.12%     511.9MiB / 1GiB       49.99%
+gamegaraj-keycloak-postgres                                1.09%     30.64MiB / 512MiB     5.99%
+[wk1 (192.168.1.5) snapshot alinamadi: [Errno None] Unable to connect to port 22 on 192.168.1.5]
+[wk2 (192.168.1.200) snapshot alinamadi: [Errno None] Unable to connect to port 22 on 192.168.1.200]
+=== wk3 (192.168.1.199) Uptime & RAM ===
+ 14:24:50 up 29 min,  3 users,  load average: 0.10, 0.12, 0.14
+               total        used        free      shared  buff/cache   available
+Mem:            30Gi       3.0Gi        27Gi       551Mi       1.4Gi        27Gi
+Swap:             0B          0B          0B
+
+=== wk3 Top CPU Processes (htop ozeti) ===
+    PID USER     %CPU %MEM COMMAND
+  13542 root      8.1  0.6 dotnet
+  13541 root      7.9  0.6 dotnet
+   7553 root      2.7  1.4 dotnet
+   6618 root      2.5  0.6 dotnet
+  10359 root      2.0  0.8 dotnet
+   5518 root      1.5  0.6 k3s-agent
+   5546 root      1.5  0.5 containerd
+   7546 root      0.7  0.6 dotnet
+  11698 wk3       0.6  0.0 htop
+   7528 root      0.5  0.2 search-api
+   7667 root      0.4  0.5 dotnet
+   6588 root      0.3  0.5 dotnet
