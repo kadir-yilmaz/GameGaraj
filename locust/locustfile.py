@@ -200,6 +200,12 @@ def _(environment, **kwargs):
     opts = getattr(environment, "parsed_options", None)
     target_env = getattr(opts, "target_env", "custom")
     user_rps = getattr(opts, "user_rps", 1.0)
+    host = environment.host or getattr(opts, "host", "")
+    runner = environment.runner
+    active_users = runner.user_count if runner else 0
+    target_users = getattr(runner, "target_user_count", None) or getattr(opts, "num_users", None) or active_users
+    spawn_rate = getattr(runner, "spawn_rate", None) or getattr(opts, "spawn_rate", None)
+    run_time = getattr(opts, "run_time", None)
 
     # Local tek-process modda worker_report calismadigi icin _WORKER_NODE_STATS'i birlestir
     with _NODE_STATS_LOCK:
@@ -221,6 +227,8 @@ def _(environment, **kwargs):
         "=== GameGaraj Locust Test Sonucu ===",
         f"Tarih       : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         f"Target Env  : {target_env}",
+        f"Host        : {host}",
+        f"Users       : {target_users} (aktif={active_users}) | Spawn Rate: {spawn_rate}/s | Run Time: {run_time or 'manual'}",
         f"User RPS    : {user_rps} (0 = max hiz)",
         f"Sure (sn)   : {elapsed:.1f}",
         f"Toplam Istek: {total_reqs} | Hata: {total_fails} ({fail_rate:.2f}%)",
@@ -292,6 +300,11 @@ def _(environment, **kwargs):
             {
                 "timestamp": datetime.now().isoformat(),
                 "target_env": target_env,
+                "host": host,
+                "target_users": target_users,
+                "active_users": active_users,
+                "spawn_rate": spawn_rate,
+                "run_time": run_time,
                 "user_rps": user_rps,
                 "elapsed_s": round(elapsed, 2),
                 "total_requests": total_reqs,
@@ -314,7 +327,7 @@ def _(parser):
     parser.add_argument(
         "--target-env",
         type=str,
-        default="wk1+wk2-tailscale",
+        default="custom",
         choices=[
             "custom",
             "kadirserver-tailscale",
@@ -422,11 +435,12 @@ class GameGarajUser(FastHttpUser):
 
         now = time.perf_counter()
         last = getattr(self, "_last_pace_ts", None)
-        self._last_pace_ts = now
         if last is None:
+            self._last_pace_ts = now
             return 0
-        delay = (1.0 / user_rps) - (now - last)
-        return delay if delay > 0 else 0
+        delay = max(0.0, (1.0 / user_rps) - (now - last))
+        self._last_pace_ts = now + delay
+        return delay
 
     def on_start(self):
         seq = next(_USER_SEQ)
