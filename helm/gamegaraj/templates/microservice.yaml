@@ -1,4 +1,7 @@
 {{- range $name, $svc := .Values.services }}
+{{- $ts := $.Values.global.topologySpread | default dict }}
+{{- $whenUnsatisfiable := $svc.whenUnsatisfiable | default $ts.whenUnsatisfiable | default "ScheduleAnyway" }}
+{{- $defaultMaxUnavailable := ternary 2 0 (eq $whenUnsatisfiable "DoNotSchedule") }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -15,7 +18,7 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: {{ $svc.maxUnavailable | default 0 }}
+      maxUnavailable: {{ $svc.maxUnavailable | default $defaultMaxUnavailable }}
       maxSurge: {{ $svc.maxSurge | default 1 }}
   selector:
     matchLabels:
@@ -54,8 +57,6 @@ spec:
       nodeSelector:
         {{- toYaml $.Values.global.nodeSelector | nindent 8 }}
       {{- end }}
-      {{- $ts := $.Values.global.topologySpread | default dict }}
-      {{- $whenUnsatisfiable := $svc.whenUnsatisfiable | default $ts.whenUnsatisfiable | default "ScheduleAnyway" }}
       topologySpreadConstraints:
         - maxSkew: {{ $ts.maxSkew | default 1 }}
           topologyKey: kubernetes.io/hostname
