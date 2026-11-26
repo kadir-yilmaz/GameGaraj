@@ -98,6 +98,8 @@ spec:
               value: "true"
             - name: DOTNET_EnableAVX512F
               value: "0"
+            - name: DOTNET_EnableWriteXorExecute
+              value: "0"
             {{- if not $svc.skipCommon }}
             - name: ASPNETCORE_ENVIRONMENT
               value: {{ $.Values.global.aspnetEnvironment | default "Production" | quote }}
