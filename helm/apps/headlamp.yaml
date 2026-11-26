@@ -13,8 +13,6 @@ spec:
     chart: headlamp
     helm:
       values: |
-        nodeSelector:
-          kubernetes.io/hostname: kadirserver
         tolerations:
           - key: "management"
             operator: "Equal"

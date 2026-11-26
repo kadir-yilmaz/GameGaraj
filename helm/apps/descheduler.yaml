@@ -28,9 +28,6 @@ spec:
             cpu: "250m"
             memory: "256Mi"
         
-        nodeSelector:
-          kubernetes.io/hostname: kadirserver
-        
         tolerations:
           - key: "node-role.kubernetes.io/control-plane"
             operator: "Exists"
