@@ -61,4 +61,6 @@
   - [x] Eski `kadirserver` host `cloudflared` servisi durduruldu (`sudo systemctl disable --now cloudflared`) ve `https://gamegaraj.kadiryilmaz.online` erişimi doğrulandı.
   - [x] `coredns` üzerindeki `kubernetes.io/hostname=kadirserver` kilidi kaldırıldı ve `replicas: 2` (`aws-cp1` + `aws-cp2`) olarak açıldı (502 Bad Gateway sebebi buydu).
   - [x] `helm/apps/headlamp.yaml` (`replicaCount: 2`, `podAntiAffinity`) ve `helm/apps/argocd.yaml` (`server.replicas: 2`, `repoServer.replicas: 2`, `syncPolicy.automated`) kalıcı 2 replika HA olarak güncellendi.
+  - [x] `helm/gamegaraj/templates/microservice.yaml` içine `aws-wk1` Intel Xeon AVX-512 uyumluluğu için `DOTNET_EnableAVX512F: "0"` eklendi (`Exit 139` çözüldü).
+  - [x] `helm/apps/prometheus.yaml` HA moduna alındı: Prometheus & Alertmanager `replicas: 2` (`kadirserver` + `aws-wk1`, `retentionSize: 2GB`), `kube-state-metrics` ve `prometheusOperator` üzerinden `kadirserver` kilidi kaldırıldı.
   - [ ] *(Opsiyonel Test)* `git push` sonrası `kadirserver` açıkken hem `kadirserver` hem `aws-wk1` üzerinde 2'şer podun doğrulanması.
