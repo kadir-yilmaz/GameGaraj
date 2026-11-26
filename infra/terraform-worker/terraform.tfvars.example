@@ -1,0 +1,6 @@
+aws_region       = "eu-north-1"
+instance_type    = "m7i-flex.large"
+disk_size_gb     = 15
+key_name         = "BURAYA_AWS_SSH_KEY_ADINI_YAZ"
+allowed_ssh_cidr = "0.0.0.0/0"
+node_name        = "aws-wk2"

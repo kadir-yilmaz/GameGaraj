@@ -59,6 +59,16 @@ spec:
       {{- end }}
       topologySpreadConstraints:
         - maxSkew: {{ $ts.maxSkew | default 1 }}
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: {{ $whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              app: {{ $name }}
+          matchLabelKeys:
+            - pod-template-hash
+          nodeAffinityPolicy: Honor
+          nodeTaintsPolicy: Honor
+        - maxSkew: {{ $ts.maxSkew | default 1 }}
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: {{ $whenUnsatisfiable }}
           labelSelector:
@@ -69,6 +79,15 @@ spec:
           nodeAffinityPolicy: Honor
           nodeTaintsPolicy: Honor
       affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      - home
         podAntiAffinity:
           {{- if eq $whenUnsatisfiable "DoNotSchedule" }}
           requiredDuringSchedulingIgnoredDuringExecution:
