@@ -30,9 +30,9 @@ spec:
 
         prometheus:
           prometheusSpec:
-            replicas: 2
+            replicas: 1
             retention: 15d
-            retentionSize: 2GB
+            retentionSize: 8GB
             storageSpec:
               volumeClaimTemplate:
                 spec:
@@ -41,46 +41,18 @@ spec:
                   resources:
                     requests:
                       storage: 10Gi
-            affinity:
-              podAntiAffinity:
-                preferredDuringSchedulingIgnoredDuringExecution:
-                  - weight: 100
-                    podAffinityTerm:
-                      labelSelector:
-                        matchExpressions:
-                          - key: app.kubernetes.io/name
-                            operator: In
-                            values:
-                              - prometheus
-                      topologyKey: kubernetes.io/hostname
-            tolerations:
-              - key: "node-role.kubernetes.io/control-plane"
-                operator: "Exists"
-                effect: "NoSchedule"
+            nodeSelector:
+              kubernetes.io/hostname: kadirserver
 
         alertmanager:
           alertmanagerSpec:
-            replicas: 2
+            replicas: 1
             # Secret: GitHub workflow olusturur (monitoring/alertmanager-telegram)
             # Pod icinde: /etc/alertmanager/secrets/alertmanager-telegram/token
             secrets:
               - alertmanager-telegram
-            affinity:
-              podAntiAffinity:
-                preferredDuringSchedulingIgnoredDuringExecution:
-                  - weight: 100
-                    podAffinityTerm:
-                      labelSelector:
-                        matchExpressions:
-                          - key: app.kubernetes.io/name
-                            operator: In
-                            values:
-                              - alertmanager
-                      topologyKey: kubernetes.io/hostname
-            tolerations:
-              - key: "node-role.kubernetes.io/control-plane"
-                operator: "Exists"
-                effect: "NoSchedule"
+            nodeSelector:
+              kubernetes.io/hostname: kadirserver
           config:
             global:
               resolve_timeout: 5m
@@ -120,28 +92,18 @@ spec:
             size: 2Gi
           nodeSelector:
             kubernetes.io/hostname: kadirserver
-          tolerations:
-            - key: "node-role.kubernetes.io/control-plane"
-              operator: "Exists"
-              effect: "NoSchedule"
 
         kube-state-metrics:
-          tolerations:
-            - key: "node-role.kubernetes.io/control-plane"
-              operator: "Exists"
-              effect: "NoSchedule"
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
 
         prometheusOperator:
-          tolerations:
-            - key: "node-role.kubernetes.io/control-plane"
-              operator: "Exists"
-              effect: "NoSchedule"
+          nodeSelector:
+            kubernetes.io/hostname: kadirserver
           admissionWebhooks:
             patch:
-              tolerations:
-                - key: "node-role.kubernetes.io/control-plane"
-                  operator: "Exists"
-                  effect: "NoSchedule"
+              nodeSelector:
+                kubernetes.io/hostname: kadirserver
 
         prometheus-node-exporter:
           tolerations:
