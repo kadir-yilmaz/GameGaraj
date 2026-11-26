@@ -96,6 +96,8 @@ spec:
           env:
             - name: DOTNET_USE_POLLING_FILE_WATCHER
               value: "true"
+            - name: DOTNET_EnableAVX512F
+              value: "0"
             {{- if not $svc.skipCommon }}
             - name: ASPNETCORE_ENVIRONMENT
               value: {{ $.Values.global.aspnetEnvironment | default "Production" | quote }}
