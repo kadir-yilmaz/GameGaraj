@@ -53,8 +53,12 @@
 - [x] **Aşama 3: `headlamp`, `argocd`, `descheduler` `kadirserver` Kilidinin Kaldırılması**
   - `helm/apps/headlamp.yaml`, `helm/apps/argocd.yaml` ve `helm/apps/descheduler.yaml` içindeki `nodeSelector: kubernetes.io/hostname: kadirserver` sabitleri kaldırıldı.
   - *(Not: `prometheus-stack` `local-path` PVC'leri `kadirserver` diskine bağlı olduğu için şimdilik `prometheus.yaml` korundu.)*
-- [ ] **Aşama 4: `git push` + Cloudflare Routes Güncellemesi + Canlı Failover Testi**
-  - `git push` sonrası ArgoCD'nin `cloudflared` podlarını (`kadirserver` + `aws-wk1`) açmasının doğrulanması.
-  - Cloudflare Dashboard → Routes içinden `gamegaraj.kadiryilmaz.online` (`http://webui.gamegaraj.svc.cluster.local:8080`) ve `gateway.kadiryilmaz.online` (`http://gateway.gamegaraj.svc.cluster.local:8080`) yönlendirmelerinin güncellenmesi.
-  - Eski `kadirserver` host `cloudflared` servisinin durdurulması (`sudo systemctl disable --now cloudflared`).
-  - `kadirserver` kapatılıp `gamegaraj.kadiryilmaz.online`, `headlamp` ve `argocd` erişiminin `aws-wk1` üzerinden test edilmesi.
+- [x] **Aşama 4: `git push` + Cloudflare Routes Güncellemesi + Canlı Failover Hazırlığı**
+  - [x] `git push` sonrası ArgoCD `cloudflared` (`aws-wk1` + `kadirserver`) ve `headlamp` (`aws-wk1`) podlarını otomatik açtı.
+  - [x] `aws-wk1` node'una `gamegaraj-node=worker` etiketi eklendi ve `gamegaraj` podları `aws-wk1` üzerinde çalışmaya başladı.
+  - [x] Tailscale Subnet Router (`kadirserver`: `--advertise-routes=192.168.1.0/24`, `aws-wk1`: `--accept-routes`) aktif edilerek AWS worker'ın `192.168.1.56` üzerindeki Dokploy/DB'lere erişimi sağlandı.
+  - [x] Cloudflare Dashboard → Routes içinden `gamegaraj.kadiryilmaz.online` (`http://webui.gamegaraj.svc.cluster.local:8080`), `gateway.kadiryilmaz.online` (`http://gateway.gamegaraj.svc.cluster.local:8080`) ve diğer rotalar (`192.168.1.56`) güncellendi.
+  - [x] Eski `kadirserver` host `cloudflared` servisi durduruldu (`sudo systemctl disable --now cloudflared`) ve `https://gamegaraj.kadiryilmaz.online` erişimi doğrulandı.
+  - [x] `coredns` üzerindeki `kubernetes.io/hostname=kadirserver` kilidi kaldırıldı ve `replicas: 2` (`aws-cp1` + `aws-cp2`) olarak açıldı (502 Bad Gateway sebebi buydu).
+  - [x] `helm/apps/headlamp.yaml` (`replicaCount: 2`, `podAntiAffinity`) ve `helm/apps/argocd.yaml` (`server.replicas: 2`, `repoServer.replicas: 2`, `syncPolicy.automated`) kalıcı 2 replika HA olarak güncellendi.
+  - [ ] *(Opsiyonel Test)* `git push` sonrası `kadirserver` açıkken hem `kadirserver` hem `aws-wk1` üzerinde 2'şer podun doğrulanması.

@@ -20,12 +20,12 @@ spec:
         controller:
           replicas: 1
         server:
-          replicas: 1
+          replicas: 2
           service:
             type: NodePort
             nodePortHttps: 30580
         repoServer:
-          replicas: 1
+          replicas: 2
         dex: {}
         applicationSet:
           replicas: 1
@@ -37,5 +37,8 @@ spec:
     server: https://kubernetes.default.svc
     namespace: argocd
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - ServerSideApply=true

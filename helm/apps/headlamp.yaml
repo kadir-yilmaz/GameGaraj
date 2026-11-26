@@ -13,6 +13,19 @@ spec:
     chart: headlamp
     helm:
       values: |
+        replicaCount: 2
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                podAffinityTerm:
+                  labelSelector:
+                    matchExpressions:
+                      - key: app.kubernetes.io/name
+                        operator: In
+                        values:
+                          - headlamp
+                  topologyKey: kubernetes.io/hostname
         tolerations:
           - key: "management"
             operator: "Equal"
