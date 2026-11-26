@@ -1,0 +1,87 @@
+=== GameGaraj k6 Test Sonucu ===
+Tarih       : 2026-11-25 14:13:42
+Hedef URL   : http://100.100.32.3:30000
+Hedef RPS   : 10000 | Sure Ayari: 60s
+Gecen Sure  : 90.1 sn
+Toplam Istek: 178194 | Basarisiz: 16569 (9.30%)
+Dropped Iter: 421429 | Max VU: 10000
+Gercek RPS  : 1977.2
+Latency (ms): avg=3229.1 p50=72.9 p90=3021.4 p95=25314.5 max=60062.8
+Trafik      : Alinan=322.37 MB | Gonderilen=27.68 MB
+
+=== kadirserver (100.100.32.3) Uptime & RAM ===
+ 11:13:38 up  1:27,  4 users,  load average: 5.51, 4.05, 2.38
+               total        used        free      shared  buff/cache   available
+Mem:            15Gi        10Gi       1.2Gi       704Mi       4.3Gi       4.5Gi
+Swap:          4.0Gi        31Mi       4.0Gi
+
+=== kadirserver Top CPU Processes (htop ozeti) ===
+    PID USER     %CPU %MEM COMMAND
+ 139858 kadirse+  400  0.0 ps
+ 138326 root     56.6  1.7 dotnet
+  18602 root     20.9  9.3 k3s-server
+ 111771 root      8.8  1.5 dotnet
+  19004 root      7.3  1.5 containerd
+  87152 root      6.0  1.6 dotnet
+   7659 kadirse+  5.9  7.4 java
+   4863 kadirse+  4.6  3.3 node
+  95078 root      4.6  1.0 dotnet
+  30085 kadirse+  4.3  5.9 prometheus
+   1651 root      3.4  0.4 tailscaled
+ 100649 root      3.2  0.4 search-api
+
+=== k3s Node Durumu ===
+NAME          STATUS     ROLES                AGE     VERSION        INTERNAL-IP     EXTERNAL-IP   OS-IMAGE                         KERNEL-VERSION                          CONTAINER-RUNTIME
+kadirserver   Ready      control-plane,etcd   163d    v1.37.2+k3s1   192.168.1.56    <none>        Ubuntu 26.04 LTS                 7.0.0-38-generic (amd64)                containerd://2.3.7-k3s1
+wk1           NotReady   <none>               9d      v1.37.2+k3s1   192.168.1.5     <none>        AlmaLinux 10.2 (Lavender Lion)   6.12.0-211.74.2.el10_2.x86_64 (amd64)   containerd://2.3.7-k3s1
+wk2           NotReady   <none>               4d22h   v1.37.2+k3s1   192.168.1.200   <none>        AlmaLinux 10.3 (Mauve Lion)      6.12.0-264.16.1.el10_3.x86_64 (amd64)   containerd://2.3.7-k3s1
+wk3           Ready      <none>               40m     v1.37.2+k3s1   192.168.1.199   <none>        Rocky Linux 10.3 (Red Quartz)    6.12.0-264.20.1.el10_3.x86_64 (amd64)   containerd://2.3.7-k3s1
+
+=== k3s Node Kaynaklari (kubectl top nodes) ===
+NAME          CPU(cores)   CPU(%)      MEMORY(bytes)   MEMORY(%)   
+kadirserver   2486m        20%         10533Mi         68%         
+wk3           216m         1%          2632Mi          8%          
+wk2           <unknown>    <unknown>   <unknown>       <unknown>   
+wk1           <unknown>    <unknown>   <unknown>       <unknown>   
+
+=== k3s GameGaraj Pod Kaynaklari (Top 15 CPU) ===
+NAME                                CPU(cores)   MEMORY(bytes)   
+gateway-866d67c567-dd2mf            664m         221Mi           
+catalog-api-644b76dd74-jsrch        567m         165Mi           
+gateway-866d67c567-7vv2n            302m         380Mi           
+basket-api-6c74996446-472zq         220m         98Mi            
+basket-api-6c74996446-9khtb         93m          160Mi           
+catalog-api-644b76dd74-bvxvh        93m          163Mi           
+catalog-api-644b76dd74-b4fcg        86m          158Mi           
+catalog-api-644b76dd74-s4ff9        44m          185Mi           
+order-api-d57f8f676-fl8h7           15m          120Mi           
+order-api-d57f8f676-slw9k           10m          134Mi           
+catalog-api-644b76dd74-j4s7b        8m           205Mi           
+discussion-api-657985c556-d8rrg     8m           79Mi            
+invoice-api-5d594bb4fd-kzlmg        7m           72Mi            
+payment-api-74c4bf6989-7cwmj        7m           78Mi            
+campaign-api-7f58bb8795-jrq4z       7m           81Mi            
+
+=== k3s HPA Durumu ===
+NAME          REFERENCE                TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+catalog-api   Deployment/catalog-api   cpu: 53%/70%   3         5         5          27h
+
+=== Dokploy DB/ES/Redis Stats ===
+NAME                                                       CPU %     MEM USAGE / LIMIT     MEM %
+dokploy-postgres.1.s10fnl3rrley5mrgkgzkyniti               0.00%     26.96MiB / 15.06GiB   0.17%
+dokploy-redis.1.optl83xf1zf7jdytbtlxbdy9y                  0.49%     5.457MiB / 15.06GiB   0.04%
+gamegaraj-redis-sentinel-2                                 1.41%     3.969MiB / 128MiB     3.10%
+gamegaraj-redis-sentinel-3                                 1.14%     4.246MiB / 128MiB     3.32%
+gamegaraj-redis-sentinel-1                                 1.21%     4.484MiB / 128MiB     3.50%
+gamegaraj-redis-replica-2                                  3.75%     13.45MiB / 256MiB     5.25%
+gamegaraj-redis-replica-1                                  1.06%     13.73MiB / 256MiB     5.36%
+gamegaraj-redis-master                                     1.11%     13.79MiB / 256MiB     5.38%
+gamegaraj-elasticsearch                                    12.77%    1.185GiB / 1.5GiB     78.99%
+gamegaraj-discussion-postgres                              0.00%     21.64MiB / 512MiB     4.23%
+gamegaraj-review-postgres                                  0.00%     21.56MiB / 512MiB     4.21%
+gamegaraj-catalog-postgres                                 1.35%     49.7MiB / 512MiB      9.71%
+keycloak                                                   0.11%     511.5MiB / 1GiB       49.95%
+gamegaraj-keycloak-postgres                                0.00%     30.29MiB / 512MiB     5.92%
+[wk1 (100.67.37.25) snapshot alinamadi: timed out]
+[wk2 (100.120.194.97) snapshot alinamadi: timed out]
+[wk3 (192.168.1.199) snapshot alinamadi: [Errno None] Unable to connect to port 22 on 192.168.1.199]

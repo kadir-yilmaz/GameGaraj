@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-11-25T11:24:48.255Z",
+  "base_url": "http://192.168.1.199:30000",
+  "target_rps": 10000,
+  "duration_config": "60s",
+  "run_duration_ms": 120146.576,
+  "total_requests": 115284,
+  "actual_rps": 959.5279685706566,
+  "failed_requests": 13347,
+  "fail_rate_pct": 11.577495576142397,
+  "checks_passed": 101937,
+  "checks_failed": 13345,
+  "dropped_iterations": 442920,
+  "vus_max": 10000,
+  "latency_ms": {
+    "avg": 2180.9443642396204,
+    "min": 0,
+    "med": 6.854,
+    "p90": 125.8737,
+    "p95": 3875.981049999969,
+    "p99": 0,
+    "max": 60075.54
+  },
+  "data_received_mb": 340.2083969116211,
+  "data_sent_mb": 10.216520309448242
+}

@@ -2,6 +2,7 @@ import itertools
 import json
 import os
 import random
+import socket
 import threading
 import time
 from collections import defaultdict
@@ -14,39 +15,9 @@ from gevent.pool import Pool
 from locust import FastHttpUser, events, tag, task
 from locust.runners import MasterRunner, WorkerRunner
 
-DEFAULT_HOST = "http://100.67.37.25:30000"
+DEFAULT_HOST = "http://192.168.1.56:30000"
 DEFAULT_KEYWORDS = ["rtx", "asus", "msi", "gaming", "laptop", "ssd", "ram", "monitör"]
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
-
-TARGET_ENV_HOSTS = {
-    "kadirserver-tailscale": ["http://100.100.32.3:30000"],
-    "wk1-tailscale": ["http://100.67.37.25:30000"],
-    "wk2-tailscale": ["http://100.120.194.97:30000"],
-    "wk1+wk2-tailscale": ["http://100.67.37.25:30000", "http://100.120.194.97:30000"],
-    "all3-tailscale": [
-        "http://100.67.37.25:30000",
-        "http://100.120.194.97:30000",
-        "http://100.100.32.3:30000",
-    ],
-    "kadirserver-lan": ["http://192.168.1.56:30000"],
-    "wk1+wk2-lan": ["http://192.168.1.5:30000", "http://192.168.1.200:30000"],
-    "all3-lan": [
-        "http://192.168.1.5:30000",
-        "http://192.168.1.200:30000",
-        "http://192.168.1.56:30000",
-    ],
-    "cloudflare": ["https://gateway.kadiryilmaz.online"],
-}
-
-HOST_LABELS = {
-    "http://100.67.37.25:30000": "wk1 (tailscale)",
-    "http://100.120.194.97:30000": "wk2 (tailscale)",
-    "http://100.100.32.3:30000": "kadirserver (tailscale)",
-    "http://192.168.1.5:30000": "wk1 (lan)",
-    "http://192.168.1.200:30000": "wk2 (lan)",
-    "http://192.168.1.56:30000": "kadirserver (lan)",
-    "https://gateway.kadiryilmaz.online": "cloudflare",
-}
 
 _PRODUCTS_LOCK = threading.Lock()
 _PRODUCTS: list[dict] = []
@@ -176,15 +147,15 @@ ps -eo pid,user,%cpu,%mem,comm --sort=-%cpu | head -n 13
         client.close()
 
 
-def _collect_cluster_snapshots(target_env: str) -> str:
-    is_lan = "lan" in (target_env or "")
+def _collect_cluster_snapshots(is_lan: bool) -> str:
     password = os.getenv("CLUSTER_SSH_PASS") or os.getenv("KADIRSERVER_SSH_PASS") or "1234"
     nodes = [
         ("kadirserver", "192.168.1.56" if is_lan else "100.100.32.3", os.getenv("KADIRSERVER_USER", "kadirserver"), True),
         ("wk1", "192.168.1.5" if is_lan else "100.67.37.25", "wk1", False),
         ("wk2", "192.168.1.200" if is_lan else "100.120.194.97", "wk2", False),
+        ("wk3", "192.168.1.199", "wk3", False),
     ]
-    with ThreadPoolExecutor(max_workers=3) as pool:
+    with ThreadPoolExecutor(max_workers=4) as pool:
         results = list(pool.map(lambda n: _collect_node_snapshot(n[0], n[1], n[2], password, n[3]), nodes))
     return "\n\n".join(r for r in results if r)
 
@@ -198,9 +169,9 @@ def _(environment, **kwargs):
 
     elapsed = max(time.perf_counter() - _TEST_STARTED_AT, 0.001) if _TEST_STARTED_AT else 1.0
     opts = getattr(environment, "parsed_options", None)
-    target_env = getattr(opts, "target_env", "custom")
     user_rps = getattr(opts, "user_rps", 1.0)
     host = environment.host or getattr(opts, "host", "")
+    is_lan = "192.168." in (host or "")
     runner = environment.runner
     active_users = runner.user_count if runner else 0
     target_users = getattr(runner, "target_user_count", None) or getattr(opts, "num_users", None) or active_users
@@ -226,7 +197,6 @@ def _(environment, **kwargs):
     lines = [
         "=== GameGaraj Locust Test Sonucu ===",
         f"Tarih       : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"Target Env  : {target_env}",
         f"Host        : {host}",
         f"Users       : {target_users} (aktif={active_users}) | Spawn Rate: {spawn_rate}/s | Run Time: {run_time or 'manual'}",
         f"User RPS    : {user_rps} (0 = max hiz)",
@@ -286,7 +256,7 @@ def _(environment, **kwargs):
             "p95_ms": round(e_p95, 2),
         }
 
-    cluster_snapshot = _collect_cluster_snapshots(target_env)
+    cluster_snapshot = _collect_cluster_snapshots(is_lan)
     if cluster_snapshot:
         lines.extend(["", cluster_snapshot])
 
@@ -299,7 +269,6 @@ def _(environment, **kwargs):
         json.dumps(
             {
                 "timestamp": datetime.now().isoformat(),
-                "target_env": target_env,
                 "host": host,
                 "target_users": target_users,
                 "active_users": active_users,
@@ -324,24 +293,6 @@ def _(environment, **kwargs):
 
 @events.init_command_line_parser.add_listener
 def _(parser):
-    parser.add_argument(
-        "--target-env",
-        type=str,
-        default="custom",
-        choices=[
-            "custom",
-            "kadirserver-tailscale",
-            "wk1-tailscale",
-            "wk2-tailscale",
-            "wk1+wk2-tailscale",
-            "all3-tailscale",
-            "kadirserver-lan",
-            "wk1+wk2-lan",
-            "all3-lan",
-            "cloudflare",
-        ],
-        help="Hedef giris noktasi (custom = ustteki Host kutusunu kullanir)",
-    )
     parser.add_argument(
         "--user-rps",
         type=float,
@@ -447,15 +398,7 @@ class GameGarajUser(FastHttpUser):
         self.user_id = f"guest-locust-{seq}"
         self.cart_items: list[dict] = []
 
-        opts = getattr(self.environment, "parsed_options", None)
-        target_env = getattr(opts, "target_env", "custom")
-        hosts = TARGET_ENV_HOSTS.get(target_env)
-        if hosts:
-            chosen = hosts[seq % len(hosts)]
-            self.client.base_url = chosen
-            self.node_label = HOST_LABELS.get(chosen, chosen)
-        else:
-            self.node_label = HOST_LABELS.get(self.client.base_url or "", self.client.base_url or "custom")
+        self.node_label = (self.environment.host or self.client.base_url or "gateway").rstrip("/")
 
         self._ensure_products_loaded()
 
