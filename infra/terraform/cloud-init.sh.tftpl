@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+
+hostnamectl set-hostname "${node_name}"
+
+apt-get update -y
+apt-get install -y curl
+
+# Tailscale sadece kurulur; bağlantı kullanıcı tarafından `sudo tailscale up` ile yapılır
+curl -fsSL https://tailscale.com/install.sh | sh
