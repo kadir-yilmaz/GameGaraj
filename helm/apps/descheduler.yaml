@@ -28,11 +28,6 @@ spec:
             cpu: "250m"
             memory: "256Mi"
         
-        tolerations:
-          - key: "node-role.kubernetes.io/control-plane"
-            operator: "Exists"
-            effect: "NoSchedule"
-
         deschedulerPolicyAPIVersion: "descheduler/v1alpha2"
         deschedulerPolicy:
           profiles:
