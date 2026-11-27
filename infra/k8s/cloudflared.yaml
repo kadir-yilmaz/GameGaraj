@@ -18,6 +18,11 @@ spec:
       labels:
         app: cloudflared
     spec:
+      tolerations:
+        - key: "management"
+          operator: "Equal"
+          value: "only"
+          effect: "NoSchedule"
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
