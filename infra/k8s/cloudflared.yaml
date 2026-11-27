@@ -23,6 +23,10 @@ spec:
           operator: "Equal"
           value: "only"
           effect: "NoSchedule"
+        - key: "gamegaraj"
+          operator: "Equal"
+          value: "only"
+          effect: "NoSchedule"
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
