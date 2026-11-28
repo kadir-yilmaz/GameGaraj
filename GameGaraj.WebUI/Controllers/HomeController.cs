@@ -34,9 +34,9 @@ namespace GameGaraj.WebUI.Controllers
 
         public async Task<IActionResult> Index()
         {
-            bool serviceDegraded = false;
+            var degradedServices = new System.Collections.Concurrent.ConcurrentBag<string>();
 
-            async Task<T> SafeAsync<T>(Task<T> task, T fallback, string name, bool markDegraded = false)
+            async Task<T> SafeAsync<T>(Task<T> task, T fallback, string serviceLabel, bool trackDegraded = true)
             {
                 try
                 {
@@ -44,32 +44,26 @@ namespace GameGaraj.WebUI.Controllers
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "[HomeController] {Service} geçici olarak yanıt vermiyor, fallback dönülüyor.", name);
-                    if (markDegraded) serviceDegraded = true;
+                    _logger.LogWarning(ex, "[HomeController] {Service} geçici olarak yanıt vermiyor, fallback dönülüyor.", serviceLabel);
+                    if (trackDegraded) degradedServices.Add(serviceLabel);
                     return fallback;
                 }
             }
 
-            var featuredTask = SafeAsync(GetFeaturedProductsFromSearchWithFallbackAsync(), new List<GameGaraj.WebUI.Models.Products.ProductViewModel>(), "FeaturedProducts", markDegraded: true);
-            var categoriesTask = SafeAsync(_catalogService.GetAllCategoriesAsync(), new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>(), "Categories", markDegraded: true);
-            var rulesTask = SafeAsync(_campaignService.GetAllRulesAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>(), "CampaignRules");
-            var couponsTask = SafeAsync(_campaignService.GetPublicCouponsAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>(), "PublicCoupons");
-            var rewardRulesTask = SafeAsync(_campaignService.GetAllRewardRulesAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CouponRewardRuleViewModel>(), "RewardRules");
-            var carouselTask = SafeAsync(_campaignService.GetCarouselImagesAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CarouselImageViewModel>(), "CarouselImages");
+            var featuredTask = SafeAsync(GetFeaturedProductsFromSearchWithFallbackAsync(), new List<GameGaraj.WebUI.Models.Products.ProductViewModel>(), "Ürün Vitrini (Arama / Katalog)");
+            var categoriesTask = SafeAsync(_catalogService.GetAllCategoriesAsync(), new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>(), "Kategori Ağacı (Katalog)");
+            var rulesTask = SafeAsync(_campaignService.GetAllRulesAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>(), "Kampanya Kuralları");
+            var couponsTask = SafeAsync(_campaignService.GetPublicCouponsAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>(), "Kuponlar", trackDegraded: false);
+            var rewardRulesTask = SafeAsync(_campaignService.GetAllRewardRulesAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CouponRewardRuleViewModel>(), "Ödül Kuralları", trackDegraded: false);
+            var carouselTask = SafeAsync(_campaignService.GetCarouselImagesAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CarouselImageViewModel>(), "Banner Görselleri", trackDegraded: false);
 
             await Task.WhenAll(featuredTask, categoriesTask, rulesTask, couponsTask, rewardRulesTask, carouselTask);
 
             var featuredProducts = featuredTask.Result ?? new List<GameGaraj.WebUI.Models.Products.ProductViewModel>();
             var allCategories = categoriesTask.Result ?? new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
 
-            if (!featuredProducts.Any() && !allCategories.Any())
-            {
-                serviceDegraded = true;
-            }
-            ViewBag.ServiceDegraded = serviceDegraded;
-
-            var userStateTask = SafeAsync(ApplyUserProductStateAsync(featuredProducts).ContinueWith(_ => true), false, "UserProductState");
-            var reviewSummaryTask = SafeAsync(ApplyReviewSummariesAsync(featuredProducts).ContinueWith(_ => true), false, "ReviewSummaries");
+            var userStateTask = SafeAsync(ApplyUserProductStateAsync(featuredProducts).ContinueWith(_ => true), false, "Sepet / Favoriler", trackDegraded: false);
+            var reviewSummaryTask = SafeAsync(ApplyReviewSummariesAsync(featuredProducts).ContinueWith(_ => true), false, "Ürün Değerlendirmeleri", trackDegraded: false);
 
             var flattenedCategories = new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
             void Flatten(IEnumerable<GameGaraj.WebUI.Models.Products.CategoryViewModel> categories)
@@ -134,6 +128,14 @@ namespace GameGaraj.WebUI.Controllers
             }
 
             await Task.WhenAll(userStateTask, reviewSummaryTask);
+
+            var degradedList = degradedServices.Distinct().ToList();
+            if (!featuredProducts.Any() && !degradedList.Contains("Ürün Vitrini (Arama / Katalog)"))
+            {
+                degradedList.Add("Ürün Vitrini (Arama / Katalog)");
+            }
+            ViewBag.DegradedServices = degradedList;
+            ViewBag.ServiceDegraded = degradedList.Count > 0;
 
             return View(featuredProducts);
         }

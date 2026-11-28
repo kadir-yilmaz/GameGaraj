@@ -161,7 +161,16 @@ namespace GameGaraj.WebUI.Controllers
 
             // PDP (Product Detail Page) reads from authoritative primary store (Catalog.API / PostgreSQL)
             // for real-time stock & price consistency (Trendyol Split-Datastore PDP pattern)
-            var product = await _catalogService.GetProductByIdAsync(productId);
+            ProductViewModel? product = null;
+            try
+            {
+                product = await _catalogService.GetProductByIdAsync(productId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[ProductController.Detail] Catalog.API unreachable for {ProductId}", productId);
+                return StatusCode(503);
+            }
 
             if (product == null)
                 return NotFound();
@@ -175,14 +184,40 @@ namespace GameGaraj.WebUI.Controllers
 
             var pid = product.Id?.Trim() ?? string.Empty;
 
+            async Task<T> SafeValueAsync<T>(Task<T> task, T fallback)
+            {
+                try { return await task; }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[ProductController.Detail] Supplementary call failed for {ProductId}", pid);
+                    return fallback;
+                }
+            }
+
+            async Task<T?> SafeObjAsync<T>(Task<T?> task) where T : class
+            {
+                try { return await task; }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[ProductController.Detail] Supplementary call failed for {ProductId}", pid);
+                    return null;
+                }
+            }
+
             // Parallelize all supplementary lookups (basket, favorites, reviews, questions, permissions, category)
-            var basketTask = _basketService.GetBasketAsync();
-            var favTask = _favoritesService.IsFavoriteAsync(pid);
-            var reviewsTask = _reviewService.GetProductReviewsAsync(pid, 0, 10);
-            var questionsTask = _discussionService.GetProductQuestionsAsync(pid, 0, 20);
-            var canReviewTask = User.Identity?.IsAuthenticated == true ? _reviewService.CanReviewAsync(pid) : Task.FromResult(new CanReviewViewModel { CanReview = false });
-            var userReviewTask = User.Identity?.IsAuthenticated == true ? _reviewService.GetUserReviewAsync(pid) : Task.FromResult(new UserReviewResponseViewModel());
-            var categoryTask = !string.IsNullOrEmpty(product.CategoryId) ? _catalogService.GetCategoryByIdAsync(product.CategoryId) : Task.FromResult<CategoryViewModel?>(null);
+            var basketTask = SafeObjAsync(_basketService.GetBasketAsync());
+            var favTask = SafeValueAsync(_favoritesService.IsFavoriteAsync(pid), false);
+            var reviewsTask = SafeObjAsync(_reviewService.GetProductReviewsAsync(pid, 0, 10));
+            var questionsTask = SafeObjAsync(_discussionService.GetProductQuestionsAsync(pid, 0, 20));
+            var canReviewTask = User.Identity?.IsAuthenticated == true
+                ? SafeValueAsync(_reviewService.CanReviewAsync(pid), new CanReviewViewModel { CanReview = false })
+                : Task.FromResult(new CanReviewViewModel { CanReview = false });
+            var userReviewTask = User.Identity?.IsAuthenticated == true
+                ? SafeObjAsync(_reviewService.GetUserReviewAsync(pid))
+                : Task.FromResult<UserReviewResponseViewModel?>(new UserReviewResponseViewModel());
+            var categoryTask = !string.IsNullOrEmpty(product.CategoryId)
+                ? SafeObjAsync(_catalogService.GetCategoryByIdAsync(product.CategoryId))
+                : Task.FromResult<CategoryViewModel?>(null);
 
             await Task.WhenAll(basketTask, favTask, reviewsTask, questionsTask, canReviewTask, userReviewTask, categoryTask);
 

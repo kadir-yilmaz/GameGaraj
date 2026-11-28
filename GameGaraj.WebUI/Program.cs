@@ -1,4 +1,4 @@
-﻿using GameGaraj.WebUI.Extensions;
+using GameGaraj.WebUI.Extensions;
 using GameGaraj.WebUI.Services.Abstract;
 using GameGaraj.WebUI.Services.Concrete;
 using GameGaraj.WebUI.Settings;

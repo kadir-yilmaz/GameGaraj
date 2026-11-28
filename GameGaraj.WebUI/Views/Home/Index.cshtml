@@ -386,11 +386,35 @@
 
 @if (ViewBag.ServiceDegraded == true)
 {
-    <div class="container mt-3">
-        <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 shadow-sm" role="alert">
-            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-            <div>
-                <strong>Geçici Bakım Modu:</strong> Ürün ve katalog servislerimize şu anda ulaşılamıyor. Kısa süre içinde tekrar deneyebilirsiniz.
+    var degradedList = ViewBag.DegradedServices as List<string> ?? new List<string>();
+    <div style="background: linear-gradient(90deg, #12131C 0%, #1c1e2b 100%); border-bottom: 1px solid rgba(255, 193, 7, 0.35);">
+        <div class="container py-3">
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 text-white">
+                <div class="d-flex align-items-start align-items-md-center gap-3">
+                    <span class="rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                          style="width: 38px; height: 38px; background: rgba(255, 193, 7, 0.16); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.35);">
+                        <i class="bi bi-wrench-adjustable-circle-fill fs-5"></i>
+                    </span>
+                    <div>
+                        <div class="fw-bold" style="color: #ffc107; font-size: 0.95rem;">
+                            Geçici Bakım / Kısıtlı Mod Aktif
+                        </div>
+                        <div class="text-white-50 small">
+                            Bazı arka uç ve veritabanı servislerine geçici olarak erişilemiyor. Sayfa açık kalmaya devam ediyor, bağlantılar geldiğinde veriler otomatik yüklenecektir.
+                        </div>
+                    </div>
+                </div>
+                @if (degradedList.Any())
+                {
+                    <div class="d-flex flex-wrap gap-1 flex-shrink-0">
+                        @foreach (var svc in degradedList)
+                        {
+                            <span class="badge rounded-pill" style="background: rgba(255, 193, 7, 0.14); color: #ffd54f; border: 1px solid rgba(255, 193, 7, 0.3); font-weight: 500;">
+                                <i class="bi bi-dot"></i>@svc
+                            </span>
+                        }
+                    </div>
+                }
             </div>
         </div>
     </div>
