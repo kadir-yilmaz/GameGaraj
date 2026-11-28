@@ -89,3 +89,17 @@ notes/
 
 # NuGet/dotnet HOME artifacts (yanlislikla proje klasorune yazilanlar)
 .local/
+
+## [Terraform & Secrets]
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.auto.tfvars
+*.pem
+*.key
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
