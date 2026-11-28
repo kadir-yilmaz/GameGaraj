@@ -1,4 +1,4 @@
-using GameGaraj.WebUI.Extensions;
+﻿using GameGaraj.WebUI.Extensions;
 using GameGaraj.WebUI.Services.Abstract;
 using GameGaraj.WebUI.Services.Concrete;
 using GameGaraj.WebUI.Settings;
@@ -68,31 +68,26 @@ if (!string.IsNullOrWhiteSpace(redisUrl) &&
       }
 
       var redisOptions = ConfigurationOptions.Parse(redisUrl);
-      redisOptions.AbortOnConnectFail = true; // HÄ±zlÄ± hata fÄ±rlatmasÄ± iÃ§in
-      redisOptions.ConnectTimeout = 3000; // 3 saniye iÃ§inde baÄŸlanamazsa pes et
+      redisOptions.AbortOnConnectFail = false;
+      redisOptions.ConnectTimeout = 1500;
+      redisOptions.SyncTimeout = 1500;
+      redisOptions.AsyncTimeout = 1500;
       var redis = ConnectionMultiplexer.Connect(redisOptions);
       
       dataProtectionBuilder.PersistKeysToStackExchangeRedis(redis, "data-protection:keys");
       builder.Services.AddStackExchangeRedisCache(options =>
       {
-          options.Configuration = redisUrl;
+          options.ConfigurationOptions = redisOptions;
           options.InstanceName = "GameGarajWebUI:";
       });
   }
   catch (Exception ex)
   {
-      if (!builder.Environment.IsDevelopment())
-      {
-          throw new InvalidOperationException(
-              "Redis DataProtection is required in non-development environments. Refusing to start with ephemeral cookie keys.",
-              ex);
-      }
-
       var keyPath = builder.Configuration["DataProtection:KeysPath"]
           ?? Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtectionKeys");
       Directory.CreateDirectory(keyPath);
 
-      Console.WriteLine($"[WARNING] Redis for DataProtection failed: {ex.Message}. Persisting local development keys to {keyPath}.");
+      Console.WriteLine($"[WARNING] Redis for DataProtection failed: {ex.Message}. Falling back to local keys at {keyPath}.");
       dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(keyPath));
       builder.Services.AddDistributedMemoryCache();
   }
