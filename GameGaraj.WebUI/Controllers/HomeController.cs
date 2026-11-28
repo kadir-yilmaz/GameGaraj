@@ -34,20 +34,42 @@ namespace GameGaraj.WebUI.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var featuredTask = GetFeaturedProductsFromSearchWithFallbackAsync();
-            var categoriesTask = _catalogService.GetAllCategoriesAsync();
-            var rulesTask = _campaignService.GetAllRulesAsync();
-            var couponsTask = _campaignService.GetPublicCouponsAsync();
-            var rewardRulesTask = _campaignService.GetAllRewardRulesAsync();
-            var carouselTask = _campaignService.GetCarouselImagesAsync();
+            bool serviceDegraded = false;
+
+            async Task<T> SafeAsync<T>(Task<T> task, T fallback, string name, bool markDegraded = false)
+            {
+                try
+                {
+                    return await task;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[HomeController] {Service} geçici olarak yanıt vermiyor, fallback dönülüyor.", name);
+                    if (markDegraded) serviceDegraded = true;
+                    return fallback;
+                }
+            }
+
+            var featuredTask = SafeAsync(GetFeaturedProductsFromSearchWithFallbackAsync(), new List<GameGaraj.WebUI.Models.Products.ProductViewModel>(), "FeaturedProducts", markDegraded: true);
+            var categoriesTask = SafeAsync(_catalogService.GetAllCategoriesAsync(), new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>(), "Categories", markDegraded: true);
+            var rulesTask = SafeAsync(_campaignService.GetAllRulesAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CampaignRuleViewModel>(), "CampaignRules");
+            var couponsTask = SafeAsync(_campaignService.GetPublicCouponsAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CouponViewModel>(), "PublicCoupons");
+            var rewardRulesTask = SafeAsync(_campaignService.GetAllRewardRulesAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CouponRewardRuleViewModel>(), "RewardRules");
+            var carouselTask = SafeAsync(_campaignService.GetCarouselImagesAsync(), new List<GameGaraj.WebUI.Models.Campaigns.CarouselImageViewModel>(), "CarouselImages");
 
             await Task.WhenAll(featuredTask, categoriesTask, rulesTask, couponsTask, rewardRulesTask, carouselTask);
 
             var featuredProducts = featuredTask.Result ?? new List<GameGaraj.WebUI.Models.Products.ProductViewModel>();
             var allCategories = categoriesTask.Result ?? new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
 
-            var userStateTask = ApplyUserProductStateAsync(featuredProducts);
-            var reviewSummaryTask = ApplyReviewSummariesAsync(featuredProducts);
+            if (!featuredProducts.Any() && !allCategories.Any())
+            {
+                serviceDegraded = true;
+            }
+            ViewBag.ServiceDegraded = serviceDegraded;
+
+            var userStateTask = SafeAsync(ApplyUserProductStateAsync(featuredProducts).ContinueWith(_ => true), false, "UserProductState");
+            var reviewSummaryTask = SafeAsync(ApplyReviewSummariesAsync(featuredProducts).ContinueWith(_ => true), false, "ReviewSummaries");
 
             var flattenedCategories = new List<GameGaraj.WebUI.Models.Products.CategoryViewModel>();
             void Flatten(IEnumerable<GameGaraj.WebUI.Models.Products.CategoryViewModel> categories)

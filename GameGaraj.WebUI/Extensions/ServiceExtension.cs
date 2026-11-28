@@ -22,7 +22,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<ICatalogService, CatalogService>(client =>
             {
                 client.BaseAddress = new Uri(gatewayUri, "api/catalog/");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(8);
             })
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>()
@@ -32,7 +32,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<IBasketService, BasketService>(client =>
             {
                 client.BaseAddress = new Uri(gatewayUri, "api/basket/");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(8);
             })
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>()
@@ -42,7 +42,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<IOrderService, OrderService>(client =>
             {
                 client.BaseAddress = new Uri(gatewayUri, "api/order/");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(8);
             })
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>()
@@ -52,7 +52,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<IReviewService, ReviewService>(client =>
             {
                 client.BaseAddress = new Uri(gatewayUri, "api/review/");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(8);
             })
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>()
@@ -62,7 +62,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<IFavoritesService, FavoritesService>(client =>
             {
                 client.BaseAddress = new Uri(gatewayUri, "api/favorites/");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(8);
             })
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>()
@@ -80,7 +80,7 @@ namespace GameGaraj.WebUI.Extensions
             // Identity Service (talks directly to Keycloak, not through gateway)
             services.AddHttpClient<IIdentityService, IdentityService>(client =>
             {
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(8);
             })
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddConfiguredResilienceHandler("Identity Service (Keycloak)");
@@ -89,7 +89,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<IPhotoStockService, PhotoStockService>(client =>
             {
                 client.BaseAddress = new Uri(gatewayUri, "api/photostock/");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(8);
             })
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>()
@@ -99,7 +99,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<ICampaignService, CampaignService>(client =>
             {
                 client.BaseAddress = new Uri(gatewayUri, "api/campaign/");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(8);
             })
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>()
@@ -109,7 +109,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<ISearchService, SearchService>(client =>
             {
                 client.BaseAddress = new Uri(gatewayUri, "api/search/");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(8);
             })
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>()
@@ -119,7 +119,7 @@ namespace GameGaraj.WebUI.Extensions
             services.AddHttpClient<IDiscussionService, DiscussionService>(client =>
             {
                 client.BaseAddress = new Uri(gatewayUri, "api/discussion/");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(8);
             })
             .AddHttpMessageHandler<OutboundRequestLoggingHandler>()
             .AddHttpMessageHandler<UserIdDelegatingHandler>()
@@ -130,10 +130,20 @@ namespace GameGaraj.WebUI.Extensions
         {
             builder.AddStandardResilienceHandler(options =>
             {
-                options.Retry.MaxRetryAttempts = 3;
-                options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
+                // Fail-fast: prevent Cloudflare 524 timeouts when backend DBs are unreachable
+                options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(3);
+                options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(6);
+
+                options.Retry.MaxRetryAttempts = 1;
+                options.Retry.BackoffType = Polly.DelayBackoffType.Constant;
                 options.Retry.UseJitter = false;
-                options.Retry.Delay = TimeSpan.FromSeconds(2); // 2s -> 4s -> 8s
+                options.Retry.Delay = TimeSpan.FromMilliseconds(400);
+
+                options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(15);
+                options.CircuitBreaker.FailureRatio = 0.5;
+                options.CircuitBreaker.MinimumThroughput = 3;
+                options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(20);
+
                 options.Retry.OnRetry = args =>
                 {
                     var attempt = args.AttemptNumber + 1;
@@ -143,7 +153,7 @@ namespace GameGaraj.WebUI.Extensions
 
                     _ = PipelineNotifier.Instance?.NotifyAsync(
                         "Polly (Resilience)",
-                        $"⚠️ [Polly Retry {attempt}/3] <b>{serviceName}</b> uykuda/kapalı ({statusStr}). <span class='badge bg-warning text-dark'>{delaySec:F0} sn</span> sonra tekrar denenecek...",
+                        $"⚠️ [Polly Retry {attempt}/1] <b>{serviceName}</b> uykuda/kapalı ({statusStr}). <span class='badge bg-warning text-dark'>{delaySec:F1} sn</span> sonra tekrar denenecek...",
                         "warning"
                     );
                     return default;

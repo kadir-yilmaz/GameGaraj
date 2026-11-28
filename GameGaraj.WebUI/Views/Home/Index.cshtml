@@ -384,6 +384,18 @@
     }
 </style>
 
+@if (ViewBag.ServiceDegraded == true)
+{
+    <div class="container mt-3">
+        <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div>
+                <strong>Geçici Bakım Modu:</strong> Ürün ve katalog servislerimize şu anda ulaşılamıyor. Kısa süre içinde tekrar deneyebilirsiniz.
+            </div>
+        </div>
+    </div>
+}
+
 <!-- Hero Carousel -->
 @{
     var dbCarouselImages = ViewBag.CarouselImages as List<string>;
