@@ -68,7 +68,7 @@ if (!string.IsNullOrWhiteSpace(redisUrl) &&
       }
 
       var redisOptions = ConfigurationOptions.Parse(redisUrl);
-      redisOptions.AbortOnConnectFail = false;
+      redisOptions.AbortOnConnectFail = true; // Redis kapalıysa hemen catch'e düşüp FileSystem + MemoryCache fallback kullansın
       redisOptions.ConnectTimeout = 1500;
       redisOptions.SyncTimeout = 1500;
       redisOptions.AsyncTimeout = 1500;
