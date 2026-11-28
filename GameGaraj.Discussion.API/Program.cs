@@ -196,12 +196,26 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// PostgreSQL Auto-Migrate
-using (var scope = app.Services.CreateScope())
+// PostgreSQL Auto-Migrate (non-blocking with background retry)
+_ = Task.Run(async () =>
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<DiscussionDbContext>();
-    await dbContext.Database.MigrateAsync();
-}
+    while (true)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<DiscussionDbContext>();
+            await dbContext.Database.MigrateAsync();
+            app.Logger.LogInformation("[Startup] Discussion PostgreSQL migration completed.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "[Startup] Discussion PostgreSQL unreachable, retrying in 15s...");
+            await Task.Delay(TimeSpan.FromSeconds(15));
+        }
+    }
+});
 
 if (app.Environment.IsDevelopment())
 {

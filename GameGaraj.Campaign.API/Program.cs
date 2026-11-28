@@ -77,9 +77,26 @@ builder.Services.AddMassTransit(x =>
 });
 
 // Run Migration â€” campaign_rule, coupons, rewards, notifications, purchase logs tablolarÄ±nÄ± oluÅŸtur
-DbMigrationHelper.EnsureDatabaseSetup(builder.Configuration);
-
 var app = builder.Build();
+
+// Non-blocking DB setup with background retry
+_ = Task.Run(async () =>
+{
+    while (true)
+    {
+        try
+        {
+            DbMigrationHelper.EnsureDatabaseSetup(app.Configuration);
+            app.Logger.LogInformation("[Startup] Campaign DB setup completed.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "[Startup] Campaign DB unreachable, retrying in 15s...");
+            await Task.Delay(TimeSpan.FromSeconds(15));
+        }
+    }
+});
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

@@ -106,11 +106,26 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+// Auto Migration (non-blocking with background retry)
+_ = Task.Run(async () =>
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<ReviewDbContext>();
-    await dbContext.Database.MigrateAsync();
-}
+    while (true)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<ReviewDbContext>();
+            await dbContext.Database.MigrateAsync();
+            app.Logger.LogInformation("[Startup] Review DB migration completed.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "[Startup] Review DB unreachable, retrying in 15s...");
+            await Task.Delay(TimeSpan.FromSeconds(15));
+        }
+    }
+});
 
 if (app.Environment.IsDevelopment())
 {

@@ -144,15 +144,27 @@ builder.Services.AddMassTransit(x =>
 
 var app = builder.Build();
 
-// PostgreSQL Startup Tasks
-using (var scope = app.Services.CreateScope())
+// PostgreSQL Startup Tasks (non-blocking with background retry so pod starts even if DB is temporarily unreachable)
+_ = Task.Run(async () =>
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
-    await dbContext.Database.MigrateAsync();
-    
-    // Seed Data into Postgres
-    await GameGaraj.Catalog.API.Services.Seed.PostgresDbSeeder.SeedAsync(app.Services);
-}
+    while (true)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
+            await dbContext.Database.MigrateAsync();
+            await GameGaraj.Catalog.API.Services.Seed.PostgresDbSeeder.SeedAsync(app.Services);
+            app.Logger.LogInformation("[Startup] Catalog PostgreSQL migration and seed completed.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "[Startup] Catalog PostgreSQL unreachable, retrying in 15s...");
+            await Task.Delay(TimeSpan.FromSeconds(15));
+        }
+    }
+});
 
 if (app.Environment.IsDevelopment())
 {

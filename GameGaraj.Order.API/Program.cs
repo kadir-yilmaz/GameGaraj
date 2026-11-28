@@ -168,12 +168,25 @@ app.UsePrometheusMetrics();
 
 app.MapControllers();
 
-// Auto Migration
-using (var scope = app.Services.CreateScope())
+// Auto Migration (non-blocking with background retry)
+_ = Task.Run(async () =>
 {
-    var serviceProvider = scope.ServiceProvider;
-    var orderDbContext = serviceProvider.GetRequiredService<OrderDbContext>();
-    orderDbContext.Database.Migrate();
-}
+    while (true)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var orderDbContext = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+            await orderDbContext.Database.MigrateAsync();
+            app.Logger.LogInformation("[Startup] Order DB migration completed.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "[Startup] Order DB unreachable, retrying in 15s...");
+            await Task.Delay(TimeSpan.FromSeconds(15));
+        }
+    }
+});
 
 app.Run();
