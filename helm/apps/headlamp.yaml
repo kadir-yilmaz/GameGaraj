@@ -38,10 +38,6 @@ spec:
             operator: "Equal"
             value: "only"
             effect: "NoSchedule"
-          - key: "gamegaraj"
-            operator: "Equal"
-            value: "only"
-            effect: "NoSchedule"
         service:
           type: NodePort
           nodePort: 30444

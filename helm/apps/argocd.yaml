@@ -17,10 +17,6 @@ spec:
               operator: "Equal"
               value: "only"
               effect: "NoSchedule"
-            - key: "gamegaraj"
-              operator: "Equal"
-              value: "only"
-              effect: "NoSchedule"
         controller:
           replicas: 1
         server:
