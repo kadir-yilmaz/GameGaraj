@@ -254,7 +254,7 @@ services:
   # WebUI (MVC — routes through Gateway internally)
   # ---------------------------------------------------------------------------
   webui:
-    image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:56276c2-173-1"
+    image: "ghcr.io/kadir-yilmaz/gamegaraj/webui:b3245b0-174-1"
     serviceType: NodePort
     nodePort: 30075
     replicas: 3
@@ -267,7 +267,7 @@ services:
       ServiceApiSettings__IdentityBaseUri: "https://keycloak.kadiryilmaz.online/realms/GameGaraj"
       ServiceApiSettings__GatewayBaseUri: "http://gateway:8080"
       ServiceApiSettings__PhotoBaseUrl: "https://minio.kadiryilmaz.online/gamegaraj"
-      APP_VERSION: "56276c2-173-1"
+      APP_VERSION: "b3245b0-174-1"
       ObservabilitySettings__ElasticSearchUri: "http://192.168.1.56:9201"
       ObservabilitySettings__Services__Gateway: "http://gateway:8080"
       ObservabilitySettings__Services__CatalogAPI: "http://catalog-api:8080"
