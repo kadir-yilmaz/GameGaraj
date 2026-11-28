@@ -14,6 +14,13 @@ spec:
     helm:
       values: |
         replicaCount: 2
+        topologySpreadConstraints:
+          - maxSkew: 1
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: ScheduleAnyway
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: headlamp
         affinity:
           podAntiAffinity:
             preferredDuringSchedulingIgnoredDuringExecution:
@@ -28,6 +35,10 @@ spec:
                   topologyKey: kubernetes.io/hostname
         tolerations:
           - key: "management"
+            operator: "Equal"
+            value: "only"
+            effect: "NoSchedule"
+          - key: "gamegaraj"
             operator: "Equal"
             value: "only"
             effect: "NoSchedule"

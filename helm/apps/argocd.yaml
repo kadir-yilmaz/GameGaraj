@@ -17,15 +17,33 @@ spec:
               operator: "Equal"
               value: "only"
               effect: "NoSchedule"
+            - key: "gamegaraj"
+              operator: "Equal"
+              value: "only"
+              effect: "NoSchedule"
         controller:
           replicas: 1
         server:
           replicas: 2
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: argocd-server
           service:
             type: NodePort
             nodePortHttps: 30580
         repoServer:
           replicas: 2
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: argocd-repo-server
         dex: {}
         applicationSet:
           replicas: 1
